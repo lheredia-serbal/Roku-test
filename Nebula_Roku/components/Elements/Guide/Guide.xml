@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<component 
+    name="Guide" 
+    extends="Group"
+    xsi:noNamespaceSchemaLocation="https://devtools.web.roku.com/schema/RokuSceneGraph.xsd">
+    
+    <script type="text/brightscript" uri="Guide.brs" />
+    <script type="text/brightscript" uri="pkg:/source/Utils/i18nUtils.brs" />
+    <script type="text/brightscript" uri="pkg:/source/Utils.brs" />
+    <script type="text/brightscript" uri="pkg:/source/Utils/DateFunctions.brs" />
+    <script type="text/brightscript" uri="pkg:/source/Enums.brs" />
+
+    <script type="text/brightscript" uri="pkg:/source/Services/Epg.brs" />
+    <script type="text/brightscript" uri="pkg:/source/Services/ParentalControl.brs" />
+
+    <interface>
+        <!-- Paramentros de Entrada -->
+        <field id="loading" type="node" />
+        <field id="items" type="array" onChange="loadChannelArray"/>
+        <field id="channelId" type="integer" value="0" onChange="positionChannel"/>
+        <field id="channelIdIndexOf" type="integer" value="-1"/>
+        <field id="visible" type="boolean" />
+        <field id="positioninChannelId" type="boolean" value="false" onChange="onShowPositioninChannelId"/>
+        <field id="searchChannelPosition" type="boolean" value="false" onChange="onSearchChannelPosition"/>
+        
+        <!-- Paramentros de Salida -->
+        <field id="selected" type="string"/>
+    </interface>
+
+    <children> 
+        <Poster 
+            id="background"
+            uri="pkg:/images/shared/gradient_carousel_guide.png" 
+            translation="[0, 0]"/>
+        
+
+        <!-- Contendor principal -->
+        <LayoutGroup
+            id="guideContainer"
+            layoutDirection="vert"
+            horizAlignment="custom"
+            vertAlignment="bottom"
+            itemSpacings="[10]">
+            
+            <ProgramSummaryPlayer id="programSummaryPlayer" showAvailableView="true"/>
+        
+            <Group translation="[0, 0]">
+                <!-- Contenedor del carousel  -->
+                <Group translation="[155,0]">
+                    <Group id="carouselGuideContainer" translation="[0,0]" >
+                        <QvTargetList 
+                            id="carouselGuide"
+                            translation="[0,0]"
+                            advanceKey="right" 
+                            reverseKey="left" 
+                            focusable="true"/>
+                    </Group>
+
+                    <SelectionBox id="selectedIndicator" translation="[548, 20]" visible="false"/>
+                </Group>
+
+                <!-- Contenedor de la lista de canales  -->
+                <Rectangle 
+                    translation="[-30, 0]"
+                    width="145" 
+                    height="262"
+                    color="0x00000000">
+
+                    <Group translation="[0, 40]">
+                        <!-- arrow up -->
+                        <Poster 
+                            id="arrowUp"
+                            translation="[90, 0]" 
+                            width="70"
+                            height="10"
+                            loadWidth="70"
+                            loadHeight="10"
+                            loadDisplayMode="scaleToFit"
+                            uri="pkg:/images/shared/arrow_up.png" 
+                            opacity="0.8"/>
+
+                        <!-- prev channel -->
+                        <Group translation="[0, 25]" opacity="0.6"> 
+                            <Label
+                                id="prevChannelNumber"
+                                translation="[0, 0]"
+                                width="80"
+                                height="30"
+                                wrap="false" 
+                                maxLines="1" 
+                                vertAlign="center"
+                                horizAlign="center"
+                                opacity="0.6"
+                                font="font:TinySystemFont" />
+
+                            <Poster 
+                                id="prevChannelImage"
+                                translation="[110, 0]"
+                                width="30"
+                                height="30"
+                                loadWidth="30"
+                                loadHeight="30"
+                                opacity="0.6"
+                                loadDisplayMode="scaleToFit"/>
+                        </Group>
+                        
+                        <!-- current channel -->
+                        <Group translation="[0, 60]"> 
+                            <Label
+                                id="currentChannelNumber"
+                                translation="[0, 0]"
+                                width="80"
+                                height="70"
+                                wrap="false" 
+                                maxLines="1" 
+                                vertAlign="center"
+                                horizAlign="center"
+                                focusable="true"
+                                font="font:TinySystemFont" />
+
+
+                            <Poster 
+                                id="currentChannelImage"
+                                translation="[90, 0]"
+                                width="70"
+                                height="70"
+                                loadWidth="70"
+                                loadHeight="70"
+                                loadDisplayMode="scaleToFit"
+                                focusable="true"/>
+                        </Group>
+
+                        <!-- next channel -->
+                        <Group translation="[0, 145]" opacity="0.6"> 
+                            <Label
+                                id="nextChannelNumber"
+                                translation="[0, 0]"
+                                width="80"
+                                height="30"
+                                wrap="false" 
+                                maxLines="1" 
+                                vertAlign="center"
+                                horizAlign="center"
+                                opacity="0.6"
+                                font="font:TinySystemFont" />
+
+                            <Poster 
+                                id="nextChannelImage"
+                                translation="[110, 0]"
+                                width="30"
+                                height="30"
+                                loadWidth="30"
+                                loadHeight="30"
+                                opacity="0.6"
+                                loadDisplayMode="scaleToFit"/>
+                        </Group>
+
+                        <!-- arrow down -->
+                        <Poster 
+                            id="arrowDown"
+                            translation="[90, 200]" 
+                            width="70"
+                            height="10"
+                            loadWidth="70"
+                            loadHeight="10"
+                            loadDisplayMode="scaleToFit"
+                            uri="pkg:/images/shared/arrow_down.png" 
+                            opacity="0.8"/>
+                    </Group>
+                </Rectangle>
+            </Group>
+
+        </LayoutGroup>
+
+        <!-- Contenedor del Detalle para la Guia  -->
+        <Group id="detailGuideContainer" translation="[0, 0]"/>
+            
+        <Timer id="changeUp" repeat="false" duration="0.4"/>
+        <Timer id="changeDown" repeat="false" duration="0.4"/>
+
+    </children>
+
+</component>

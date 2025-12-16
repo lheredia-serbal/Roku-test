@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<component 
+    name="MenuItem" 
+    extends="Group"
+    focusable="true"
+    xsi:noNamespaceSchemaLocation="https://devtools.web.roku.com/schema/RokuSceneGraph.xsd">
+    
+    <script type="text/brightscript" uri="MenuItem.brs" />
+
+    <interface>
+        <!-- Paramentros de Entrada -->
+        <field id="menuKey" type="string" />
+        <field id="menuId" type="integer"/>
+        <field id="code" type="string" />
+        <field id="behavior" type="string" />
+        <field id="selected" type="boolean" value="false" onChange="onSelectedItem" />
+        <field id="text" type="string" onChange="updateText" />
+        <field id="imageURL" type="string" onChange="updateImage" />
+        <field id="opacityText" type="float" onChange="onOpacityChange" />
+        
+        <!-- Paramentros de Salida -->
+        <field id="focusDown" type="node" />
+        <field id="focusUp" type="node" />
+    </interface>
+
+    <children> 
+        <Group id="menuItemContent">
+            <LayoutGroup
+                layoutDirection="horiz"
+                horizAlignment="left"
+                vertAlignment="top"
+                itemSpacings="[20]">
+
+                <Group>
+                  <Poster 
+                        id="itemImage"
+                        width="20"
+                        height="20"
+                        loadDisplayMode="scaleToFit" />
+                    
+                    <Rectangle
+                        id="itemIndicatorSelected"
+                        translation="[0, 25]"
+                        width="20"
+                        height="5"
+                        visible="false" />
+                </Group>
+
+                <Label 
+                    id="itemText"
+                    opacity="0.0"
+                    height="25"
+                    wrap="false" 
+                    maxLines="1" 
+                    vertAlign="center"
+                    font="font:TinySystemFont" />
+            </LayoutGroup>
+        </Group>
+    </children>
+
+</component>

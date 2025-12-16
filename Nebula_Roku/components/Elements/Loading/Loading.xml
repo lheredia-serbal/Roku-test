@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<component 
+    name="Loading" 
+    extends="Group"
+    xsi:noNamespaceSchemaLocation="https://devtools.web.roku.com/schema/RokuSceneGraph.xsd">
+    
+    <script type="text/brightscript" uri="Loading.brs" />
+    <script type="text/brightscript" uri="pkg:/source/Config.brs" />
+
+    <children> 
+        <Group id="Loading" translation="[0,0]">
+            <Rectangle id="background" translation="[0,0]" color="0xAARRGGBB" />
+            <Spinner id="spinner" />
+        </Group>
+    </children>
+
+</component>

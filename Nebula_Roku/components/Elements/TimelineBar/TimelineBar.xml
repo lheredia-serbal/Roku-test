@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<component 
+  name="TimelineBar" 
+  extends="Group" 
+  focusable="true"
+  xsi:noNamespaceSchemaLocation="https://devtools.web.roku.com/schema/RokuSceneGraph.xsd">
+
+  <script type="text/brightscript" uri="TimelineBar.brs"/>
+
+  <interface>
+    <field id="duration" type="float" value="0" onChange="onDurationChanged" />
+    <field id="position" type="float" value="0" onChange="onPositionChanged" />
+    <field id="widthBar" type="float" value="0" onChange="onWidthChanged" />
+    <field id="thumbUri" type="uri" value="pkg:/images/shared/ball.png" onChange="onThumbUriChanged" />
+  </interface>
+
+  <children>
+    <LayoutGroup
+      id="container"
+      layoutDirection="vert"
+      horizAlignment="left"
+      vertAlignment="bottom"
+      itemSpacings="[6]">
+
+      <Label
+        id="timeLabel"
+        wrap="false"
+        maxLines="1"
+        font="font:SmallestSystemFont"
+        color="#FFFFFF" />
+
+      <Group id="barContainer">
+        <Rectangle id="track" height="6" color="#FFFFFF" opacity="0.35" />
+        <Rectangle id="progress" height="6" color="#FFFFFF" />
+        <Poster 
+          id="thumb" 
+          width="16" 
+          height="16" 
+          loadWidth="16"
+          loadHeight="16"
+          uri="pkg:/images/shared/ball.png"
+          translation="[-8,-5]" />
+      </Group>
+    </LayoutGroup>
+  </children>
+</component>

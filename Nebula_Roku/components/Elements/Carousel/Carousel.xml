@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<component 
+  name="Carousel" 
+  extends="Group" 
+  xsi:noNamespaceSchemaLocation="https://devtools.web.roku.com/schema/RokuSceneGraph.xsd">
+  
+  <script type="text/brightscript" uri="Carousel.brs"/>
+  <script type="text/brightscript" uri="pkg:/source/Utils.brs" />
+  <script type="text/brightscript" uri="pkg:/source/CarouselConstants.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Utils/DateFunctions.brs" />
+
+  <interface>
+    <!-- Paramentros de Entrada -->
+    <field id="id" type="integer"/>
+    <field id="style" type="integer" onChange="initSyle"/>
+    <field id="items" type="array" onChange="initData"/>
+    <field id="title" type="string"/>
+    <field id="code" type="string"/>
+    <field id="contentType" type="integer"/>
+    <field id="imageType" type="integer"/>
+    <field id="redirectType" type="integer"/>
+    <field id="updateNode" type="string" onChange="onUpdateNode"/>
+
+    <!-- Paramentros de entrada/Salida -->
+    <field id="size" type="array"/>
+
+    <!-- Paramentros de Salida -->
+    <field id="focusDown" type="node"/>
+    <field id="focusUp" type="node"/>
+    <field id="height" type="integer" value="0"/>
+    <field id="openMenu" type="boolean" value="false"/>
+    <field id="selected" type="string"/>
+    <field id="focused" type="string"/>
+  </interface>
+
+  <children>
+    <Label 
+      id="carouselTitle"
+      translation="[70, 100]"
+      font="font:SmallestBoldSystemFont" 
+      />
+
+      <QvTargetList 
+          id="carouselList"
+          advanceKey="right" 
+          reverseKey="left" 
+          focusable="true"
+          translation="[-80, 130]"/>
+  </children>
+</component>

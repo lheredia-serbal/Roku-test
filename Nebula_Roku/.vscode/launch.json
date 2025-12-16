@@ -1,0 +1,17 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+
+        {
+            "type": "brightscript",
+            "request": "launch",
+            "name": "Deploy to Roku",
+            "host": "172.20.0.176",
+            "password": "admin123",
+            "rootDir": "${workspaceFolder}"
+        }
+    ]
+}

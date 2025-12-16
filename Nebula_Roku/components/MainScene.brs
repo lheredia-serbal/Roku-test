@@ -1,0 +1,542 @@
+
+' Inicialización del componente (parte del ciclo de vida de Roku)
+' 1st function that runs for the scene on channel startup
+sub init()
+  ' Imagen de fondo
+  m.top.backgroundUri= "pkg:/images/client/bg1.jpg"
+  
+  'To see print statements/debug info, telnet on port 8089
+
+  m.loading = m.top.FindNode("Loading")
+  m.LauncherScreen = m.top.FindNode("LauncherScreen")
+  m.SettingScreen = m.top.FindNode("SettingScreen")
+  m.LoginScreen = m.top.FindNode("LoginScreen")
+  m.ProfileScreen = m.top.FindNode("ProfileScreen")
+  m.MainScreen = m.top.FindNode("MainScreen")
+  m.ProgramDetailScreen = m.top.FindNode("ProgramDetailScreen")
+  m.KillSessionScreen = m.top.FindNode("KillSessionScreen")
+  m.PlayerScreen = m.top.FindNode("PlayerScreen")
+
+  m.i18n = invalid
+  scene = m.top.getScene()
+  if scene <> invalid then
+      m.i18n = scene.findNode("i18n")
+  end if
+
+  __initConfig()
+end sub
+
+' Funcion que interpreta los eventos de teclado y retorna true si fue porcesada por este componente. Sino es porcesado por el
+' entonces sigue con el siguente metodo onKeyEvent del compoente superior
+function onKeyEvent(key as string, press as boolean) as boolean
+  if press and key = KeyButtons().BACK then
+    if m.StackOfScreens.count() = 0 or (m.StackOfScreens.count() = 1 and m.StackOfScreens.Peek() = "MainScreen") then 
+      __showExitAsk()
+      return true
+
+    else
+      if m.StackOfScreens.Peek() = "PlayerScreen" then   
+        m.StackOfScreens.Pop()
+        m.PlayerScreen.unobserveField("onBack")
+        
+        __playerBackProcessing()
+
+      else if m.StackOfScreens.Peek() = "ProgramDetailScreen" then 
+        m.StackOfScreens.Pop()
+
+        __hideProgramDetail()
+        m.ProgramDetailScreen.data = invalid
+
+        __backManager(m.StackOfScreens.Peek())
+        
+      else if m.StackOfScreens.Peek() = "SettingScreen" then 
+        m.StackOfScreens.Pop()
+
+        __hideSetting()
+        __backManager(m.StackOfScreens.Peek())
+      
+      else if m.StackOfScreens.Peek() = "KillSessionScreen" then 
+        m.StackOfScreens.Pop()
+
+        __hideKillSessionScreen()
+
+        __backManager(m.StackOfScreens.Peek())
+      end if
+
+      return true
+    end if 
+  end if
+end function
+
+' Metodo que se ejecuta al finalizar la LauncherScreen y valida si redirige al login, pantalla de perfiles o la home.
+sub onLauncherFinished()
+  if  m.LauncherScreen.finished then 
+    ' Esconder Launcher y mostrar MainScreen
+    m.LauncherScreen.visible = false
+    if isLoginUser() then
+      m.LauncherScreen.unobserveField("finished")
+      m.LoginScreen.unobserveField("finished")
+      if m.global.contact <> invalid and m.global.contact.profile <> invalid then
+        __initMain()
+      else 
+        __initProfile()
+      end if 
+    else
+      m.LauncherScreen.unobserveField("finished")
+
+      m.LoginScreen.ObserveField("finished", "onLoginFinished")
+      m.LoginScreen.visible = true
+      m.LoginScreen.onFocus = true
+      m.LoginScreen.setFocus(true)
+    end if
+  end if
+end sub
+
+
+' Metodo que se ejecuta al desloguear al usuario. Resetea las varibles y configuracion de la app y redirige al login
+sub onLogoutEvent()
+  if m.MainScreen.logout or m.ProfileScreen.logout or m.ProgramDetailScreen.logout or m.KillSessionScreen.logout or m.PlayerScreen.logout then
+    ' Necesito hacer un bloqueo por procesamineto porque sino cuando dispara los logout de cada pantalla al 
+    ' cambiar la propeidad logout esta volvera a disaparar el metodo de onLogoutEvent ya que tanto internamente 
+    ' como externamente se esta escuchando el cambio de esta propiedad.  
+    if not m.blockLogoutProcess then 
+      m.blockLogoutProcess = true
+      m.loading.visible = true
+      __resetApp()
+      
+      ' se limpian las variables y se le da el foco al login
+      m.LoginScreen.finished = false
+      m.LoginScreen.ObserveField("finished", "onLoginFinished")
+      m.LoginScreen.visible = true
+      m.LoginScreen.onFocus = true
+      m.LoginScreen.setFocus(true)
+      
+      m.loading.visible = false
+      m.blockLogoutProcess = false
+    end if
+  end if
+end sub
+
+' Metodo que se ejecuta al finalizar la LoginScreen y valida si redirige al login, pantalla de perfiles o la home.
+sub onLoginFinished()
+  if m.LoginScreen.finished then 
+    m.LoginScreen.unobserveField("finished")
+    ' Esconder Launcher y mostrar MainScreen
+    m.LoginScreen.visible = false
+    m.LoginScreen.onFocus = false
+    if m.global.contact <> invalid and m.global.contact.profile <> invalid then
+      __initMain()
+    else 
+      __initProfile()
+    end if 
+  end if 
+end sub
+
+' Metodo que se ejecuta al finalizar la ProfileScreen y valida si redirige al login, pantalla de perfiles o la home.
+sub onProfileFinished()
+  if m.ProfileScreen.finished then 
+    m.ProfileScreen.unobserveField("finished")
+    ' Esconder Launcher y mostrar MainScreen
+    m.ProfileScreen.visible = false
+    m.ProfileScreen.onFocus = false
+    __initMain()
+  end if 
+end sub
+
+' Cierra la aplicacion.
+sub onExitApp()
+  m.top.appExit = true
+end sub
+
+' Metodo que se ejecuta al elegir una opcion del dialogo.
+function onDialogButtonClicked(event)
+  buttonIndex = event.getData()
+  'did the user click "Yes"
+  if buttonIndex = 0 then
+    'set appExit which will exit main loop in main.brs 
+     m.top.appExit = true
+  else
+      'close the dialog
+      m.top.dialog.close = true
+      return true
+  end if
+end function
+
+' Metodo que redirige a la pantalla de detalle
+sub onProgramDetail()
+  programDetail = m.MainScreen.detail
+  __hideMain()
+  m.StackOfScreens.Push("ProgramDetailScreen")
+  __showProgramDetail()
+  m.ProgramDetailScreen.data = programDetail
+end sub
+
+' Metodo que redirige a la pantalla de configuracion
+sub onSetting()
+  if m.MainScreen.setting then 
+    m.MainScreen.setting = false
+    __hideMain()
+    m.StackOfScreens.Push("SettingScreen")
+    __showSetting()
+  end if
+end sub
+
+' Metodo que redirige a la pantalla del player
+sub onStreamingPlayer()
+  streaming = invalid
+  openGuide = false
+  
+  if m.StackOfScreens.Peek() = "MainScreen" then
+    streaming = m.MainScreen.streaming
+    openGuide = m.MainScreen.openGuide
+    m.MainScreen.openGuide = false 
+    __hideMain()
+  else if m.StackOfScreens.Peek() = "ProgramDetailScreen" then
+    streaming = m.ProgramDetailScreen.streaming
+    __hideProgramDetail()
+  else if m.StackOfScreens.Peek() = "KillSessionScreen" then
+    m.StackOfScreens.Pop()
+    streaming = m.KillSessionScreen.streaming
+    openGuide = m.KillSessionScreen.openGuide
+    __hideKillSessionScreen()
+  end if
+  
+  if streaming <> invalid then __showPlayer(streaming, openGuide)
+end sub
+
+' Metodo que retrocede de la pantalla de detalle limpiando las variables de dicha pantalla.
+sub onBackDetail()
+  if m.ProgramDetailScreen.onBack then 
+    m.ProgramDetailScreen.unobserveField("onBack")
+    m.ProgramDetailScreen.onBack = false
+
+    if m.StackOfScreens.Peek() = "ProgramDetailScreen" then 
+      m.StackOfScreens.Pop()
+  
+      __hideProgramDetail()
+      m.ProgramDetailScreen.data = invalid
+  
+      __backManager(m.StackOfScreens.Peek())
+    end if
+  end if
+end sub
+
+' Metodo que retrocede de la pantalla del player limpiando las variables de dicha pantalla.
+sub onBackPlayer()
+  if m.PlayerScreen.onBack then 
+    m.PlayerScreen.unobserveField("onBack")
+    m.PlayerScreen.onBack = false
+
+    if (m.StackOfScreens.Peek() = "PlayerScreen") then  m.StackOfScreens.Pop()
+
+    __playerBackProcessing()
+  end if
+end sub
+
+' Metodo que se dispara al querer salir de la app por ociones de menú 
+sub onExitEvent()
+  if m.MainScreen.onExit then 
+    m.MainScreen.onExit = false
+    __showExitAsk()
+  end if
+end sub
+
+' Metodo que se dispara al cambiar el perfil del usuario
+sub onChangeProfileEvent()
+  if m.MainScreen.onChangeProfile then 
+    m.MainScreen.onChangeProfile = false
+    m.MainScreen.visible = false
+    m.MainScreen.onFocus = false
+    m.MainScreen.loadData = false
+    m.MainScreen.unobserveField("streaming")
+    m.MainScreen.unobserveField("pendingStreamingSession")
+    m.MainScreen.unobserveField("detail")
+    m.MainScreen.unobserveField("setting")
+
+    __initProfile()
+    m.StackOfScreens = []
+  end if
+end sub
+
+' Metodo que regresa a la home desde la pantalla de sesiones concurrentes
+sub goToHomeKillSessionScreen()
+  if m.KillSessionScreen.goToHome then
+    m.KillSessionScreen.goToHome = false
+
+    if m.StackOfScreens.Peek() = "KillSessionScreen" then m.StackOfScreens.Pop()
+
+    __hideKillSessionScreen()
+
+    if m.StackOfScreens.Peek() = "ProgramDetailScreen" then 
+        m.StackOfScreens.Pop()
+
+        __hideProgramDetail()
+        m.ProgramDetailScreen.data = invalid
+      end if
+
+      __backManager(m.StackOfScreens.Peek())
+  end if 
+end sub
+
+' Metodo que dispara la apertura de la pantalla para eliminar sesiones concurrentes
+sub onKillSession()
+  pendingStreamingSession = invalid
+  openGuide = false
+  
+  if m.StackOfScreens.Peek() = "MainScreen" then
+    pendingStreamingSession = m.MainScreen.pendingStreamingSession
+    openGuide = m.MainScreen.openGuide
+    m.MainScreen.openGuide = false
+    __hideMain()
+  else if m.StackOfScreens.Peek() = "ProgramDetailScreen" then
+    pendingStreamingSession = m.ProgramDetailScreen.pendingStreamingSession
+    __hideProgramDetail()
+  end if
+  
+  if pendingStreamingSession <> invalid then __showKillSession(pendingStreamingSession, openGuide)
+end sub
+
+' Carga la configuracion inicial del componente, escuchando los observable y obteniendo las 
+' referencias de compenentes necesarios para su uso
+sub __initConfig()
+  m.blockLogoutProcess = false
+
+  ' Esperar evento de LauncherScreen
+  m.LauncherScreen.ObserveField("finished", "onLauncherFinished")
+  m.LauncherScreen.ObserveField("forceExit", "onExitApp")
+  
+  ' Esperar evento de Salida de la MainScreen
+  m.MainScreen.ObserveField("onExit", "onExitEvent")
+  m.MainScreen.ObserveField("forceExit", "onExitApp")
+  m.MainScreen.ObserveField("onChangeProfile", "onChangeProfileEvent")
+
+  ' Set focus a LauncherScreen primero
+  m.LoginScreen.loading = m.loading
+  m.ProfileScreen.loading = m.loading
+  m.MainScreen.loading = m.loading
+  m.PlayerScreen.loading = m.loading
+  m.ProgramDetailScreen.loading = m.loading
+  m.KillSessionScreen.loading = m.loading
+
+  m.MainScreen.ObserveField("logout", "onLogoutEvent")
+  m.ProfileScreen.ObserveField("logout", "onLogoutEvent")
+  m.ProgramDetailScreen.ObserveField("logout", "onLogoutEvent")
+  m.KillSessionScreen.ObserveField("logout", "onLogoutEvent")
+  m.PlayerScreen.ObserveField("logout", "onLogoutEvent")
+
+  m.StackOfScreens = []
+
+  m.LauncherScreen.setFocus(true)
+end sub
+
+' Define la configuracion del componente main los observable y si seteando sus variables necesarias
+sub __initMain()
+  m.StackOfScreens.Push("MainScreen")
+  m.MainScreen.visible = true
+  m.MainScreen.onFocus = true
+  m.MainScreen.loadData = true
+  m.MainScreen.setFocus(true)
+  m.MainScreen.ObserveField("streaming", "onStreamingPlayer")
+  m.MainScreen.ObserveField("pendingStreamingSession", "onKillSession")
+  m.MainScreen.ObserveField("detail", "onProgramDetail")
+  m.MainScreen.ObserveField("setting", "onSetting")
+end sub
+
+' Define la configuracion del componente Perfil los observable y si seteando sus variables necesarias
+sub __initProfile()
+  ' Esperar evento de ProfileScreen
+  m.ProfileScreen.ObserveField("finished", "onProfileFinished")
+  m.ProfileScreen.visible = true
+  m.ProfileScreen.onFocus = true
+  m.ProfileScreen.setFocus(true)
+end sub
+
+' Muestra la pantalla de Detalle de programa y esucha sus observable relacionados
+sub __showProgramDetail()
+  if m.MainScreen.visible then m.MainScreen.visible = false
+  m.ProgramDetailScreen.visible = true
+  m.ProgramDetailScreen.onFocus = true
+  m.ProgramDetailScreen.setFocus(true)
+  m.ProgramDetailScreen.ObserveField("onBack", "onBackDetail")
+  m.ProgramDetailScreen.ObserveField("streaming", "onStreamingPlayer")
+  m.ProgramDetailScreen.ObserveField("pendingStreamingSession", "onKillSession")
+end sub
+
+' Muestra la pantalla de configuracion
+sub __showSetting()
+  if m.MainScreen.visible then m.MainScreen.visible = false
+  m.SettingScreen.visible = true
+  m.SettingScreen.onFocus = true
+  m.SettingScreen.setFocus(true)
+end sub
+
+' Muestra la pantalla del player y esucha sus observable relacionados
+sub __showPlayer(streaming, openGuide = false)
+  m.StackOfScreens.Push("PlayerScreen")
+  m.PlayerScreen.visible = true
+  m.PlayerScreen.onFocus = true
+  m.PlayerScreen.ObserveField("onBack", "onBackPlayer")
+  m.PlayerScreen.setFocus(true)
+  m.PlayerScreen.killedMe = invalid
+  m.PlayerScreen.openGuide = openGuide
+  m.PlayerScreen.data = streaming
+end sub 
+
+' Muestra la pantalla de sesiones concurrentes y esucha sus observable relacionados
+sub __showKillSession(pendingStreamingSession, openGuide = false, killedMe = invalid)
+  if m.MainScreen.visible then m.MainScreen.visible = false
+  if m.ProgramDetailScreen.visible then m.MainScreen.visible = false
+
+  m.StackOfScreens.Push("KillSessionScreen")
+
+  m.KillSessionScreen.visible = true
+  m.KillSessionScreen.onFocus = true
+  m.KillSessionScreen.goToHome = false
+  m.KillSessionScreen.setFocus(true)
+  m.KillSessionScreen.ObserveField("streaming", "onStreamingPlayer")
+  m.KillSessionScreen.ObserveField("goToHome", "goToHomeKillSessionScreen")
+
+  m.KillSessionScreen.openGuide = openGuide
+  m.KillSessionScreen.killedMe = killedMe
+  m.KillSessionScreen.data = pendingStreamingSession
+end sub 
+
+' Esconde el detalle del programa y no escucha los eventos de esta pantalla ya que ahora abra otra siendo la
+' pantalla princripal
+sub __hideProgramDetail()
+  m.ProgramDetailScreen.visible = false
+  m.ProgramDetailScreen.onFocus = false
+  m.ProgramDetailScreen.unobserveField("streaming")
+  m.ProgramDetailScreen.unobserveField("onBack")
+  m.ProgramDetailScreen.unobserveField("pendingStreamingSession")
+  m.ProgramDetailScreen.streaming = invalid
+  m.ProgramDetailScreen.pendingStreamingSession = invalid
+end sub
+
+' Esconde la Configuracion
+sub __hideSetting()
+  m.SettingScreen.visible = false
+  m.SettingScreen.onFocus = false
+end sub
+
+' Esconde la eliminar sesiones concurrentes y no escucha los eventos de esta pantalla ya que ahora abra otra 
+' siendo la pantalla princripal
+sub __hideKillSessionScreen()
+  m.KillSessionScreen.visible = false
+  m.KillSessionScreen.onFocus = false
+  m.KillSessionScreen.unobserveField("streaming")
+  m.KillSessionScreen.unobserveField("goToHome")
+  m.KillSessionScreen.data = invalid
+  m.KillSessionScreen.streaming = invalid
+  m.KillSessionScreen.killedMe = invalid
+  m.KillSessionScreen.openGuide = false 
+  m.KillSessionScreen.goToHome = false
+end sub
+
+' Esconde la Main y no escucha los eventos de esta pantalla ya que ahora abra otra siendo la pantalla princripal 
+sub __hideMain()
+  m.MainScreen.onFocus = false
+  m.MainScreen.loadData = false
+  m.MainScreen.unobserveField("streaming")
+  m.MainScreen.unobserveField("pendingStreamingSession")
+  m.MainScreen.unobserveField("detail")
+  m.MainScreen.unobserveField("setting")
+  m.MainScreen.streaming = invalid
+  m.MainScreen.pendingStreamingSession = invalid
+  m.MainScreen.detail = invalid
+  m.MainScreen.setting = false
+end sub
+
+' Procesa el back del player limpiando las variables necesarias
+sub __playerBackProcessing()
+  if not (m.PlayerScreen.killedMe <> invalid and m.PlayerScreen.killedMe <> "") then 
+    ' curso normal
+    m.PlayerScreen.visible = false
+    m.PlayerScreen.onFocus = false
+    
+    __backManager(m.StackOfScreens.Peek())
+  else
+    ' alguien me quito la sesion
+    m.PlayerScreen.visible = false
+    m.PlayerScreen.onFocus = false
+    killedMe = m.PlayerScreen.killedMe
+    m.PlayerScreen.killedMe = invalid
+
+    __showKillSession(invalid, false, killedMe)
+  end if
+end sub
+
+' Limpia tidas las variables internas y configuracion del usuario.
+sub __resetApp()
+  ' Se usa el cambio para diaparar la limpieza de las pantallas
+  m.ProfileScreen.logout = true
+  m.MainScreen.logout = true
+  m.ProgramDetailScreen.logout = true
+  m.KillSessionScreen.logout = true
+  m.PlayerScreen.logout = true  
+  
+  m.ProfileScreen.logout = false
+  m.MainScreen.logout = false
+  m.KillSessionScreen.logout = false
+  m.ProgramDetailScreen.logout = false
+  m.PlayerScreen.logout = false
+
+  m.StackOfScreens = []
+
+  __hideMain()
+  __hideSetting()
+  __hideProgramDetail()
+  __hideKillSessionScreen()
+
+  ' se limpian las variablesd del player
+  m.PlayerScreen.visible = false
+  m.PlayerScreen.onFocus = false
+  m.PlayerScreen.unobserveField("onBack")
+  m.PlayerScreen.onBack = false
+  m.PlayerScreen.killedMe = invalid
+  
+  ' se limpia las variables del detalle
+  m.ProgramDetailScreen.data = invalid
+
+  ' se limpia las variables del perfil    
+  m.ProfileScreen.visible = false
+  m.ProfileScreen.onFocus = false
+  m.ProfileScreen.finished = false
+
+  ' Se limpia las variables del Main
+  m.MainScreen.onChangeProfile = false
+  m.MainScreen.visible = false
+  m.MainScreen.loadData = false
+
+  deleteSessionData()
+  removeFields(m.global, ["contact", "organization", "PrivateVariables"])
+end sub
+
+' Dibuja el modal que pregunta si el usuario realmente quiere salir del app.
+sub __showExitAsk()
+  'create the dialog
+  dialog = createObject("roSGNode", "StandardMessageDialog")
+  dialog.palette = createPaletteDialog()
+  dialog.title = [i18n_t(m.i18n, "shared.exitModal.title")]
+  dialog.message = [i18n_t(m.i18n, "shared.exitModal.askExit")]
+  dialog.buttons = [i18n_t(m.i18n, "button.yes"), i18n_t(m.i18n, "button.no")]
+  dialog.observeFieldScoped("buttonSelected", "onDialogButtonClicked")
+
+  'assigning the dialog to m.top.dialog will "show" the dialog
+  m.top.dialog = dialog
+end sub
+
+' Adminsitrador de eventos back
+sub __backManager(ScreenFocus)
+  if ScreenFocus = "ProgramDetailScreen" then 
+    __showProgramDetail()
+  else if ScreenFocus = "MainScreen" then 
+    if not m.MainScreen.visible then m.MainScreen.visible = true
+    m.MainScreen.onFocus = true
+    m.MainScreen.setFocus(true)
+    m.MainScreen.ObserveField("streaming", "onStreamingPlayer")
+    m.MainScreen.ObserveField("pendingStreamingSession", "onKillSession")
+    m.MainScreen.ObserveField("detail", "onProgramDetail")
+    m.MainScreen.ObserveField("setting", "onSetting")
+  end if
+end sub

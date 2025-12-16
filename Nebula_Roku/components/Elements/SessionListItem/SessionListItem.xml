@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<component 
+    name="SessionListItem" 
+    extends="Group" 
+    xsi:noNamespaceSchemaLocation="https://devtools.web.roku.com/schema/RokuSceneGraph.xsd">
+
+    <script type="text/brightscript" uri="SessionListItem.brs"/>
+
+    <interface>
+        <!-- Paramentros de Entrada -->
+        <field id="widthContainer" type="integer" value="0"/>
+        <field id="itemContent" type="node"   onChange="itemContentChanged" />
+        
+        <!-- Paramentros de Salida -->
+        <field id="focusUp" type="node"/>
+        <field id="focusDown" type="node"/>
+    </interface>
+
+    <children>
+        <Rectangle id="theRectangle">
+            <LayoutGroup
+                id="theRect"
+                layoutDirection="horiz"
+                horizAlignment="left"
+                vertAlignment="center"
+                itemSpacings="[5]" >
+                <Rectangle id="theRectangleLeft">
+                    <LayoutGroup
+                        id="theRectLeft"
+                        layoutDirection="horiz"
+                        horizAlignment="left"
+                        vertAlignment="center"
+                        itemSpacings="[5]"/>
+                </Rectangle>
+
+                <Rectangle id="theRectangleRight">
+                    <LayoutGroup
+                        id="theRectRight"
+                        layoutDirection="horiz"
+                        horizAlignment="right"
+                        vertAlignment="center"
+                        itemSpacings="[5]"/>
+                    </Rectangle>
+            </LayoutGroup>
+        </Rectangle>
+    </children>
+</component>

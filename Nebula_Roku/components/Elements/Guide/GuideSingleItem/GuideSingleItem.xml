@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<component 
+    name="GuideSingleItem" 
+    extends="Group" 
+    xsi:noNamespaceSchemaLocation="https://devtools.web.roku.com/schema/RokuSceneGraph.xsd">
+
+    <script type="text/brightscript" uri="pkg:/source/CarouselConstants.brs" />
+    <script type="text/brightscript" uri="pkg:/source/Utils.brs" />
+    <script type="text/brightscript" uri="GuideSingleItem.brs"/>
+
+    <interface>
+        <!-- Paramentros de Entrada -->
+        <field id="itemContent" type="node"   onChange="itemContentChanged" />
+        <field id="currRect"    type="rect2d" onChange="currRectChanged" />
+        <field id="groupHasFocus" type="boolean" onChange="focusPercentChanged"/>
+        <field id="focusPercent" type="float" onChange="focusPercentChanged" />
+    </interface>
+
+    <children>
+        <Group id="theRect">
+
+            <!-- Indicador del hora -->
+            <Label 
+                id="programTime"
+                translation="[0, 0]"
+                wrap="false"
+                maxLines="1"
+                vertAlign="top"
+                horizAlign="center"
+                font="font:TinySystemFont" />
+
+            <!-- Imagen item -->
+            <Poster 
+                id="imageItem"
+                loadDisplayMode="scaleToZoom"/>
+
+            <LayoutGroup
+                id="programTitleByError"
+                layoutDirection="vert"
+                horizAlignment="center"
+                vertAlignment="center"
+                visible="false" >
+                <Label 
+                    id="programTitle"
+                    wrap="true"
+                    maxLines="3"
+                    vertAlign="center"
+                    horizAlign="center"
+                    font="font:SmallestSystemFont" />
+            </LayoutGroup>
+    
+        </Group>
+    </children>
+</component>

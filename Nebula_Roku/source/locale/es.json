@@ -1,0 +1,225 @@
+{
+  "language": {
+    "es": "Español",
+    "pt": "Português",
+    "en": "English"
+  },
+  "button": {
+    "accept": "Aceptar",
+    "back": "Volver",
+    "backToHome": "Volver al inicio",
+    "cancel": "Cancelar",
+    "close": "Cerrar",
+    "clear": "Limpiar",
+    "delete": "Borrar",
+    "next": "Siguiente",
+    "login": "Ingresar",
+    "no": "NO",
+    "previous": "Anterior",
+    "ready": "Listo",
+    "retry": "Reintentar",
+    "save": "Guardar",
+    "yes": "SI",
+    "continueSee": "Continuar viendo",
+    "showPassword": "Mostrar contraseña",
+    "hidePassword": "Ocultar contraseña",
+    "changeLanguage": "Cambiar idioma",
+    "validateRegisterCode": "Validar",
+    "tryAgain": "Volver a intentar",
+    "exit": "Salir"
+  },
+  "time": {
+    "endsIn": "Termina en {{time}}",
+    "live": "En vivo",
+    "today": "Hoy",
+    "yesterday": "Ayer",
+    "tomorrow": "Mañana",
+    "durationHoursMinutes": "{{hours}}h {{minutes}}min",
+    "durationMinutes": "{{minutes}}min",
+    "durationHours": "{{hours}}h"
+  },
+  "config": {
+    "configPage": {
+      "title": "Información de dispositivo",
+      "titleEmail": "Correo electrónico: ",
+      "titleName": "Nombre de usuario: ",
+      "titleDiveId": "ID de dispositivo: ",
+      "titleSerialNumber": "N° de serie: ",
+      "titleVersion": "Versión: ",
+      "orgName": "Qvix Solutions"
+    }
+  },
+  "content": {
+    "menuComponent": {
+      "changeProfile": "Cambiar perfil",
+      "Search": "Buscar",
+      "Setting": "Configuración",
+      "exit": "Salir",
+      "logout": "Cerrar sesión"
+    },
+    "contentPage": {
+      "goToGuide": "Ir a la Guía",
+      "seeMore": "Ver todos",
+      "notDisplayTitle": "Nada por aquí...",
+      "notDisplayContect": "En este momento no hay contenido para mostrar en esta sección. Esto puede deberse a que no tengas una suscripción activa o no hay contenido disponible, por favor comunícate con nosotros.",
+      "seeDetail": "VER DETALLE",
+      "watch": "REPRODUCIR",
+      "errorServerConnection": "Error de conexión con el servidor"
+    }
+  },
+  "initialPage": {
+    "loadingPage": {
+      "connection": "Error de conexión con el servidor"
+    }
+  },
+  "login": {
+    "loginPage": {
+      "enterYourEmail": "Ingresa tu Email",
+      "password": "Contraseña: ",
+      "title": "Iniciar sesión",
+      "titleQR": "Elige cómo iniciar sesión",
+      "usernameInput": "Ingresa tu usuario",
+      "passwordInput": "Ingresa tu contraseña",
+      "passwordRecoveryTitle": "Te hemos enviado un correo",
+      "passwordRecoveryDescription": "Comprueba tu correo y sigue las instrucciones para restablecer la contraseña; a continuación, vuelve aquí para iniciar sesión.",
+      "passwordRecovery": "Recuperar contraseña",
+      "qrStepsTitle": "Sigue estos pasos en tu computadora o dispositivo móvil",
+      "qrStep1Description": "Escanea el código QR con la cámara de tu teléfono o visita:",
+      "qrStep2Description": "Ingresa o confirma el código de inicio de sesión:",
+      "qrStep3Description": "Inicia sesión. ¡Tu TV estará lista para ver!",
+      "step": "Paso",
+      "optionKeyboard": "Usar teclado",
+      "optionPhone": "Usar teléfono",
+      "errorForm": {
+        "unAuthorized": "Usuario o contraseña incorrecta",
+        "unAuthorizedCode": "El dispositivo aún no ha sido ingresado",
+        "notConfirmed": "Cuenta no confirmada",
+        "notActivated": "Cuenta no activada por el administrador",
+        "connection": "Error de conexión con el servidor",
+        "unhandled": "Error al procesar la petición",
+        "incomplete": "Campos incompletos",
+        "validationProcess": "Error en proceso de validación"
+      },
+      "acction": {
+        "acction1" : "Validando conexión",
+        "acction2" : "Validando dispositivo",
+        "acction3" : "Validando el dispositivo",
+        "acction4" : "Validando el dispositivo...",
+        "acction5" : "Problemas al validar",
+        "acction6" : "Validando cuenta",
+        "acction7" : "Validando estado de la cuenta"
+      }
+    }
+  },
+  "player": {
+    "errorPlanSessionModal": {
+      "killer": "Esta sesión fue cerrada el día {{date}} por este dispositivo:",
+      "manyPeople": "Hay muchas personas usando tu cuenta, para seguir viendo, debes cerrar una cuenta e intentarlo de nuevo.",
+      "notPlans": "Actualmente no estas suscripto a ningún plan para este dispositivo, comunícate con nosotros y elige tu plan preferido!",
+      "connection": "Actualmente no se pudo conectar con el servidor. Comprueba tu conexión a Internet e inténtalo nuevamente mas tarde."
+    },
+    "guide": {
+      "availableToView": "Disponible para ver",
+      "now": "AHORA"
+    },
+    "video": {
+      "audioTrack": "Pista de audio",
+      "subtitle": "Subtítulos",
+      "live": "En vivo",
+      "pause": "Pausar",
+      "play": "Reproducir",
+      "restart": "Ir al comienzo",
+      "language": "Idioma",
+      "goLive": "Ir al vivo",
+      "guide": "Guía",
+      "guideButton": "GUIA",
+      "disabled": "Desactivado",
+      "default": "Predeterminado"
+    },
+    "playerPage": {
+      "signalProblems": "Canal '{{channelName}}'",
+      "connectionProblems": "",
+      "connecting": "Conectando Señal...",
+      "askHere": "¿Todavía estás ahí?"
+    }
+  },
+  "profiles": {
+    "confirmDeleteModal": {
+      "title": "Eliminar Perfil",
+      "askDelete": "¿Está seguro que desea eliminar el perfil?"
+    },
+    "profilePage": {
+      "askTitle": "¿Quién está viendo?",
+      "titleButton": "Administrar perfiles",
+      "addProfile": "Agregar perfil",
+      "EditProfile": "Editar perfil",
+      "name": "Nombre",
+      "chooseAvatar": "Elige un avatar",
+      "error": {
+        "connection": "Error de conexión con el servidor. Verifique su conexión a internet",
+        "nameRequired": "El nombre es requerido",
+        "cannotDelete": "No se puede eliminar este perfil, por favor seleccione otro"
+      }
+    }
+  },
+  "program": {
+    "programDetail": {
+      "live": "En vivo",
+      "season": "Temporada {{number}}",
+      "chapter": " • Capítulo {{number}}",
+      "atTheMoment": "En este momento",
+      "button": {
+        "watch": "Ver",
+        "continue": "Continuar",
+        "restart": "Reiniciar",
+        "rec": "Grabar",
+        "stop": "Detener",
+        "delete": "Eliminar",
+        "emissions": "Emisiones"
+      }
+    }
+  },
+  "shared": {
+    "errorComponent": {
+      "notFound": "La información no está disponible",
+      "unhandled": "Ups! Se ha producido un error.",
+      "connectionCouldNotEstablished": "No se pudo establecer la conexión",
+      "tryingToConnect": "Detectamos un inconveniente al intentar conectarnos. Te recomendamos verificar tu conexión a Internet y volver a intentarlo en unos instantes.",
+      "extendedMessage": "Si el error persiste por favor comunícate con nosotros.",
+      "errorRestoringService": "Ocurrió un inconveniente. Estamos restableciendo el servicio.",
+      "checkingConnection": "Verificando conexión...",
+      "code": "Código de error",
+      "anErrorOcurred": "Se produjo un error.",
+      "weAreSorry": "Lo sentimos...",
+      "youCurrentlyDoNotHavePlan": "Actualmente no tienes un plan que te permita ver contenido en este tipo de dispositivo. Contacta con el equipo de [ProductName].",
+      "youCurrentlyDoNotHaveAnyActiveSubscriptions": "Actualmente no tienes ninguna suscripción activa. Contacta con el equipo de [ProductName].",
+      "youCurrentlyDoNotHaveSufficientBalance": "Actualmente no tienes saldo suficiente para continuar viendo contenido.",
+      "serverConnectionProblems": "Problemas de conexión al servidor..."
+    },
+    "exitModal": {
+      "title": "Salir",
+      "askExit": "¿Seguro que deseas salir?",
+      "askLogout": "¿Seguro que deseas cerrar sesión?"
+    },
+    "parentalControlModal": {
+      "title": "Ingrese su PIN",
+      "error": {
+        "incomplete": "Campo incompleto",
+        "invalid": "PIN inválido",
+        "connectionCouldNotEstablished":"No se pudo establecer la conexión",
+        "code": "Código"
+      }
+    },
+    "languageModal": {
+      "title": "Elige el idioma"
+    }
+  },
+  "search": {
+    "noResults": "No hay resultados para tu búsqueda pero podemos recomendarte lo siguiente:",
+    "noResultsDefaultSearch": "Buscá por título, actores y canales de TV.",
+    "noResultsRecomendations": "Tu búsqueda no obtuvo resultados."
+  },
+  "emissions": {
+    "noResults": "No hay emisiones disponibles en este momento, inténtelo de nuevo más tarde."
+  }
+}

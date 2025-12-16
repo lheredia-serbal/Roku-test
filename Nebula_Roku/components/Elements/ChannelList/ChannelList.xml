@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<component 
+    name="ChannelList" 
+    extends="Group" 
+    xsi:noNamespaceSchemaLocation="https://devtools.web.roku.com/schema/RokuSceneGraph.xsd">
+    
+    <script type="text/brightscript" uri="ChannelList.brs"/>
+    <script type="text/brightscript" uri="pkg:/source/Utils.brs" />
+    <script type="text/brightscript" uri="pkg:/source/Utils/DateFunctions.brs" />
+
+    <interface>
+        <!-- Paramentros de Entrada -->
+        <field id="items" type="array" onChange="initData"/>
+        <field id="channelId" type="integer" value="0"/>
+        <field id="channelIdIndexOf" type="integer" value="-1"/>
+
+        <!-- Paramentros de entrada/Salida -->
+        <field id="refreshProgressBars" type="boolean" value="false" onChange="onUpdateProgressBars"/>
+        <field id="positioninChannelId" type="boolean" value="false" onChange="onShowPositioninChannelId"/>
+        <field id="searchChannelPosition" type="boolean" value="false" onChange="onSearchChannelPosition"/>
+        
+        <!-- Paramentros de Salida -->
+        <field id="selected" type="string"/>
+        <field id="refreshLoadChannelList" type="integer" value="0"/>
+    </interface>
+
+    <children>
+        <TargetList 
+            id="channelList"
+            advanceKey="down" 
+            reverseKey="up" 
+            focusable="true"/>
+    </children>
+</component>
