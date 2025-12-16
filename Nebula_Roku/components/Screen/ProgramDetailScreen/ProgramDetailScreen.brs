@@ -606,6 +606,12 @@ sub _clearScreen()
   m.programImage.uri = ""
   m.programImageBackground.uri = ""
   __clearButtons()
+  credits = m.top.findNode("creditsContainer")
+  if credits <> invalid then
+    while credits.getChildCount() > 0
+      credits.removeChild(credits.getChild(0))
+    end while
+  end if
   m.lastButtonSelect = invalid
   m.selectedIndicator.visible = false
   m.relatedContainer.visible = false
@@ -710,7 +716,9 @@ sub __renderCreditGroups()
     if container = invalid then return
 
     ' limpiar anteriores
-    container.removeChildrenIndex(0, container.getChildCount())
+    while container.getChildCount() > 0
+        container.removeChild(container.getChild(0))
+    end while
 
     if m.program.creditGroups = invalid then return
     if Type(m.program.creditGroups) <> "roArray" then return
@@ -742,7 +750,7 @@ sub __renderCreditGroups()
         lNames.text = namesText
         lNames.wrap = true
         lNames.font = "font:SmallSystemFont"
-        lNames.maxLines = 3
+        lNames.maxLines = 2
         lNames.color = m.global.colors.LIGHT_GRAY
         ' opcional: para que no se te vaya infinito, poné un ancho razonable
         lNames.width = 800

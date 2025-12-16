@@ -39,6 +39,8 @@ sub init()
   m.inactivityTimer = m.top.findNode("inactivityTimer")
   m.inactivityAutoCloseTimer = m.top.findNode("inactivityAutoCloseTimer") 
 
+  m.controlsRow = m.top.findNode("controlsRow")
+
   m.inactivityPrompt = invalid
 
   m.showChannelListAfterUpdate = false
@@ -219,49 +221,62 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
 
     handled = true
 
-  else if m.toLiveImageButton.isInFocusChain() then
+  else if m.toLiveImageButton <> invalid and m.toLiveImageButton.isInFocusChain() and press then
     
     if key = KeyButtons().LEFT and m.restartImageButton.visible = true then
-      if press then
         __restartShowInfoTimer()
         m.restartImageButton.setFocus(true)
-      end if
     end if
 
     if key = KeyButtons().RIGHT and m.guideImageButton.visible = true then
-      if press then
         __restartShowInfoTimer()
         m.guideImageButton.setFocus(true)
+    end if
+
+    if m.toLiveImageButton.isInFocusChain() and key = KeyButtons().OK then
+      if m.isLiveRewind and m.videoPlayer <> invalid then
+        ' en live-rewind, normalmente "live edge" es duration (ventana) o el final
+        dur = m.timelineBar.duration
+        if dur <> invalid and dur > 0 then
+          m.videoPlayer.seek = dur
+        end if
+        m.videoPlayer.control = "play"
       end if
     end if
+
     handled = true
 
-  else if m.restartImageButton.isInFocusChain() then
+  else if m.restartImageButton <> invalid and m.restartImageButton.isInFocusChain() and press then
     
     if key = KeyButtons().LEFT and m.playPauseImageButton.visible = true then
-      if press then
-        __restartShowInfoTimer()
-        m.playPauseImageButton.setFocus(true)
-      end if
+      __restartShowInfoTimer()
+      m.playPauseImageButton.setFocus(true)
     end if
 
     if key = KeyButtons().RIGHT and m.toLiveImageButton.visible = true then
-      if press then
-        __restartShowInfoTimer()
-        m.toLiveImageButton.setFocus(true)
-      end if
+      __restartShowInfoTimer()
+      m.toLiveImageButton.setFocus(true)
     end if
+
+    if (key = KeyButtons().OK) then
+        if m.videoPlayer <> invalid then
+          m.videoPlayer.control = "pause" ' opcional, evita saltos visuales
+          m.videoPlayer.seek = 0
+          m.videoPlayer.control = "play"
+        end if
+    end if
+
     handled = true
 
   else if m.playPauseImageButton.isInFocusChain() and press then
     
-    __restartShowInfoTimer()
-    if key = KeyButtons().RIGHT and m.restartImageButton.visible = true then
-        m.restartImageButton.setFocus(true)
-    end if
-
-    if key = "OK" then
-      __togglePlayPause()
+    if press then
+      __restartShowInfoTimer()
+      if key = KeyButtons().RIGHT and m.restartImageButton.visible = true then
+          m.restartImageButton.setFocus(true)
+        else if (key = KeyButtons().OK) then
+          __togglePlayPause()
+      end if
     end if
     handled = true
   
@@ -346,6 +361,13 @@ sub initData()
     m.top.openGuide = false
     
     m.guide.loading = m.top.loading
+
+    st = ""
+    if m.streaming.type <> invalid then st = LCase(m.streaming.type)
+
+    m.isLiveContent = (st = "live")
+    m.isLiveRewind  = (st = "liverewind")
+    m.isVodContent  = (not m.isLiveContent and not m.isLiveRewind)
   
     m.videoPlayer.observeField("state", "OnVideoPlayerStateChange")
 
@@ -370,6 +392,8 @@ sub initData()
 
     __setTimelineFromStreaming()
 
+    __rebuildControllerButtons()
+
     if not m.isLiveContent then
       if m.videoPlayer <> invalid then
         m.videoPlayer.trickplaybar.currentTimeMarkerBlendColor = m.whiteColor
@@ -387,6 +411,8 @@ sub initData()
         m.timelineBar.duration = 0
       end if
     end if
+
+    __applyControlsVisibility()
 
     ' Si debe reconectar automaticamente o preguntar al usuario si esta ahi
     m.inactivityPromptEnabled = getIntValueConfigVariable(EqvAppConfigVariable().INACTIVITY_PROMPT_ENABLED, 0) = 1
@@ -442,27 +468,34 @@ end sub
 
 ' Metodo que se dispiara por los cambios de estado del player
 Sub OnVideoPlayerStateChange()
-  if m.videoPlayer <> invalid then
-    if m.videoPlayer.state = "error"
-      __errorProcessing()
-    else if m.videoPlayer.state = "buffering"     
-      m.errorChannel.visible = true
-      m.spinner.visible = true
-    else if m.videoPlayer.state = "playing"
-      clearTimer(m.retryReconnection)
-      m.lastErrorTime = invalid
+  if m.videoPlayer = invalid then return
+    state = m.videoPlayer.state
 
-      m.errorChannel.visible = false
-      m.spinner.visible = false
-    else if m.videoPlayer.state = "finished"
-      printLog("finished")
-    end if
+  if state = "error" then
+    __errorProcessing()
+    return
+  end if
 
-    else if m.videoPlayer.state = "paused"
-      if m.playPauseImageButton <> invalid then m.playPauseImageButton.uri = "pkg:/images/shared/play.png"
-    else if m.videoPlayer.state = "playing"
-      if m.playPauseImageButton <> invalid then m.playPauseImageButton.uri = "pkg:/images/shared/pause.png"
-    end if
+  if state = "buffering" then
+    m.errorChannel.visible = true
+    m.spinner.visible = true
+  else
+    m.errorChannel.visible = false
+    m.spinner.visible = false
+  end if
+
+  if state = "paused" then
+    if m.playPauseImageButton <> invalid then m.playPauseImageButton.uri = "pkg:/images/shared/play.png"
+  else if state = "playing" then
+    clearTimer(m.retryReconnection)
+    m.lastErrorTime = invalid
+
+    if m.playPauseImageButton <> invalid then m.playPauseImageButton.uri = "pkg:/images/shared/pause.png"
+  end if
+
+  if state = "finished" then
+    printLog("finished")
+  end if
   
 End Sub
 
@@ -1279,7 +1312,8 @@ end sub
 sub __showProgramInfo()
   m.playerControllers.visible = true
   if m.timelineBar <> invalid and not m.isLiveContent then m.timelineBar.visible = true
-  m.guideImageButton.setFocus(true)
+  btn = __getFirstVisibleControllerButton()
+  if btn <> invalid then btn.setFocus(true)
 
   m.showInfoTimer.control = "start"
   m.showInfoTimer.ObserveField("fire","onHidenProgramInfo")
@@ -1407,26 +1441,152 @@ sub __togglePlayPause()
 
   state = m.videoPlayer.state
 
-  ' Si está reproduciendo => pausar
+  ' Pausar
   if state = "playing" or state = "buffering" then
+    if m.videoPlayer.position <> invalid and m.videoPlayer.position > 0 then
+      m.pausePosition = m.videoPlayer.position
+    end if
+    m.userPaused = true
     m.videoPlayer.control = "pause"
-    if m.playPauseImageButton <> invalid then
-      m.playPauseImageButton.uri = "pkg:/images/shared/play.png"
-      m.playPauseImageButton.tooltip = i18n_t(m.i18n, "player.video.play")
-    end if
+    if m.playPauseImageButton <> invalid then m.playPauseImageButton.uri = "pkg:/images/shared/play.png"
     return
   end if
 
-  ' Si está pausado o detenido => reproducir
-  if state = "paused" or state = "stopped" then
+  ' Reanudar (desde paused)
+  if state = "paused" then
+    m.userPaused = false
+    m.videoPlayer.control = "resume" ' <- clave
+    if m.playPauseImageButton <> invalid then m.playPauseImageButton.uri = "pkg:/images/shared/pause.png"
+    return
+  end if
+
+  ' Si por alguna razón quedó "stopped", reanudar manualmente desde la última posición
+  if state = "stopped" then
+    m.userPaused = false
+    if m.pausePosition <> invalid and m.pausePosition > 0 then
+      m.videoPlayer.seek = m.pausePosition
+    end if
     m.videoPlayer.control = "play"
-    if m.playPauseImageButton <> invalid then
-      m.playPauseImageButton.uri = "pkg:/images/shared/pause.png"
-      m.playPauseImageButton.tooltip = i18n_t(m.i18n, "player.video.pause")
+    if m.playPauseImageButton <> invalid then m.playPauseImageButton.uri = "pkg:/images/shared/pause.png"
+    return
+  end if
+end sub
+
+
+sub __applyControlsVisibility()
+  if m.playPauseImageButton <> invalid then m.playPauseImageButton.visible = not m.isLiveContent
+  if m.restartImageButton   <> invalid then m.restartImageButton.visible   = not m.isLiveContent
+  if m.toLiveImageButton    <> invalid then m.toLiveImageButton.visible    = not m.isLiveContent
+
+  ' El botón guía siempre visible (si querés)
+  if m.guideImageButton <> invalid then m.guideImageButton.visible = true
+
+  ' Si el foco quedó en un botón oculto, lo movemos al primero visible
+  idx = __getFocusedControllerButtonIndex()
+  if idx <> -1 then
+    btn = m.controllerButtons[idx]
+    if btn <> invalid and btn.visible = false then
+      firstBtn = __getFirstVisibleControllerButton()
+      if firstBtn <> invalid then firstBtn.setFocus(true)
     end if
+  end if
+end sub
+
+function __getFocusedControllerButtonIndex() as Integer
+  if m.controllerButtons = invalid then return -1
+
+  for i = 0 to m.controllerButtons.count() - 1
+    btn = m.controllerButtons[i]
+    if btn <> invalid and btn.isInFocusChain() then return i
+  end for
+
+  return -1
+end function
+
+function __focusControllerButtonAt(index as Integer) as Boolean
+  if m.controllerButtons = invalid then return false
+  if index < 0 or index >= m.controllerButtons.count() then return false
+
+  btn = m.controllerButtons[index]
+  if btn = invalid then return false
+  if btn.visible = false then return false
+
+  btn.setFocus(true)
+  return true
+end function
+
+function __moveControllerFocus(direction as Integer) as Boolean
+  ' direction: -1 = left, +1 = right
+  if m.controllerButtons = invalid then return false
+
+  idx = __getFocusedControllerButtonIndex()
+  if idx = -1 then
+    ' si ninguno está enfocado, mandamos al primero visible
+    btn = __getFirstVisibleControllerButton()
+    if btn <> invalid then btn.setFocus(true)
+    return true
+  end if
+
+  i = idx + direction
+  while i >= 0 and i < m.controllerButtons.count()
+    btn = m.controllerButtons[i]
+    if btn <> invalid and btn.visible then
+      btn.setFocus(true)
+      return true
+    end if
+    i = i + direction
+  end while
+
+  ' opcional: wrap (volver al otro extremo)
+  ' si no querés wrap, devolvé false acá
+  if direction > 0 then
+    i = 0
+    while i < m.controllerButtons.count()
+      btn = m.controllerButtons[i]
+      if btn <> invalid and btn.visible then
+        btn.setFocus(true)
+        return true
+      end if
+      i++
+    end while
+  else
+    i = m.controllerButtons.count() - 1
+    while i >= 0
+      btn = m.controllerButtons[i]
+      if btn <> invalid and btn.visible then
+        btn.setFocus(true)
+        return true
+      end if
+      i--
+    end while
+  end if
+
+  return true
+end function
+
+sub __rebuildControllerButtons()
+  if m.controlsRow = invalid then return
+
+  ' Vaciar el layout
+  while m.controlsRow.getChildCount() > 0
+    m.controlsRow.removeChildIndex(0)
+  end while
+
+  ' Siempre agregamos los comunes (salvo LIVE puro, que querías solo Guide antes).
+  ' Si en LIVE también querés mostrar Play/Restart, decime y lo ajusto.
+  if m.isLiveContent then
+    if m.guideImageButton <> invalid then m.controlsRow.appendChild(m.guideImageButton)
     return
   end if
 
-  ' Fallback: si no sabemos, intentamos play
-  m.videoPlayer.control = "play"
+  ' VOD y LiveRewind: Play/Pause + Restart + Guide
+  if m.playPauseImageButton <> invalid then m.controlsRow.appendChild(m.playPauseImageButton)
+  if m.restartImageButton   <> invalid then m.controlsRow.appendChild(m.restartImageButton)
+
+  ' SOLO LiveRewind: ToLive
+  if m.isLiveRewind and m.toLiveImageButton <> invalid then
+    m.controlsRow.appendChild(m.toLiveImageButton)
+  end if
+
+  if m.guideImageButton <> invalid then m.controlsRow.appendChild(m.guideImageButton)
 end sub
