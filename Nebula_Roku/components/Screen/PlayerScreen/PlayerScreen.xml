@@ -190,6 +190,8 @@
     <Timer id="channelListTimer" repeat="false" duration="40" />
     <Timer id="inactivityTimer" repeat="false" duration="60" />
     <Timer id="inactivityAutoCloseTimer" repeat="false" duration="30" />
+    <Timer id="seekCommitTimer" repeat="false" duration="1" />
+    <Timer id="seekHoldTimer" repeat="true" duration="0.2" />
   </children>
 
 </component>

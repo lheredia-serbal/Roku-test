@@ -9,6 +9,8 @@ sub init()
   m.timelineBar = m.top.findNode("timelineBar")
   m.showInfoTimer = m.top.findNode("showInfoTimer")
   m.newProgramTimer = m.top.findNode("newProgramTimer")
+  m.seekCommitTimer = m.top.findNode("seekCommitTimer")
+  m.seekHoldTimer = m.top.findNode("seekHoldTimer")
   
   m.playPauseImageButton = m.top.findNode("playPauseImageButton")
   m.restartImageButton = m.top.findNode("restartImageButton")
@@ -41,6 +43,9 @@ sub init()
 
   m.controlsRow = m.top.findNode("controlsRow")
 
+  m.seekCommitTimer.ObserveField("fire", "onSeekCommitTimerFired")
+  m.seekHoldTimer.ObserveField("fire", "onSeekHoldTimerFired")
+
   m.inactivityPrompt = invalid
 
   m.showChannelListAfterUpdate = false
@@ -64,6 +69,13 @@ sub init()
   m.lastButtonSelect = invalid
   m.sendLastChannelWatched = false
   m.focusplayerByload = false
+
+  m.pendingSeekActive = false
+  m.pendingSeekPosition = invalid
+
+  m.seekHoldActive = false
+  m.seekHoldKey = invalid
+  m.seekHoldTicks = 0
 
   m.i18n = invalid
   scene = m.top.getScene()
@@ -275,6 +287,7 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
       if key = KeyButtons().RIGHT and m.restartImageButton.visible = true then
           m.restartImageButton.setFocus(true)
         else if (key = KeyButtons().OK) then
+          __commitPendingSeek()
           __togglePlayPause()
       end if
     end if
@@ -288,13 +301,26 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
     end if
     handled = true
 
-  else if (m.videoPlayer.isInFocusChain() or m.timelineBar.isInFocusChain()) and (key = KeyButtons().LEFT or key = KeyButtons().RIGHT) then
-    if not press then 
+  ' Si el foco está en el Video y tocan left/right => abrís tu UI
+  if m.videoPlayer <> invalid and m.videoPlayer.hasFocus() then
+    if key = KeyButtons().LEFT or key = KeyButtons().RIGHT then
       __showProgramInfo()
-      m.timelineBar.setFocus(true)
-      __handleSeek(key)
+      return true ' IMPORTANTE: consumís el evento
     end if
+  end if
+
+  return false
+
+  else if (m.videoPlayer.isInFocusChain() or m.timelineBar.isInFocusChain()) and __isSeekKey(key) then
     handled = true
+
+    if press then
+      __showProgramInfo()
+      if m.timelineBar <> invalid then m.timelineBar.setFocus(true)
+      __startSeekHold(key)  ' <- 1 salto inmediato + timer repetitivo
+    else
+      __stopSeekHold()      ' <- al soltar, deja el debounce para commit
+   end if
 
   else if m.timelineBar <> invalid and m.timelineBar.isInFocusChain() and key = KeyButtons().DOWN then
     if not press then
@@ -1093,7 +1119,18 @@ end sub
 
 ' Actualiza la barra de tiempo con la informacion del player
 sub __updateTimeline()
-  if m.timelineBar = invalid or m.isLiveContent or m.videoPlayer = invalid then return
+    if m.timelineBar = invalid or m.isLiveContent or m.videoPlayer = invalid then return
+
+  ' ✅ si hay seek pendiente, mantenemos el preview y no pisamos con position real
+  if m.pendingSeekActive and m.pendingSeekPosition <> invalid then
+    dur = m.videoPlayer.duration
+    if m.isLiveRewind and m.liveRewindDuration <> invalid then dur = m.liveRewindDuration
+    if dur = invalid or dur <= 0 then dur = m.timelineBar.duration
+    if dur <> invalid and dur > 0 then m.timelineBar.duration = dur
+
+    m.timelineBar.position = m.pendingSeekPosition
+    return
+  end if
 
   duration = m.videoPlayer.duration
   position = m.videoPlayer.position
@@ -1126,6 +1163,13 @@ sub __restartShowInfoTimer()
   end if
 end sub
 
+' Determina si la tecla presionada debe buscar en la linea de tiempo
+function __isSeekKey(key as String) as Boolean
+  if key = invalid then return false
+
+  return key = KeyButtons().LEFT or key = KeyButtons().RIGHT or key = KeyButtons().FAST_FORWARD or key = KeyButtons().REWIND
+end function
+
 ' Maneja el avance/retroceso con flechas en contenido grabado
 sub __handleSeek(key as String)
   if m.isLiveContent or m.videoPlayer = invalid then return
@@ -1140,7 +1184,7 @@ sub __handleSeek(key as String)
   jump = m.timelineSeekStep
   if jump = invalid or jump <= 0 then jump = 10
 
-  if key = KeyButtons().RIGHT then
+  if key = KeyButtons().RIGHT or key = KeyButtons().FAST_FORWARD then
     position = position + jump
   else
     position = position - jump
@@ -1260,6 +1304,15 @@ sub __closePlayer(onBack = false)
   m.errorChannelTitle.text = ""
   m.errorChannelImage.uri = ""
   m.top.onBack = onBack
+
+  m.pendingSeekActive = false
+  m.pendingSeekPosition = invalid
+  if m.seekCommitTimer <> invalid then m.seekCommitTimer.control = "stop"
+
+  if m.seekHoldTimer <> invalid then m.seekHoldTimer.control = "stop"
+  m.seekHoldActive = false
+  m.seekHoldKey = invalid
+  m.seekHoldTicks = 0
 end sub
 
 ' Abre la lista de canales
@@ -1589,4 +1642,184 @@ sub __rebuildControllerButtons()
   end if
 
   if m.guideImageButton <> invalid then m.controlsRow.appendChild(m.guideImageButton)
+end sub
+
+sub __queueSeek(key as String)
+  if m.isLiveContent or m.videoPlayer = invalid then return
+
+  ' duration
+  duration = m.videoPlayer.duration
+  if m.isLiveRewind and m.liveRewindDuration <> invalid then
+    duration = m.liveRewindDuration
+  else
+    if duration = invalid or duration <= 0 then duration = m.timelineBar.duration
+  end if
+  if duration = invalid or duration <= 0 then return
+
+  ' posición base: si ya veníamos acumulando, seguimos desde el pending
+  if m.pendingSeekActive and m.pendingSeekPosition <> invalid then
+    position = m.pendingSeekPosition
+  else
+    position = m.videoPlayer.position
+    if position = invalid or position < 0 then position = 0
+  end if
+
+  jump = m.timelineSeekStep
+  if jump = invalid or jump <= 0 then jump = 10
+
+  if key = KeyButtons().RIGHT or key = KeyButtons().FAST_FORWARD then
+    position = position + jump
+  else
+    position = position - jump
+  end if
+
+  if position < 0 then position = 0
+  if position > duration then position = duration
+
+  m.pendingSeekActive = true
+  m.pendingSeekPosition = position
+
+  ' Preview UI inmediato (sin aplicar seek al stream todavía)
+  if m.timelineBar <> invalid then
+    m.timelineBar.duration = duration
+    m.timelineBar.position = position
+  end if
+
+  __restartShowInfoTimer()
+  __restartSeekCommitTimer()
+end sub
+
+sub __restartSeekCommitTimer()
+  if m.seekCommitTimer = invalid then return
+
+  ' ✅ si está manteniendo apretado, NO programar commit
+  if m.seekHoldActive then return
+
+  m.seekCommitTimer.control = "stop"
+  m.seekCommitTimer.duration = 2
+  m.seekCommitTimer.repeat = false
+  m.seekCommitTimer.control = "start"
+end sub
+
+sub onSeekCommitTimerFired()
+  __commitPendingSeek()
+end sub
+
+
+sub __commitPendingSeek()
+  if not m.pendingSeekActive then return
+  if m.videoPlayer = invalid then return
+  if m.pendingSeekPosition = invalid then return
+
+  m.videoPlayer.seek = m.pendingSeekPosition
+
+  m.pendingSeekActive = false
+  m.pendingSeekPosition = invalid
+end sub
+
+sub __startSeekHold(key as String)
+  if m.isLiveContent or m.videoPlayer = invalid then return
+
+  ' ✅ mientras está apretado, NO queremos commit
+  if m.seekCommitTimer <> invalid then m.seekCommitTimer.control = "stop"
+
+  m.seekHoldActive = true
+  m.seekHoldKey = key
+  m.seekHoldTicks = 0
+
+  __queueSeekWithJump(key, __getHoldJumpSeconds(0))
+
+  if m.seekHoldTimer <> invalid then
+    m.seekHoldTimer.control = "stop"
+    m.seekHoldTimer.duration = 0.2
+    m.seekHoldTimer.repeat = true
+    m.seekHoldTimer.control = "start"
+  end if
+end sub
+
+sub __stopSeekHold()
+  if m.seekHoldTimer <> invalid then
+    m.seekHoldTimer.control = "stop"
+  end if
+
+  m.seekHoldActive = false
+  m.seekHoldKey = invalid
+  m.seekHoldTicks = 0
+
+  ' ✅ ahora sí: 2 segundos desde que soltó
+  __restartSeekCommitTimer()
+end sub
+
+sub onSeekHoldTimerFired()
+  if not m.seekHoldActive then return
+  if m.seekHoldKey = invalid then return
+
+  m.seekHoldTicks = m.seekHoldTicks + 1
+
+  jump = __getHoldJumpSeconds(m.seekHoldTicks)
+  __queueSeekWithJump(m.seekHoldKey, jump)
+end sub
+
+
+function __getHoldJumpSeconds(ticks as Integer) as Integer
+  ' Aceleración por tramos (ajustable)
+  ' ticks depende de seekHoldTimer.duration (0.2 => 5 ticks/seg)
+  base = m.timelineSeekStep
+  if base = invalid or base <= 0 then base = 10
+
+  mult = 1
+  if ticks >= 5  and ticks < 10 then mult = 2     ' ~1s
+  if ticks >= 10 and ticks < 20 then mult = 4     ' ~2s
+  if ticks >= 20 then mult = 8                    ' ~4s+
+
+  return base * mult
+end function
+
+sub __queueSeekWithJump(key as String, jumpOverride as Integer)
+  if m.isLiveContent or m.videoPlayer = invalid then return
+
+  ' duration
+  duration = m.videoPlayer.duration
+  if m.isLiveRewind and m.liveRewindDuration <> invalid then
+    duration = m.liveRewindDuration
+  else
+    if duration = invalid or duration <= 0 then duration = m.timelineBar.duration
+  end if
+  if duration = invalid or duration <= 0 then return
+
+  ' posición base
+  if m.pendingSeekActive and m.pendingSeekPosition <> invalid then
+    position = m.pendingSeekPosition
+  else
+    position = m.videoPlayer.position
+    if position = invalid or position < 0 then position = 0
+  end if
+
+  jump = jumpOverride
+  if jump = invalid or jump <= 0 then
+    jump = m.timelineSeekStep
+    if jump = invalid or jump <= 0 then jump = 10
+  end if
+
+  if key = KeyButtons().RIGHT or key = KeyButtons().FAST_FORWARD then
+    position = position + jump
+  else
+    position = position - jump
+  end if
+
+  if position < 0 then position = 0
+  if position > duration then position = duration
+
+  m.pendingSeekActive = true
+  m.pendingSeekPosition = position
+
+  ' Preview UI
+  if m.timelineBar <> invalid then
+    m.timelineBar.duration = duration
+    m.timelineBar.position = position
+  end if
+
+  __restartShowInfoTimer()
+    ' ✅ solo reiniciar commit si NO está en hold
+  if not m.seekHoldActive then __restartSeekCommitTimer()
 end sub
