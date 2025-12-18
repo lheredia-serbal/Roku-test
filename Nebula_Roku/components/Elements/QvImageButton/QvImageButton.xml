@@ -50,7 +50,7 @@
     <Label 
       id="btnTooltip"
       translation="[0, 45]"
-      width="60"
+      width="60"  maxLines="2"
       font="font:TinySystemFont"
       horizAlign="center"
       visible="false" />

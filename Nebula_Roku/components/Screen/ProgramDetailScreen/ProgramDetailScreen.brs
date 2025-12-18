@@ -59,10 +59,10 @@ function onKeyEvent(key as string, press as boolean) as boolean
         if m.actionsBtn.focusedChild <> invalid and m.actionsBtn.focusedChild.id = "btnPlay" then 
           m.lastButtonSelect = m.actionsBtn.focusedChild
           __openPlayer(getStreamingAction().PLAY)
-        else if m.actionsBtn.focusedChild <> invalid and m.actionsBtn.focusedChild.id = "btnContinue" then 
+        else if m.actionsBtn.focusedChild <> invalid and m.actionsBtn.focusedChild.id = "btnRestart" then 
           m.lastButtonSelect = m.actionsBtn.focusedChild
           __openPlayer(getStreamingAction().RESTART)
-        else if m.actionsBtn.focusedChild <> invalid and m.actionsBtn.focusedChild.id = "btnRestart" then 
+        else if m.actionsBtn.focusedChild <> invalid and m.actionsBtn.focusedChild.id = "btnContinue" then 
           m.lastButtonSelect = m.actionsBtn.focusedChild
           __openPlayer(getStreamingAction().CONTINUE)
         else if m.actionsBtn.focusedChild <> invalid and m.actionsBtn.focusedChild.id = "btnEmissions" then 

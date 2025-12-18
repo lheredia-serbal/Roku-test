@@ -2,6 +2,8 @@
 sub init()
   m.videoPlayer = m.top.findNode("VideoPlayer")
   m.playerControllers = m.top.findNode("playerControllers")
+
+  if m.videoPlayer <> invalid then m.videoPlayer.enableUI = false
   
   m.backgroundControllers = m.top.findNode("backgroundControllers")
   m.programInfo = m.top.findNode("programInfo")
@@ -40,11 +42,24 @@ sub init()
   m.inactivityContinueButton = m.top.findNode("inactivityContinueButton")
   m.inactivityTimer = m.top.findNode("inactivityTimer")
   m.inactivityAutoCloseTimer = m.top.findNode("inactivityAutoCloseTimer") 
+  m.timelinePreviewBg = m.top.findNode("timelinePreviewBg") 
 
   m.controlsRow = m.top.findNode("controlsRow")
 
   m.seekCommitTimer.ObserveField("fire", "onSeekCommitTimerFired")
   m.seekHoldTimer.ObserveField("fire", "onSeekHoldTimerFired")
+  m.timelineBarBarContainer = m.timelineBar.findNode("barContainer")
+
+  if m.timelineBar <> invalid then
+    m.timelineBar.observeField("seeking", "onTimelineSeekingChanged")
+    m.timelineBar.observeField("previewVisible", "onTimelinePreviewChanged")
+    m.timelineBar.observeField("previewX", "onTimelinePreviewChanged")
+    m.timelineBar.observeField("previewY", "onTimelinePreviewChanged")
+    m.timelineBar.observeField("previewUri", "onTimelinePreviewChanged")
+  end if
+
+  m.timelinePreviewOverlay = m.top.findNode("timelinePreviewOverlay")
+  m.timelinePreviewPoster  = m.top.findNode("timelinePreviewPoster")
 
   m.inactivityPrompt = invalid
 
@@ -77,12 +92,30 @@ sub init()
   m.seekHoldKey = invalid
   m.seekHoldTicks = 0
 
+  m.previewPinned = false
+
+  ' --- Tap acceleration (FF/RW) ---
+  m.trickTapWindowMs = 1000
+  m.trickTapMaxMult = 6   ' ajustá a gusto (6x, 8x, etc)
+
+  m.trickClock = CreateObject("roTimespan")
+  m.trickClock.Mark()
+
+  m.lastTrickKey = invalid
+  m.lastTrickMs  = -999999
+  m.trickTapCount = 0
+
+  ' Base jump para el hold (se recalcula en cada start)
+  m.seekHoldBaseJump = 0
+
   m.i18n = invalid
   scene = m.top.getScene()
   if scene <> invalid then
       m.i18n = scene.findNode("i18n")
   end if
   applyTranslations()
+
+  __ensurePreviewTimeNodes()
 end sub
 
 ' Aplicar las traducciones en el componente
@@ -98,6 +131,7 @@ sub applyTranslations()
   m.guideImageButton.tooltip = i18n_t(m.i18n, "player.video.guide")
   m.inactivityMessage.text = i18n_t(m.i18n, "player.playerPage.askHere")
   m.inactivityContinueButton.text = i18n_t(m.i18n, "button.continueSee")
+  m.timelineBar.liveText = i18n_t(m.i18n, "time.live")
 end sub
 
 ' Mostrar el modal de inactividad
@@ -172,6 +206,20 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
 
   handled = false
 
+  if press and key = KeyButtons().REPLAY then
+    handled = true
+
+    __replayBack(20)
+    __restartShowInfoTimer()
+
+    ' ✅ si el program info está visible, mandar foco al timelinebar
+    if m.playerControllers <> invalid and m.playerControllers.visible = true then
+      if m.timelineBar <> invalid and m.timelineBar.visible = true then
+        m.timelineBar.setFocus(true)
+      end if
+    end if
+  end if
+
   if m.videoPlayer.isInFocusChain() and key = KeyButtons().BACK then
     if press then 
       __closePlayer()
@@ -203,31 +251,29 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
     end if
 
   else if m.guideImageButton.isInFocusChain()
-    if key = KeyButtons().OK then
-      if press then
-        if m.showInfoTimer <> invalid then clearTimer(m.showInfoTimer)
-        if m.playerControllers.visible then m.playerControllers.visible = false
-        m.guide.visible = true
-        m.guide.setFocus(true)
-        m.guide.positioninChannelId = true
+    __restartShowInfoTimer()
 
-        actionLog = getActionLog({ actionCode: ActionLogCode().OPEN_PAGE, pageUrl: "Epg" })
+    if key = KeyButtons().OK and press then
+      if m.showInfoTimer <> invalid then clearTimer(m.showInfoTimer)
+      if m.playerControllers.visible then m.playerControllers.visible = false
+      m.guide.visible = true
+      m.guide.setFocus(true)
+      m.guide.positioninChannelId = true
 
-        __saveActionLog(actionLog)
-      end if
+      actionLog = getActionLog({ actionCode: ActionLogCode().OPEN_PAGE, pageUrl: "Epg" })
+      __saveActionLog(actionLog)
     end if
 
-    if key = KeyButtons().UP and m.timelineBar.visible = true then
-      if press then
-        __restartShowInfoTimer()
-        m.timelineBar.setFocus(true)
-      end if
+    if key = KeyButtons().UP and m.timelineBar.visible = true and press then
+      
+      m.timelineBar.setFocus(true)
     end if
 
-    if key = KeyButtons().LEFT and m.toLiveImageButton.visible = true then
-      if press then
-        __restartShowInfoTimer()
+    if key = KeyButtons().LEFT and press then
+      if __controlsRowContainsButton("toLiveImageButton") then
         m.toLiveImageButton.setFocus(true)
+      else if __controlsRowContainsButton("restartImageButton") then
+        m.restartImageButton.setFocus(true)
       end if
     end if
 
@@ -235,13 +281,15 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
 
   else if m.toLiveImageButton <> invalid and m.toLiveImageButton.isInFocusChain() and press then
     
-    if key = KeyButtons().LEFT and m.restartImageButton.visible = true then
-        __restartShowInfoTimer()
+    __restartShowInfoTimer()
+    if (key = KeyButtons().LEFT) then
+      
+      if __controlsRowContainsButton("restartImageButton") then
         m.restartImageButton.setFocus(true)
+      end if
     end if
 
-    if key = KeyButtons().RIGHT and m.guideImageButton.visible = true then
-        __restartShowInfoTimer()
+    if key = KeyButtons().RIGHT and __controlsRowContainsButton("guideImageButton") then
         m.guideImageButton.setFocus(true)
     end if
 
@@ -259,15 +307,19 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
     handled = true
 
   else if m.restartImageButton <> invalid and m.restartImageButton.isInFocusChain() and press then
+
+    __restartShowInfoTimer()
     
-    if key = KeyButtons().LEFT and m.playPauseImageButton.visible = true then
-      __restartShowInfoTimer()
+    if key = KeyButtons().LEFT and __controlsRowContainsButton("playPauseImageButton") then
       m.playPauseImageButton.setFocus(true)
     end if
 
-    if key = KeyButtons().RIGHT and m.toLiveImageButton.visible = true then
-      __restartShowInfoTimer()
+    if key = KeyButtons().RIGHT and __controlsRowContainsButton("toLiveImageButton") then
       m.toLiveImageButton.setFocus(true)
+    end if
+
+    if key = KeyButtons().RIGHT and __controlsRowContainsButton("guideImageButton") then
+        m.guideImageButton.setFocus(true)
     end if
 
     if (key = KeyButtons().OK) then
@@ -284,7 +336,7 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
     
     if press then
       __restartShowInfoTimer()
-      if key = KeyButtons().RIGHT and m.restartImageButton.visible = true then
+      if key = KeyButtons().RIGHT and __controlsRowContainsButton("restartImageButton") then
           m.restartImageButton.setFocus(true)
         else if (key = KeyButtons().OK) then
           __commitPendingSeek()
@@ -301,32 +353,77 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
     end if
     handled = true
 
-  ' Si el foco está en el Video y tocan left/right => abrís tu UI
-  if m.videoPlayer <> invalid and m.videoPlayer.hasFocus() then
-    if key = KeyButtons().LEFT or key = KeyButtons().RIGHT then
-      __showProgramInfo()
-      return true ' IMPORTANTE: consumís el evento
-    end if
-  end if
-
-  return false
-
-  else if (m.videoPlayer.isInFocusChain() or m.timelineBar.isInFocusChain()) and __isSeekKey(key) then
+  else if m.timelineBar <> invalid and m.timelineBar.isInFocusChain() and key = KeyButtons().OK then
     handled = true
 
     if press then
-      __showProgramInfo()
-      if m.timelineBar <> invalid then m.timelineBar.setFocus(true)
+    ' ✅ Evitar doble commit
+    if m.seekCommitTimer <> invalid then m.seekCommitTimer.control = "stop"
+
+    ' (opcional pero recomendado) si estaba en hold, lo cortamos
+    if m.seekHoldTimer <> invalid then m.seekHoldTimer.control = "stop"
+    m.seekHoldActive = false
+    m.seekHoldKey = invalid
+    m.seekHoldTicks = 0
+
+    ' ✅ Commit inmediato (misma lógica del timer)
+    __commitPendingSeek()
+
+    ' ✅ Salir de modo seeking
+    if m.timelineBar <> invalid then m.timelineBar.seeking = false
+
+    ' ✅ Ocultar miniatura y volver a mostrar programInfo/summary
+    m.previewPinned = false
+    if m.timelinePreviewOverlay <> invalid then m.timelinePreviewOverlay.visible = false
+    __setSeekUi(false) ' esto deja opacity=1 al programSummaryPlayer
+    if m.programSummaryPlayer <> invalid then m.programSummaryPlayer.visible = true
+  end if
+
+  else if m.timelineBar.isInFocusChain() and __isSeekKey(key) then
+    handled = true
+
+    if press then
       __startSeekHold(key)  ' <- 1 salto inmediato + timer repetitivo
     else
       __stopSeekHold()      ' <- al soltar, deja el debounce para commit
-   end if
+    end if
+
+  else if m.videoPlayer.isInFocusChain() and __isSeekKey(key) then
+    handled = true
+
+    if not press and not m.focusplayerByload then 
+      __showProgramInfo()
+
+      m.timelineBar.setFocus(true)
+    else 
+      m.focusplayerByload = false
+    end if
 
   else if m.timelineBar <> invalid and m.timelineBar.isInFocusChain() and key = KeyButtons().DOWN then
     if not press then
+
+      ' ✅ Si había miniatura (pinneada o visible), la cerramos y volvemos al summary
+      if m.previewPinned or (m.timelinePreviewOverlay <> invalid and m.timelinePreviewOverlay.visible) then
+        m.previewPinned = false
+
+        if m.timelinePreviewOverlay <> invalid then
+          m.timelinePreviewOverlay.visible = false
+        end if
+
+        ' salimos del modo seeking para que no vuelva a esconder el summary
+        m.timelineBar.seeking = false
+
+        __setSeekUi(false) ' esto te pone opacity=1 y/o el estado normal
+        if m.programSummaryPlayer <> invalid then
+          m.programSummaryPlayer.visible = true
+          m.programSummaryPlayer.opacity = 1
+        end if
+      end if
+
       btn = __getFirstVisibleControllerButton()
       if btn <> invalid then btn.setFocus(true)
     end if
+
     handled = true
 
   else if m.videoPlayer.isInFocusChain() and (key = KeyButtons().UP or key = KeyButtons().DOWN) then
@@ -464,6 +561,15 @@ sub initData()
     end if
     
     m.top.loading.visible = false
+
+    ' Pasar template de thumbnails a TimelineBar
+    if m.timelineBar <> invalid and m.streaming <> invalid and m.streaming.thumbnailsUrl <> invalid then
+      m.timelineBar.thumbnailsUrl = m.streaming.thumbnailsUrl
+    end if
+
+    if m.timelineBar <> invalid then
+      m.timelineBar.isLive = m.isLiveContent
+    end if
   end if
 end sub
 
@@ -859,6 +965,12 @@ sub onHidenProgramInfo()
   m.playerControllers.visible = false
   if m.timelineBar <> invalid then m.timelineBar.visible = false
   clearTimer(m.showInfoTimer)
+
+  ' ✅ acá recién se oculta la miniatura y vuelve el summary
+  m.previewPinned = false
+  if m.timelinePreviewOverlay <> invalid then m.timelinePreviewOverlay.visible = false
+  __setSeekUi(false)
+
   m.videoPlayer.setFocus(true)
 end sub
 
@@ -972,6 +1084,14 @@ sub __setTimelineFromStreaming()
     m.timelineBar.position = elapsed
   else if m.streaming.startAt <> invalid then
     m.timelineBar.position = m.streaming.startAt
+  end if
+
+  if m.timelineBar <> invalid then
+    base = 0
+    if m.streamStartSeconds <> invalid then
+      base = m.streamStartSeconds
+    end if
+    m.timelineBar.baseEpochSeconds = base
   end if
 end sub
 
@@ -1313,6 +1433,8 @@ sub __closePlayer(onBack = false)
   m.seekHoldActive = false
   m.seekHoldKey = invalid
   m.seekHoldTicks = 0
+
+  if m.timelineBar <> invalid then m.timelineBar.seeking = false
 end sub
 
 ' Abre la lista de canales
@@ -1362,7 +1484,7 @@ end sub
 
 ' Muestra la informacion del programa actual sobre el player y dispara un timer para escodnerla 
 ' automaticamente si no hay ninguna interaccion. 
-sub __showProgramInfo()
+sub __showProgramInfo(focusNode = invalid as object)
   m.playerControllers.visible = true
   if m.timelineBar <> invalid and not m.isLiveContent then m.timelineBar.visible = true
   btn = __getFirstVisibleControllerButton()
@@ -1370,6 +1492,9 @@ sub __showProgramInfo()
 
   m.showInfoTimer.control = "start"
   m.showInfoTimer.ObserveField("fire","onHidenProgramInfo")
+
+  ' ✅ respeta el estado seeking
+  onTimelineSeekingChanged()
 end sub
 
 'Metodo que dispara la carga de un nuevo streaming en el player
@@ -1687,6 +1812,8 @@ sub __queueSeek(key as String)
 
   __restartShowInfoTimer()
   __restartSeekCommitTimer()
+
+  if m.timelineBar <> invalid then m.timelineBar.seeking = true
 end sub
 
 sub __restartSeekCommitTimer()
@@ -1715,26 +1842,45 @@ sub __commitPendingSeek()
 
   m.pendingSeekActive = false
   m.pendingSeekPosition = invalid
+
+  if m.timelineBar <> invalid then m.timelineBar.seeking = false
 end sub
 
 sub __startSeekHold(key as String)
   if m.isLiveContent or m.videoPlayer = invalid then return
 
-  ' ✅ mientras está apretado, NO queremos commit
+  ' mientras está apretado, NO queremos commit
   if m.seekCommitTimer <> invalid then m.seekCommitTimer.control = "stop"
 
   m.seekHoldActive = true
   m.seekHoldKey = key
   m.seekHoldTicks = 0
 
-  __queueSeekWithJump(key, __getHoldJumpSeconds(0))
+  base = m.timelineSeekStep
+  if base = invalid or base <= 0 then base = 10
 
+  mult = 1
+  if key = KeyButtons().FAST_FORWARD or key = KeyButtons().REWIND then
+    mult = __getTrickTapMultiplier(key)
+  else
+    ' si querés que LEFT/RIGHT no acumulen taps, queda 1
+    mult = 1
+  end if
+
+  m.seekHoldBaseJump = base * mult
+
+  ' ✅ 1 salto inmediato con tap-mult
+  __queueSeekWithJump(key, m.seekHoldBaseJump)
+
+  ' ✅ timer de hold (tu lógica actual)
   if m.seekHoldTimer <> invalid then
     m.seekHoldTimer.control = "stop"
     m.seekHoldTimer.duration = 0.2
     m.seekHoldTimer.repeat = true
     m.seekHoldTimer.control = "start"
   end if
+
+  if m.timelineBar <> invalid then m.timelineBar.seeking = true
 end sub
 
 sub __stopSeekHold()
@@ -1748,6 +1894,8 @@ sub __stopSeekHold()
 
   ' ✅ ahora sí: 2 segundos desde que soltó
   __restartSeekCommitTimer()
+
+  if m.timelineBar <> invalid then m.timelineBar.seeking = false
 end sub
 
 sub onSeekHoldTimerFired()
@@ -1760,17 +1908,17 @@ sub onSeekHoldTimerFired()
   __queueSeekWithJump(m.seekHoldKey, jump)
 end sub
 
-
 function __getHoldJumpSeconds(ticks as Integer) as Integer
-  ' Aceleración por tramos (ajustable)
-  ' ticks depende de seekHoldTimer.duration (0.2 => 5 ticks/seg)
-  base = m.timelineSeekStep
-  if base = invalid or base <= 0 then base = 10
+  base = m.seekHoldBaseJump
+  if base = invalid or base <= 0 then
+    base = m.timelineSeekStep
+    if base = invalid or base <= 0 then base = 10
+  end if
 
   mult = 1
-  if ticks >= 5  and ticks < 10 then mult = 2     ' ~1s
-  if ticks >= 10 and ticks < 20 then mult = 4     ' ~2s
-  if ticks >= 20 then mult = 8                    ' ~4s+
+  if ticks >= 5  and ticks < 10 then mult = 2
+  if ticks >= 10 and ticks < 20 then mult = 4
+  if ticks >= 20 then mult = 8
 
   return base * mult
 end function
@@ -1822,4 +1970,233 @@ sub __queueSeekWithJump(key as String, jumpOverride as Integer)
   __restartShowInfoTimer()
     ' ✅ solo reiniciar commit si NO está en hold
   if not m.seekHoldActive then __restartSeekCommitTimer()
+
+  if m.timelineBar <> invalid then m.timelineBar.seeking = true
 end sub
+
+sub onTimelineSeekingChanged()
+  if m.timelineBar = invalid then return
+
+  isSeeking = (m.timelineBar.seeking = true)
+
+  ' Ocultar “program info” mientras se muestra la miniatura
+  if m.programSummaryPlayer <> invalid then
+    m.programSummaryPlayer.visible = (not isSeeking)
+  end if
+end sub
+
+sub onTimelinePreviewChanged()
+  if m.timelinePreviewOverlay = invalid or m.timelinePreviewPoster = invalid then return
+  if m.timelineBar = invalid then return
+
+' Si TimelineBar dice "no visible"...
+  if m.timelineBar.previewVisible <> true then
+    ' ✅ Si ya pinneamos la miniatura, NO ocultar ni traer el summary de vuelta
+    if m.previewPinned then return
+
+    ' Caso normal: no hay preview activo
+    m.timelinePreviewOverlay.visible = false
+    __setSeekUi(false)
+    return
+  end if
+
+  uri = m.timelineBar.previewUri
+  if uri <> invalid and uri <> "" then m.timelinePreviewPoster.uri = uri
+
+  piT = m.programInfo.translation
+  if piT = invalid then piT = [0, 0]
+
+  tb = m.timelineBar.boundingRect()
+
+  bcX = 0 : bcY = 0
+  if m.timelineBarBarContainer <> invalid then
+    bc = m.timelineBarBarContainer.boundingRect()
+    bcX = bc.x
+    bcY = bc.y
+  end if
+
+  x = piT[0] + tb.x + bcX + m.timelineBar.previewX
+  y = piT[1] + tb.y + bcY + m.timelineBar.previewY + 40
+
+  m.timelinePreviewOverlay.translation = [x, y]
+  m.timelinePreviewOverlay.visible = true
+
+  ' ✅ PIN: queda visible aunque suelte las teclas
+  m.previewPinned = true
+  __setSeekUi(true)
+
+  ' tamaños deseados (16:9)
+  w = 250
+  h = Fix((w * 9) / 16) ' 180
+
+  m.timelinePreviewBg.width  = w
+  m.timelinePreviewBg.height = h
+
+  m.timelinePreviewPoster.width  = w - 4
+  m.timelinePreviewPoster.height = h - 4
+  m.timelinePreviewPoster.loadWidth  = w
+  m.timelinePreviewPoster.loadHeight = h
+  m.timelinePreviewPoster.loadDisplayMode = "scaleToZoom"
+
+  ' IMPORTANTE: append después del poster para que quede “por encima” de la imagen
+  m.timelinePreviewOverlay.appendChild(m.timelinePreviewTimeBg)
+  m.timelinePreviewOverlay.appendChild(m.timelinePreviewTimeLabel)
+
+  m.timelinePreviewTimeLabel.text = m.timelineBar.previewTimeText
+
+  ' tamaños deseados (16:9)
+  w = 250
+  h = Fix((w * 9) / 16)
+
+  m.timelinePreviewBg.width  = w
+  m.timelinePreviewBg.height = h
+
+  m.timelinePreviewPoster.width  = w - 4
+  m.timelinePreviewPoster.height = h - 4
+  m.timelinePreviewPoster.loadWidth  = w
+  m.timelinePreviewPoster.loadHeight = h
+
+  ' Si también lo querés 16:9:
+  bgW = 70
+  bgH = Fix((bgW * 9) / 16)
+
+  bgX = w - bgW
+  bgY = h - bgH
+
+  m.timelinePreviewTimeBg.width = bgW
+  m.timelinePreviewTimeBg.height = bgH
+  m.timelinePreviewTimeBg.translation = [bgX, bgY]
+
+  ' Label dentro del recuadro (con un mini padding interno)
+  m.timelinePreviewTimeLabel.width = bgW - 6
+  m.timelinePreviewTimeLabel.height = bgH
+  m.timelinePreviewTimeLabel.translation = [bgX + 3, bgY]
+  m.timelinePreviewTimeLabel.text = m.timelineBar.previewTimeText
+
+end sub
+
+sub __setSeekUi(isSeeking as Boolean)
+  if m.programSummaryPlayer = invalid then return
+  if isSeeking then
+    m.programSummaryPlayer.opacity = 0
+  else
+    m.programSummaryPlayer.opacity = 1
+  end if
+end sub
+
+sub __ensurePreviewTimeNodes()
+  if m.timelinePreviewOverlay = invalid then return
+
+  ' si ya existen, no duplicar
+  if m.timelinePreviewTimeLabel <> invalid and m.timelinePreviewTimeBg <> invalid then return
+
+  m.timelinePreviewTimeBg = CreateObject("roSGNode", "Rectangle")
+  m.timelinePreviewTimeBg.color = "#000000"
+
+  m.timelinePreviewTimeLabel = CreateObject("roSGNode", "Label")
+  m.timelinePreviewTimeLabel.horizAlign = "right"
+  m.timelinePreviewTimeLabel.vertAlign = "center"
+  m.timelinePreviewTimeLabel.font = "font:SmallestSystemFont"
+  m.timelinePreviewTimeLabel.color = "#FFFFFF"
+  m.timelinePreviewTimeLabel.text = ""
+end sub
+
+' Devuelve true si el controlsRow contiene un hijo con ese id
+function __controlsRowContainsButton(buttonId as String) as Boolean
+  if m.controlsRow = invalid then return false
+  if buttonId = invalid or buttonId = "" then return false
+
+  count = m.controlsRow.getChildCount()
+  for i = 0 to count - 1
+    child = m.controlsRow.getChild(i)
+    if child <> invalid then
+      ' El id del nodo (definido en XML) se puede leer así
+      if child.id = buttonId then return true
+    end if
+  end for
+
+  return false
+end function
+
+sub __replayBack(seconds as Integer)
+  if m.videoPlayer = invalid then return
+  if seconds = invalid or seconds <= 0 then seconds = 20
+
+  ' No aplica a LIVE puro (sin ventana de rewind)
+  if m.isLiveContent then return
+
+  ' ✅ cancelar timers/estado de seek pendiente para evitar doble ejecución
+  if m.seekCommitTimer <> invalid then m.seekCommitTimer.control = "stop"
+  if m.seekHoldTimer   <> invalid then m.seekHoldTimer.control = "stop"
+
+  m.pendingSeekActive = false
+  m.pendingSeekPosition = invalid
+  m.seekHoldActive = false
+  m.seekHoldKey = invalid
+  m.seekHoldTicks = 0
+
+  if m.timelineBar <> invalid then m.timelineBar.seeking = false
+
+  ' Posición actual
+  posi = m.videoPlayer.position
+  if posi = invalid or posi < 0 then
+    if m.timelineBar <> invalid then
+      posi = m.timelineBar.position
+    else
+      posi = 0
+    end if
+  end if
+
+  newPos = posi - seconds
+  if newPos < 0 then newPos = 0
+
+  ' Duración (para clamp, sobre todo en live-rewind)
+  dur = m.videoPlayer.duration
+  if m.isLiveRewind and m.liveRewindDuration <> invalid then
+    dur = m.liveRewindDuration
+  else if dur = invalid or dur <= 0 then
+    if m.timelineBar <> invalid then dur = m.timelineBar.duration
+  end if
+  if dur <> invalid and dur > 0 and newPos > dur then newPos = dur
+
+  ' ✅ seek real
+  m.videoPlayer.seek = newPos
+
+  ' Mantener TimelineBar sincronizada
+  if m.timelineBar <> invalid then
+    if dur <> invalid and dur > 0 then m.timelineBar.duration = dur
+    m.timelineBar.position = newPos
+  end if
+
+  ' ✅ si había miniatura/preview, la ocultamos y devolvemos summary
+  m.previewPinned = false
+  if m.timelinePreviewOverlay <> invalid then m.timelinePreviewOverlay.visible = false
+  __setSeekUi(false)
+  if m.programSummaryPlayer <> invalid then
+    m.programSummaryPlayer.visible = true
+    m.programSummaryPlayer.opacity = 1
+  end if
+end sub
+
+function __getTrickTapMultiplier(key as String) as Integer
+  if m.trickClock = invalid then
+    m.trickClock = CreateObject("roTimespan")
+    m.trickClock.Mark()
+  end if
+
+  nowMs = m.trickClock.TotalMilliseconds()
+
+  if m.lastTrickKey = key and (nowMs - m.lastTrickMs) <= m.trickTapWindowMs then
+    m.trickTapCount = m.trickTapCount + 1
+  else
+    m.trickTapCount = 1
+  end if
+
+  ' clamp
+  if m.trickTapCount > m.trickTapMaxMult then m.trickTapCount = m.trickTapMaxMult
+
+  m.lastTrickKey = key
+  m.lastTrickMs  = nowMs
+
+  return m.trickTapCount  ' 1 => 1x, 2 => 2x, 3 => 3x...
+end function

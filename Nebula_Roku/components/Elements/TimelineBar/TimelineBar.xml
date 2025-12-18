@@ -7,12 +7,23 @@
   xsi:noNamespaceSchemaLocation="https://devtools.web.roku.com/schema/RokuSceneGraph.xsd">
 
   <script type="text/brightscript" uri="TimelineBar.brs"/>
+  <script type="text/brightscript" uri="pkg:/source/Enums.brs" />
 
   <interface>
     <field id="duration" type="float" value="0" onChange="onDurationChanged" />
     <field id="position" type="float" value="0" onChange="onPositionChanged" />
     <field id="widthBar" type="float" value="0" onChange="onWidthChanged" />
     <field id="thumbUri" type="uri" value="pkg:/images/shared/ball.png" onChange="onThumbUriChanged" />
+    <field id="thumbnailsUrl" type="string" value="" onChange="onThumbnailsUrlChanged" />
+    <field id="baseEpochSeconds" type="float" value="0" onChange="onBaseEpochChanged" />
+    <field id="seeking" type="boolean" value="false" onChange="onSeekingChanged" />
+    <field id="previewVisible" type="boolean" value="false" />
+    <field id="previewX" type="float" value="0" />
+    <field id="previewY" type="float" value="0" />
+    <field id="previewUri" type="uri" value="" />
+    <field id="isLive" type="boolean" value="false" onChange="onIsLiveChanged" />
+    <field id="liveText" type="string" value="En vivo" onChange="onLiveTextChanged" />
+    <field id="previewTimeText" type="string" value="" />
   </interface>
 
   <children>
@@ -21,27 +32,26 @@
       layoutDirection="vert"
       horizAlignment="left"
       vertAlignment="bottom"
-      itemSpacings="[6]">
+      itemSpacings="[2]">
+
+      <Group id="barContainer">
+        <Rectangle id="track" height="6" color="#FFFFFF" opacity="0.35" />
+        <Rectangle id="progress" height="6" color="#FFFFFF" />
+        <Poster id="thumb"
+          width="16" 
+          height="16" 
+          loadWidth="16" 
+          loadHeight="16"
+          uri="pkg:/images/shared/ball.png" />
+      </Group>
 
       <Label
         id="timeLabel"
         wrap="false"
         maxLines="1"
+        horizAlign="right"
         font="font:SmallestSystemFont"
         color="#FFFFFF" />
-
-      <Group id="barContainer">
-        <Rectangle id="track" height="6" color="#FFFFFF" opacity="0.35" />
-        <Rectangle id="progress" height="6" color="#FFFFFF" />
-        <Poster 
-          id="thumb" 
-          width="16" 
-          height="16" 
-          loadWidth="16"
-          loadHeight="16"
-          uri="pkg:/images/shared/ball.png"
-          translation="[-8,-5]" />
-      </Group>
     </LayoutGroup>
   </children>
 </component>

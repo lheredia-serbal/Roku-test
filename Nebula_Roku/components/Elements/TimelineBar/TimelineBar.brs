@@ -1,10 +1,26 @@
 ' Inicializa el componente de linea de tiempo
 sub init()
+  m.componentHeightBlur  = 12 ' ajustá a gusto
+  m.componentHeightFocus = 12  ' ajustá a gusto
+
   m.track = m.top.findNode("track")
   m.progress = m.top.findNode("progress")
   m.thumb = m.top.findNode("thumb")
   m.timeLabel = m.top.findNode("timeLabel")
   m.barContainer = m.top.findNode("barContainer")
+
+  m.trackHeightBlur  = 6
+  m.trackHeightFocus = 10  ' <- más alta cuando tiene foco
+
+  m.previewW = 250
+  m.previewH = Fix((m.previewW * 9) / 16) ' => 180
+  m.previewMargin = 8
+
+  m.thumbHalf = 8.0 ' se recalcula igual si cambia width
+
+  m.thumbnailsUrlTemplate = ""
+  m.baseEpochSeconds = 0
+  m.lastPreviewEpoch = invalid
 
   m.baseHeight = 6
   m.focusExtraHeight = 20
@@ -12,16 +28,30 @@ sub init()
   m.totalWidth = 0
   m.currentDuration = 0.0
   m.currentPosition = 0.0
+  
+  m.lastPreviewEpoch = invalid
+
+  m.previewPinned = false
 
   if m.thumb <> invalid and m.thumb.uri = "" then
     m.thumb.uri = "pkg:/images/shared/ball.png"
   end if
 
-  m.top.observeField("focusedChild", "onFocusChanged")
+  'Alto reservado (fijo) para que NO cambie el boundingRect
+  thumbH = 0
+  if m.thumb <> invalid and m.thumb.height <> invalid then thumbH = m.thumb.height
+    m.trackHeightMax = m.trackHeightFocus
+  if thumbH > m.trackHeightMax then m.trackHeightMax = thumbH
+
+  if m.barContainer <> invalid then
+    m.barContainer.height = m.trackHeightMax
+  end if
+
+  m.top.observeField("focusedChild", "onHasFocusChanged")
 
   __initColors()
   __applyWidth()
-  __applyHeight(false)
+  __applyHeight(m.top.hasFocus = true)
   __updateProgress()
 end sub
 
@@ -48,43 +78,130 @@ sub __applyWidth()
 
   m.barContainer.width = m.totalWidth
   m.track.width = m.totalWidth
+
+  if m.timeLabel <> invalid then m.timeLabel.width = m.totalWidth
+
   __updateProgress()
 end sub
 
 sub __applyHeight(hasFocus as boolean)
-  height = m.baseHeight
-  if hasFocus then height = m.baseHeight + m.focusExtraHeight
+  h = m.trackHeightBlur
+  if hasFocus then h = m.trackHeightFocus
 
-  m.track.height = height
-  m.progress.height = height
+  m.track.height = h
+  m.progress.height = h
+
+  ' ✅ centrar dentro del alto fijo del barContainer
+  y = (m.trackHeightMax - h) / 2.0
+  m.track.translation = [0, y]
+  m.progress.translation = [0, y]
+
   __updateProgress()
 end sub
 
 sub __updateProgress()
+
+  ' ✅ LIVE: no hay tiempo, mostrar "En vivo" (traducido) y no usar position/duration
+  if m.top <> invalid and m.top.isLive = true then
+    if m.progress <> invalid then m.progress.width = m.totalWidth
+    if m.thumb <> invalid then m.thumb.visible = false
+    if m.timeLabel <> invalid then
+      txt = m.top.liveText
+      if txt = invalid or txt = "" then txt = "En vivo"
+      m.timeLabel.text = txt
+    end if
+    return
+  else
+    if m.thumb <> invalid then m.thumb.visible = true
+  end if
+
+  if m.track = invalid or m.progress = invalid or m.barContainer = invalid then return
+
+  ' Medidas del thumb
+  thumbHalf = 0.0
+  thumbH = 0.0
+  if m.thumb <> invalid then
+    if m.thumb.width <> invalid then thumbHalf = m.thumb.width / 2.0
+    if m.thumb.height <> invalid then thumbH = m.thumb.height
+  end if
+  m.thumbHalf = thumbHalf
+
+  ' Centrado vertical del thumb
+  trackY = 0.0
+  if m.track <> invalid and m.track.translation <> invalid then
+    trackY = m.track.translation[1]
+  end if
+
+  thumbY = trackY + (m.track.height / 2.0) - (thumbH / 2.0)
+
+  ' Si no hay duración
   if m.currentDuration <= 0 then
     m.progress.width = 0
-    thumbHalf = 0
-    if m.thumb <> invalid and m.thumb.width <> invalid then thumbHalf = m.thumb.width / 2
-    m.thumb.translation = [-thumbHalf, -(m.track.height / 2)]
-    m.timeLabel.text = "00:00 / 00:00"
+    if m.thumb <> invalid then m.thumb.translation = [-thumbHalf, thumbY]
+    if m.timeLabel <> invalid then m.timeLabel.text = "00:00 / 00:00"
     return
   end if
 
+  ' Clamp position
   if m.currentPosition < 0 then m.currentPosition = 0
   if m.currentPosition > m.currentDuration then m.currentPosition = m.currentDuration
 
+  ' Progreso
   progressWidth = (m.currentPosition / m.currentDuration) * m.totalWidth
   m.progress.width = progressWidth
 
-  thumbHalf = 0
-  if m.thumb <> invalid and m.thumb.width <> invalid then thumbHalf = m.thumb.width / 2
-
+  ' Thumb X centrado en borde del progreso
   thumbX = progressWidth - thumbHalf
   if thumbX < -thumbHalf then thumbX = -thumbHalf
-  if thumbX > m.totalWidth - thumbHalf then thumbX = m.totalWidth - thumbHalf
-  m.thumb.translation = [thumbX, -(m.track.height / 2)]
+  if thumbX > (m.totalWidth - thumbHalf) then thumbX = (m.totalWidth - thumbHalf)
 
-  m.timeLabel.text = __formatTime(m.currentPosition) + " / " + __formatTime(m.currentDuration)
+  if m.thumb <> invalid then
+    m.thumb.translation = [thumbX, thumbY]
+  end if
+
+  ' Texto
+  if m.timeLabel <> invalid then
+    ' Tiempo restante = Total - Transcurrido
+    remaining = m.currentDuration - m.currentPosition
+    if remaining < 0 then remaining = 0
+
+    m.timeLabel.text = __formatTime(remaining)
+  end if
+
+  ' ✅ Preview: SOLO publica datos, NO dibuja nada
+  shouldShow = (m.top.seeking = true) and (m.thumbnailsUrlTemplate <> invalid and m.thumbnailsUrlTemplate <> "")
+  if not shouldShow then
+    m.top.previewVisible = false
+    m.top.previewUri = ""
+    m.top.previewTimeText = ""
+    return
+  else 
+    m.top.previewTimeText = __formatTime(m.currentPosition) ' tiempo transcurrido
+  end if
+
+  epoch = 0
+  if m.baseEpochSeconds <> invalid and m.baseEpochSeconds > 0 then
+    epoch = Fix(m.baseEpochSeconds + m.currentPosition)
+  else
+    epoch = Fix(m.currentPosition)
+  end if
+
+  url = __buildThumbUrl(epoch)
+  if url = "" then
+    m.top.previewVisible = false
+    return
+  end if
+
+  ' Posición relativa al TimelineBar (misma cuenta que ya hacías)
+  previewX = (thumbX + thumbHalf) - (m.previewW / 2.0)
+  previewX = __clamp(previewX, 0, m.totalWidth - m.previewW)
+
+  previewY = thumbY - m.previewH - m.previewMargin
+
+  m.top.previewX = previewX
+  m.top.previewY = previewY
+  m.top.previewUri = url
+  m.top.previewVisible = true
 end sub
 
 function __formatTime(seconds as float) as string
@@ -125,26 +242,49 @@ sub onThumbUriChanged()
   if m.thumb <> invalid then m.thumb.uri = m.top.thumbUri
 end sub
 
-' Ajusta estilos al cambiar el foco del componente
-sub onFocusChanged()
-  hasFocus = false
-  if m.top <> invalid and m.top.hasFocus <> invalid then hasFocus = m.top.hasFocus
-
-  if m.top.isInFocusChain() then
-    m.top.thumbUri = "pkg:/images/client/ball.png"
-  else
-    m.top.thumbUri = "pkg:/images/shared/ball.png"
-  end if
-
+sub onHasFocusChanged()
+  hasFocus = m.top.isInFocusChain()
   __applyHeight(hasFocus)
+  __updateProgress()
 
-  if m.global <> invalid and m.global.colors <> invalid then
-    if hasFocus then
-      m.progress.color = m.global.colors.PLAYER_TIMEBAR_FOCUCED
-      if m.thumb <> invalid then m.thumb.blendColor = m.thumbColorFocused
-    else
-      m.progress.color = m.global.colors.PLAYER_TIMEBAR_NOT_FOCUCED
-      if m.thumb <> invalid then m.thumb.blendColor = m.thumbColorBlur
-    end if
+  if hasFocus then
+    m.progress.color = m.global.colors.PLAYER_TIMEBAR_FOCUCED
+  else 
+    m.progress.color = m.global.colors.PLAYER_TIMEBAR_NOT_FOCUCED
   end if
+end sub
+
+sub onThumbnailsUrlChanged()
+  if m.top.thumbnailsUrl <> invalid then m.thumbnailsUrlTemplate = m.top.thumbnailsUrl
+  m.lastPreviewEpoch = invalid
+  __updateProgress()
+end sub
+
+sub onBaseEpochChanged()
+  if m.top.baseEpochSeconds <> invalid then m.baseEpochSeconds = m.top.baseEpochSeconds
+  m.lastPreviewEpoch = invalid
+  __updateProgress()
+end sub
+
+sub onSeekingChanged()
+  __updateProgress()
+end sub
+
+function __clamp(v as float, mn as float, mx as float) as float
+  if v < mn then return mn
+  if v > mx then return mx
+  return v
+end function
+
+function __buildThumbUrl(epochSeconds as integer) as string
+  if m.thumbnailsUrlTemplate = invalid or m.thumbnailsUrlTemplate = "" then return ""
+  return m.thumbnailsUrlTemplate.Replace("[DateInEpoch]", epochSeconds.toStr())
+end function
+
+sub onIsLiveChanged()
+  __updateProgress()
+end sub
+
+sub onLiveTextChanged()
+  __updateProgress()
 end sub

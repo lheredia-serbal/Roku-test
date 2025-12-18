@@ -22,7 +22,7 @@
   <script type="text/brightscript" uri="pkg:/source/Services/Programs.brs" />
   <script type="text/brightscript" uri="pkg:/source/Services/Watch.brs" />
 
-    <script type="text/brightscript" uri="pkg:/source/Services/ActionLogs.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Services/ActionLogs.brs" />
 
   <interface>
     <!-- Paramentros de Entrada -->
@@ -61,7 +61,7 @@
           layoutDirection="vert"
           horizAlignment="custom"
           vertAlignment="bottom"
-          itemSpacings="[10]">
+          itemSpacings="[4]">
           
           <ProgramSummaryPlayer id="programSummaryPlayer"/>
 
@@ -84,6 +84,16 @@
             <QvImageButton id="guideImageButton"     uri="pkg:/images/shared/guide.png" focusable="true" tooltip=""/>
           </LayoutGroup>
         </LayoutGroup>
+
+         <!-- ✅ FUERA del LayoutGroup (NO ocupa espacio del layout) -->
+        <Group id="timelinePreviewOverlay" visible="false">
+          <Rectangle id="timelinePreviewBg" width="160" height="90" color="#000000" opacity="0.85" />
+          <Poster id="timelinePreviewPoster"
+                  width="156" height="86"
+                  translation="[2,2]"
+                  loadWidth="160" loadHeight="90"
+                  loadDisplayMode="scaleToFit" />
+        </Group>
       </Group>
 
     <Group id="errorChannel" visible="false">
