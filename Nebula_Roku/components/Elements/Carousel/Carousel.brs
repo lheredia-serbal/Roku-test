@@ -2,8 +2,16 @@
 sub init()
   m.carouselList = m.top.findNode("carouselList")
   m.carouselTitle = m.top.findNode("carouselTitle")
-  m.labelSpace = 40
-  m.separator = 30
+  m.scaleInfo = m.global.scaleInfo
+  if m.scaleInfo = invalid then
+    m.scaleInfo = getScaleInfo()
+  end if
+
+  m.carouselTitle.translation = scalePoint([70, 100], m.scaleInfo)
+  m.carouselList.translation = scalePoint([-80, 130], m.scaleInfo)
+
+  m.labelSpace = scaleValue(40, m.scaleInfo)
+  m.separator = scaleValue(30, m.scaleInfo)
   m.xInitial = 0
   m.clearItems = createObject("roSGNode", "CarouselItemContentNode")
   m.targetRects = invalid
@@ -23,53 +31,53 @@ end sub
 ' Define la configuracion necesaria del estilo del carousel
 sub initSyle()
   if m.top.style = -1 then ' AvatarsItem
-    m.top.size = [120, 120]
-    m.separator = 10
+    m.top.size = [scaleValue(120, m.scaleInfo), scaleValue(120, m.scaleInfo)]
+    m.separator = scaleValue(10, m.scaleInfo)
     m.top.height = (m.top.size[1] + m.labelSpace)
     m.targetItems = 10
     m.styleItem = "AvatarItem"
-    m.xInitial = -150
-    m.carouselTitle.translation = [29, 100]
+    m.xInitial = scaleValue(-150, m.scaleInfo)
+    m.carouselTitle.translation = scalePoint([29, 100], m.scaleInfo)
     m.targetRects = createTargetRects(m.targetItems, m.xInitial, (m.top.size[0] + m.separator), m.top.size[0], m.top.size[1])
 
   else if m.top.style = getCarouselStyles().PORTRAIT_FEATURED then ' carouselPortraitFeatured
-    m.top.size = [270, 405]
+    m.top.size = [scaleValue(270, m.scaleInfo), scaleValue(405, m.scaleInfo)]
     __defaultConfig()
     m.top.height = (m.top.size[1] + m.labelSpace)
     m.targetItems = 6
     m.styleItem = "BasicItem"
-    m.xInitial = -449
+    m.xInitial = scaleValue(-449, m.scaleInfo)
     m.targetRects = createTargetRects(m.targetItems, m.xInitial, (m.top.size[0] + m.separator), m.top.size[0], m.top.size[1])
 
   else if m.top.style = getCarouselStyles().LANDSCAPE_STANDARD then ' carouselLandscapeStandard
-    m.top.size = [464, 261]
+     m.top.size = [scaleValue(464, m.scaleInfo), scaleValue(261, m.scaleInfo)]
     __defaultConfig()
     m.top.height = (m.top.size[1] + m.labelSpace)
     m.targetItems = 5
     m.styleItem = "BasicItem"
-    m.xInitial = -837
+    m.xInitial = scaleValue(-837, m.scaleInfo)
     m.targetRects = createTargetRects(m.targetItems, m.xInitial, (m.top.size[0] + m.separator), m.top.size[0], m.top.size[1])
 
   else if m.top.style = getCarouselStyles().LANDSCAPE_FEATURED then ' carouselLandscapeFeatured
-    m.top.size = [560, 315]
+    m.top.size = [scaleValue(560, m.scaleInfo), scaleValue(315, m.scaleInfo)]
     __defaultConfig()
     m.top.height = (m.top.size[1] + m.labelSpace)
     m.targetItems = 4
     m.styleItem = "BasicItem"
-    m.xInitial = -1029
+    m.xInitial = scaleValue(-1029, m.scaleInfo)
     m.targetRects = createTargetRects(m.targetItems, m.xInitial, (m.top.size[0] + m.separator), m.top.size[0], m.top.size[1])
 
   else if m.top.style = getCarouselStyles().SQUARE_STANDARD then ' carouselSquareStandard
-    m.top.size = [120, 120]
+    m.top.size = [scaleValue(120, m.scaleInfo), scaleValue(120, m.scaleInfo)]
     __defaultConfig()
     m.top.height = (m.top.size[1] + m.labelSpace)
     m.targetItems = 10
     m.styleItem = "SquareItem"
-    m.xInitial = -150
+    m.xInitial = scaleValue(-150, m.scaleInfo)
     m.targetRects = createTargetRects(m.targetItems, m.xInitial, (m.top.size[0] + m.separator), m.top.size[0], m.top.size[1])
 
   else if m.top.style = getCarouselStyles().SQUARE_FEATURED then ' carouselSquareFeatured
-    m.top.size = [280, 110]
+    m.top.size = [scaleValue(280, m.scaleInfo), scaleValue(110, m.scaleInfo)]
     __defaultConfig()
     m.top.height = (m.top.size[1] + m.labelSpace)
     m.targetItems = 6
@@ -78,16 +86,16 @@ sub initSyle()
     else
       m.styleItem = "SquareFeaturedItem"
     end if
-    m.xInitial = -469
+    m.xInitial = scaleValue(-469, m.scaleInfo)
     m.targetRects = createTargetRects(m.targetItems, m.xInitial, (m.top.size[0] + m.separator), m.top.size[0], m.top.size[1])
 
   else ' Style = getCarouselStyles().PORTRAIT_STANDARD and default carouselPortraitStandard
-    m.top.size = [180, 270]
+    m.top.size = [scaleValue(180, m.scaleInfo), scaleValue(270, m.scaleInfo)]
     __defaultConfig()
     m.top.height = (m.top.size[1] + m.labelSpace)
     m.targetItems = 8
     m.styleItem = "BasicItem"
-    m.xInitial = -269
+    m.xInitial = scaleValue(-269, m.scaleInfo)
     m.targetRects = createTargetRects(m.targetItems, m.xInitial, (m.top.size[0] + m.separator), m.top.size[0], m.top.size[1])
 
   end if 
@@ -181,7 +189,7 @@ end sub
 
 ' Define la configuracion inicial
 sub __defaultConfig()
-  m.separator = 30
+  m.separator = scaleValue(30, m.scaleInfo)
 end sub
 
 ' Limpia todas las propiedades internas o observables necesarios en su uso interno

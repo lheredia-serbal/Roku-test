@@ -1,5 +1,10 @@
 ' Inicialización del componente (parte del ciclo de vida de Roku)
 sub init()
+    m.scaleInfo = m.global.scaleInfo
+    if m.scaleInfo = invalid then
+        m.scaleInfo = getScaleInfo()
+    end if
+
     m.programContainer = m.top.findNode("programContainer")
     m.programTitle = m.top.findNode("programTitle")
     m.programSubtitle = m.top.findNode("programSubtitle")
@@ -11,7 +16,7 @@ sub init()
 
     m.HeightToHide = 1
     m.defaultHeight = 0
-    m.spacings = 10
+    m.spacings = scaleValue(10, m.scaleInfo)
 
     m.i18n = invalid
     scene = m.top.getScene()
@@ -34,7 +39,7 @@ end sub
 ' referencias de compenentes necesarios para su uso
 sub initConfig()
     if m.top.initConfig then 
-        m.reservedWidth = (m.global.width - 140)
+        m.reservedWidth = (m.global.width - scaleValue(140, m.scaleInfo))
         if m.top.width <> 0 then m.reservedWidth = m.top.width
 
         m.programTitle.width = m.reservedWidth

@@ -1,5 +1,10 @@
 ' Inicialización del componente (parte del ciclo de vida de Roku)
 sub init()
+  m.scaleInfo = m.global.scaleInfo
+  if m.scaleInfo = invalid then
+    m.scaleInfo = getScaleInfo()
+  end if
+
   m.videoPlayer = m.top.findNode("VideoPlayer")
   m.playerControllers = m.top.findNode("playerControllers")
 
@@ -992,16 +997,16 @@ sub __configurePlayer()
   m.backgroundControllers.loadHeight = height
   
   if m.timelineBar <> invalid then
-    m.timelineBar.widthBar = width - 160
+    m.timelineBar.widthBar = width - scaleValue(160, m.scaleInfo)
     m.timelineBar.translation = [0, 0]
   end if
 
-  m.programInfo.translation = [80, (height - 50)]
-  m.channelListContainer.translation = [(width - 360), 0]
+  m.programInfo.translation = [scaleValue(80, m.scaleInfo), (height - scaleValue(50, m.scaleInfo))]
+  m.channelListContainer.translation = [(width - scaleValue(360, m.scaleInfo)), 0]
 
   m.programSummaryPlayer.initConfig = true
 
-  m.errorChannel.translation = [((m.global.width - 320) / 2), (m.global.height - 130) / 2]
+  m.errorChannel.translation = [((m.global.width - scaleValue(320, m.scaleInfo)) / 2), (m.global.height - scaleValue(130, m.scaleInfo)) / 2]
 
   m.channelList.ObserveField("selected", "onSelectItemChannelList")
   m.guide.ObserveField("selected", "onSelectItemGuide")
@@ -2016,7 +2021,7 @@ sub onTimelinePreviewChanged()
   end if
 
   x = piT[0] + tb.x + bcX + m.timelineBar.previewX
-  y = piT[1] + tb.y + bcY + m.timelineBar.previewY + 40
+  y = piT[1] + tb.y + bcY + m.timelineBar.previewY + scaleValue(40, m.scaleInfo)
 
   m.timelinePreviewOverlay.translation = [x, y]
   m.timelinePreviewOverlay.visible = true
@@ -2026,14 +2031,14 @@ sub onTimelinePreviewChanged()
   __setSeekUi(true)
 
   ' tamaños deseados (16:9)
-  w = 250
+  w = scaleValue(250, m.scaleInfo)
   h = Fix((w * 9) / 16) ' 180
 
   m.timelinePreviewBg.width  = w
   m.timelinePreviewBg.height = h
 
-  m.timelinePreviewPoster.width  = w - 4
-  m.timelinePreviewPoster.height = h - 4
+  m.timelinePreviewPoster.width  = w - scaleValue(4, m.scaleInfo)
+  m.timelinePreviewPoster.height = h - scaleValue(4, m.scaleInfo)
   m.timelinePreviewPoster.loadWidth  = w
   m.timelinePreviewPoster.loadHeight = h
   m.timelinePreviewPoster.loadDisplayMode = "scaleToZoom"
@@ -2044,20 +2049,8 @@ sub onTimelinePreviewChanged()
 
   m.timelinePreviewTimeLabel.text = m.timelineBar.previewTimeText
 
-  ' tamaños deseados (16:9)
-  w = 250
-  h = Fix((w * 9) / 16)
-
-  m.timelinePreviewBg.width  = w
-  m.timelinePreviewBg.height = h
-
-  m.timelinePreviewPoster.width  = w - 4
-  m.timelinePreviewPoster.height = h - 4
-  m.timelinePreviewPoster.loadWidth  = w
-  m.timelinePreviewPoster.loadHeight = h
-
   ' Si también lo querés 16:9:
-  bgW = 70
+  bgW = scaleValue(70, m.scaleInfo)
   bgH = Fix((bgW * 9) / 16)
 
   bgX = w - bgW
@@ -2068,9 +2061,9 @@ sub onTimelinePreviewChanged()
   m.timelinePreviewTimeBg.translation = [bgX, bgY]
 
   ' Label dentro del recuadro (con un mini padding interno)
-  m.timelinePreviewTimeLabel.width = bgW - 6
+  m.timelinePreviewTimeLabel.width = bgW - scaleValue(6, m.scaleInfo)
   m.timelinePreviewTimeLabel.height = bgH
-  m.timelinePreviewTimeLabel.translation = [bgX + 3, bgY]
+  m.timelinePreviewTimeLabel.translation = [bgX + scaleValue(3, m.scaleInfo), bgY]
   m.timelinePreviewTimeLabel.text = m.timelineBar.previewTimeText
 
 end sub

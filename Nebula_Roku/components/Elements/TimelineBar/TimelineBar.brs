@@ -1,7 +1,12 @@
 ' Inicializa el componente de linea de tiempo
 sub init()
-  m.componentHeightBlur  = 12 ' ajustá a gusto
-  m.componentHeightFocus = 12  ' ajustá a gusto
+  m.scaleInfo = m.global.scaleInfo
+  if m.scaleInfo = invalid then
+    m.scaleInfo = getScaleInfo()
+  end if
+
+  m.componentHeightBlur  = scaleValue(12, m.scaleInfo)
+  m.componentHeightFocus = scaleValue(12, m.scaleInfo)
 
   m.track = m.top.findNode("track")
   m.progress = m.top.findNode("progress")
@@ -9,21 +14,21 @@ sub init()
   m.timeLabel = m.top.findNode("timeLabel")
   m.barContainer = m.top.findNode("barContainer")
 
-  m.trackHeightBlur  = 6
-  m.trackHeightFocus = 10  ' <- más alta cuando tiene foco
+  m.trackHeightBlur  = scaleValue(6, m.scaleInfo)
+  m.trackHeightFocus = scaleValue(10, m.scaleInfo)  ' <- más alta cuando tiene foco
 
-  m.previewW = 250
+  m.previewW = scaleValue(250, m.scaleInfo)
   m.previewH = Fix((m.previewW * 9) / 16) ' => 180
-  m.previewMargin = 8
+  m.previewMargin = scaleValue(8, m.scaleInfo)
 
-  m.thumbHalf = 8.0 ' se recalcula igual si cambia width
+  m.thumbHalf = scaleValue(8.0, m.scaleInfo) ' se recalcula igual si cambia width
 
   m.thumbnailsUrlTemplate = ""
   m.baseEpochSeconds = 0
   m.lastPreviewEpoch = invalid
 
-  m.baseHeight = 6
-  m.focusExtraHeight = 20
+  m.baseHeight = scaleValue(6, m.scaleInfo)
+  m.focusExtraHeight = scaleValue(20, m.scaleInfo)
 
   m.totalWidth = 0
   m.currentDuration = 0.0
@@ -73,7 +78,7 @@ sub __applyWidth()
   if m.top.widthBar <> invalid and m.top.widthBar > 0 then
     m.totalWidth = m.top.widthBar
   else if m.totalWidth = 0
-    m.totalWidth = 800
+    m.totalWidth = scaleValue(800, m.scaleInfo)
   end if
 
   m.barContainer.width = m.totalWidth

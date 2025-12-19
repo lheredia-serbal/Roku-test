@@ -1,5 +1,10 @@
 ' Inicialización del componente (parte del ciclo de vida de Roku)
 sub init()
+    m.scaleInfo = m.global.scaleInfo
+    if m.scaleInfo = invalid then
+        m.scaleInfo = getScaleInfo()
+    end if
+
     m.background = m.top.findNode("background")
     m.guideContainer = m.top.findNode("guideContainer")
     m.carouselGuide = m.top.findNode("carouselGuide")
@@ -44,9 +49,9 @@ sub init()
     m.indexPosition = 0
     m.currentCatchupHours = 0
 
-    m.separator = 15
-    m.size = [160, 262]
-    m.xInitial = -150
+    m.separator = scaleValue(15, m.scaleInfo)
+    m.size = scaleSize([160, 262], m.scaleInfo)
+    m.xInitial = scaleValue(-150, m.scaleInfo)
     m.targetItems = 8
 
     m.targetRects = createTargetRects(m.targetItems, m.xInitial, (m.size[0] + m.separator), m.size[0], m.size[1])
@@ -534,7 +539,7 @@ sub __initConfig()
     m.background.loadWidth = width
     m.background.loadHeight = height
     
-    m.carouselGuideContainer.clippingRect = [0, 0, (width - 155), m.size[1] + 3]
+    m.carouselGuideContainer.clippingRect = [0, 0, (width - scaleValue(155, m.scaleInfo)), m.size[1] + scaleValue(3, m.scaleInfo)]
     m.programSummaryPlayer.initConfig = true
 
     grayColor = m.global.colors.LIGHT_GRAY
@@ -542,7 +547,7 @@ sub __initConfig()
     m.arrowUp.blendColor = grayColor
     m.arrowDown.blendColor = grayColor
 
-    m.guideContainer.translation = [80, (height - 50)]
+    m.guideContainer.translation = [scaleValue(80, m.scaleInfo), (height - scaleValue(50, m.scaleInfo))]
     
     if m.apiUrl = invalid then m.apiUrl = getConfigVariable(m.global.configVariablesKeys.API_URL)
     
@@ -552,7 +557,7 @@ sub __initConfig()
         m.targetSet.focusIndex = 4
     end if 
 
-    m.selectedIndicator.size = [m.size[0] - 2, m.size[1] - 24] 'Ajhuste del label y el espacio de separacion
+    m.selectedIndicator.size = [m.size[0] - scaleValue(2, m.scaleInfo), m.size[1] - scaleValue(24, m.scaleInfo)] 'Ajhuste del label y el espacio de separacion
 
     m.loadConfig = true
 end sub

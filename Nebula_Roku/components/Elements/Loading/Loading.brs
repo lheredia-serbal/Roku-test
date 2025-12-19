@@ -1,5 +1,10 @@
 ' Inicialización del componente (parte del ciclo de vida de Roku)
 sub init()
+    m.scaleInfo = m.global.scaleInfo
+    if m.scaleInfo = invalid then
+        m.scaleInfo = getScaleInfo()
+    end if
+
     m.spinner = m.top.findNode("spinner")
 
     m.top.observeField("visible", "onVisibleChange")
@@ -8,7 +13,10 @@ sub init()
  
     background.width = m.global.width
     background.height = m.global.height
-    m.spinner.translation = [((m.global.width - 80) / 2), (m.global.height - 20) / 2]
+    m.scaleInfo = m.global.scaleInfo
+    if m.scaleInfo = invalid then
+        m.scaleInfo = getScaleInfo()
+    end if
 end sub
 
  

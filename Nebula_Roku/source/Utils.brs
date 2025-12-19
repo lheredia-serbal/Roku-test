@@ -5,6 +5,46 @@ function getVersion() as string
     return appInfo.GetVersion() ' Obtiene la versión definida en el manifest
 end function
 
+' Calcula la escala y zona segura tomando como base un layout 1280x720.
+' Se puede sobreescribir el tamaño base si la UI se diseñó para otra resolución.
+function getScaleInfo(displayWidth = invalid as dynamic, displayHeight = invalid as dynamic, baseWidth = 1280.0, baseHeight = 720.0, safeZonePercent = 0.05 as float) as object
+    size = { w: displayWidth, h: displayHeight }
+
+    if size.w = invalid or size.h = invalid then
+        di = CreateObject("roDeviceInfo")
+        size = di.GetDisplaySize()
+    end if
+
+    scaleX = size.w / baseWidth
+    scaleY = size.h / baseHeight
+    scale = scaleX
+    if scaleY < scale then scale = scaleY
+
+    safePadding = {
+        x: Int(size.w * safeZonePercent),
+        y: Int(size.h * safeZonePercent)
+    }
+
+    return {
+        scale: scale,
+        width: size.w,
+        height: size.h,
+        safeZone: safePadding
+    }
+end function
+
+' Escala un valor lineal usando la información de escala calculada.
+function scaleValue(value as dynamic, scaleInfo as object) as dynamic
+    if scaleInfo = invalid or scaleInfo.scale = invalid then return value
+    return value * scaleInfo.scale
+end function
+
+' Escala un punto/Vector2 de dos posiciones.
+function scalePoint(point as object, scaleInfo as object) as object
+    if point = invalid or point.count() < 2 then return point
+    return [scaleValue(point[0], scaleInfo), scaleValue(point[1], scaleInfo)]
+end function
+
 ' Función para obtener la versión de la aplicación
 function getVersionCode() as float
     version = GetVersion().split(".")
@@ -633,4 +673,10 @@ function __compValue(value, numberOfDigits = 2) as string
     else
         return strValue
     end if
+end function
+
+' Escala un tamaño [ancho, alto].
+function scaleSize(size as object, scaleInfo as object) as object
+    if size = invalid or size.count() < 2 then return size
+    return [scaleValue(size[0], scaleInfo), scaleValue(size[1], scaleInfo)]
 end function

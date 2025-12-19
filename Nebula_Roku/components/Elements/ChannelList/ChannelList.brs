@@ -1,10 +1,15 @@
 ' Inicialización del componente (parte del ciclo de vida de Roku)
 sub init()
+    m.scaleInfo = m.global.scaleInfo
+    if m.scaleInfo = invalid then
+        m.scaleInfo = getScaleInfo()
+    end if
+
     m.channelList = m.top.findNode("channelList")
     m.targetItems = 8
     m.top.refreshLoadChannelList = 0
-    m.separator = 20
-    m.size = [280, 110]
+    m.separator = scaleValue(20, m.scaleInfo)
+    m.size = scaleSize([280, 110], m.scaleInfo)
 
     m.targetRects = createTargetRects(m.targetItems, -(m.size[1] + m.separator), (m.size[1] + m.separator), m.size[0], m.size[1], "InY")
 end sub

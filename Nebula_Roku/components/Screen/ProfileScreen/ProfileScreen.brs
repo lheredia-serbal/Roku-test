@@ -1,5 +1,10 @@
 ' Inicialización del componente (parte del ciclo de vida de Roku)
 sub init()
+  m.scaleInfo = m.global.scaleInfo
+  if m.scaleInfo = invalid then
+    m.scaleInfo = getScaleInfo()
+  end if
+
   m.top.finished = false 
   m.allowAddingProfiles = false
 
@@ -317,7 +322,7 @@ sub onGetAllAvatarsResponse()
       
       __clearAvatarsCarousel()
 
-      m.carouselContainer.translation = [50, 20]
+      m.carouselContainer.translation = [scaleValue(50, m.scaleInfo), scaleValue(20, m.scaleInfo)]
       m.xPosition = m.carouselContainer.translation[0]
       m.yPosition = m.carouselContainer.translation[1]
 
@@ -346,7 +351,7 @@ sub onGetAllAvatarsResponse()
         previousCarousel = newCarousel
     
         ' Usa la propiedad height definida en el componente para calcular la posición
-        yPosition = yPosition + newCarousel.height + 20
+        yPosition = yPosition + newCarousel.height + scaleValue(20, m.scaleInfo)
         
         id++
       end for
@@ -558,7 +563,7 @@ sub __initConfig()
   m.screenProfileSelected.translation = [(width / 2), (height / 2)]
   m.titleSelected.width = width
   
-  m.screenProfileEdit.translation = [(width / 2), 80]
+  m.screenProfileEdit.translation = [(width / 2), scaleValue(80, m.scaleInfo)]
   m.titleEdit.width = width
   m.keyboard.showTextEditBox = false
   m.keyboard.text = ""
@@ -566,7 +571,7 @@ sub __initConfig()
   m.profileName.maxTextLength = 255
   m.profileName.hintTextColor = m.global.colors.LIGHT_GRAY
 
-  m.profileImageAndNameContainer.translation = [width - 150, 20]
+  m.profileImageAndNameContainer.translation = [width - scaleValue(150, m.scaleInfo), scaleValue(20, m.scaleInfo)]
 
   'clear variables
   m.lastProfileFocus = invalid

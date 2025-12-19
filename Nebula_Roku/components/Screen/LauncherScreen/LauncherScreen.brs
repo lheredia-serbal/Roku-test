@@ -2,16 +2,19 @@
 sub init()
   m.top.finished = false
   device = getDevice(getVersion(), getVersionCode(), getAppCode())
+  scaleInfo = getScaleInfo(device.width, device.height)
+
   addAndSetFields(m.global, {
-    configVariablesKeys: getAppConfigVariable(), 
-    apiVersions: getApiVersion(), 
-    device: device, 
-    width: device.width, 
-    height: device.height, 
-    ratio: device.ratio, 
+    configVariablesKeys: getAppConfigVariable(),
+    apiVersions: getApiVersion(),
+    device: device,
+    width: scaleInfo.width,
+    height: scaleInfo.height,
+    ratio: device.ratio,
+    scaleInfo: scaleInfo,
     colors: mergeAssociativeArrays(getBasicColors(), getSpecialColors()),
     appCode: getAppCode(),
-    beaconTokenExpiresIn: 0, 
+    beaconTokenExpiresIn: 0,
   })
 
   'find Nodes
@@ -19,12 +22,19 @@ sub init()
   copyrightLabel = m.top.findNode("copyrightLabel")
   logo = m.top.findNode("logo")
 
-  logo.translation = [((device.width - 500) / 2), (device.height - 250) / 2]
+  logoWidth = scaleValue(500, scaleInfo)
+  logoHeight = scaleValue(250, scaleInfo)
+  logo.width = logoWidth
+  logo.height = logoHeight
+  logo.loadWidth = logoWidth
+  logo.loadHeight = logoHeight
+  logo.translation = [((scaleInfo.width - logoWidth) / 2), (scaleInfo.height - logoHeight) / 2]
 
   versionLabel.color = m.global.colors.PRIMARY
   versionLabel.text = "v " + getVersion()
-  versionLabel.width = device.width
-  versionLabel.translation = [0, (device.height - 80)]
+  versionLabel.width = scaleInfo.width - (scaleInfo.safeZone.x * 2)
+  versionLabel.height = scaleValue(35, scaleInfo)
+  versionLabel.translation = [scaleInfo.safeZone.x, (scaleInfo.height - scaleInfo.safeZone.y - scaleValue(80, scaleInfo))]
 
   copyrightLabel.color = m.global.colors.LIGHT_GRAY
   copyrightLabel.text = "@copyright " + getCurrentYear() + " - Qvix Solutions"

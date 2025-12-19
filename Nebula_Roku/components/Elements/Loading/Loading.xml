@@ -7,6 +7,7 @@
     
     <script type="text/brightscript" uri="Loading.brs" />
     <script type="text/brightscript" uri="pkg:/source/Config.brs" />
+    <script type="text/brightscript" uri="pkg:/source/Utils.brs" />
 
     <children> 
         <Group id="Loading" translation="[0,0]">

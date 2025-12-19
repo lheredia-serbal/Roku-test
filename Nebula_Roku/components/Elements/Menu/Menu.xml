@@ -31,7 +31,6 @@
             
         <LayoutGroup
             id="avatarMenuContainer"
-            translation="[70, 70]"
             layoutDirection="horiz"
             horizAlignment="left"
             vertAlignment="center"

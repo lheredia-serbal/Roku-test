@@ -1,5 +1,10 @@
 ' Inicialización del componente (parte del ciclo de vida de Roku)
 sub init()
+    m.scaleInfo = m.global.scaleInfo
+    if m.scaleInfo = invalid then
+        m.scaleInfo = getScaleInfo()
+    end if
+
     m.programContainer = m.top.findNode("programContainer")
     m.programRectangleContainer = m.top.findNode("programRectangleContainer")
     m.programTitle = m.top.findNode("programTitle")
@@ -9,12 +14,12 @@ sub init()
     m.programSynopsis = m.top.findNode("programSynopsis")
     m.programAvailableView = m.top.findNode("programAvailableView")
 
-    m.reservedHeight = 240
-    m.reservedWidth = 1200
+    m.reservedHeight = scaleValue(240, m.scaleInfo)
+    m.reservedWidth = scaleValue(1200, m.scaleInfo)
     m.HeightToHide = 1
     m.defaultHeight = 0
-    m.spacings = 10
-    m.buttonExist = [220, 30]
+    m.spacings = scaleValue(10, m.scaleInfo)
+    m.buttonExist = scaleSize([220, 30], m.scaleInfo)
     m.buttonNotExist = [1, 1]
 
     m.i18n = invalid
@@ -39,7 +44,7 @@ end sub
 sub initConfig()
     if m.top.initConfig then 
         width = m.global.width
-        m.reservedWidth = width - 140
+        m.reservedWidth = width - scaleValue(140, m.scaleInfo)
     
         m.programRectangleContainer.width = m.reservedWidth
         m.programRectangleContainer.height = m.reservedHeight

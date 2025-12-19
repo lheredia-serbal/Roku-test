@@ -7,6 +7,7 @@
     xsi:noNamespaceSchemaLocation="https://devtools.web.roku.com/schema/RokuSceneGraph.xsd">
 
     <script type="text/brightscript" uri="QvButton.brs"/>
+    <script type="text/brightscript" uri="pkg:/source/Utils.brs" />
 
     <interface>
       <!-- Paramentros de Entrada -->

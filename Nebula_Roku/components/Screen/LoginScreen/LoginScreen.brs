@@ -1,5 +1,10 @@
 ' Inicialización del componente (parte del ciclo de vida de Roku)
 sub init()
+  m.scaleInfo = m.global.scaleInfo
+  if m.scaleInfo = invalid then
+    m.scaleInfo = getScaleInfo()
+  end if
+
   m.top.finished = false 
   m.userField = m.top.findNode("userField")
   m.passwordField = m.top.findNode("passwordField")
@@ -98,8 +103,8 @@ sub initFocus()
 
     width = m.global.width
 
-    m.buttonContainer.translation = [((width - 380) / 2), 0]
-    m.logo.translation = [(width - 280), 30]
+    m.buttonContainer.translation = [((width - scaleValue(380, m.scaleInfo)) / 2), 0]
+    m.logo.translation = [(width - scaleValue(280, m.scaleInfo)), scaleValue(30, m.scaleInfo)]
     
     m.keyboard.ObserveField("textEditBox", "onTextBoxManagment")
     __focusKeyboard()

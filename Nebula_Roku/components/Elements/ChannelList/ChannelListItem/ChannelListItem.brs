@@ -1,5 +1,10 @@
 ' Inicialización del componente (parte del ciclo de vida de Roku)
 sub init()
+    m.scaleInfo = m.global.scaleInfo
+    if m.scaleInfo = invalid then
+        m.scaleInfo = getScaleInfo()
+    end if
+
     m.theRect  = m.top.findNode("theRect")
     m.channelInfo = m.top.findNode("channelInfo")
     m.programInfo = m.top.findNode("programInfo")
@@ -8,8 +13,8 @@ sub init()
     m.progressLeft = m.top.findNode("progressLeft")
     m.progressRight = m.top.findNode("progressRight")
 
-    m.padding = 12
-    m.totalProgress = 280 - (m.padding * 2)
+    m.padding = scaleValue(12, m.scaleInfo)
+    m.totalProgress = scaleValue(280, m.scaleInfo) - (m.padding * 2)
     m.limitOpacity = 0.6
     __initColors()
 end sub
@@ -45,8 +50,8 @@ end sub
 
 ' Se dispara al dibujar en pantalla y define oppiedades del xml del componente
 sub currRectChanged()
-      m.theRect.width = m.top.currRect.width
-      m.theRect.height = m.top.currRect.height
+    m.theRect.width = scaleValue(m.top.currRect.width, m.scaleInfo)
+    m.theRect.height = scaleValue(m.top.currRect.height, m.scaleInfo)
 end sub
 
 ' Define el estilo de foco del componente y como se comporta al tener o no el foco

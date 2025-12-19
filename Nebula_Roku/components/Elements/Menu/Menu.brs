@@ -24,6 +24,7 @@ sub init()
   m.selectedProfileChange = m.top.findNode("selectedProfileChange")
   m.avatarName = m.top.findNode("avatarName")
   m.profileChange = m.top.findNode("profileChange")
+  m.profileContainer = m.top.findNode("profileContainer")
   
   m.exitItem = {key: "MenuId", Id: -1, code: "exit", behavior: "exit"}
   m.logoutItem = {key: "MenuId", Id: -1, code: "logout", behavior: "logout"}
@@ -33,6 +34,8 @@ sub init()
 
   m.orderSecondaryMenu = [m.settingLabel, m.exitLabel, m.logoutLabel]
   m.positionSecondaryMenu = 0 
+
+  m.scaleInfo = invalid
 
   m.i18n = invalid
   scene = m.top.getScene()
@@ -181,20 +184,39 @@ sub configureMenu()
   width = m.global.width
   height = m.global.height
   
+  m.scaleInfo = m.global.scaleInfo
+  if m.scaleInfo = invalid then m.scaleInfo = getScaleInfo(width, height)
+
+  safeX = m.scaleInfo.safeZone.x
+  safeY = m.scaleInfo.safeZone.y
+  usableWidth = m.scaleInfo.width
+  contentHeight = m.scaleInfo.height - (safeY * 2)
+
+  m.backgroundMenu.translation = [0, 0]
   m.backgroundMenu.width = 1
-  m.backgroundMenu.height = height
+  m.backgroundMenu.height = m.scaleInfo.height
 
-  m.menuContainer.width = 118
-  m.menuContainer.height = height
+  m.menuContainer.translation = [0, safeY]
+  m.menuContainer.width = scaleValue(118, m.scaleInfo)
+  m.menuContainer.height = contentHeight
 
+  m.menuExpandVector2DFAnimation.keyValue = [1, usableWidth]
+  m.menuCollapseVector2DFAnimation.keyValue = [usableWidth, 1]
 
-  m.menuExpandVector2DFAnimation.keyValue = [1, width]
-  m.menuCollapseVector2DFAnimation.keyValue = [width, 1]
+  m.avatarMenuContainer.translation = [safeX + scaleValue(0, m.scaleInfo), safeY + scaleValue(70, m.scaleInfo)]
+  m.avatarMenuContainer.itemSpacings = [scaleValue(10, m.scaleInfo)]
+  m.avatarImage.width = scaleValue(65, m.scaleInfo)
+  m.avatarImage.height = scaleValue(65, m.scaleInfo)
+  m.avatarImageOpacity.width = scaleValue(65, m.scaleInfo)
+  m.avatarImageOpacity.height = scaleValue(66, m.scaleInfo)
+  m.selectedProfileChange.size = [scaleValue(62, m.scaleInfo), scaleValue(62, m.scaleInfo)]
 
-  m.principalMenuLayoutGroup.translation = [70, ((height - 160) / 2)]
-  
-  m.secondaryMenuLayoutGroup.translation = [70, (height - 120)]
-  
+  m.principalMenuLayoutGroup.translation = [safeX + scaleValue(0, m.scaleInfo), (safeY + ((contentHeight - scaleValue(160, m.scaleInfo)) / 2))]
+  m.principalMenuLayoutGroup.itemSpacings = [scaleValue(20, m.scaleInfo)]
+
+  m.secondaryMenuLayoutGroup.translation = [safeX + scaleValue(0, m.scaleInfo), (safeY + contentHeight - scaleValue(60, m.scaleInfo))]
+  m.secondaryMenuLayoutGroup.itemSpacings = [scaleValue(10, m.scaleInfo)]
+
   m.colorFosused = m.global.colors.WHITE
   m.colorDefault = m.global.colors.MENU_ITEM_DEFAULT
   

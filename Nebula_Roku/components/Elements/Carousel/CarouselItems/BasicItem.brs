@@ -1,5 +1,10 @@
 ' Inicialización del componente (parte del ciclo de vida de Roku)
 sub init()
+    m.scaleInfo = m.global.scaleInfo
+    if m.scaleInfo = invalid then
+        m.scaleInfo = getScaleInfo()
+    end if
+
     m.theRect  = m.top.findNode("theRect")
     m.progressContainer = m.top.findNode("progressContainer")
     m.imageItem = m.top.findNode("imageItem")
@@ -9,7 +14,7 @@ sub init()
     m.programTitleByError = m.top.findNode("programTitleByError")
     m.programTitle = m.top.findNode("programTitle")
     
-    m.padding = 10
+    m.padding = scaleValue(10, m.scaleInfo)
     m.backgroundImage = invalid
     m.showBackgroundImage = false
     __initConfig()
@@ -42,34 +47,39 @@ sub itemContentChanged()
         m.imageItem.uri = m.backgroundImage
     end if
 
+    scaledSize = getScaledItemSize()
+
     if m.top.itemContent.percentageElapsed <> invalid and m.top.itemContent.percentageElapsed > 0 then
-        widthLeft = (m.top.itemContent.percentageElapsed * (m.top.itemContent.size[0] - (m.padding*2))) / 100
+        widthLeft = (m.top.itemContent.percentageElapsed * (scaledSize[0] - (m.padding*2))) / 100
 
         m.progressLeft.width = widthLeft
-        m.progressRight.width = (m.top.itemContent.size[0] - (m.padding*2) - widthLeft)
+        m.progressRight.width = (scaledSize[0] - (m.padding*2) - widthLeft)
     else
         m.progressLeft.width = 0
         m.progressRight.width = 0
     end if
 end sub
 
-' Se dispara al dibujar en pantalla y define oppiedades del xml del componente
+' Se dispara al dibujar en pantalla y define propiedades del xml del componente
 sub currRectChanged()
-    m.theRect.width = m.top.currRect.width
-    m.theRect.height = m.top.currRect.height
+    scaledSize = getScaledItemSize()
+    scaledCurrRect = getScaledCurrRect()
 
-    m.imageItem.width = m.top.itemContent.size[0]
-    m.imageItem.height = m.top.itemContent.size[1]
-    
-    m.opacityLayout.width = m.top.itemContent.size[0]
-    m.opacityLayout.height = m.top.itemContent.size[1]
+    m.theRect.width = scaledCurrRect.width
+    m.theRect.height = scaledCurrRect.height
 
-    m.programTitleByError.translation = [(m.top.itemContent.size[0] / 2), (m.top.itemContent.size[1] / 2)]
+    m.imageItem.width = scaledSize[0]
+    m.imageItem.height = scaledSize[1]
 
-    m.programTitle.width = (m.top.itemContent.size[0] - m.padding)
-    m.programTitle.height = (m.top.itemContent.size[1] - m.padding)
+    m.opacityLayout.width = scaledSize[0]
+    m.opacityLayout.height = scaledSize[1]
 
-    m.progressContainer.translation = [m.padding , m.top.currRect.height - 20]
+    m.programTitleByError.translation = [(scaledSize[0] / 2), (scaledSize[1] / 2)]
+
+    m.programTitle.width = (scaledSize[0] - m.padding)
+    m.programTitle.height = (scaledSize[1] - m.padding)
+
+    m.progressContainer.translation = [m.padding , scaledCurrRect.height - scaleValue(20, m.scaleInfo)]
 end sub
 
 ' Define el estilo de foco del componente y como se comporta al tener o no el foco
@@ -91,7 +101,7 @@ end sub
 ' Carga la configuracion inicial del componente, escuchando los observable y obteniendo las 
 ' referencias de compenentes necesarios para su uso
 sub __initConfig()
-    m.imageItem.loadSync = true 
+    m.imageItem.loadSync = true
     m.backgroundImage = getImageError()
     m.imageItem.loadingBitmapUri = m.backgroundImage
     m.imageItem.failedBitmapUri = m.backgroundImage
@@ -99,6 +109,32 @@ sub __initConfig()
     m.progressLeft.color = m.global.colors.PROGRESS
     m.progressRight.color = m.global.colors.PROGRESS_BG
 
+    scaledHeight = scaleValue(3, m.scaleInfo)
+    m.progressLeft.height = scaledHeight
+    m.progressRight.height = scaledHeight
+
     m.imageItem.ObserveField("loadStatus", "onStatusChange")
 end sub
 
+function getScaledItemSize() as object
+    if m.top.itemContent <> invalid and m.top.itemContent.size <> invalid then
+        return [scaleValue(m.top.itemContent.size[0], m.scaleInfo), scaleValue(m.top.itemContent.size[1], m.scaleInfo)]
+    end if
+
+    return [0, 0]
+end function
+
+function getScaledCurrRect() as object
+    scaledWidth = m.top.currRect.width
+    scaledHeight = m.top.currRect.height
+
+    if m.top.currRect.width <> invalid and m.top.currRect.height <> invalid then
+        scaledWidth = scaleValue(m.top.currRect.width, m.scaleInfo)
+        scaledHeight = scaleValue(m.top.currRect.height, m.scaleInfo)
+    end if
+
+    return {
+        width: scaledWidth,
+        height: scaledHeight
+    }
+end function

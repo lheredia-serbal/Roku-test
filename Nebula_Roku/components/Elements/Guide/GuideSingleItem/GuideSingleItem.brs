@@ -1,12 +1,17 @@
 ' Inicialización del componente (parte del ciclo de vida de Roku)
 sub init()
+    m.scaleInfo = m.global.scaleInfo
+    if m.scaleInfo = invalid then
+        m.scaleInfo = getScaleInfo()
+    end if
+
     m.theRect = m.top.findNode("theRect")
     m.imageItem = m.top.findNode("imageItem")
     m.programTitleByError = m.top.findNode("programTitleByError")
     m.programTitle = m.top.findNode("programTitle")
     m.programTime = m.top.findNode("programTime")
     
-    m.padding = 14
+    m.padding = scaleValue(14, m.scaleInfo)
     m.backgroundImage = invalid
     m.showBackgroundImage = false
     m.limitOpacity = 0.5
@@ -44,20 +49,22 @@ end sub
 
 ' Se dispara al dibujar en pantalla y define oppiedades del xml del componente
 sub currRectChanged()
-    m.programTime.width = m.top.itemContent.size[0]
-    m.programTime.height = 22
+    scaledSize = getScaledItemSize()
+    programTimeHeight = scaleValue(22, m.scaleInfo)
+    m.programTime.width = scaledSize[0]
+    m.programTime.height = programTimeHeight
 
-    m.imageItem.translation = [0, m.programTime.height]
+    m.imageItem.translation = [0, programTimeHeight]
 
-    m.imageItem.width = m.top.itemContent.size[0]
-    m.imageItem.loadWidth = m.top.itemContent.size[0]
-    m.imageItem.height = m.top.itemContent.size[1] - m.programTime.height
-    m.imageItem.loadHeight = m.top.itemContent.size[1] - m.programTime.height
+    m.imageItem.width = scaledSize[0]
+    m.imageItem.loadWidth = scaledSize[0]
+    m.imageItem.height = scaledSize[1] - programTimeHeight
+    m.imageItem.loadHeight = scaledSize[1] - programTimeHeight
     
-    m.programTitleByError.translation = [(m.top.itemContent.size[0] / 2), ((m.top.itemContent.size[1] - m.programTime.height) / 2) + m.programTime.height]
+    m.programTitleByError.translation = [(scaledSize[0] / 2), ((scaledSize[1] - programTimeHeight) / 2) + programTimeHeight]
 
-    m.programTitle.width = (m.top.itemContent.size[0] - m.padding)
-    m.programTitle.height = ((m.top.itemContent.size[1] - m.programTime.height) - m.padding) + m.programTime.height
+    m.programTitle.width = (scaledSize[0] - m.padding)
+    m.programTitle.height = ((scaledSize[1] - programTimeHeight) - m.padding) + programTimeHeight
 end sub
 
 ' Define el estilo de foco del componente y como se comporta al tener o no el foco
@@ -95,3 +102,10 @@ sub __initConfig()
     m.imageItem.ObserveField("loadStatus", "onStatusChange")
 end sub
 
+function getScaledItemSize() as object
+    if m.top.itemContent <> invalid and m.top.itemContent.size <> invalid then
+        return scaleSize(m.top.itemContent.size, m.scaleInfo)
+    end if
+
+    return [0, 0]
+end function

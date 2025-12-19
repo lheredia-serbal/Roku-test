@@ -1,5 +1,10 @@
 ' Inicialización del componente (parte del ciclo de vida de Roku)
 sub init()
+  m.scaleInfo = m.global.scaleInfo
+  if m.scaleInfo = invalid then
+    m.scaleInfo = getScaleInfo()
+  end if
+
   m.sessionsContainer = m.top.findNode("sessionsContainer")
   m.sessionsList = m.top.findNode("sessionsList")
   m.titleManySessions = m.top.findNode("titleManySessions")
@@ -316,10 +321,10 @@ sub __initConfigWithManySessions()
   
   width = m.global.width
   
-  m.widthContainer = width - 80
-  m.sessionsContainer.translation = [(width / 2), 80]
+  m.widthContainer = width - scaleValue(80, m.scaleInfo)
+  m.sessionsContainer.translation = [(width / 2), scaleValue(80, m.scaleInfo)]
   
-  m.titleManySessions.width = width - 300
+  m.titleManySessions.width = width - scaleValue(300, m.scaleInfo)
 end sub
 
 ' Carga la configuracion inicial del componente cuando interactua como la pantalla de que la sesion fue eliminada por otro dipositivo, 
@@ -332,7 +337,7 @@ sub __initConfigWithKilledMe()
   height = m.global.height
   
   m.killedMeContainer.translation = [(width / 2), (height / 2)]
-  m.titleKilledMe.width = width - 300
+  m.titleKilledMe.width = width - scaleValue(300, m.scaleInfo)
 end sub
 
 ' Dispara la peticion de cerrrar una sesion

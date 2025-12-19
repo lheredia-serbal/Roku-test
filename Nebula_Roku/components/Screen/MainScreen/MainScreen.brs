@@ -1,5 +1,8 @@
 ' Inicialización del componente (parte del ciclo de vida de Roku)
 sub init()
+  m.scaleInfo = m.global.scaleInfo
+  if m.scaleInfo = invalid then m.scaleInfo = getScaleInfo()
+
   m.opacityForMenu = m.top.findNode("opacityForMenu")
   m.groupOpacityForMenu = m.top.findNode("groupOpacityForMenu")
   m.myMenu = m.top.findNode("myMenu")
@@ -100,8 +103,10 @@ sub initData()
   if m.top.onFocus and m.top.loadData then
     if m.top.loading.visible = false then m.top.loading.visible = true
     
-    width = m.global.width
-    height = m.global.height
+    safeX = m.scaleInfo.safeZone.x
+    safeY = m.scaleInfo.safeZone.y
+    width = m.scaleInfo.width
+    height = m.scaleInfo.height
 
     m.opacityForMenu.width = width
     m.opacityForMenu.height = height
@@ -112,16 +117,23 @@ sub initData()
     m.programImageBackground.width = width
     m.programImageBackground.height = height
     
-    m.groupOpacityForMenu.clippingRect = [0, 0, 118, height]
+    m.groupOpacityForMenu.clippingRect = [0, 0, scaleValue(118, m.scaleInfo), height]
 
-    m.logo.translation = [(width - 280), 30]
-    m.nameOrganization.translation = [(width - 200), 130]
-    
+    logoWidth = scaleValue(200, m.scaleInfo)
+    logoHeight = scaleValue(100, m.scaleInfo)
+    m.logo.width = logoWidth
+    m.logo.height = logoHeight
+    m.logo.loadWidth = logoWidth
+    m.logo.loadHeight = logoHeight
+    m.logo.translation = [(width - safeX - scaleValue(280, m.scaleInfo)), safeY + scaleValue(30, m.scaleInfo)]
+    m.nameOrganization.translation = [(width - safeX - scaleValue(200, m.scaleInfo)), safeY + scaleValue(130, m.scaleInfo)]
     m.withoutContentLayoutGroup.translation = [(width / 2), (height / 2)]
     
-    errorSafeZone = width - 230
+    errorSafeZone = width - (safeX * 2) - scaleValue(230, m.scaleInfo)
     m.withoutContentTitle.width = errorSafeZone
     m.withoutContentMessage.width = errorSafeZone
+
+    m.programInfo.translation = [safeX + scaleValue(118, m.scaleInfo), safeY + scaleValue(50, m.scaleInfo)]
 
     if m.productCode = invalid then m.productCode = getConfigVariable(m.global.configVariablesKeys.PRODUCT_CODE)
     if m.apiUrl = invalid then m.apiUrl = getConfigVariable(m.global.configVariablesKeys.API_URL) 
@@ -177,9 +189,11 @@ sub populateCarousels(data as Object)
   __clearContentView()
   __clearProgramInfo()
 
-  m.carouselContainer.translation = [50, 20]
+  m.carouselContainer.translation = [m.scaleInfo.safeZone.x + scaleValue(50, m.scaleInfo), m.scaleInfo.safeZone.y + scaleValue(20, m.scaleInfo)]
   m.xPosition = m.carouselContainer.translation[0]
   m.yPosition = m.carouselContainer.translation[1]
+
+  m.selectedIndicator.translation = [m.scaleInfo.safeZone.x + scaleValue(118, m.scaleInfo), m.scaleInfo.safeZone.y + scaleValue(147, m.scaleInfo)]
 
   for each carouselData in data.items
     if carouselData.style <> getCarouselStyles().NEWS then 
@@ -212,7 +226,7 @@ sub populateCarousels(data as Object)
       previousCarousel = newCarousel
   
       ' Usa la propiedad height definida en el componente para calcular la posición
-      yPosition = yPosition + newCarousel.height + 20
+      yPosition = yPosition + newCarousel.height + scaleValue(20, m.scaleInfo)
     end if
   end for
 

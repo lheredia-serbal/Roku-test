@@ -1,5 +1,10 @@
 ' Inicialización del componente (parte del ciclo de vida de Roku)
 sub init()
+  m.scaleInfo = m.global.scaleInfo
+  if m.scaleInfo = invalid then
+    m.scaleInfo = getScaleInfo()
+  end if
+
   m.borderSize = 1
   m.buttonBg = m.top.FindNode("buttonBg")
   m.layoutContainer = m.top.FindNode("layoutContainer")
@@ -59,8 +64,8 @@ sub changeSize()
   size = [m.buttonBg.width, m.buttonBg.height]
   
   if m.top.size <> invalid then 
-    if m.top.size.count() = 1 then size = [m.top.size[0], m.buttonBg.height]
-    if m.top.size.count() = 2 then size = [m.top.size[0], m.top.size[1]]
+    if m.top.size.count() = 1 then size = [scaleValue(m.top.size[0], m.scaleInfo), m.buttonBg.height]
+    if m.top.size.count() = 2 then size = scaleSize(m.top.size, m.scaleInfo)
     
     if size[0] = 0 then size[0] = m.buttonBg.width
     if size[1] = 0 then size[1] = m.buttonBg.height

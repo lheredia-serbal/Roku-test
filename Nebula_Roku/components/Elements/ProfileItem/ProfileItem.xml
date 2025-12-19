@@ -7,6 +7,7 @@
 
     <script type="text/brightscript" uri="pkg:/source/Utils.brs" />
     <script type="text/brightscript" uri="ProfileItem.brs"/>
+    <script type="text/brightscript" uri="pkg:/source/Utils.brs" />
 
     <interface>
         <!-- Paramentros de Entrada -->

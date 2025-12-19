@@ -1,5 +1,10 @@
 ' Inicialización del componente (parte del ciclo de vida de Roku)
 sub init()
+  m.scaleInfo = m.global.scaleInfo
+  if m.scaleInfo = invalid then
+    m.scaleInfo = getScaleInfo()
+  end if
+
   m.programDetailContent = m.top.findNode("programDetailContent")
   
   m.notFoundLayoutGroup = m.top.findNode("notFoundLayoutGroup")
@@ -574,7 +579,7 @@ sub __configProgramDetail()
   width = m.global.width
   height = m.global.height
 
-  m.programInfo.width = (m.global.width - 390)
+  m.programInfo.width = (m.global.width - scaleValue(390, m.scaleInfo))
   m.programInfo.initConfig = true
    
   m.infoGradient.width = width
@@ -585,7 +590,7 @@ sub __configProgramDetail()
   
   m.notFoundLayoutGroup.translation = [(width / 2), (height / 2)]
 
-  m.notFoundTitle.width = width - 230
+  m.notFoundTitle.width = width - scaleValue(230, m.scaleInfo)
 
   if m.top.isOpenByPlayer then 
     m.programImageBackground.visible = false
@@ -737,14 +742,14 @@ sub __renderCreditGroups()
         row.layoutDirection = "horiz"
         row.horizAlignment = KeyButtons().LEFT
         row.vertAlignment = "top"
-        row.itemSpacings = [12]
+        row.itemSpacings = [scaleValue(12, m.scaleInfo)]
 
         lType = CreateObject("roSGNode", "Label")
         lType.text = creditType + ":"
         lType.wrap = false
         lType.font = "font:SmallSystemFont"
         lType.maxLines = 1
-        lType.width = 100
+        lType.width = scaleValue(100, m.scaleInfo)
 
         lNames = CreateObject("roSGNode", "Label")
         lNames.text = namesText
@@ -753,7 +758,7 @@ sub __renderCreditGroups()
         lNames.maxLines = 2
         lNames.color = m.global.colors.LIGHT_GRAY
         ' opcional: para que no se te vaya infinito, poné un ancho razonable
-        lNames.width = 800
+        lNames.width = scaleValue(800, m.scaleInfo)
 
         row.appendChild(lType)
         row.appendChild(lNames)
