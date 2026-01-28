@@ -1,11 +1,7 @@
 ' Inicialización del componente (parte del ciclo de vida de Roku)
 sub init()
-    m.scaleInfo = m.global.scaleInfo
-    if m.scaleInfo = invalid then
-        m.scaleInfo = getScaleInfo()
-    end if
-
     m.background = m.top.findNode("background")
+    m.carouselContainer = m.top.findNode("carouselContainer")
     m.guideContainer = m.top.findNode("guideContainer")
     m.carouselGuide = m.top.findNode("carouselGuide")
     m.carouselGuideContainer = m.top.findNode("carouselGuideContainer")
@@ -17,6 +13,7 @@ sub init()
     m.prevChannelNumber = m.top.findNode("prevChannelNumber")
     m.prevChannelImage = m.top.findNode("prevChannelImage")
     
+    m.currentChannelContainer = m.top.findNode("currentChannelContainer")
     m.currentChannelNumber = m.top.findNode("currentChannelNumber")
     m.currentChannelImage = m.top.findNode("currentChannelImage")
 
@@ -24,12 +21,19 @@ sub init()
     m.nextChannelImage = m.top.findNode("nextChannelImage")
     
     m.selectedIndicator = m.top.findNode("selectedIndicator")
+    m.channelContainer = m.top.findNode("channelContainer")
+    m.guideGroup = m.top.findNode("guideGroup")
 
     m.arrowUp = m.top.findNode("arrowUp")
     m.arrowDown = m.top.findNode("arrowDown")
+
+    m.prevContainer = m.top.findNode("prevContainer")
+    m.nextChannelContainer = m.top.findNode("nextChannelContainer")
     
     m.changeUp = m.top.findNode("changeUp")
     m.changeDown = m.top.findNode("changeDown")
+
+    m.scaleInfo = m.global.scaleInfo
     
     m.loadConfig = false
     m.saveDateByEvent = false
@@ -55,13 +59,6 @@ sub init()
     m.targetItems = 8
 
     m.targetRects = createTargetRects(m.targetItems, m.xInitial, (m.size[0] + m.separator), m.size[0], m.size[1])
-
-    m.i18n = invalid
-    scene = m.top.getScene()
-    if scene <> invalid then
-        m.i18n = scene.findNode("i18n")
-    end if
-
     __removeProgramDetailComponent()
 end sub
 
@@ -179,7 +176,17 @@ function onKeyEvent(key as string, press as boolean) as boolean
         handled = true 
 
     else if key = KeyButtons().BACK then
-        if press then
+
+        if m.detailGuideContainer.isInFocusChain() then 
+            if press then
+                __removeProgramDetailComponent()
+                m.carouselGuide.setFocus(true)
+            end if 
+            
+            handled = true 
+        end if 
+
+        if not handled and press then
             clearTimer(m.changeUp)
             clearTimer(m.changeDown)
 
@@ -223,16 +230,6 @@ function onKeyEvent(key as string, press as boolean) as boolean
                 
             m.nextChannelNumber.text = ""
             m.nextChannelImage.uri = ""
-        end if 
-
-
-        if m.detailGuideContainer.isInFocusChain() then 
-            if press then
-                __removeProgramDetailComponent()
-                m.carouselGuide.setFocus(true)
-            end if 
-            
-            handled = true 
         end if 
 
     end if 
@@ -312,6 +309,14 @@ sub onCurrentCarouselResponse()
                 __searchNextChannel()
             end if
         end if
+    else
+        error = m.apiRequestCurrentChannel.errorResponse
+        statusCode = m.apiRequestCurrentChannel.statusCode
+        m.apiRequestCurrentChannel = clearApiRequest(m.apiRequestCurrentChannel) 
+
+        printError("Guide (CurrentCarousel):", error)
+
+        if validateLogout(statusCode, m.top) then return
     end if
 end sub
 
@@ -325,6 +330,14 @@ sub onPrevCarouselResponse()
         end if 
 
         m.apiRequestPrevChannel = clearApiRequest(m.apiRequestPrevChannel)
+    else
+        error = m.apiRequestPrevChannel.errorResponse
+        statusCode = m.apiRequestPrevChannel.statusCode
+        m.apiRequestPrevChannel = clearApiRequest(m.apiRequestPrevChannel) 
+
+        printError("Guide (PrevCarousel):", error)
+
+        if validateLogout(statusCode, m.top) then return
     end if
 end sub
 
@@ -338,6 +351,14 @@ sub onNextCarouselResponse()
         end if 
 
         m.apiRequestNextChannel = clearApiRequest(m.apiRequestNextChannel)
+    else
+        error = m.apiRequestNextChannel.errorResponse
+        statusCode = m.apiRequestNextChannel.statusCode
+        m.apiRequestNextChannel = clearApiRequest(m.apiRequestNextChannel) 
+
+        printError("Guide (NextCarousel):", error)
+
+        if validateLogout(statusCode, m.top) then return
     end if
 end sub
 
@@ -362,20 +383,29 @@ sub onItemSelectedChanged()
         loadToPLayer = true
     else if m.currentCatchupHours <> 0 and catchupDateSeconds <= programNode.endSeconds and programNode.endSeconds <= nowSeconds then
         ' Programa catchup
-        loadToPLayer = true
+        if m.global.contact.forTest = invalid or (m.global.contact.forTest <> invalid and not m.global.contact.forTest) then 
+            loadToPLayer = true
+        end if
     end if
 
     if loadToPLayer then 
         if programNode <> invalid and programNode.parentalControl <> invalid and programNode.parentalControl then 
             if m.carouselGuide.focusedChild <> invalid then m.lastElementSelect = m.carouselGuide.focusedChild
-            m.pinDialog = createAndShowPINDialog(m.top, i18n_t(m.i18n, "shared.parentalControlModal.title"), "onPinDialogLoad", [i18n_t(m.i18n, "button.ok"), i18n_t(m.i18n, "button.cancel")])
+            if m.pinDialog <> invalid then 
+                clearPINDialogAndGetOption(m.top, m.pinDialog)
+                m.pinDialog = invalid
+            end if
+            m.programBySend = m.currentCarouselGuide.data.programs[indexSelected]
+            m.pinDialog = createAndShowPINDialog(m.top, i18n_t(m.global.i18n, "shared.parentalControlModal.title"), "onPinDialogLoad", [i18n_t(m.global.i18n, "button.ok"), i18n_t(m.global.i18n, "button.cancel")])
         else
             m.programBySend = m.currentCarouselGuide.data.programs[indexSelected]
             __loadStreamingForPlayer()
         end if
     else 
-        m.programBySend = m.currentCarouselGuide.data.programs[indexSelected]
-        __loadDetail()
+        if m.global.contact.forTest = invalid or (m.global.contact.forTest <> invalid and not m.global.contact.forTest) then
+            m.programBySend = m.currentCarouselGuide.data.programs[indexSelected]
+            __loadDetail()
+        end if
     end if 
 end sub
 
@@ -459,7 +489,7 @@ sub onPinDialogLoad()
   m.pinDialog = invalid
   
   if (resp.option = 0 and resp.pin <> invalid and Len(resp.pin) = 4) then 
-    if m.lastElementSelect <> invalid then m.lastElementSelect.setFocus(true)
+    ' if m.lastElementSelect <> invalid then m.lastElementSelect.setFocus(true)
     m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlParentalControlPin(m.apiUrl, resp.pin), "GET", "onParentalControlResponse")
   else 
     m.repositionChannnelList = true
@@ -473,9 +503,14 @@ sub onParentalControlResponse()
     resp = ParseJson(m.apiRequestManager.response)
 
     if resp <> invalid and resp.data <> invalid and resp.data then
-      __loadStreamingForPlayer()
+        __loadStreamingForPlayer()
     else
-      m.dialog = createAndShowDialog(m.top, "", i18n_t(m.i18n, "shared.parentalControlModal.error.invalid"), "onDialogClosedLastFocus")
+        if m.lastElementSelect <> invalid then m.lastElementSelect.setFocus(true)
+        if m.dialog <> invalid then
+            clearDialogAndGetOption(m.top, m.dialog)
+            m.dialog = invalid 
+        end if
+        m.dialog = createAndShowDialog(m.top, "", i18n_t(m.global.i18n, "shared.parentalControlModal.error.invalid"), "onDialogClosedLastFocus")
     end if
   else     
     m.top.loading.visible = false
@@ -484,6 +519,8 @@ sub onParentalControlResponse()
     m.apiRequestManager = clearApiRequest(m.apiRequestManager)
 
     printError("ParentalControl:", statusCode.toStr() + " " +  errorResponse)
+
+    if validateLogout(statusCode, m.top) then return
   end if
 end sub
 
@@ -500,9 +537,11 @@ end sub
 
 ' Metodo que dispara el deslogueo del usuario
 sub onLogoutEvent()
-    printError("FaltaImplementar onLogoutEvent")
     m.carouselGuide.setFocus(true)
     __removeProgramDetailComponent()
+    m.top.logout = true
+    __clearGuide()
+    m.top.logout = false
 end sub
 
 ' Metodo que recarga el player con la nueva seleccion del objeto.
@@ -525,21 +564,22 @@ end sub
 ' Metodo que levanta la pantalla de detalle sobre el player.
 sub onBackDetail()
     m.carouselGuide.setFocus(true)
+    if (m.guideContainer.visible = false) then m.guideContainer.visible = true
     __removeProgramDetailComponent()
 end sub
 
 ' Carga la configuracion inicial del componente, escuchando los observable y obteniendo las 
 ' referencias de compenentes necesarios para su uso
 sub __initConfig()
-    width = m.global.width
-    height = m.global.height
+    width = m.scaleInfo.width
+    height = m.scaleInfo.height
 
     m.background.width = width
     m.background.height = height
     m.background.loadWidth = width
     m.background.loadHeight = height
     
-    m.carouselGuideContainer.clippingRect = [0, 0, (width - scaleValue(155, m.scaleInfo)), m.size[1] + scaleValue(3, m.scaleInfo)]
+    m.carouselGuideContainer.clippingRect = [0, 0, (width - scaleValue(250, m.scaleInfo)), m.size[1] + scaleValue(3, m.scaleInfo)]
     m.programSummaryPlayer.initConfig = true
 
     grayColor = m.global.colors.LIGHT_GRAY
@@ -548,6 +588,7 @@ sub __initConfig()
     m.arrowDown.blendColor = grayColor
 
     m.guideContainer.translation = [scaleValue(80, m.scaleInfo), (height - scaleValue(50, m.scaleInfo))]
+    m.carouselContainer.translation = scaleSize([155,0], m.scaleInfo)
     
     if m.apiUrl = invalid then m.apiUrl = getConfigVariable(m.global.configVariablesKeys.API_URL)
     
@@ -557,7 +598,46 @@ sub __initConfig()
         m.targetSet.focusIndex = 4
     end if 
 
-    m.selectedIndicator.size = [m.size[0] - scaleValue(2, m.scaleInfo), m.size[1] - scaleValue(24, m.scaleInfo)] 'Ajhuste del label y el espacio de separacion
+    m.selectedIndicator.size = scaleSize([153, 225], m.scaleInfo) 'Ajhuste del label y el espacio de separacion
+    m.selectedIndicator.translation = scaleSize([547, 21], m.scaleInfo)
+
+    m.channelContainer.width = scaleValue(145, m.scaleInfo)
+    m.channelContainer.height = scaleValue(262, m.scaleInfo)
+    m.channelContainer.translation = scaleSize([-30, 0], m.scaleInfo)
+    m.guideGroup.translation = scaleSize([0, 40], m.scaleInfo)
+
+    m.arrowUp.translation = scaleSize([90, 0], m.scaleInfo)
+    m.arrowUp.width = scaleValue(70, m.scaleInfo)
+    m.arrowUp.height = scaleValue(10, m.scaleInfo)
+
+    m.prevContainer.translation = scaleSize([0, 25], m.scaleInfo)
+    m.prevChannelNumber.width = scaleValue(80, m.scaleInfo)
+    m.prevChannelNumber.height = scaleValue(30, m.scaleInfo)
+
+    m.prevChannelImage.translation = scaleSize([110, 0], m.scaleInfo)
+    m.prevChannelImage.width = scaleValue(30, m.scaleInfo)
+    m.prevChannelImage.height = scaleValue(30, m.scaleInfo)
+
+    m.currentChannelContainer.translation = scaleSize([0, 60], m.scaleInfo)
+
+    m.currentChannelNumber.width = scaleValue(80, m.scaleInfo)
+    m.currentChannelNumber.height = scaleValue(70, m.scaleInfo)
+
+    m.currentChannelImage.translation = scaleSize([90, 0], m.scaleInfo)
+    m.currentChannelImage.width = scaleValue(70, m.scaleInfo)
+    m.currentChannelImage.height = scaleValue(70, m.scaleInfo)
+
+    m.nextChannelContainer.translation = scaleSize([0, 145], m.scaleInfo)
+    m.nextChannelNumber.width = scaleValue(80, m.scaleInfo)
+    m.nextChannelNumber.height = scaleValue(30, m.scaleInfo)
+
+    m.nextChannelImage.translation = scaleSize([110, 0], m.scaleInfo)
+    m.nextChannelImage.width = scaleValue(30, m.scaleInfo)
+    m.nextChannelImage.height = scaleValue(30, m.scaleInfo)
+
+    m.arrowDown.translation = scaleSize([90, 200], m.scaleInfo)
+    m.arrowDown.width = scaleValue(70, m.scaleInfo)
+    m.arrowDown.height = scaleValue(10, m.scaleInfo)
 
     m.loadConfig = true
 end sub
@@ -651,6 +731,17 @@ sub __clearGuide()
     m.nextChannelNumber.text = ""
     m.nextChannelImage.uri = ""
 
+    if m.pinDialog <> invalid then
+        m.programBySend = invalid
+        clearPINDialogAndGetOption(m.top, m.pinDialog)
+        m.pinDialog = invalid
+    end if
+
+    if m.dialog <> invalid then
+        clearDialogAndGetOption(m.top, m.dialog)
+        m.dialog = invalid 
+    end if 
+
     __removeProgramDetailComponent()
 end sub
 
@@ -687,7 +778,12 @@ end sub
 sub __channelSelected()
     if m.currentChannel.parentalControl <> invalid and m.currentChannel.parentalControl then
         m.lastElementSelect = m.top.focusedChild
-        m.pinDialog = createAndShowPINDialog(m.top, i18n_t(m.i18n, "shared.parentalControlModal.title"), "onPinDialogLoad", [i18n_t(m.i18n, "button.ok"), i18n_t(m.i18n, "button.cancel")])
+        if m.pinDialog <> invalid then
+            m.programBySend = invalid
+            clearPINDialogAndGetOption(m.top, m.pinDialog)
+            m.pinDialog = invalid
+        end if
+        m.pinDialog = createAndShowPINDialog(m.top, i18n_t(m.global.i18n, "shared.parentalControlModal.title"), "onPinDialogLoad", [i18n_t(m.global.i18n, "button.ok"), i18n_t(m.global.i18n, "button.cancel")])
     else
         __loadStreamingForPlayer()
     end if
@@ -719,7 +815,7 @@ sub __processAndLoadCarousel(programs)
 
     for each program in programs
         child = contentRoot.createChild("ProgramNode")
-        child.size = m.size
+        child.size = scaleSize([153, 230], m.scaleInfo)
         if program.key <> invalid then child.key = program.key
         if program.id <> invalid then child.id = program.id
         if program.title <> invalid and program.title <> "" then child.title = program.title
@@ -746,7 +842,7 @@ sub __processAndLoadCarousel(programs)
             child.startTime = program.startTime
             child.startSeconds = startTime.AsSeconds()
             
-            child.programTime = dateConverter(startTime, "HH:mm a")
+            child.programTime = dateConverter(startTime, i18n_t(m.global.i18n, "time.formatHours"))
         end if
 
         if program.endTime <> invalid then 
@@ -762,7 +858,7 @@ sub __processAndLoadCarousel(programs)
             endSeconds = endTime.AsSeconds()
 
             if (startSeconds <= nowSeconds and endSeconds >= nowSeconds) then 
-                child.programTime = "NOW"
+                child.programTime = i18n_t(m.global.i18n, "player.guide.now")
                 child.isNow = true
                 if m.isNowPosition then m.indexPosition = index
             end if

@@ -26,6 +26,7 @@
         
         <!-- Paramentros de Salida -->
         <field id="selected" type="string"/>
+        <field id="logout" alwaysnotify="true" type="boolean" value="false" />
     </interface>
 
     <children> 
@@ -47,7 +48,7 @@
         
             <Group translation="[0, 0]">
                 <!-- Contenedor del carousel  -->
-                <Group translation="[155,0]">
+                <Group id="carouselContainer">
                     <Group id="carouselGuideContainer" translation="[0,0]" >
                         <QvTargetList 
                             id="carouselGuide"
@@ -57,36 +58,27 @@
                             focusable="true"/>
                     </Group>
 
-                    <SelectionBox id="selectedIndicator" translation="[548, 20]" visible="false"/>
+                    <SelectionBox id="selectedIndicator" visible="false"/>
                 </Group>
 
                 <!-- Contenedor de la lista de canales  -->
                 <Rectangle 
-                    translation="[-30, 0]"
-                    width="145" 
-                    height="262"
+                    id="channelContainer"
                     color="0x00000000">
 
-                    <Group translation="[0, 40]">
+                    <Group id="guideGroup">
                         <!-- arrow up -->
                         <Poster 
                             id="arrowUp"
-                            translation="[90, 0]" 
-                            width="70"
-                            height="10"
-                            loadWidth="70"
-                            loadHeight="10"
                             loadDisplayMode="scaleToFit"
                             uri="pkg:/images/shared/arrow_up.png" 
                             opacity="0.8"/>
 
                         <!-- prev channel -->
-                        <Group translation="[0, 25]" opacity="0.6"> 
+                        <Group id="prevContainer" opacity="0.6"> 
                             <Label
                                 id="prevChannelNumber"
                                 translation="[0, 0]"
-                                width="80"
-                                height="30"
                                 wrap="false" 
                                 maxLines="1" 
                                 vertAlign="center"
@@ -96,22 +88,15 @@
 
                             <Poster 
                                 id="prevChannelImage"
-                                translation="[110, 0]"
-                                width="30"
-                                height="30"
-                                loadWidth="30"
-                                loadHeight="30"
                                 opacity="0.6"
                                 loadDisplayMode="scaleToFit"/>
                         </Group>
                         
                         <!-- current channel -->
-                        <Group translation="[0, 60]"> 
+                        <Group id="currentChannelContainer"> 
                             <Label
                                 id="currentChannelNumber"
                                 translation="[0, 0]"
-                                width="80"
-                                height="70"
                                 wrap="false" 
                                 maxLines="1" 
                                 vertAlign="center"
@@ -122,22 +107,15 @@
 
                             <Poster 
                                 id="currentChannelImage"
-                                translation="[90, 0]"
-                                width="70"
-                                height="70"
-                                loadWidth="70"
-                                loadHeight="70"
                                 loadDisplayMode="scaleToFit"
                                 focusable="true"/>
                         </Group>
 
                         <!-- next channel -->
-                        <Group translation="[0, 145]" opacity="0.6"> 
+                        <Group id="nextChannelContainer" opacity="0.6"> 
                             <Label
                                 id="nextChannelNumber"
                                 translation="[0, 0]"
-                                width="80"
-                                height="30"
                                 wrap="false" 
                                 maxLines="1" 
                                 vertAlign="center"
@@ -147,11 +125,6 @@
 
                             <Poster 
                                 id="nextChannelImage"
-                                translation="[110, 0]"
-                                width="30"
-                                height="30"
-                                loadWidth="30"
-                                loadHeight="30"
                                 opacity="0.6"
                                 loadDisplayMode="scaleToFit"/>
                         </Group>
@@ -159,11 +132,6 @@
                         <!-- arrow down -->
                         <Poster 
                             id="arrowDown"
-                            translation="[90, 200]" 
-                            width="70"
-                            height="10"
-                            loadWidth="70"
-                            loadHeight="10"
                             loadDisplayMode="scaleToFit"
                             uri="pkg:/images/shared/arrow_down.png" 
                             opacity="0.8"/>

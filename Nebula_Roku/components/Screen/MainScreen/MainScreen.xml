@@ -19,6 +19,7 @@
   <script type="text/brightscript" uri="pkg:/source/Services/Menu.brs" />
   <script type="text/brightscript" uri="pkg:/source/Services/ParentalControl.brs" />
   <script type="text/brightscript" uri="pkg:/source/Services/Platforms.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Services/AutoUpgrade.brs" />
   <script type="text/brightscript" uri="pkg:/source/Services/Streamings.brs" />
   <script type="text/brightscript" uri="pkg:/source/Services/Programs.brs" />
   <script type="text/brightscript" uri="pkg:/source/Services/Watch.brs" />
@@ -31,7 +32,7 @@
     <field id="loadData" type="boolean" value="false" onChange="initData" />
     
     <!-- Paramentros de entrada/Salida -->
-    <field id="logout" type="boolean" value="false" onChange="onLogoutChange" />
+    <field id="logout" alwaysnotify="true" type="boolean" value="false" onChange="onLogoutChange" />
     
     <!-- Paramentros de Salida -->
     <field id="streaming" type="string" />
@@ -65,7 +66,7 @@
     <Group id="carousels" translation="[0, 135]">
       <Group id="carouselContainer" translation="[50, 20]"/>
 
-      <SelectionBox id="selectedIndicator" translation="[118, 147]" visible="false"/>
+      <SelectionBox id="selectedIndicator" visible="false"/>
     </Group>
 
     
@@ -124,7 +125,6 @@
         wrap="false" 
         maxLines="3" 
         horizAlign="center"
-        text="Nebula 2"
         font="font:SmallSystemFont" />
     
     <!-- Timers -->

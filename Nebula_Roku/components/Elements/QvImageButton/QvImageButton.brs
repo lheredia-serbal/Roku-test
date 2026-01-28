@@ -19,24 +19,53 @@ sub updateUri()
   __initColors()
 end sub
 
+' Detecta el estado Disable de lboton y muestra el estilo en consecuencia
+sub onChangeDisable()
+  if m.top.disable then
+    m.top.opacity = 0.4
+  else
+    m.top.opacity = 1.0
+  end if
+end sub
+
 ' Actualiza el texto que se muestra como tooltip del boton
 sub updateTooltip()
+  size = 45
   m.btnTooltip.text = m.top.tooltip
+  if (m.scaleInfo = invalid) then m.scaleInfo = m.global.scaleInfo
 
   ' Forzamos medida si fuera necesario (la Label suele usar width fija).
   ' Calculamos la X para centrar el label respecto del buttonBg
-  btnW = 0
-  if m.buttonBg <> invalid and m.buttonBg.width <> invalid then
-    btnW = m.buttonBg.width
-  else
-    btnW = 40 ' fallback
-  end if
-  lblW = m.btnTooltip.width
-  ' Si label tiene width fijo, lblW es ese. Si quieres ajustar dinámicamente
-  ' podrías cambiar label.width dependiendo del texto (pero aquí asumimos width fijo).
-  x = (btnW - lblW) / 2
+  m.buttonBg.width = scaleValue(size, m.scaleInfo)
+  m.buttonBg.height = scaleValue(size, m.scaleInfo)
+
   ' translation es un array [x,y]
-  m.btnTooltip.translation = [x, m.btnTooltip.translation[1]]
+  tooltipWidth = scaleValue((size + 10), m.scaleInfo)
+  if m.btnTooltip.text <> invalid and m.btnTooltip.text <> "" then
+    textLen = Len(m.btnTooltip.text)
+    textWidth = scaleValue(7 * textLen, m.scaleInfo)
+    if textWidth > tooltipWidth then tooltipWidth = textWidth
+  end if
+  m.btnTooltip.width = tooltipWidth
+  m.btnTooltip.translation = [-(tooltipWidth - m.buttonBg.width) / 2.0, scaleValue((size + 5), m.scaleInfo)]
+
+  m.btnImage.width = scaleValue((size/2), m.scaleInfo)
+  m.btnImage.height = scaleValue((size/2), m.scaleInfo)
+  m.btnImage.translation = [scaleValue(10, m.scaleInfo), scaleValue(10, m.scaleInfo)] 
+
+  m.rectLeft.width = scaleValue(1, m.scaleInfo)
+  m.rectLeft.height = scaleValue((size + 1), m.scaleInfo)
+
+  m.rectTop.width = scaleValue(size, m.scaleInfo)
+  m.rectTop.height = scaleValue(1, m.scaleInfo)
+
+  m.rectRight.width = scaleValue(1, m.scaleInfo)
+  m.rectRight.height = scaleValue((size + 1), m.scaleInfo)
+  m.rectRight.translation = [scaleValue(size, m.scaleInfo), scaleValue(0, m.scaleInfo)] 
+
+  m.rectBottom.width = scaleValue(size, m.scaleInfo)
+  m.rectBottom.height = scaleValue(1, m.scaleInfo)
+  m.rectBottom.translation = [scaleValue(0, m.scaleInfo), scaleValue(size, m.scaleInfo)] 
 end sub
 
 ' Dispara la validacion si el componente tiene o no el foco sobre él

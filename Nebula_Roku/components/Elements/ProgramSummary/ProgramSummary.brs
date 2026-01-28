@@ -1,10 +1,5 @@
 ' Inicialización del componente (parte del ciclo de vida de Roku)
 sub init()
-    m.scaleInfo = m.global.scaleInfo
-    if m.scaleInfo = invalid then
-        m.scaleInfo = getScaleInfo()
-    end if
-
     m.programContainer = m.top.findNode("programContainer")
     m.programTitle = m.top.findNode("programTitle")
     m.programSubtitle = m.top.findNode("programSubtitle")
@@ -13,33 +8,21 @@ sub init()
     m.programSynopsis = m.top.findNode("programSynopsis")
 
     m.animation = m.top.findNode("liveAnimation")
+    
+    m.scaleInfo = m.global.scaleInfo
 
     m.HeightToHide = 1
     m.defaultHeight = 0
     m.spacings = scaleValue(10, m.scaleInfo)
-
-    m.i18n = invalid
-    scene = m.top.getScene()
-    if scene <> invalid then
-        m.i18n = scene.findNode("i18n")
-    end if
-
-    applyTranslations()
-end sub
-
-sub applyTranslations()
-    if m.i18n = invalid then
-        return
-    end if
-
-    m.programLive.text = i18n_t(m.i18n, "program.programDetail.live")
 end sub
 
 ' Carga la configuracion inicial del componente, escuchando los observable y obteniendo las 
 ' referencias de compenentes necesarios para su uso
 sub initConfig()
+    m.programLive.text = i18n_t(m.global.i18n, "time.live")
+
     if m.top.initConfig then 
-        m.reservedWidth = (m.global.width - scaleValue(140, m.scaleInfo))
+        m.reservedWidth = (m.scaleInfo.width - scaleValue(140, m.scaleInfo))
         if m.top.width <> 0 then m.reservedWidth = m.top.width
 
         m.programTitle.width = m.reservedWidth
@@ -144,32 +127,32 @@ sub changeProgram()
                         if (remaining > 60) then
                             modMinutes = remaining mod 60
                             hours = remaining \ 60
-                            templateStr = "Ends in [hours]h [minutes]m"
-                            m.programDateAndChannel.text = templateStr.Replace("[hours]", hours.ToStr()).Replace("[minutes]", modMinutes.ToStr())
+                            templateStr = i18n_t(m.global.i18n, "time.endsInHoursMin")
+                            m.programDateAndChannel.text = templateStr.Replace("{{hours}}", hours.ToStr()).Replace("{{minutes}}", modMinutes.ToStr())
                         else
                             modMinutes = remaining mod 60
-                            templateStr = "Ends in [minutes] min"
-                            m.programDateAndChannel.text = templateStr.Replace("[minutes]", modMinutes.ToStr())
+                            templateStr = i18n_t(m.global.i18n, "time.endsInMin")
+                            m.programDateAndChannel.text = templateStr.Replace("{{minutes}}", modMinutes.ToStr())
                         end if
                         visibleLive = true
                     end if
         
                 else if (IsToday(startSeconds)) then
-                    m.programDateAndChannel.text = "Today " + dateConverter(startTime, "HH:mm a") + durationStr
+                    m.programDateAndChannel.text = i18n_t(m.global.i18n, "time.today") + " "  + dateConverter(startTime, i18n_t(m.global.i18n, "time.formatHours")) + durationStr
                     m.programDateAndChannel.height = m.defaultHeight
                     m.programDateAndChannel.visible = true
                 else if (IsToday(startSeconds + 86400)) then
                     ' Si al sumar un día la fecha es hoy, el inicio fue ayer
-                    m.programDateAndChannel.text = "Yesterday " + dateConverter(startTime, "HH:mm a") + durationStr
+                    m.programDateAndChannel.text = i18n_t(m.global.i18n, "time.yesterday") + " "  + dateConverter(startTime, i18n_t(m.global.i18n, "time.formatHours")) + durationStr
                     m.programDateAndChannel.height = m.defaultHeight
                     m.programDateAndChannel.visible = true
                 else if (IsToday(startSeconds - 86400)) then
                     ' Si al restar un día la fecha es hoy, el inicio será mañana
-                    m.programDateAndChannel.text = "Tomorrow " + dateConverter(startTime, "HH:mm a") + durationStr
+                    m.programDateAndChannel.text = i18n_t(m.global.i18n, "time.tomorrow") + " "  + dateConverter(startTime, i18n_t(m.global.i18n, "time.formatHours")) + durationStr
                     m.programDateAndChannel.height = m.defaultHeight
                     m.programDateAndChannel.visible = true
                 else
-                    m.programDateAndChannel.text = dateConverter(startTime, "MM/dd/yyyy") + " - " + dateConverter(startTime, "HH:mm a") + durationStr
+                    m.programDateAndChannel.text = dateConverter(startTime, i18n_t(m.global.i18n, "time.formatDate")) + " - " + dateConverter(startTime, i18n_t(m.global.i18n, "time.formatHours")) + durationStr
                     m.programDateAndChannel.height = m.defaultHeight
                     m.programDateAndChannel.visible = true
                 end if

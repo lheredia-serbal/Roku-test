@@ -1,16 +1,13 @@
 ' Inicialización del componente (parte del ciclo de vida de Roku)
 sub init()
-  m.scaleInfo = m.global.scaleInfo
-  if m.scaleInfo = invalid then
-    m.scaleInfo = getScaleInfo()
-  end if
-
   m.top.finished = false 
   m.allowAddingProfiles = false
 
   'Elegir perfil
   m.screenProfileSelected = m.top.findNode("screenProfileSelected")
   m.titleSelected = m.top.findNode("titleSelected")
+  m.buttonRectangleEdit = m.top.findNode("buttonRectangleEdit")
+  m.buttonRectangle = m.top.findNode("buttonRectangle")
   m.manageProfile = m.top.findNode("manageProfile")
   m.profilesElements = m.top.findNode("profilesElements")
   
@@ -31,30 +28,14 @@ sub init()
   m.profileNameInAvatars = m.top.findNode("profileNameInAvatars")
   m.profileImageInAvatars = m.top.findNode("profileImageInAvatars")
   m.profileImageAndNameContainer = m.top.findNode("profileImageAndNameContainer")
+
+  m.scaleInfo = m.global.scaleInfo
   
   m.profiles = []
   m.lastProfileFocus = invalid
 
   m.profileByEdit = invalid
   m.blockLoading = false
-
-  m.i18n = invalid
-  scene = m.top.getScene()
-  if scene <> invalid then
-      m.i18n = scene.findNode("i18n")
-  end if
-  applyTranslations()
-end sub
-
-sub applyTranslations()
-    if m.i18n = invalid then
-        return
-    end if
-
-    m.titleSelected.text = i18n_t(m.i18n, "profiles.profilePage.askTitle")
-    m.titleEdit.text = i18n_t(m.i18n, "profiles.profilePage.EditProfile")
-    m.profileName.hintText = i18n_t(m.i18n, "profiles.profilePage.name")
-    m.avatar.text = i18n_t(m.i18n, "profiles.profilePage.chooseAvatar")
 end sub
 
 ' Funcion que interpreta los eventos de teclado y retorna true si fue porcesada por este componente. Sino es porcesado por el
@@ -113,11 +94,11 @@ function onKeyEvent(key as string, press as boolean) as boolean
 
       if press and m.manageProfile.isInFocusChain() then 
         if m.showManageProfile then 
-          m.manageProfile.text = "Manage profiles"
+          m.manageProfile.text = i18n_t(m.global.i18n, "profiles.profilePage.titleButton")
           m.showManageProfile = false
   
         else 
-          m.manageProfile.text = "Ready!"
+          m.manageProfile.text = i18n_t(m.global.i18n, "button.ready")
           m.showManageProfile = true
         end if 
       end if
@@ -179,7 +160,7 @@ function onKeyEvent(key as string, press as boolean) as boolean
       handled = true
 
     else if key = KeyButtons().OK and m.btnDeleteProfile <> invalid and m.btnDeleteProfile.isInFocusChain() then
-      if press then m.dialog = createAndShowDialog(m.top, "Delete Profile.", "Are you sure you want to delete this profile?", "onDialogDeleteClosed", ["Delete", i18n_t(m.i18n, "button.cancel")])
+      if press then m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "profiles.confirmDeleteModal.title"), i18n_t(m.global.i18n, "profiles.confirmDeleteModal.askDelete"), "onDialogDeleteClosed", ["Delete", i18n_t(m.global.i18n, "button.cancel")])
       handled = true
 
     else if key = KeyButtons().OK and m.profileImageEdit.isInFocusChain() then
@@ -219,7 +200,7 @@ function onKeyEvent(key as string, press as boolean) as boolean
           m.carouselContainer.focusedChild.opacity = "0.0"
           focusItem.setFocus(true)
           m.carouselContainer.translation = [m.xPosition, -(m.carouselContainer.focusedChild.translation[1] - m.yPosition)]
-          m.selectedIndicator.size = m.carouselContainer.focusedChild.size ' Mover hacia arriba
+          m.selectedIndicator.size = m.carouselContainer.focusedChild.size
         end if
       end if
       handled = true
@@ -236,6 +217,7 @@ end function
 ' Inicializa el foco del componente seteando los valores necesarios
 sub initFocus()
   if m.top.onFocus then
+    __applyTranslations()
     __initConfig()
     __getAllProfile()
   end if
@@ -262,7 +244,7 @@ sub onGetAllProfileResponse()
     
     m.top.loading.visible = false
 
-    m.dialog = createAndShowDialog(m.top, i18n_t(m.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogReloadProfilesClosed", [i18n_t(m.i18n, "button.retry")])
+    m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.global.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogReloadProfilesClosed", [i18n_t(m.global.i18n, "button.retry")])
 
     actionLog = createLogError(generateErrorDescription(errorResponse), generateErrorPageUrl("getAllProfile", "SelectProfileComponent"), getServerErrorStack(errorResponse))
     __saveActionLog(actionLog)
@@ -304,7 +286,7 @@ sub onSussessSelectResponse()
 
     m.lastItemFocus = m.focusedChild
 
-    m.dialog = createAndShowDialog(m.top, i18n_t(m.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogFocusToLastElementClosed", [i18n_t(m.i18n, "button.cancel")])
+    m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.global.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogFocusToLastElementClosed", [i18n_t(m.global.i18n, "button.cancel")])
 
     actionLog = createLogError(generateErrorDescription(errorResponse), generateErrorPageUrl("updateSessionProfile", "ProfileComponent"), getServerErrorStack(errorResponse), "ProfileId", profileId)
     __saveActionLog(actionLog)
@@ -322,7 +304,7 @@ sub onGetAllAvatarsResponse()
       
       __clearAvatarsCarousel()
 
-      m.carouselContainer.translation = [scaleValue(50, m.scaleInfo), scaleValue(20, m.scaleInfo)]
+      m.carouselContainer.translation = scaleSize([50, 20], m.scaleInfo)
       m.xPosition = m.carouselContainer.translation[0]
       m.yPosition = m.carouselContainer.translation[1]
 
@@ -378,7 +360,7 @@ sub onGetAllAvatarsResponse()
     if validateLogout(statusCode, m.top) then return 
     
     m.top.loading.visible = false
-    m.dialog = createAndShowDialog(m.top, i18n_t(m.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogReturnProfileEditClosed", [i18n_t(m.i18n, "button.cancel")])
+    m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.global.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogReturnProfileEditClosed", [i18n_t(m.global.i18n, "button.cancel")])
   end if 
 end sub
 
@@ -458,7 +440,7 @@ sub onSussessDeleteResponse()
     m.blockLoading = false
     m.lastItemFocus = m.btnDeleteProfile
 
-    m.dialog = createAndShowDialog(m.top, i18n_t(m.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogFocusToLastElementClosed", [i18n_t(m.i18n, "button.cancel")])
+    m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.global.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogFocusToLastElementClosed", [i18n_t(m.global.i18n, "button.cancel")])
   end if 
 end sub
 
@@ -481,7 +463,7 @@ sub onSussessSaveResponse()
     m.lastItemFocus = m.btnSave
     m.top.loading.visible = false
     
-    m.dialog = createAndShowDialog(m.top, i18n_t(m.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogFocusToLastElementClosed", [i18n_t(m.i18n, "button.cancel")])
+    m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.global.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogFocusToLastElementClosed", [i18n_t(m.global.i18n, "button.cancel")])
   end if 
 end sub
 
@@ -502,7 +484,7 @@ sub onGetDefaultAvatarResponse()
 
     m.top.loading.visible = false
     
-    m.dialog = createAndShowDialog(m.top, i18n_t(m.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogReturnProfileListClosed", [i18n_t(m.i18n, "button.cancel")])
+    m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.global.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogReturnProfileListClosed", [i18n_t(m.global.i18n, "button.cancel")])
   end if
 end sub
 
@@ -522,7 +504,7 @@ sub onGetByIdResponse()
 
     m.top.loading.visible = false
 
-    m.dialog = createAndShowDialog(m.top, i18n_t(m.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogReturnProfileListClosed", [i18n_t(m.i18n, "button.cancel")])
+    m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.global.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogReturnProfileListClosed", [i18n_t(m.global.i18n, "button.cancel")])
   end if
 end sub
 
@@ -554,22 +536,36 @@ sub __initConfig()
   if m.apiUrl = invalid then m.apiUrl = getConfigVariable(m.global.configVariablesKeys.API_URL) 
   if m.beaconUrl = invalid then m.beaconUrl = getConfigVariable(m.global.configVariablesKeys.BEACON_URL) 
 
-  width = m.global.width
-  height = m.global.height
+  width = m.scaleInfo.width
+  height = m.scaleInfo.height
   
-  m.manageProfile.text = "Manage profiles"
+  m.manageProfile.text = i18n_t(m.global.i18n, "profiles.profilePage.titleButton")
+  m.manageProfile.size = [scaleValue(260, m.scaleInfo)]
   m.showManageProfile = false
   
   m.screenProfileSelected.translation = [(width / 2), (height / 2)]
   m.titleSelected.width = width
   
   m.screenProfileEdit.translation = [(width / 2), scaleValue(80, m.scaleInfo)]
+  m.buttonRectangleEdit.height = scaleValue(224, m.scaleInfo)
+  m.buttonRectangle.height = scaleValue(216, m.scaleInfo)
   m.titleEdit.width = width
   m.keyboard.showTextEditBox = false
   m.keyboard.text = ""
   m.keyboard.textEditBox.maxTextLength = 255
   m.profileName.maxTextLength = 255
   m.profileName.hintTextColor = m.global.colors.LIGHT_GRAY
+
+  m.profileImageEdit.size = scaleSize([200, 200], m.scaleInfo)
+  m.profileName.width = scaleValue(600, m.scaleInfo)
+  m.avatar.translation = scaleSize([77, 50], m.scaleInfo)
+
+  m.profileImageInAvatars.width = scaleValue(90, m.scaleInfo)
+  m.profileImageInAvatars.height = scaleValue(90, m.scaleInfo)
+
+  m.carousels.translation = scaleSize([0, 20], m.scaleInfo)
+  m.carouselContainer.translation = scaleSize([50, 20], m.scaleInfo)
+  m.selectedIndicator.translation = scaleSize([78, 148], m.scaleInfo)
 
   m.profileImageAndNameContainer.translation = [width - scaleValue(150, m.scaleInfo), scaleValue(20, m.scaleInfo)]
 
@@ -606,6 +602,7 @@ sub __loadProfiles(profilesResp)
 
   for each profile in profilesResp
     newProfile = m.profilesElements.createChild("ProfileItem")
+    newProfile.size = scaleSize([150, 150], m.scaleInfo)
     newProfile.uriImage = getImageUrl(profile.avatar.image)
     newProfile.id ="profile" + profile.id.ToStr() 
     newProfile.profileId = profile.id
@@ -627,11 +624,12 @@ sub __loadProfiles(profilesResp)
 
   if m.allowAddingProfiles then 
     addProfileButton = m.profilesElements.createChild("ProfileItem")
+    addProfileButton.size = scaleSize([150, 150], m.scaleInfo)
     addProfileButton.uriImage = "pkg:/images/shared/add_profile.png"
     addProfileButton.id ="profileSelected" 
     addProfileButton.profileId = -1
     addProfileButton.focusable = true
-    addProfileButton.name = "Add profile"
+    addProfileButton.name = i18n_t(m.global.i18n, "profiles.profilePage.addProfile")
 
     addProfileButton.focusLeft = m.profiles.[m.profiles.count() - 1]
     m.profiles.[m.profiles.count() - 1].focusRight = addProfileButton
@@ -695,14 +693,14 @@ end sub
 sub __saveProfile()
   if (m.profileName.text = invalid) or (m.profileName.text = "") then 
     m.lastItemFocus = m.btnSave
-    m.dialog = createAndShowDialog(m.top, i18n_t(m.i18n, "shared.errorComponent.unhandled"), "You must enter a name", "onDialogFocusToLastElementClosed")
+    m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.unhandled"), i18n_t(m.global.i18n, "profiles.profilePage.error.nameRequired"), "onDialogFocusToLastElementClosed")
     printError("required field Profile")
     return
   end if 
 
   if (m.profileByEdit.avatar = invalid) then 
     m.lastItemFocus = m.btnSave
-    m.dialog = createAndShowDialog(m.top, i18n_t(m.i18n, "shared.errorComponent.unhandled"), "You must choose an avatar", "onDialogFocusToLastElementClosed")
+    m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.unhandled"), i18n_t(m.global.i18n, "profiles.profilePage.error.avatarRequired"), "onDialogFocusToLastElementClosed")
     printError("required field Profile")
     return
   end if 
@@ -733,19 +731,21 @@ sub __loadEditProfile(profileByEdit)
 
   m.btnSave = m.buttonEditContainer.createChild("QvButton")
   m.btnSave.id = "btnSave"
-  m.btnSave.text = "Save"
+  m.btnSave.text = i18n_t(m.global.i18n, "button.save")
   m.btnSave.focusable = true
+  m.btnSave.size = [scaleValue(220, m.scaleInfo)]
 
   m.btnCancel = m.buttonEditContainer.createChild("QvButton")
   m.btnCancel.id = "btnCancel"
-  m.btnCancel.text = i18n_t(m.i18n, "button.cancel")
+  m.btnCancel.text = i18n_t(m.global.i18n, "button.cancel")
   m.btnCancel.focusable = true
+  m.btnCancel.size = [scaleValue(220, m.scaleInfo)]
 
   if m.profileByEdit.id <> invalid and m.profileByEdit.id <> 0 and not m.profileByEdit.default then 
     m.btnDeleteProfile = m.buttonEditContainer.createChild("QvButton")
     m.btnDeleteProfile.id = "btnDeleteProfile"
-    m.btnDeleteProfile.text = "Delete Profile"
-    m.btnDeleteProfile.size= [220]
+    m.btnDeleteProfile.text = i18n_t(m.global.i18n, "profiles.profilePage.DeleteProfile")
+    m.btnDeleteProfile.size = [scaleValue(220, m.scaleInfo)]
     m.btnDeleteProfile.focusable = true
   end if 
   m.top.loading.visible = false
@@ -760,6 +760,16 @@ sub __clearAvatarsCarousel()
     child.unobserveField("selected")
   end while
   m.selectedIndicator.visible = false
+end sub
+
+' Aplicar las traducciones en el componente
+sub __applyTranslations()
+  if m.global.i18n = invalid then return
+
+  m.titleSelected.text = i18n_t(m.global.i18n, "profiles.profilePage.askTitle")
+  m.titleEdit.text = i18n_t(m.global.i18n, "profiles.profilePage.EditProfile")
+  m.profileName.hintText = i18n_t(m.global.i18n, "profiles.profilePage.name")
+  m.avatar.text = i18n_t(m.global.i18n, "profiles.profilePage.chooseAvatar")
 end sub
 
 ' Procesa el back de la pantalla de editar perfiles.

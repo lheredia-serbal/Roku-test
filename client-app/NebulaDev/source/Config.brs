@@ -3,7 +3,7 @@ function  getAppCode() As String
 End function 
 
 function getUrl() As String
-    return "https://nebuladev-api.qvixsolutions.com/api"
+    return "https://nebuladev-api.qvixprimary.com/api"
 End function 
 
 ' Función para obtener los colores Principales

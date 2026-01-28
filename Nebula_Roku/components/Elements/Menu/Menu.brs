@@ -36,12 +36,6 @@ sub init()
   m.positionSecondaryMenu = 0 
 
   m.scaleInfo = invalid
-
-  m.i18n = invalid
-  scene = m.top.getScene()
-  if scene <> invalid then
-      m.i18n = scene.findNode("i18n")
-  end if
 end sub
 
 ' Funcion que interpreta los eventos de teclado y retorna true si fue porcesada por este componente. Sino es porcesado por el
@@ -181,11 +175,8 @@ end function
 
 ' carga la configuracion del Menú
 sub configureMenu()
-  width = m.global.width
-  height = m.global.height
-  
   m.scaleInfo = m.global.scaleInfo
-  if m.scaleInfo = invalid then m.scaleInfo = getScaleInfo(width, height)
+  __applyTranslations()
 
   safeX = m.scaleInfo.safeZone.x
   safeY = m.scaleInfo.safeZone.y
@@ -209,7 +200,7 @@ sub configureMenu()
   m.avatarImage.height = scaleValue(65, m.scaleInfo)
   m.avatarImageOpacity.width = scaleValue(65, m.scaleInfo)
   m.avatarImageOpacity.height = scaleValue(66, m.scaleInfo)
-  m.selectedProfileChange.size = [scaleValue(62, m.scaleInfo), scaleValue(62, m.scaleInfo)]
+  m.selectedProfileChange.size = scaleSize([62, 62], m.scaleInfo)
 
   m.principalMenuLayoutGroup.translation = [safeX + scaleValue(0, m.scaleInfo), (safeY + ((contentHeight - scaleValue(160, m.scaleInfo)) / 2))]
   m.principalMenuLayoutGroup.itemSpacings = [scaleValue(20, m.scaleInfo)]
@@ -228,21 +219,7 @@ sub configureMenu()
 
   m.animationsMenuItemsExpand = []
   m.animationsMenuItemsCollapse = []
-
-  applyTranslations()
 end sub
-
-sub applyTranslations()
-    if m.i18n = invalid then
-        return
-    end if
-
-    m.profileChange.text = i18n_t(m.i18n, "content.menuComponent.changeProfile")
-    m.settingLabel.text = i18n_t(m.i18n, "content.menuComponent.Setting")
-    m.exitLabel.text    = i18n_t(m.i18n, "content.menuComponent.exit")
-    m.logoutLabel.text  = i18n_t(m.i18n, "content.menuComponent.logout")
-end sub
-
 
 ' Carga los items del menu y el perfil
 sub itemData()
@@ -387,6 +364,15 @@ sub changeActionAnimate()
   else if m.top.action = "collapse"
     __collapseMenu()
   end if
+end sub
+
+' Aplicar las traducciones en el componente
+sub __applyTranslations()
+  if m.global.i18n = invalid then return
+  m.profileChange.text = i18n_t(m.global.i18n, "content.menuComponent.changeProfile")
+  m.settingLabel.text = i18n_t(m.global.i18n, "content.menuComponent.Setting")
+  m.exitLabel.text    = i18n_t(m.global.i18n, "content.menuComponent.exit")
+  m.logoutLabel.text  = i18n_t(m.global.i18n, "content.menuComponent.logout")
 end sub
 
 ' Realiza la apertura del menú

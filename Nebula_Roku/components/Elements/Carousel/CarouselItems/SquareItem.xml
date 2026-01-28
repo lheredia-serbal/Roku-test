@@ -23,19 +23,11 @@
                 <!-- Imagen centrada con 30px de margen -->
                 <Poster 
                     id="itemImage" 
-                    width="60" 
-                    height="60"
-                    loadWidth="60"
-                    loadHeight="60"
-                    translation="[30, 16]"
                     loadDisplayMode="scaleToFit"/>
                 
                 <!-- Etiqueta para el título, centrada y con 2 líneas máximo -->
                 <Label 
                     id="itemTitle" 
-                    width="110" 
-                    height="48"
-                    translation="[5, 72]"
                     wrap="true" 
                     maxLines="2" 
                     horizAlign="center" 

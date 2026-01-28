@@ -57,7 +57,7 @@ sub itemContentChanged()
         
         btnClose = m.theRectRight.createChild("QvButton")
         btnClose.id = "CloseSession" 
-        btnClose.text = "Close"
+        btnClose.text = i18n_t(m.global.i18n, "button.close")
         btnClose.focusable = true
     else
         m.top.unobserveField("focusedChild")

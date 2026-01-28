@@ -1,10 +1,5 @@
 ' Inicialización del componente (parte del ciclo de vida de Roku)
 sub init()
-    m.scaleInfo = m.global.scaleInfo
-    if m.scaleInfo = invalid then
-        m.scaleInfo = getScaleInfo()
-    end if
-
     m.theRect  = m.top.findNode("theRect")
     m.progressContainer = m.top.findNode("progressContainer")
     m.imageItem = m.top.findNode("imageItem")
@@ -13,6 +8,8 @@ sub init()
     m.opacityLayout = m.top.findNode("opacityLayout")
     m.programTitleByError = m.top.findNode("programTitleByError")
     m.programTitle = m.top.findNode("programTitle")
+    
+    m.scaleInfo = m.global.scaleInfo
     
     m.padding = scaleValue(10, m.scaleInfo)
     m.backgroundImage = invalid
@@ -64,22 +61,41 @@ end sub
 sub currRectChanged()
     scaledSize = getScaledItemSize()
     scaledCurrRect = getScaledCurrRect()
+    imageWidth = scaledSize[0]
+    imageHeight = scaledSize[1]
+    imageX = 0
+    imageY = 0
 
     m.theRect.width = scaledCurrRect.width
     m.theRect.height = scaledCurrRect.height
 
-    m.imageItem.width = scaledSize[0]
-    m.imageItem.height = scaledSize[1]
+    if imageWidth = 0 or imageHeight = 0 then
+        imageWidth = scaledCurrRect.width
+        imageHeight = scaledCurrRect.height
+    end if
 
-    m.opacityLayout.width = scaledSize[0]
-    m.opacityLayout.height = scaledSize[1]
+    if scaledCurrRect.width > imageWidth then
+        imageX = (scaledCurrRect.width - imageWidth) / 2
+    end if
 
-    m.programTitleByError.translation = [(scaledSize[0] / 2), (scaledSize[1] / 2)]
+    if scaledCurrRect.height > imageHeight then
+        imageY = (scaledCurrRect.height - imageHeight) / 2
+    end if
 
-    m.programTitle.width = (scaledSize[0] - m.padding)
-    m.programTitle.height = (scaledSize[1] - m.padding)
+    m.imageItem.width = imageWidth
+    m.imageItem.height = imageHeight
+    m.imageItem.translation = [imageX, imageY]
 
-    m.progressContainer.translation = [m.padding , scaledCurrRect.height - scaleValue(20, m.scaleInfo)]
+    m.opacityLayout.width = imageWidth
+    m.opacityLayout.height = imageHeight
+    m.opacityLayout.translation = [imageX, imageY]
+
+    m.programTitleByError.translation = [imageX + (imageWidth / 2), imageY + (imageHeight / 2)]
+
+    m.programTitle.width = (imageWidth - m.padding)
+    m.programTitle.height = (imageHeight - m.padding)
+
+    m.progressContainer.translation = [m.padding , scaledCurrRect.height - scaleValue(8, m.scaleInfo)]
 end sub
 
 ' Define el estilo de foco del componente y como se comporta al tener o no el foco
@@ -118,7 +134,7 @@ end sub
 
 function getScaledItemSize() as object
     if m.top.itemContent <> invalid and m.top.itemContent.size <> invalid then
-        return [scaleValue(m.top.itemContent.size[0], m.scaleInfo), scaleValue(m.top.itemContent.size[1], m.scaleInfo)]
+       return m.top.itemContent.size
     end if
 
     return [0, 0]
@@ -129,8 +145,8 @@ function getScaledCurrRect() as object
     scaledHeight = m.top.currRect.height
 
     if m.top.currRect.width <> invalid and m.top.currRect.height <> invalid then
-        scaledWidth = scaleValue(m.top.currRect.width, m.scaleInfo)
-        scaledHeight = scaleValue(m.top.currRect.height, m.scaleInfo)
+        scaledWidth = m.top.currRect.width
+        scaledHeight = m.top.currRect.height
     end if
 
     return {

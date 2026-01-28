@@ -24,10 +24,10 @@
     <field id="onFocus" type="boolean" value="false" onChange="initFocus"/>
     
     <!-- Paramentros de entrada/Salida -->
-    <field id="logout" type="boolean" value="false" onChange="onLogoutChange" />
+    <field id="logout" alwaysnotify="true" type="boolean" value="false" onChange="onLogoutChange" />
     
     <!-- Paramentros de Salida -->
-    <field id="finished" type="boolean" value="false" />
+    <field id="finished" alwaysnotify="true" type="boolean" value="false" />
   </interface>
   
   <children>
@@ -55,15 +55,14 @@
         
         <!-- Se usa para que no se haya un efecto de movimiento del texto y el boton -->
         <Rectangle  
+          id="buttonRectangle"
           width="0"
-          height="216" 
           opacity="0.0"/> 
       </LayoutGroup> 
         
       <QvButton 
         id="manageProfile"
-        focusable="true"
-        size="[260]" />
+        focusable="true"/>
     </LayoutGroup>
 
 
@@ -90,13 +89,12 @@
         itemSpacings="[0, 20]"> 
         <!-- Se usa para que no se haya un efecto de movimiento -->
         <Rectangle  
+          id="buttonRectangleEdit"
           width="0"
-          height="224" 
           opacity="0.0"/> 
 
         <ProfileItem 
           id="profileImageEdit"
-          size="[220, 220]"
           showManageProfile="true"
           focusable="true"/>
 
@@ -106,8 +104,7 @@
           vertAlignment="center"
           itemSpacings="[40]" >
           <TextEditBox
-            id="profileName"
-            width="600"/>
+            id="profileName"/>
 
           <LayoutGroup
             id="buttonEditContainer"
@@ -138,40 +135,33 @@
         wrap="false" 
         maxLines="1"
         horizAlign="left"
-        translation="[77, 50]"
         font="font:MediumBoldSystemFont"/>
 
       <LayoutGroup
         id="profileImageAndNameContainer"
-        layoutDirection="horiz"
-        horizAlignment="right"
+        layoutDirection="vert"
+        horizAlignment="center"
         vertAlignment="top"> 
-
-        <Poster 
-          id="profileImageInAvatars"
-          width="90" 
-          width="90" 
-          loadWidth="90"
-          loadHeight="90"
-          loadDisplayMode="scaleToZoom" />
 
         <Label
           id="profileNameInAvatars"
-          width="100"
-          height="40"
           wrap="false"
           maxLines="1"
-          horizAlign="right"
+          horizAlign="center"
           vertAlign="bottom"
           font="font:SmallestSystemFont"/>
+
+        <Poster 
+          id="profileImageInAvatars"
+          loadDisplayMode="scaleToZoom" />
 
       </LayoutGroup>
 
       <!-- Contenedor para múltiples carouseles y foco -->
-      <Group id="carousels" translation="[0, 20]">
-        <Group id="carouselContainer" translation="[50, 20]"/>
+      <Group id="carousels" >
+        <Group id="carouselContainer"/>
 
-        <SelectionBox id="selectedIndicator" translation="[77, 147]" visible="false"/>
+        <SelectionBox id="selectedIndicator"  visible="false"/>
       </Group>
     </Group>
   </children>

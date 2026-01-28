@@ -11,11 +11,11 @@
 
     <interface>
       <!-- Paramentros de Entrada -->
-      <field id="size" type="array" onChange="changeSize" />
+      <field id="size" type="array" onChange="changeSize" value="[140, 50]"/>
       <field id="text" type="string" onChange="updateText" />
       <field id="textColor" type="string" value="" onChange="updateTextColor" />
       <field id="borderColor" type="string" value="" onChange="updateBorderColor" />
-      <field id="font" type="string" value="font:SmallestSystemFont" onChange="updateFont" />
+      <field id="font" type="string" value="font:MediumSystemFont" onChange="updateFont" />
 
       <!-- Paramentros de Entrada/Salida -->
       <field id="disable" type="boolean" value="false" onChange="onChangeDisable" />
@@ -31,14 +31,13 @@
       
       <!-- item del fondo -->
       <Rectangle
-        id="buttonBg"
+        id="butonBg"
         width="140"
-        height="36"
+        height="50"
         focusable="true"
         color="0x00000000" >
           <LayoutGroup      
             id="layoutContainer"
-            translation="[70, 18]"
             layoutDirection="vert"
             horizAlignment="center"
             vertAlignment="center">

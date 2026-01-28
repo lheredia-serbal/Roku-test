@@ -1,10 +1,5 @@
 ' Inicialización del componente (parte del ciclo de vida de Roku)
 sub init()
-  m.scaleInfo = m.global.scaleInfo
-  if m.scaleInfo = invalid then
-    m.scaleInfo = getScaleInfo()
-  end if
-
   m.sessionsContainer = m.top.findNode("sessionsContainer")
   m.sessionsList = m.top.findNode("sessionsList")
   m.titleManySessions = m.top.findNode("titleManySessions")
@@ -14,25 +9,11 @@ sub init()
   m.backToHomeButton = m.top.findNode("backToHomeButton")
   m.goToHomeTimer = m.top.findNode("goToHomeTimer")
 
+  m.scaleInfo = m.global.scaleInfo
+
   m.widthContainer = 0
   m.redirectKey = invalid
   m.redirectId = 0
-  
-  m.i18n = invalid
-  scene = m.top.getScene()
-  if scene <> invalid then
-      m.i18n = scene.findNode("i18n")
-  end if
-  applyTranslations()
-end sub
-
-sub applyTranslations()
-    if m.i18n = invalid then
-        return
-    end if
-
-    m.backToHomeButton.text = i18n_t(m.i18n, "button.backToHome")
-    m.titleManySessions.text = i18n_t(m.i18n, "player.errorPlanSessionModal.manyPeople")
 end sub
 
 ' Funcion que interpreta los eventos de teclado y retorna true si fue porcesada por este componente. Sino es porcesado por el
@@ -92,6 +73,8 @@ end function
 
 ' Carga los datos de componente, si no recibe datos o los recibe vacios entonces dispara la limpieza del componete
 sub initData()
+    m.backToHomeButton.text = i18n_t(m.global.i18n, "button.backToHome")
+    m.titleManySessions.text = i18n_t(m.global.i18n, "errorPlanSession.manyPeople")
   if (m.top.data = invalid or m.top.data = "") and m.top.killedMe <> invalid and m.top.killedMe <> "" then
     __initConfigWithKilledMe()
 
@@ -128,7 +111,7 @@ sub onAllWhoAreWatchingResponse()
       itemContent.profileName = item.profileName
 
       newSessionItem = m.sessionsList.createChild("SessionListItem")
-      newSessionItem.widthContainer = (m.global.width - 80)
+      newSessionItem.widthContainer = (m.scaleInfo.width - 80)
       newSessionItem.itemContent = itemContent
 
         ' Configura la navegación vertical las sesiones
@@ -180,7 +163,7 @@ sub onWatchValidateResponse()
     m.apiRequestManager = clearApiRequest(m.apiRequestManager)
     
     if (statusCode = 408) then
-      m.dialog = createAndShowDialog(m.top, i18n_t(m.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogClosedLastFocus", [i18n_t(m.i18n, "button.cancel")])
+      m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.global.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogClosedLastFocus", [i18n_t(m.global.i18n, "button.cancel")])
     else 
       __validateError(statusCode, 0, errorResponse)
     end if
@@ -198,12 +181,13 @@ sub onStreamingsResponse()
       streaming = resp.data
       streaming.key = m.redirectKey 
       streaming.id = m.redirectId
-      m.top.streaming = FormatJson(resp.data)
+      streaming.streamingType = getStreamingType().DEFAULT
+      m.top.streaming = FormatJson(streaming)
     else 
       m.top.loading.visible = false
       printError("Streamings Emty:", m.apiRequestManager.response)
       m.apiRequestManager = clearApiRequest(m.apiRequestManager)
-      m.dialog = createAndShowDialog(m.top, i18n_t(m.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogClosedLastFocus", [i18n_t(m.i18n, "button.cancel")])
+      m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.global.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogClosedLastFocus", [i18n_t(m.global.i18n, "button.cancel")])
     end if
   else 
     m.top.loading.visible = false
@@ -212,7 +196,7 @@ sub onStreamingsResponse()
     m.apiRequestManager = clearApiRequest(m.apiRequestManager)
 
     if (statusCode = 408) then  
-      m.dialog = createAndShowDialog(m.top, i18n_t(m.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogClosedLastFocus", [i18n_t(m.i18n, "button.cancel")])
+      m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.global.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogClosedLastFocus", [i18n_t(m.global.i18n, "button.cancel")])
     else 
       __validateError(statusCode, 0, errorResponse)
     end if
@@ -244,7 +228,7 @@ sub onkillSessionResponse()
     m.apiRequestManager = clearApiRequest(m.apiRequestManager)
 
     if (statusCode = 408) then
-      m.dialog = createAndShowDialog(m.top, i18n_t(m.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogClosedLastFocus", [i18n_t(m.i18n, "button.cancel")])
+      m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.global.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogClosedLastFocus", [i18n_t(m.global.i18n, "button.cancel")])
     else 
       __validateError(statusCode, 0, errorResponse)
     end if
@@ -255,7 +239,7 @@ end sub
 
 ' Procesa la respuesta de quien es que elimino mi sesion
 sub onKillerResponse()
-  textError = "This session was closed on {{date}} by this device:"
+  textError = i18n_t(m.global.i18n, "errorPlanSession.killer")
   if valdiateStatusCode(m.apiRequestManager.statusCode) then
     resp = ParseJson(m.apiRequestManager.response)
     m.apiRequestManager = clearApiRequest(m.apiRequestManager)
@@ -265,15 +249,15 @@ sub onKillerResponse()
       m.InfoKiller = resp.data
 
       m.titleKilledMe.drawingStyles = {
-        "MyBold": { "fontUri": "font:SmallBoldSystemFont" }
-        "default": { "fontUri": "font:SmallSystemFont" }
+        "MyBold": { "fontUri": "font:MediumBoldSystemFont" }
+        "default": { "fontUri": "font:MediumSystemFont" }
       }
         
       date = CreateObject("roDateTime")
       date.FromISO8601String(m.killedMe.date)
       date.ToLocalTime()
 
-      m.titleKilledMe.text = textError.Replace("{{date}}", dateConverter(date, "MM/dd/yy hh:mm a"))
+      m.titleKilledMe.text = textError.Replace("{{date}}", dateConverter(date, i18n_t(m.global.i18n, "time.formatDateAndHours")))
 
       if (m.infoKiller.deviceDescription <> invalid and m.infoKiller.deviceDescription <> "") then 
         m.titleKilledMe.text = m.titleKilledMe.text + " <MyBold>" + m.infoKiller.deviceDescription + "</MyBold>"
@@ -319,7 +303,7 @@ sub __initConfigWithManySessions()
   m.sessionsContainer.visible = true
   if m.apiUrl = invalid then m.apiUrl = getConfigVariable(m.global.configVariablesKeys.API_URL)
   
-  width = m.global.width
+  width = m.scaleInfo.width
   
   m.widthContainer = width - scaleValue(80, m.scaleInfo)
   m.sessionsContainer.translation = [(width / 2), scaleValue(80, m.scaleInfo)]
@@ -333,8 +317,8 @@ sub __initConfigWithKilledMe()
   m.killedMeContainer.visible = true
   if m.apiUrl = invalid then m.apiUrl = getConfigVariable(m.global.configVariablesKeys.API_URL)
   
-  width = m.global.width
-  height = m.global.height
+  width = m.scaleInfo.width
+  height = m.scaleInfo.height
   
   m.killedMeContainer.translation = [(width / 2), (height / 2)]
   m.titleKilledMe.width = width - scaleValue(300, m.scaleInfo)
@@ -379,13 +363,13 @@ sub __validateError(statusCode, resultCode, errorResponse)
 
   if (error <> invalid and error.code <> invalid) then 
     if (error.code = 5931) then
-      m.dialog = createAndShowDialog(m.top,i18n_t(m.i18n, "shared.errorComponent.weAreSorry"), (i18n_t(m.i18n, "shared.errorComponent.youCurrentlyDoNotHavePlan")).Replace("[ProductName]", m.productName), "onDialogClosedLastFocus", [i18n_t(m.i18n, "button.cancel")])
+      m.dialog = createAndShowDialog(m.top,i18n_t(m.global.i18n, "shared.errorComponent.weAreSorry"), (i18n_t(m.global.i18n, "shared.errorComponent.youCurrentlyDoNotHavePlan")).Replace("[ProductName]", m.productName), "onDialogClosedLastFocus", [i18n_t(m.global.i18n, "button.cancel")])
     
     else if (error.code = 5932) then
-      m.dialog = createAndShowDialog(m.top,i18n_t(m.i18n, "shared.errorComponent.weAreSorry"), (i18n_t(m.i18n, "shared.errorComponent.youCurrentlyDoNotHaveAnyActiveSubscriptions")).Replace("[ProductName]", m.productName), "onDialogClosedLastFocus", [i18n_t(m.i18n, "button.cancel")])
+      m.dialog = createAndShowDialog(m.top,i18n_t(m.global.i18n, "shared.errorComponent.weAreSorry"), (i18n_t(m.global.i18n, "shared.errorComponent.youCurrentlyDoNotHaveAnyActiveSubscriptions")).Replace("[ProductName]", m.productName), "onDialogClosedLastFocus", [i18n_t(m.global.i18n, "button.cancel")])
     
     else if (error.code = 5939) then
-      m.dialog = createAndShowDialog(m.top,i18n_t(m.i18n, "shared.errorComponent.weAreSorry"), i18n_t(m.i18n, "shared.errorComponent.youCurrentlyDoNotHaveSufficientBalance"), "onDialogClosedLastFocus", [i18n_t(m.i18n, "button.cancel")])
+      m.dialog = createAndShowDialog(m.top,i18n_t(m.global.i18n, "shared.errorComponent.weAreSorry"), i18n_t(m.global.i18n, "shared.errorComponent.youCurrentlyDoNotHaveSufficientBalance"), "onDialogClosedLastFocus", [i18n_t(m.global.i18n, "button.cancel")])
     
     else if (error.code = 5930) then
       m.apiRequestManager = clearApiRequest(m.apiRequestManager)
@@ -394,7 +378,7 @@ sub __validateError(statusCode, resultCode, errorResponse)
     end if
   else 
     if (statusCode = 400) or (statusCode = 404) or (statusCode = 500) then 
-      m.dialog = createAndShowDialog(m.top, i18n_t(m.i18n, "shared.errorComponent.unhandled"), i18n_t(m.i18n, "shared.errorComponent.extendedMessage"), "onDialogClosedLastFocus", [i18n_t(m.i18n, "button.cancel")])
+      m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.unhandled"), i18n_t(m.global.i18n, "shared.errorComponent.extendedMessage"), "onDialogClosedLastFocus", [i18n_t(m.global.i18n, "button.cancel")])
     end if
   end if 
 end sub

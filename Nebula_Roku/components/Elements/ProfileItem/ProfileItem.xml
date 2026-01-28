@@ -17,7 +17,7 @@
         <field id="showManageProfile" type="boolean" value="false"/>
         
         <!-- Paramentros de entrada/Salida -->
-        <field id="size" type="array" onChange="setSize" value="[180, 180]"/>
+        <field id="size" type="array" onChange="setSize"/>
         <field id="auxInfo" type="string" value="" />
 
         <!-- Paramentros de Salida -->
@@ -33,18 +33,10 @@
             <Group translation="[0, 0]">
                 <Poster 
                     id="itemImage"
-                    width="180"
-                    height="180"
-                    loadWidth="180"
-                    loadHeight="180"
                     loadDisplayMode="scaleToZoom"/> 
                 <Poster 
                     id="opacityByEdit" 
                     translation="[0,0]"
-                    width="180"
-                    height="180"
-                    loadWidth="180"
-                    loadHeight="180"
                     visible="false"
                     loadDisplayMode="scaleToFit"
                     uri="pkg:/images/shared/edit_profile.png"/> 
@@ -54,7 +46,7 @@
                 id="selectedIndicator"
                 translation="[-2, -2]"
                 visible="false"
-                size="[179, 179]"/>
+                size="[249, 249]"/>
     
             <Rectangle
                 id="opacityLayout"
@@ -64,8 +56,8 @@
 
             <Label
                 id="profileName"
-                translation="[0, 190]"
-                width="180" 
+                translation="[0, 260]"
+                width="250" 
                 wrap="false"
                 maxLines="1"
                 horizAlign="center"

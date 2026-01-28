@@ -1,14 +1,12 @@
 ##   Channel Details
 ## Client Information
-title=Nebula
-subtitle=B8KS0E4
+title=NebulaDev.tv
 splash_color=#000000
 
 ## Version
-major_version=3
+major_version=1
 minor_version=0
-build_version=1
-
+build_version=0
 
 
 ##   Channel Assets
@@ -30,7 +28,8 @@ splash_screen_sd=pkg:/images/client/splash-screen_sd.jpg
 
 # Resolution
 ui_resolutions=HD,FHD,UFD,UHD
-supports_input_launch=1
 
 # Translates
 bs_libs=source/Utils/i18nUtils.brs
+
+supports_input_launch=1

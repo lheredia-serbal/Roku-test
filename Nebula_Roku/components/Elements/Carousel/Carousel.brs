@@ -2,11 +2,9 @@
 sub init()
   m.carouselList = m.top.findNode("carouselList")
   m.carouselTitle = m.top.findNode("carouselTitle")
+  
   m.scaleInfo = m.global.scaleInfo
-  if m.scaleInfo = invalid then
-    m.scaleInfo = getScaleInfo()
-  end if
-
+  
   m.carouselTitle.translation = scalePoint([70, 100], m.scaleInfo)
   m.carouselList.translation = scalePoint([-80, 130], m.scaleInfo)
 
@@ -31,17 +29,18 @@ end sub
 ' Define la configuracion necesaria del estilo del carousel
 sub initSyle()
   if m.top.style = -1 then ' AvatarsItem
-    m.top.size = [scaleValue(120, m.scaleInfo), scaleValue(120, m.scaleInfo)]
-    m.separator = scaleValue(10, m.scaleInfo)
+    m.top.size = scaleSize([120, 120], m.scaleInfo)
+    m.labelSpace = scaleValue(60, m.scaleInfo)
+    m.separator = scaleValue(20, m.scaleInfo)
     m.top.height = (m.top.size[1] + m.labelSpace)
-    m.targetItems = 10
+    m.targetItems = 12
     m.styleItem = "AvatarItem"
-    m.xInitial = scaleValue(-150, m.scaleInfo)
-    m.carouselTitle.translation = scalePoint([29, 100], m.scaleInfo)
+    m.xInitial = scaleValue(-171, m.scaleInfo)
+    m.carouselTitle.translation = scalePoint([29, 110], m.scaleInfo)
     m.targetRects = createTargetRects(m.targetItems, m.xInitial, (m.top.size[0] + m.separator), m.top.size[0], m.top.size[1])
 
   else if m.top.style = getCarouselStyles().PORTRAIT_FEATURED then ' carouselPortraitFeatured
-    m.top.size = [scaleValue(270, m.scaleInfo), scaleValue(405, m.scaleInfo)]
+    m.top.size = scaleSize([270, 405], m.scaleInfo)
     __defaultConfig()
     m.top.height = (m.top.size[1] + m.labelSpace)
     m.targetItems = 6
@@ -50,7 +49,7 @@ sub initSyle()
     m.targetRects = createTargetRects(m.targetItems, m.xInitial, (m.top.size[0] + m.separator), m.top.size[0], m.top.size[1])
 
   else if m.top.style = getCarouselStyles().LANDSCAPE_STANDARD then ' carouselLandscapeStandard
-     m.top.size = [scaleValue(464, m.scaleInfo), scaleValue(261, m.scaleInfo)]
+    m.top.size = scaleSize([464, 261], m.scaleInfo)
     __defaultConfig()
     m.top.height = (m.top.size[1] + m.labelSpace)
     m.targetItems = 5
@@ -59,7 +58,7 @@ sub initSyle()
     m.targetRects = createTargetRects(m.targetItems, m.xInitial, (m.top.size[0] + m.separator), m.top.size[0], m.top.size[1])
 
   else if m.top.style = getCarouselStyles().LANDSCAPE_FEATURED then ' carouselLandscapeFeatured
-    m.top.size = [scaleValue(560, m.scaleInfo), scaleValue(315, m.scaleInfo)]
+    m.top.size = scaleSize([560, 315], m.scaleInfo)
     __defaultConfig()
     m.top.height = (m.top.size[1] + m.labelSpace)
     m.targetItems = 4
@@ -68,7 +67,7 @@ sub initSyle()
     m.targetRects = createTargetRects(m.targetItems, m.xInitial, (m.top.size[0] + m.separator), m.top.size[0], m.top.size[1])
 
   else if m.top.style = getCarouselStyles().SQUARE_STANDARD then ' carouselSquareStandard
-    m.top.size = [scaleValue(120, m.scaleInfo), scaleValue(120, m.scaleInfo)]
+    m.top.size = scaleSize([120, 120], m.scaleInfo)
     __defaultConfig()
     m.top.height = (m.top.size[1] + m.labelSpace)
     m.targetItems = 10
@@ -77,7 +76,7 @@ sub initSyle()
     m.targetRects = createTargetRects(m.targetItems, m.xInitial, (m.top.size[0] + m.separator), m.top.size[0], m.top.size[1])
 
   else if m.top.style = getCarouselStyles().SQUARE_FEATURED then ' carouselSquareFeatured
-    m.top.size = [scaleValue(280, m.scaleInfo), scaleValue(110, m.scaleInfo)]
+    m.top.size = scaleSize([310, 110], m.scaleInfo)
     __defaultConfig()
     m.top.height = (m.top.size[1] + m.labelSpace)
     m.targetItems = 6
@@ -86,11 +85,11 @@ sub initSyle()
     else
       m.styleItem = "SquareFeaturedItem"
     end if
-    m.xInitial = scaleValue(-469, m.scaleInfo)
+    m.xInitial = scaleValue(-530, m.scaleInfo)
     m.targetRects = createTargetRects(m.targetItems, m.xInitial, (m.top.size[0] + m.separator), m.top.size[0], m.top.size[1])
 
   else ' Style = getCarouselStyles().PORTRAIT_STANDARD and default carouselPortraitStandard
-    m.top.size = [scaleValue(180, m.scaleInfo), scaleValue(270, m.scaleInfo)]
+    m.top.size = scaleSize([180, 270], m.scaleInfo)
     __defaultConfig()
     m.top.height = (m.top.size[1] + m.labelSpace)
     m.targetItems = 8
@@ -177,7 +176,7 @@ sub onUpdateNode()
             startTime.FromISO8601String(oldInfo.startTime)
             startTime.ToLocalTime()
     
-            child.date = dateConverter(startTime, "HH:mm a") + " - " + dateConverter(endTime, "HH:mm a")
+            child.date = dateConverter(startTime, i18n_t(m.global.i18n, "time.formatHours")) + " - " + dateConverter(endTime, i18n_t(m.global.i18n, "time.formatHours"))
           end if
         end if
         
@@ -243,7 +242,7 @@ sub __populateList()
         startTime.FromISO8601String(item.startTime)
         startTime.ToLocalTime()
 
-        child.date = dateConverter(startTime, "HH:mm a") + " - " + dateConverter(endTime, "HH:mm a")
+        child.date = dateConverter(startTime, i18n_t(m.global.i18n, "time.formatHours")) + " - " + dateConverter(endTime, i18n_t(m.global.i18n, "time.formatHours"))
       end if
     end if
     

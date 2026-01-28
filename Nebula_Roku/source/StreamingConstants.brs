@@ -13,6 +13,13 @@ function getStreamingFormat() as Object
     }
 end function
 
+function getVideoContentStreamformat() as Object
+    return {
+        HLS: "hls",
+        DASH: "dash",
+    }
+end function
+
 function getVideoType() as Object
     return {
         LIVE: "live",

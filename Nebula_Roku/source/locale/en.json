@@ -1,20 +1,11 @@
 {
-  "language": {
-    "es": "Español",
-    "pt": "Português",
-    "en": "English"
-  },
   "button": {
-    "accept": "Accept",
     "back": "Back",
     "backToHome": "Back to home",
     "ok": "OK",
     "cancel": "Cancel",
     "close": "Close",
-    "clear": "Clean",
-    "delete": "Delete",
     "next": "Next",
-    "login": "Login",
     "no": "NO",
     "previous": "Previous",
     "ready": "Done",
@@ -22,124 +13,89 @@
     "save": "Save",
     "yes": "YES",
     "continueSee": "Continue watching",
-    "showPassword": "Show password",
-    "hidePassword": "Hide password",
-    "changeLanguage": "Change language",
-    "validateRegisterCode": "Validate",
-    "tryAgain": "Try again",
     "exit": "Exit"
   },
   "time": {
+    "endsInHoursMin": "Ends in {{hours}}h {{minutes}}m",
+    "endsInMin": "Ends in {{minutes}} min",
     "endsIn": "Ends in {{time}}",
     "live": "Live",
     "today": "Today",
     "yesterday": "Yesterday",
     "tomorrow": "Tomorrow",
-    "durationHoursMinutes": "{{hours}}h {{minutes}}min",
-    "durationMinutes": "{{minutes}}min",
-    "durationHours": "{{hours}}h"
+    "january": "January",
+    "february": "February",
+    "march": "March",
+    "april": "April",
+    "may": "May",
+    "june": "June",
+    "july": "July",
+    "august": "August",
+    "september": "September",
+    "october": "October",
+    "november": "November",
+    "december": "December",
+    "formatHours": "HH:mm a",
+    "formatDate": "MM/dd/yyyy",
+    "formatDateAndHours": "MM/dd/yy hh:mm a",
+    "formatDateAndTimeSpacing": "dd MMMM yyyy hh:mm a"
   },
-  "config": {
-    "configPage": {
-      "title": "Device information",
-      "titleEmail": "Email: ",
-      "titleName": "Username: ",
-      "titleDiveId": "Device ID: ",
-      "titleSerialNumber": "Serial number: ",
-      "titleVersion": "Version: ",
-      "orgName": "Qvix Solutions"
-    }
+  "launcherScreen": {
+    "copyright": "@copyright {{year}} - Qvix Solutions"
+  },
+  "configPage": {
+    "title": "Device information",
+    "titleEmail": "Email: ",
+    "titleName": "Username: ",
+    "titleDiveId": "Device ID: ",
+    "titleSerialNumber": "Serial number: ",
+    "titleVersion": "Version: ",
+    "orgName": "Qvix Solutions"
   },
   "content": {
     "menuComponent": {
       "changeProfile": "Change profile",
-      "Search": "Search",
       "Setting": "Setting",
       "exit": "Exit",
       "logout": "Logout"
     },
     "contentPage": {
-      "goToGuide": "Go to guide",
-      "seeMore": "See more",
       "notDisplayTitle": "Nothing here...",
-      "notDisplayContect": "There is currently no content to display in this section. This may be because you do not have an active subscription or there is no content available, please contact us.",
-      "seeDetail": "SEE DETAIL",
-      "watch": "WATCH",
-      "errorServerConnection": "Server connection error"
+      "notDisplayContect": "There is currently no content to display in this section. This may be because you do not have an active subscription or there is no content available, please contact us."
     }
   },
-  "initialPage": {
-    "loadingPage": {
-      "connection": "Server connection error"
+  "loginPage": {
+    "titleUser": "User: ",
+    "enterYourUser": "Enter your user",
+    "password": "Password: ",
+    "enterYourPassword": "Enter your password",
+    "errorForm": {
+      "unAuthorized": "Incorrect user or password",
+      "notConfirmed": "unconfirmed account",
+      "notActivated": "Account not activated by administrator",
+      "unhandled": "Error processing the request",
+      "passwordRequired": "Password is required!",
+      "userRequired": "User is required!",
+      "invalidAccount": "Invalid user or password"
     }
   },
-  "login": {
-    "loginPage": {
-      "enterYourEmail": "Enter your email",
-      "password": "Password: ",
-      "title": "Sign in",
-      "titleQR": "Choose how to sign in",
-      "usernameInput": "Enter your username",
-      "passwordInput": "Enter your password",
-      "passwordRecoveryTitle": "We have sent you an email",
-      "passwordRecoveryDescription": "Check your email and follow the instructions to reset your password; then, come back here to log in.",
-      "passwordRecovery": "Recover password",
-      "qrStepsTitle": "Follow these steps on your computer or mobile device",
-      "qrStep1Description": "Scan the QR code with your phone's camera or visit:",
-      "qrStep2Description": "Enter or confirm the login code:",
-      "qrStep3Description": "Sign in. Your TV will be ready to watch!",
-      "step": "Step",
-      "optionKeyboard": "Use keyboard",
-      "optionPhone": "Use phone",
-      "errorForm": {
-        "unAuthorized": "Incorrect user or password",
-        "unAuthorizedCode": "The device has not been entered yet",
-        "notConfirmed": "unconfirmed account",
-        "notActivated": "Account not activated by administrator",
-        "connection": "Server connection error",
-        "unhandled": "Error processing the request",
-        "incomplete": "incomplete fields",
-        "validationProcess": "Error in validation process"
-      },
-      "acction": {
-        "acction1" : "Validating connection",
-        "acction2" : "validating device",
-        "acction3" : "Validating the device",
-        "acction4" : "Validating the device...",
-        "acction5" : "Problems when validating",
-        "acction6" : "validating account",
-        "acction7" : "Validating account status"
-      }
-    }
+  "errorPlanSession": {
+    "killer": "This session was closed on {{date}} by this device:",
+    "manyPeople": "There are many people using your account, to continue viewing, you must close an account and try again."
   },
   "player": {
-    "errorPlanSessionModal": {
-      "killer": "This session was closed on {{date}} by this device:",
-      "manyPeople": "There are many people using your account, to continue viewing, you must close an account and try again.",
-      "notPlans": "You are not currently subscribed to any plan for this device, contact us and choose your preferred plan!",
-      "connection": "Currently could not connect to the server. Please check your Internet connection and try again later."
-    },
     "guide": {
       "availableToView": "Available to watch",
       "now": "NOW"
     },
     "video": {
-      "audioTrack": "Audio track",
-      "subtitle": "Subtitle",
-      "live": "Live",
       "pause": "Pause",
       "play": "Play",
       "restart": "Restart",
-      "language": "Language",
       "goLive": "Go Live",
-      "guide": "Guide",
-      "guideButton": "GUIDE",
-      "disabled": "Disabled",
-      "default": "Default"
+      "guide": "Guide"
     },
     "playerPage": {
-      "signalProblems": "Channel '{{channelName}}'",
-      "connectionProblems": "",
       "connecting": "Connecting Signal...",
       "askHere": "Are you still there?"
     }
@@ -154,42 +110,34 @@
       "titleButton": "Manage profiles",
       "addProfile": "Add profile",
       "EditProfile": "Edit profile",
+      "deleteProfile": "Delete profile",
       "name": "Name",
       "chooseAvatar": "Choose an avatar",
       "error": {
-        "connection": "Server connection error. Check your internet connection",
         "nameRequired": "The name is required",
-        "cannotDelete": "This profile cannot be deleted, please select another one"
+        "avatarRequired": "You must choose an avatar"
       }
     }
   },
-  "program": {
-    "programDetail": {
-      "live": "Live",
-      "season": "Season {{number}}",
-      "chapter": "  • Chapter {{number}}",
-      "atTheMoment": "At this moment",
-      "button": {
-        "watch": "Watch",
-        "continue": "Continue",
-        "restart": "Restart",
-        "rec": "Record",
-        "stop": "Stop",
-        "delete": "Delete",
-        "emissions": "Emissions"
-      }
+  "programDetail": {
+    "button": {
+      "watch": "Watch",
+      "continue": "Continue",
+      "restart": "Restart"
     }
+  },
+  "autoUpgrade": {
+    "title": "Update available",
+    "message": "A new version is available.",
+    "mandatoryMessage": "You must update the version to continue.",
+    "remindLater": "Remind me later"
   },
   "shared": {
     "errorComponent": {
       "notFound": "Information is not available",
       "unhandled": "Oops! An error has occurred.",
-      "connectionCouldNotEstablished": "The connection could not be established",
-      "tryingToConnect": "We encountered a problem while trying to connect. We recommend checking your internet connection and trying again in a few moments.",
+      "connection": "Server connection error",
       "extendedMessage": "If the error persists please contact us.",
-      "errorRestoringService": "There was a problem. We are restoring service.",
-      "checkingConnection": "Checking connection...",
-      "code": "Error code",
       "anErrorOcurred": "An error occurred.",
       "weAreSorry": "We are sorry...",
       "youCurrentlyDoNotHavePlan": "You currently do not have a plan that allows viewing on this type of device. Please contact the [ProductName] team.",
@@ -205,22 +153,8 @@
     "parentalControlModal": {
       "title": "Enter your PIN",
       "error": {
-        "incomplete": "Incomplete field",
-        "invalid": "Invalid PIN",
-        "connectionCouldNotEstablished": "The connection could not be established",
-        "code": "Code"
+        "invalid": "Invalid PIN"
       }
-    },
-    "languageModal": {
-      "title": "Choose the language"
     }
-  },
-  "search": {
-    "noResults": "There are no results for your search, but we can recommend the following:",
-    "noResultsDefaultSearch": "Search by title, actors, and TV channels.",
-    "noResultsRecomendations": "Your search returned no results."
-  },
-  "emissions": {
-    "noResults": "There are no emissions available at this time, please try again later."
   }
 }

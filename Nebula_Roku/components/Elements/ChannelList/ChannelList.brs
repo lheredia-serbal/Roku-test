@@ -1,15 +1,13 @@
 ' Inicialización del componente (parte del ciclo de vida de Roku)
 sub init()
-    m.scaleInfo = m.global.scaleInfo
-    if m.scaleInfo = invalid then
-        m.scaleInfo = getScaleInfo()
-    end if
-
     m.channelList = m.top.findNode("channelList")
+    
+    m.scaleInfo = m.global.scaleInfo
+
     m.targetItems = 8
     m.top.refreshLoadChannelList = 0
-    m.separator = scaleValue(20, m.scaleInfo)
-    m.size = scaleSize([280, 110], m.scaleInfo)
+    m.separator = scaleValue(18, m.scaleInfo)
+    m.size = scaleSize([283, 110], m.scaleInfo)
 
     m.targetRects = createTargetRects(m.targetItems, -(m.size[1] + m.separator), (m.size[1] + m.separator), m.size[0], m.size[1], "InY")
 end sub
@@ -139,7 +137,7 @@ sub __populateList()
                     child.startTime = startTime.AsSeconds()
                     child.endTime = endTime.AsSeconds()
         
-                    child.date = dateConverter(startTime, "HH:mm a") + " - " + dateConverter(endTime, "HH:mm a")
+                    child.date = dateConverter(startTime, i18n_t(m.global.i18n, "time.formatHours")) + " - " + dateConverter(endTime, i18n_t(m.global.i18n, "time.formatHours"))
                 end if
             end if
         end if

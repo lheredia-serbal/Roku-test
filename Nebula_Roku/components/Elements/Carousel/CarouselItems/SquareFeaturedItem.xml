@@ -20,12 +20,8 @@
     <children>
         <!-- Fondo negro -->
         <Rectangle id="theRect" color="#000000">
-            <LayoutGroup
-                layoutDirection="vert"
-                horizAlignment="left"
-                vertAlignment="top"
-                itemSpacings="[12]"
-                translation="[12, 14]">
+            <Group
+                id="contentGroup">
                 <LayoutGroup
                     layoutDirection="horiz"
                     horizAlignment="left"
@@ -36,26 +32,24 @@
                         layoutDirection="vert"
                         horizAlignment="left"
                         vertAlignment="center"
-                        itemSpacings="[6]">
+                        itemSpacings="[1]">
                         <Label 
-                            id="title" 
-                            width="190" 
-                            wrap="false" 
-                            maxLines="1" 
+                            id="title"
+                            wrap="true" 
+                            maxLines="2" 
                             visible="false"
-                            font="font:SmallestSystemFont"/>
+                            lineSpacing="2"
+                            font="font:TinySystemFont"/>
                             
                         <Label 
                             id="category" 
-                            width="190" 
                             wrap="false" 
                             maxLines="1" 
                             visible="false"
-                            font="font:SmallestSystemFont"/>
+                            font="font:TinySystemFont"/>
 
                         <Label 
                             id="dateTime" 
-                            width="190" 
                             wrap="false" 
                             maxLines="1" 
                             visible="false"
@@ -63,21 +57,20 @@
                     </LayoutGroup> 
                     
                     <Poster 
-                        id="imageItem" 
-                        width="60" 
-                        height="60"
-                        loadWidth="60"
-                        loadHeight="60"/>
+                        id="imageItem" />
                 </LayoutGroup>
                 
+                <!-- BARRA FIJA ABAJO -->
                 <LayoutGroup
+                    id="progressGroup"
                     layoutDirection="horiz"
                     horizAlignment="left"
-                    vertAlignment="top">
+                    vertAlignment="bottom">
+
                     <Rectangle id="progressLeft" height="3"/>
                     <Rectangle id="progressRight" height="3"/>
                 </LayoutGroup>
-            </LayoutGroup>
+            </Group>
         </Rectangle>
         <Rectangle id="opacityLayout" color="#000000" opacity="0.33" />
     </children>

@@ -7,13 +7,18 @@
   xsi:noNamespaceSchemaLocation="https://devtools.web.roku.com/schema/RokuSceneGraph.xsd">
 
   <script type="text/brightscript" uri="QvImageButton.brs"/>
+  <script type="text/brightscript" uri="pkg:/source/Utils.brs" />
 
   <interface>
     <!-- Paramentros de Entrada -->
     <field id="uri" type="string" onChange="updateUri" />
     <field id="tooltip" type="string" onChange="updateTooltip" />
 
-    <!-- Paramentros de Salida -->    <field id="focusDown" type="node"/>
+    <!-- Paramentros de Entrada/Salida -->
+    <field id="disable" type="boolean" value="false" onChange="onChangeDisable" />
+
+    <!-- Paramentros de Salida -->    
+    <field id="focusDown" type="node"/>
     <field id="focusUp" type="node"/>
     <field id="focusLeft" type="node"/>
     <field id="focusRight" type="node"/>
@@ -25,34 +30,27 @@
     <Rectangle
       id="buttonBg"
       translation="[0, 0]"
-      width="40"
-      height="40"
       focusable="true"
       color="0x00000000" >
       <Poster 
         id="btnImage"
-        translation="[10, 10]"
-        width="20"
-        height="20"
-        loadWidth="20"
-        loadHeight="20"
         loadDisplayMode="scaleToFit" />
     </Rectangle>
 
     <!-- Bordes del cuadro con separación de 2 píxeles -->
     <Group id="borderContainer" translation="[-1,-1]" visible="false">
-      <Rectangle id="rectLeft" translation="[0, 0]" width="1" height="41"/>  <!-- Izquierda -->
-      <Rectangle id="rectTop" translation="[0, 0]" width="40" height="1"/>  <!-- Superior -->
-      <Rectangle id="rectRight" translation="[40, 0]" width="1" height="41"/> <!-- Derecha -->
-      <Rectangle id="rectBottom" translation="[0, 40]" width="40" height="1"/> <!-- Inferior -->
+      <Rectangle id="rectLeft" />  <!-- Izquierda -->
+      <Rectangle id="rectTop" />  <!-- Superior -->
+      <Rectangle id="rectRight" /> <!-- Derecha -->
+      <Rectangle id="rectBottom" /> <!-- Inferior -->
     </Group>
 
     <Label 
       id="btnTooltip"
-      translation="[0, 45]"
-      width="60"
       font="font:TinySystemFont"
       horizAlign="center"
+      vertAlign="center"
+      maxLines="1"       
       visible="false" />
   </children>
 </component>

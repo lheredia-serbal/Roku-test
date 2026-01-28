@@ -15,36 +15,31 @@
 
   <script type="text/brightscript" uri="pkg:/source/Services/Health.brs" />
   <script type="text/brightscript" uri="pkg:/source/Services/Platforms.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Services/AutoUpgrade.brs" />
   <script type="text/brightscript" uri="pkg:/source/Services/Auth.brs" />
 
   <interface>
     <!-- Paramentros de Salida -->
-    <field id="finished" type="boolean" value="false" />
-    <field id="forceExit" type="boolean" value="false" />
+    <field id="finished" alwaysnotify="true" type="boolean" value="false" />
+    <field id="forceExit" alwaysnotify="true" type="boolean" value="false" />
   </interface>
   
   <children>
     <!-- Logo en el centro -->
     <Poster
       id="logo"
-      width="500" 
-      height="250"
-      loadWidth="500"
-      loadHeight="250"
       loadDisplayMode="scaleToFit"
       uri="pkg:/images/client/logo.png" />
       
       <!-- Versión -->
       <Label
         id="versionLabel"
-        height="35"
         horizAlign="center"
         font="font:SmallestSystemFont"/>
 
       <!-- Copyright -->
       <Label
         id="copyrightLabel"
-        height="30"
         horizAlign="center"
         font="font:TinySystemFont" />
   </children>

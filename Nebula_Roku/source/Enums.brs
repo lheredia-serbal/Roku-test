@@ -129,6 +129,7 @@ function KeyButtons() as Object
         DOWN: "down",
         LEFT: "left",
         RIGHT: "right",
+        PLAY: "play",
         FAST_FORWARD: "fastforward",
         REWIND: "rewind",
         REPLAY: "replay"

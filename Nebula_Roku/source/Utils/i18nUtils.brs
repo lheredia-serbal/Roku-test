@@ -29,35 +29,74 @@ function loadJsonFile(path as string) as object
     try
         text = ReadAsciiFile(path)
     catch e
-        print "i18n: error leyendo archivo JSON: "; path; " → "; e.message
+        printError("loadJsonFile:" + e.message)
         return emptyDict
     end try
 
     if text = invalid then
-        print "i18n: archivo de traducción no encontrado o vacío en "; path
         return emptyDict
     end if
 
     dict = invalid
     try
         dict = ParseJson(text)
-    catch e
-        print "i18n: error parseando JSON en "; path; " → "; e.message
+    catch e 
+        printError("loadJsonFile:" + e.message)
         return emptyDict
     end try
 
     if Type(dict) <> "roAssociativeArray" then
-        print "i18n: estructura JSON inválida en "; path; " (se esperaba roAssociativeArray)"
         return emptyDict
     end if
 
     return dict
 end function
 
+' Traduce un arreglo de claves y devuelve un arreglo de strings
+function i18n_months(i18nNode as Object) as Object
+    result = CreateObject("roArray", 0, true)
+    keys = ["time.january", "time.february", "time.march", "time.april", "time.may", "time.june", "time.july", "time.august", "time.september", "time.october", "time.november", "time.december"]
+
+    for each key in keys
+        if Type(key) = "roString" then
+            result.push(i18n_t(i18nNode, key))
+        else
+            result.push("") ' o podés usar invalid
+        end if
+    end for
+
+    return result
+end function
+
+
+' Traduce un arreglo de claves y devuelve un arreglo de strings
+function i18n_batch(i18nNode as Object, keys as Object) as Object
+    result = CreateObject("roArray", 0, true)
+
+    if keys = invalid then return result
+    if Type(keys) <> "roArray" then return result
+
+    for each key in keys
+        if Type(key) = "roString" then
+            result.push(i18n_t(i18nNode, key))
+        else
+            result.push("") ' o podés usar invalid
+        end if
+    end for
+
+    return result
+end function
+
+
 ' Carga traducciones para un idioma específico desde /locale/<lang>.json
 function loadTranslationsForLang(lang as string) as object
     path = "pkg:/source/locale/" + lang + ".json"
-    return loadJsonFile(path)
+    baseDict = loadJsonFile(path)
+
+    customPath = "pkg:/source/locale/custom/" + lang + ".json"
+    customDict = loadJsonFile(customPath)
+
+    return mergeTranslationDict(baseDict, customDict)
 end function
 
 ' Traduce usando el nodo i18n y una clave (soporta "a.b.c")
@@ -104,4 +143,26 @@ function i18n_lookupValue(dict as Object, key as string) as dynamic
     end if
 
     return invalid
+end function
+
+' Mezcla dos diccionarios, pisando base con override (recursivo para sub-objetos)
+function mergeTranslationDict(baseDict as Object, overrideDict as Object) as Object
+    if Type(baseDict) <> "roAssociativeArray" then baseDict = CreateObject("roAssociativeArray")
+    if Type(overrideDict) <> "roAssociativeArray" then return baseDict
+
+    merged = CreateObject("roAssociativeArray")
+
+    for each k in baseDict
+        merged[k] = baseDict[k]
+    end for
+
+    for each k in overrideDict
+        if Type(merged[k]) = "roAssociativeArray" and Type(overrideDict[k]) = "roAssociativeArray" then
+            merged[k] = mergeTranslationDict(merged[k], overrideDict[k])
+        else
+            merged[k] = overrideDict[k]
+        end if
+    end for
+
+    return merged
 end function

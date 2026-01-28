@@ -1,11 +1,7 @@
 ' Inicialización del componente (parte del ciclo de vida de Roku)
 sub init()
-  m.scaleInfo = m.global.scaleInfo
-  if m.scaleInfo = invalid then
-    m.scaleInfo = getScaleInfo()
-  end if
-
   m.top.finished = false 
+  m.mainContainer = m.top.findNode("mainContainer")
   m.userField = m.top.findNode("userField")
   m.passwordField = m.top.findNode("passwordField")
   m.passwordLabel = m.top.findNode("passwordLabel")
@@ -15,6 +11,8 @@ sub init()
   m.keyboard = m.top.findNode("keyboard")
   m.logo = m.top.findNode("logo")
   m.email = m.top.findNode("email")
+
+  m.scaleInfo = m.global.scaleInfo
 
   m.keyboard.showTextEditBox = false
   m.keyboard.textEditBox.maxTextLength = 255
@@ -28,25 +26,17 @@ sub init()
   m.userField.hintTextColor = m.global.colors.LIGHT_GRAY
   m.passwordField.hintTextColor = m.global.colors.LIGHT_GRAY
 
-  m.i18n = invalid
-  scene = m.top.getScene()
-  if scene <> invalid then
-      m.i18n = scene.findNode("i18n")
-  end if
-  applyTranslations()
-end sub
+  m.mainContainer.translation = scaleSize([180, 120], m.scaleInfo)
+  m.email.width = scaleValue(300, m.scaleInfo)
+  m.userField.width = scaleValue(910, m.scaleInfo)
+  m.passwordLabel.width = scaleValue(300, m.scaleInfo)
+  m.passwordField.width = scaleValue(910, m.scaleInfo)
+  m.keyboard.translation = scaleSize([-15,0], m.scaleInfo)
+  m.logo.width = scaleValue(200, m.scaleInfo)
+  m.logo.height = scaleValue(100, m.scaleInfo)
 
-sub applyTranslations()
-    if m.i18n = invalid then
-        return
-    end if
-
-    m.email.text = i18n_t(m.i18n, "config.configPage.titleEmail")
-    m.passwordLabel.text = i18n_t(m.i18n, "login.loginPage.password")
-    m.prevButton.text = i18n_t(m.i18n, "button.previous")
-    m.nextButton.text = i18n_t(m.i18n, "button.next")
-    m.userField.hintText = i18n_t(m.i18n, "login.loginPage.enterYourEmail")
-    m.passwordField.hintText = i18n_t(m.i18n, "login.loginPage.passwordInput")
+  m.prevButton.size = scaleSize([150, 40], m.scaleInfo)
+  m.nextButton.size = scaleSize([150, 40], m.scaleInfo)
 end sub
 
 ' Funcion que interpreta los eventos de teclado y retorna true si fue porcesada por este componente. Sino es porcesado por el
@@ -95,13 +85,14 @@ end function
 ' Inicializa el foco del componente seteando los valores necesarios
 sub initFocus()
   if m.top.onFocus then
+    __applyTranslations()
     m.sendLoginPost = false
     m.inputFocus = "user"
     m.prevButton.disable = true
 
     m.keyboard.unobserveField("textEditBox")
 
-    width = m.global.width
+    width = m.scaleInfo.width
 
     m.buttonContainer.translation = [((width - scaleValue(380, m.scaleInfo)) / 2), 0]
     m.logo.translation = [(width - scaleValue(280, m.scaleInfo)), scaleValue(30, m.scaleInfo)]
@@ -140,15 +131,15 @@ sub onLoginResponse()
     errorAPI = ""
 
     if error.code = m.resultCodes.UNAUTHORIZED then
-      errorAPI = "Incorrect email or password"
+      errorAPI = i18n_t(m.global.i18n, "loginPage.errorForm.unAuthorized")
     else if error.code = m.resultCodes.NOT_CONFIRMED then
-      errorAPI = "unconfirmed account"
+      errorAPI = i18n_t(m.global.i18n, "loginPage.errorForm.notConfirmed")
     else if error.code = m.resultCodes.NOT_ACTIVATED then
-      errorAPI = "Account not activated by administrator"
+      errorAPI = i18n_t(m.global.i18n, "loginPage.errorForm.notActivated")
     else if error.code = m.resultCodes.REQUESTTIMEOUT then
-      errorAPI = "Server connection error"
+      errorAPI = i18n_t(m.global.i18n, "shared.errorComponent.connection")
     else 
-      errorAPI = "Error processing the request"
+      errorAPI = i18n_t(m.global.i18n, "loginPage.errorForm.unhandled")
     end if
       
     m.apiRequestManager = clearApiRequest(m.apiRequestManager)
@@ -197,6 +188,19 @@ sub onTextBoxManagment()
   end if
 end sub
 
+' Aplicar las traducciones en el componente
+sub __applyTranslations()
+    if m.global.i18n = invalid then return
+
+    m.email.text = i18n_t(m.global.i18n, "loginPage.titleUser")
+    m.passwordLabel.text = i18n_t(m.global.i18n, "loginPage.password")
+    m.prevButton.text = i18n_t(m.global.i18n, "button.previous")
+    m.nextButton.text = i18n_t(m.global.i18n, "button.next")
+    m.userField.hintText = i18n_t(m.global.i18n, "loginPage.enterYourUser")
+    m.passwordField.hintText = i18n_t(m.global.i18n, "loginPage.enterYourPassword")
+end sub
+
+
 ' Valdia y realiza las acciones pertinentes al precionar el boton Previus de la pantalla 
 sub __prevButtonPressed()
   if m.inputFocus = "password" then
@@ -220,7 +224,7 @@ sub __nextButtonPressed()
       m.inputFocus = "password"
       m.keyboard.text = invalid
     else
-      __showDialog("User is required!")
+      __showDialog(i18n_t(m.global.i18n, "loginPage.errorForm.userRequired"))
     end if
   else if m.inputFocus = "password" then
     if m.passwordField.text <> invalid and m.passwordField.text <> "" then 
@@ -232,13 +236,13 @@ sub __nextButtonPressed()
         
         if user = "" or password = "" then      
           m.sendLoginPost = false
-          __showDialog("Invalid email or password")
+          __showDialog(i18n_t(m.global.i18n, "loginPage.errorForm.invalidAccount"))
           return
         end if
         __login(user, password)
       end if
     else
-      __showDialog("Password is required!")
+      __showDialog(i18n_t(m.global.i18n, "loginPage.errorForm.passwordRequired"))
     end if 
   end if
 end sub
@@ -273,7 +277,7 @@ end sub
 
 ' Muestra el modal con el mensaje de error pasado por parametro.
 sub __showDialog(errorAPI as String)
-  m.dialog = createAndShowDialog(m.top, i18n_t(m.i18n, "shared.errorComponent.unhandled"), errorAPI, "onDialogClosed")
+  m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.unhandled"), errorAPI, "onDialogClosed")
 end sub
 
 ' Entrega el foco al Teclado y actualiza la posicion del cursor.

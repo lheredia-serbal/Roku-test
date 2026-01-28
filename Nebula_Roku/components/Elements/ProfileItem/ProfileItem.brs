@@ -1,16 +1,13 @@
 ' Inicialización del componente (parte del ciclo de vida de Roku)
 sub init()
-    m.scaleInfo = m.global.scaleInfo
-    if m.scaleInfo = invalid then
-        m.scaleInfo = getScaleInfo()
-    end if
-
     m.profileName = m.top.findNode("profileName")
     m.opacityLayout = m.top.findNode("opacityLayout")
 
     m.itemImage = m.top.findNode("itemImage")
     m.opacityByEdit = m.top.findNode("opacityByEdit")
     m.selectedIndicator = m.top.findNode("selectedIndicator")
+    
+    m.scaleInfo = m.global.scaleInfo
     
     m.top.observeField("focusedChild", "onFocusChange")
 end sub
@@ -56,7 +53,7 @@ end sub
 
 ' Setea el tamaño del componente
 sub setSize()
-    scaledSize = getScaledSize()
+    scaledSize = m.top.size
     m.itemImage.width = scaledSize[0]
     m.itemImage.height = scaledSize[1]
     
@@ -67,12 +64,12 @@ sub setSize()
     m.opacityByEdit.height = scaledSize[1]
 
     m.selectedIndicator.size = [scaledSize[0] - 1 ,  scaledSize[1] - 1]
+    
+    m.profileName.width = scaledSize[0]
+    m.profileName.translation = [0, scaledSize[1] + 10]
+
+    m.opacityLayout.opacity = 0.0
+    m.selectedIndicator.visible = false
+    m.opacityByEdit.visible = false
+    m.profileName.color = m.global.colors.LIGHT_GRAY
 end sub
-
-function getScaledSize() as object
-    if m.top.size <> invalid and m.top.size.count() = 2 then
-        return scaleSize(m.top.size, m.scaleInfo)
-    end if
-
-    return [0, 0]
-end function

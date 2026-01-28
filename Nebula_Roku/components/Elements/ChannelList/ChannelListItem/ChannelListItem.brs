@@ -1,10 +1,5 @@
 ' Inicialización del componente (parte del ciclo de vida de Roku)
 sub init()
-    m.scaleInfo = m.global.scaleInfo
-    if m.scaleInfo = invalid then
-        m.scaleInfo = getScaleInfo()
-    end if
-
     m.theRect  = m.top.findNode("theRect")
     m.channelInfo = m.top.findNode("channelInfo")
     m.programInfo = m.top.findNode("programInfo")
@@ -12,9 +7,15 @@ sub init()
     m.channelImage = m.top.findNode("channelImage")
     m.progressLeft = m.top.findNode("progressLeft")
     m.progressRight = m.top.findNode("progressRight")
+    m.progressGroup = m.top.findNode("progressGroup")
+    m.contentGroup = m.top.findNode("contentGroup")
+    
+    m.scaleInfo = m.global.scaleInfo
 
-    m.padding = scaleValue(12, m.scaleInfo)
-    m.totalProgress = scaleValue(280, m.scaleInfo) - (m.padding * 2)
+    m.paddingX = scaleValue(12, m.scaleInfo)
+    m.paddingY = scaleValue(14, m.scaleInfo)
+    m.paddingPorgressY = scaleValue(30, m.scaleInfo)
+    m.totalProgress = scaleValue(280, m.scaleInfo) - (m.paddingX * 2)
     m.limitOpacity = 0.6
     __initColors()
 end sub
@@ -50,8 +51,18 @@ end sub
 
 ' Se dispara al dibujar en pantalla y define oppiedades del xml del componente
 sub currRectChanged()
-    m.theRect.width = scaleValue(m.top.currRect.width, m.scaleInfo)
-    m.theRect.height = scaleValue(m.top.currRect.height, m.scaleInfo)
+    m.theRect.width = m.top.currRect.width 'Ya fue cambiado en el componente padre
+    m.theRect.height = m.top.currRect.height 'Ya fue cambiado en el componente padre
+
+    m.channelInfo.width = scaleValue(190, m.scaleInfo)
+    m.programInfo.width = scaleValue(190, m.scaleInfo)
+    m.programTime.width = scaleValue(190, m.scaleInfo)
+
+    m.channelImage.width = scaleValue(60, m.scaleInfo)
+    m.channelImage.height = scaleValue(60, m.scaleInfo)
+
+    m.contentGroup.translation = [m.paddingX, m.paddingY]
+    m.progressGroup.translation = [0, m.top.currRect.height - m.paddingPorgressY]
 end sub
 
 ' Define el estilo de foco del componente y como se comporta al tener o no el foco

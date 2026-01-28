@@ -21,3 +21,7 @@ end function
 function urlWatchKeepAlive(apiUrl)
     return apiUrl + "/"+ m.global.apiVersions.V1 +"/Watch/KeepAlive"
 end function
+
+function urlUpdateWatchSession(apiUrl, key, id)
+    return apiUrl + "/"+ m.global.apiVersions.V1 +"/Watch/Update?key=" + key + "&id=" + id.toStr()
+end function

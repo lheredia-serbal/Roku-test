@@ -1,16 +1,15 @@
 ' Inicialización del componente (parte del ciclo de vida de Roku)
 sub init()
   m.top.finished = false
-  device = getDevice(getVersion(), getVersionCode(), getAppCode())
-  scaleInfo = getScaleInfo(device.width, device.height)
+  deviceInfo = CreateObject("roDeviceInfo")
+
+  scaleInfo = getScaleInfo(deviceInfo)
+  device = getDevice(deviceInfo, scaleInfo, getVersion(), getVersionCode(), getAppCode(), m.global.language)
 
   addAndSetFields(m.global, {
     configVariablesKeys: getAppConfigVariable(),
     apiVersions: getApiVersion(),
     device: device,
-    width: scaleInfo.width,
-    height: scaleInfo.height,
-    ratio: device.ratio,
     scaleInfo: scaleInfo,
     colors: mergeAssociativeArrays(getBasicColors(), getSpecialColors()),
     appCode: getAppCode(),
@@ -18,45 +17,39 @@ sub init()
   })
 
   'find Nodes
-  versionLabel = m.top.findNode("versionLabel")
-  copyrightLabel = m.top.findNode("copyrightLabel")
+  m.versionLabel = m.top.findNode("versionLabel")
+  m.copyrightLabel = m.top.findNode("copyrightLabel")
   logo = m.top.findNode("logo")
 
-  logoWidth = scaleValue(500, scaleInfo)
-  logoHeight = scaleValue(250, scaleInfo)
+  logoWidth = scaleValue(700, scaleInfo)
+  logoHeight = ((logoWidth/16)*9)
   logo.width = logoWidth
   logo.height = logoHeight
   logo.loadWidth = logoWidth
   logo.loadHeight = logoHeight
   logo.translation = [((scaleInfo.width - logoWidth) / 2), (scaleInfo.height - logoHeight) / 2]
 
-  versionLabel.color = m.global.colors.PRIMARY
-  versionLabel.text = "v " + getVersion()
-  versionLabel.width = scaleInfo.width - (scaleInfo.safeZone.x * 2)
-  versionLabel.height = scaleValue(35, scaleInfo)
-  versionLabel.translation = [scaleInfo.safeZone.x, (scaleInfo.height - scaleInfo.safeZone.y - scaleValue(80, scaleInfo))]
+  m.versionLabel.color = m.global.colors.PRIMARY
+  m.versionLabel.width = scaleInfo.width
+  m.versionLabel.translation = [0, (scaleInfo.height - scaleValue(70, scaleInfo))]
 
-  copyrightLabel.color = m.global.colors.LIGHT_GRAY
-  copyrightLabel.text = "@copyright " + getCurrentYear() + " - Qvix Solutions"
-  copyrightLabel.width = device.width
-  copyrightLabel.translation = [0, (device.height - 50)]
-
-  m.i18n = invalid
-  scene = m.top.getScene()
-  if scene <> invalid then
-      m.i18n = scene.findNode("i18n")
-  end if
+  m.copyrightLabel.color = m.global.colors.LIGHT_GRAY
+  m.copyrightLabel.width = scaleInfo.width
+  m.copyrightLabel.translation = [0, (m.versionLabel.translation[1] + scaleValue(20, scaleInfo))]
   
   __valdiateInternetConnection()
 end sub
 
 ' Procesa la respuesta al validar la conexion contra las APIs
 sub onValdiateConnectionResponse()
+  m.versionLabel.text = "v " + getVersion()
+  m.copyrightLabel.text = i18n_t(m.global.i18n, "launcherScreen.copyright").Replace("{{year}}",getCurrentYear())
+  
   if valdiateStatusCode(m.apiRequestManager.statusCode) then
     m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlPlatformsVariables(getUrl(), m.global.appCode, getVersionCode()), "GET", "onPlatformResponse", invalid, invalid, true)
   else 
     printError("Launcher Connection: " , m.apiRequestManager.errorResponse)
-  m.dialog = createAndShowDialog(m.top, i18n_t(m.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogClosed", [i18n_t(m.i18n, "button.retry"), i18n_t(m.i18n, "button.exit")])
+    m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.global.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogClosed", [i18n_t(m.global.i18n, "button.retry"), i18n_t(m.global.i18n, "button.exit")])
   end if
 end sub
 
@@ -70,24 +63,33 @@ sub onPlatformResponse() ' invoked when EpisodesScreen content is changed
       if m.apiUrl = invalid then m.apiUrl = getConfigVariable(m.global.configVariablesKeys.API_URL) 
       m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlAuthRegenerateSession(m.apiUrl), "POST", "onRegenerateSession", FormatJson({device: m.global.device}))
     else
-      m.top.finished = true
+      __validateAutoUpgrade(true)
     end if
   else 
     printError("Launcher variables: " , m.apiRequestManager.errorResponse)
-  m.dialog = createAndShowDialog(m.top, i18n_t(m.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogClosed", [i18n_t(m.i18n, "button.retry"), i18n_t(m.i18n, "button.exit")])
+    m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.global.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogClosed", [i18n_t(m.global.i18n, "button.retry"), i18n_t(m.global.i18n, "button.exit")])
   end if
 end sub
 
 ' Dispara la regeneracion de la infromacion del usuario logueado
 sub onRegenerateSession()
-  if valdiateStatusCode(m.apiRequestManager.statusCode) then
+  statusCode = m.apiRequestManager.statusCode
+  if valdiateStatusCode(statusCode) then
     resp = ParseJson(m.apiRequestManager.response)
     m.apiRequestManager = clearApiRequest(m.apiRequestManager) 
 
     addAndSetFields(m.global, {variables: resp.variables, device: resp.device, organization: resp.organization, contact: resp.contact} )
     saveNextUpdateVariables()
+    __validateAutoUpgrade(false)
+  else if validateLogout(statusCode) then 
+    deleteTokens()
+    deleteSessionData()
+    removeFields(m.global, ["contact", "organization", "PrivateVariables"])
+    __validateAutoUpgrade(true)
+  else 
+    printError("Launcher RegenerateSession: " , m.apiRequestManager.errorResponse)
+    m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.global.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogClosed", [i18n_t(m.global.i18n, "button.retry"), i18n_t(m.global.i18n, "button.exit")])
   end if
-  m.top.finished = true
 end sub
 
 'Obtener el año actual.
@@ -113,6 +115,101 @@ sub onDialogClosed(_event)
     ' Disparar Salir
     m.top.forceExit = true
   end if 
+end sub
+
+' Dispara la validacion de upgrade
+sub __validateAutoUpgrade(isPublicApi)
+  if m.apiUrl = invalid then m.apiUrl = getConfigVariable(m.global.configVariablesKeys.API_URL)
+  m.utoUpgradeIsPublicApi = isPublicApi
+  body = {
+    appCode: m.global.appCode,
+    versionCode: getVersionCode(),
+    signedByGooglePlay: true,
+    startUp: true
+  }
+  m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlAutoUpgradeValidate(m.apiUrl), "POST", "onAutoUpgradeResponse", FormatJson(body), invalid, isPublicApi)
+end sub
+
+' Procesa la respuesta del AutoUpgrade y continua con el flujo actual
+sub onAutoUpgradeResponse()
+  if valdiateStatusCode(m.apiRequestManager.statusCode) then
+    resp = ParseJson(m.apiRequestManager.response)
+    data = resp
+    if resp <> invalid and resp.data <> invalid then data = resp.data
+
+    if data <> invalid and data.checkTime <> invalid and data.checkTime > 0 then
+      nowDate = CreateObject("roDateTime")
+      nowDate.ToLocalTime()
+      setNextAutoUpgradeCheck((nowDate.asSeconds() + data.checkTime).ToStr())
+    end if
+
+    upgrade = false
+    if data <> invalid and data.upgrade <> invalid then
+      upgrade = data.upgrade
+    end if
+
+    mandatory = false
+    if data <> invalid and data.mandatory <> invalid then
+      mandatory = data.mandatory
+    end if
+
+    if upgrade then
+      m.autoUpgradeMandatory = mandatory
+      messageKey = "autoUpgrade.message"
+      buttons = [i18n_t(m.global.i18n, "autoUpgrade.remindLater"), i18n_t(m.global.i18n, "button.exit")]
+      if mandatory then
+        messageKey = "autoUpgrade.mandatoryMessage"
+        buttons = [i18n_t(m.global.i18n, "button.exit")]
+      end if
+      m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "autoUpgrade.title"), i18n_t(m.global.i18n, messageKey), "onAutoUpgradeAvailableDialogClosed", buttons)
+    else
+      m.top.finished = true
+    end if
+    m.apiRequestManager = clearApiRequest(m.apiRequestManager)
+  else 
+    printError("AutoUpgrade: ", m.apiRequestManager.errorResponse)
+    m.apiRequestManager = clearApiRequest(m.apiRequestManager)
+    m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.global.i18n, "shared.errorComponent.serverConnectionProblems"), "onAutoUpgradeDialogClosed", [i18n_t(m.global.i18n, "button.retry"), "Exit"])
+  end if
+end sub
+
+' Procesa el evento de cierre del dialogo de AutoUpgrade
+sub onAutoUpgradeDialogClosed(_event)
+  option = m.dialog.buttonSelected
+
+  m.dialog.visible = false
+  m.dialog.unobserveField("buttonSelected")
+  m.top.removeChild(m.dialog)
+  m.dialog = invalid
+
+  if option = 0 then
+    __validateAutoUpgrade(m.utoUpgradeIsPublicApi)
+  else
+    m.top.forceExit = true
+  end if
+end sub
+
+' Procesa el evento de cierre del modal de upgrade disponible
+sub onAutoUpgradeAvailableDialogClosed(_event)
+  option = m.dialog.buttonSelected
+
+  m.dialog.visible = false
+  m.dialog.unobserveField("buttonSelected")
+  m.top.removeChild(m.dialog)
+  m.dialog = invalid
+
+  if m.autoUpgradeMandatory = true then
+    m.top.forceExit = true
+    return
+  end if
+
+  if option = 0 then
+    m.top.finished = true
+    return
+  else
+    m.top.forceExit = true
+    return
+  end if
 end sub
 
 ' Realiza la peticion para validar la conexion a internet

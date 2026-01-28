@@ -8,6 +8,7 @@
     <script type="text/brightscript" uri="ChannelList.brs"/>
     <script type="text/brightscript" uri="pkg:/source/Utils.brs" />
     <script type="text/brightscript" uri="pkg:/source/Utils/DateFunctions.brs" />
+    <script type="text/brightscript" uri="pkg:/source/Utils/i18nUtils.brs" />
 
     <interface>
         <!-- Paramentros de Entrada -->

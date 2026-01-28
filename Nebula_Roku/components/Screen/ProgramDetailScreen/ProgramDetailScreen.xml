@@ -29,13 +29,13 @@
     <field id="isOpenByPlayer" type="boolean" value="false" />
 
     <!-- Paramentros de entrada/Salida -->
-    <field id="logout" type="boolean" value="false" onChange="onLogoutChange" />
+    <field id="logout" alwaysnotify="true" type="boolean" value="false" onChange="onLogoutChange" />
     
     <!-- Paramentros de Salida -->
     <field id="streaming" type="string" />
     <field id="programOpenInPlayer" type="string" />
     <field id="pendingStreamingSession" type="string" />
-    <field id="onBack" type="boolean" value="false" />
+    <field id="onBack" alwaysnotify="true" type="boolean" value="false" />
   </interface>
 
   <children>
@@ -55,7 +55,6 @@
       layoutDirection="vert"
       horizAlignment="custom"
       vertAlignment="top"
-      translation="[70, 50]"
       itemSpacings="[20]"> 
       <LayoutGroup 
         layoutDirection="horiz"
@@ -63,11 +62,9 @@
         vertAlignment="top"
         itemSpacings="[30]"> 
 
-        <Group translation="[0,0]">
+         <Group id="programImageGroup" translation="[0,0]">
           <Poster 
             id="programImage"
-            width="216" 
-            height="324"
             translation="[0,0]"
             loadDisplayMode="scaleToZoom"
             visible="false"
@@ -78,7 +75,6 @@
             layoutDirection="vert"
             horizAlignment="center"
             vertAlignment="center"
-            translation="[108,162]"
             visible="false" >
             <Label 
               id="programTitleError"  
@@ -86,8 +82,6 @@
               maxLines="3"
               vertAlign="center"
               horizAlign="center"
-              width="200" 
-              height="300"
               font="font:MediumSystemFont" />
           </LayoutGroup>
         </Group>
@@ -98,7 +92,7 @@
           vertAlignment="top"
           itemSpacings="[10]">
           
-          <ProgramSummary  id="programInfo" visible="false"/>
+          <ProgramSummary id="programInfo" visible="false" width="50"/>
           
           <LayoutGroup 
             id="actionsBtn"
@@ -115,12 +109,11 @@
             opacity="0" >
           </Rectangle>
 
-           <LayoutGroup
+          <LayoutGroup
             id="creditsContainer"
             layoutDirection="vert"
             horizAlignment="left"
             vertAlignment="top"
-            translation="[0, 12]"
             itemSpacings="[20]" >
           </LayoutGroup>
 
@@ -129,9 +122,9 @@
       </LayoutGroup>
 
       <!-- carousel de relacionados -->
-      <Group translation="[-70, 0]" id="relatedContainer" visible="false">
-        <Carousel id="related" translation="[0, -100]"/>
-        <SelectionBox id="selectedIndicator" visible="false"  translation="[68, 27]"/>
+      <Group id="relatedContainer" visible="false">
+        <Carousel id="related"/>
+        <SelectionBox id="selectedIndicator" visible="false"/>
       </Group>
     </LayoutGroup>
 

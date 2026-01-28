@@ -17,9 +17,10 @@ end function
 
 ' Se encarga de formatear la fehca recibida por paramentro. Los formatos validos actualmente son: 
 ' HH:mm, dd/MM/yyyy, dd/MM/yy HH:mm, dd MMMM yyyy hh:mm con sus respectivos cambios por idioma.
+' En caso de usar los formatos por mes es obligatorio porporcionar el i18n_months arreglo
 ' Actualmente, el metodo espera ya el formato por idioma ya que, internamente, el no distingue 
 ' el idioma en el que esta la aplicacion
-function dateConverter(dateTime, format as string) as string
+function dateConverter(dateTime, format as string, monthArray = invalid) as string
     if format = "" then return ""
 
     if format = "HH:mm a" then
@@ -121,7 +122,7 @@ function dateConverter(dateTime, format as string) as string
             end if 
         end if
 
-        return __completeDigit(days) + " " + __getMonth(month) + " " + year.ToStr() + " " + hours.ToStr() + ":" + __completeDigit(minutes) + " " + meridian
+        return __completeDigit(days) + " " + __getMonth(month, monthArray) + " " + year.ToStr() + " " + hours.ToStr() + ":" + __completeDigit(minutes) + " " + meridian
 
     else if format = "dd MMMM yyyy hh:mm" then
         year = dateTime.GetYear()
@@ -130,7 +131,7 @@ function dateConverter(dateTime, format as string) as string
         hours = dateTime.GetHours()
         minutes = dateTime.GetMinutes()
 
-        return __completeDigit(days) + " " + __getMonth(month) + " " + year.ToStr() + " " + __completeDigit(hours) + ":" + __completeDigit(minutes)
+        return __completeDigit(days) + " " + __getMonth(month, monthArray) + " " + year.ToStr() + " " + __completeDigit(hours) + ":" + __completeDigit(minutes)
     
     else if format = "log" then
         month = dateTime.GetMonth()
@@ -146,34 +147,10 @@ function dateConverter(dateTime, format as string) as string
 end function
 
 ' Metodo privado. Devuelve el nombre del mes de una fecha
-function __getMonth(monthNumber) as string
-    if monthNumber = 1 then 
-        return "january"
-    else if monthNumber = 2 then
-        return "february"
-    else if monthNumber = 3 then
-        return "march"
-    else if monthNumber = 4 then
-        return "april"
-    else if monthNumber = 5 then
-        return "may"
-    else if monthNumber = 6 then
-        return "june"
-    else if monthNumber = 7 then
-        return "july"
-    else if monthNumber = 8 then
-        return "august"
-    else if monthNumber = 9 then
-        return "september"
-    else if monthNumber = 10 then 
-        return "october"
-    else if monthNumber = 11 then 
-        return "november"
-    else if monthNumber = 12 then 
-        return "december"
-    end if 
+function __getMonth(monthNumber, monthArray) as string
+    if monthNumber > 12 or monthNumber < 1  or monthArray = invalid then return ""
 
-    return ""
+    return monthArray[(monthNumber - 1)]
 end function
 
 ' Metodo privado. Completa el numero para que tenga el formato XX, 

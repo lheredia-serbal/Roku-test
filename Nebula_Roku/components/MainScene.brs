@@ -17,12 +17,11 @@ sub init()
   m.KillSessionScreen = m.top.FindNode("KillSessionScreen")
   m.PlayerScreen = m.top.FindNode("PlayerScreen")
 
-  m.i18n = invalid
+  i18n = invalid
   scene = m.top.getScene()
-  if scene <> invalid then
-      m.i18n = scene.findNode("i18n")
-  end if
-
+  if scene <> invalid then i18n = scene.findNode("i18n")
+  
+  addAndSetFields(m.global, {i18n: i18n})
   __initConfig()
 end sub
 
@@ -76,12 +75,14 @@ sub onLauncherFinished()
     if isLoginUser() then
       m.LauncherScreen.unobserveField("finished")
       m.LoginScreen.unobserveField("finished")
+      m.top.signalBeacon("AppLaunchComplete")
       if m.global.contact <> invalid and m.global.contact.profile <> invalid then
         __initMain()
       else 
         __initProfile()
       end if 
     else
+      m.top.signalBeacon("AppLaunchComplete")
       m.LauncherScreen.unobserveField("finished")
 
       m.LoginScreen.ObserveField("finished", "onLoginFinished")
@@ -99,9 +100,10 @@ sub onLogoutEvent()
     ' Necesito hacer un bloqueo por procesamineto porque sino cuando dispara los logout de cada pantalla al 
     ' cambiar la propeidad logout esta volvera a disaparar el metodo de onLogoutEvent ya que tanto internamente 
     ' como externamente se esta escuchando el cambio de esta propiedad.  
-    if not m.blockLogoutProcess then 
+    if not m.blockLogoutProcess then
       m.blockLogoutProcess = true
       m.loading.visible = true
+      deleteTokens()
       __resetApp()
       
       ' se limpian las variables y se le da el foco al login
@@ -469,11 +471,11 @@ end sub
 ' Limpia tidas las variables internas y configuracion del usuario.
 sub __resetApp()
   ' Se usa el cambio para diaparar la limpieza de las pantallas
-  m.ProfileScreen.logout = true
-  m.MainScreen.logout = true
-  m.ProgramDetailScreen.logout = true
-  m.KillSessionScreen.logout = true
-  m.PlayerScreen.logout = true  
+  if not m.ProfileScreen.logout then m.ProfileScreen.logout = true
+  if not m.MainScreen.logout then m.MainScreen.logout = true
+  if not m.ProgramDetailScreen.logout then m.ProgramDetailScreen.logout = true
+  if not m.KillSessionScreen.logout then m.KillSessionScreen.logout = true
+  if not m.PlayerScreen.logout then m.PlayerScreen.logout = true  
   
   m.ProfileScreen.logout = false
   m.MainScreen.logout = false
@@ -483,17 +485,17 @@ sub __resetApp()
 
   m.StackOfScreens = []
 
+  ' se limpian las variables del player
+  m.PlayerScreen.visible = false
+  m.PlayerScreen.onFocus = false
+  m.PlayerScreen.unobserveField("onBack")
+  if m.PlayerScreen.onBack then m.PlayerScreen.onBack = false
+  if m.PlayerScreen.killedMe <> invalid then m.PlayerScreen.killedMe = invalid
+
   __hideMain()
   __hideSetting()
   __hideProgramDetail()
   __hideKillSessionScreen()
-
-  ' se limpian las variablesd del player
-  m.PlayerScreen.visible = false
-  m.PlayerScreen.onFocus = false
-  m.PlayerScreen.unobserveField("onBack")
-  m.PlayerScreen.onBack = false
-  m.PlayerScreen.killedMe = invalid
   
   ' se limpia las variables del detalle
   m.ProgramDetailScreen.data = invalid
@@ -517,9 +519,9 @@ sub __showExitAsk()
   'create the dialog
   dialog = createObject("roSGNode", "StandardMessageDialog")
   dialog.palette = createPaletteDialog()
-  dialog.title = [i18n_t(m.i18n, "shared.exitModal.title")]
-  dialog.message = [i18n_t(m.i18n, "shared.exitModal.askExit")]
-  dialog.buttons = [i18n_t(m.i18n, "button.yes"), i18n_t(m.i18n, "button.no")]
+  dialog.title = [i18n_t(m.global.i18n, "shared.exitModal.title")]
+  dialog.message = [i18n_t(m.global.i18n, "shared.exitModal.askExit")]
+  dialog.buttons = [i18n_t(m.global.i18n, "button.yes"), i18n_t(m.global.i18n, "button.no")]
   dialog.observeFieldScoped("buttonSelected", "onDialogButtonClicked")
 
   'assigning the dialog to m.top.dialog will "show" the dialog

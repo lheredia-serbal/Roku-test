@@ -6,6 +6,8 @@
     xsi:noNamespaceSchemaLocation="https://devtools.web.roku.com/schema/RokuSceneGraph.xsd">
 
     <script type="text/brightscript" uri="SessionListItem.brs"/>
+    <script type="text/brightscript" uri="pkg:/source/Utils/i18nUtils.brs" />
+    <script type="text/brightscript" uri="pkg:/source/Utils.brs" />
 
     <interface>
         <!-- Paramentros de Entrada -->

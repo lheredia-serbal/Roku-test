@@ -1,11 +1,8 @@
 ' Inicialización del componente (parte del ciclo de vida de Roku)
 sub init()
-    m.scaleInfo = m.global.scaleInfo
-    if m.scaleInfo = invalid then
-        m.scaleInfo = getScaleInfo()
-    end if
-
     m.theRect  = m.top.findNode("theRect")
+    m.contentGroup = m.top.findNode("contentGroup")
+    m.progressGroup = m.top.findNode("progressGroup")
     m.title = m.top.findNode("title")
     m.category = m.top.findNode("category")
     m.dateTime = m.top.findNode("dateTime")
@@ -13,24 +10,26 @@ sub init()
     m.progressLeft = m.top.findNode("progressLeft")
     m.progressRight = m.top.findNode("progressRight")
     m.opacityLayout = m.top.findNode("opacityLayout")
+    
+    m.scaleInfo = m.global.scaleInfo
 
     m.padding = scaleValue(12, m.scaleInfo)
-    m.totalProgress = scaleValue(280, m.scaleInfo) - (m.padding * 2)
+    m.totalProgress = scaleValue(310, m.scaleInfo) - (m.padding * 2)
     m.backgroundImage = invalid 
-    m.programCotnentType = false
+    m.programContentType = false
     __initColors()
 end sub
 
 ' Carga los datos de Node en el compoente
 sub itemContentChanged()
     if (m.top.itemContent.contentType = getCarouselContentType().PROGRAMS) then 
-        m.totalProgress = 280 - (m.padding * 2) - 70
+        m.totalProgress = scaleValue(300 - (m.padding * 2) - 70, m.scaleInfo)
 
         m.imageItem.loadSync = true 
         m.backgroundImage = getImageError()
         m.imageItem.loadingBitmapUri = m.backgroundImage
         m.imageItem.failedBitmapUri = m.backgroundImage
-        m.programCotnentType = true
+        m.programContentType = true
     end if
 
     if m.top.itemContent.title <> invalid then 
@@ -60,7 +59,7 @@ sub itemContentChanged()
     if m.top.itemContent.imageURL <> invalid and m.top.itemContent.imageURL <> "" then 
         m.imageItem.loadSync = false
         m.imageItem.uri = m.top.itemContent.imageURL
-    else if m.programCotnentType then
+    else if m.programContentType then
         m.imageItem.loadSync = false
         m.imageItem.uri = m.backgroundImage
     end if 
@@ -68,11 +67,36 @@ end sub
 
 ' Se dispara al dibujar en pantalla y define oppiedades del xml del componente
 sub currRectChanged()
+    paddingX = scaleValue(12, m.scaleInfo)
+    paddingY = scaleValue(14, m.scaleInfo)
+    paddingPorgressY = scaleValue(25, m.scaleInfo)
+    labelWidth = scaleValue(220, m.scaleInfo)
+    imageSize = scaleValue(60, m.scaleInfo)
+
     m.theRect.width = m.top.currRect.width
     m.theRect.height = m.top.currRect.height
 
+    if (m.contentGroup <> invalid) then
+        m.contentGroup.translation = [paddingX, paddingY]
+    end if
+    m.title.width = labelWidth
+    m.category.width = labelWidth
+    m.dateTime.width = labelWidth
+
+    if m.programContentType then 
+        m.imageItem.height = m.theRect.height
+        m.imageItem.width = scaleValue(80, m.scaleInfo)
+    else
+        m.imageItem.height = imageSize
+        m.imageItem.width = imageSize
+    end if
+
+    m.imageItem.translation = [m.theRect.width - m.imageItem.width, 0]
+
     m.opacityLayout.width = m.top.itemContent.size[0]
     m.opacityLayout.height = m.top.itemContent.size[1]
+    
+    m.progressGroup.translation = [0, m.top.itemContent.size[1] - paddingPorgressY]
 end sub
 
 ' Define el estilo de foco del componente y como se comporta al tener o no el foco

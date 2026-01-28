@@ -7,23 +7,16 @@ end function
 
 ' Calcula la escala y zona segura tomando como base un layout 1280x720.
 ' Se puede sobreescribir el tamaño base si la UI se diseñó para otra resolución.
-function getScaleInfo(displayWidth = invalid as dynamic, displayHeight = invalid as dynamic, baseWidth = 1280.0, baseHeight = 720.0, safeZonePercent = 0.05 as float) as object
-    size = { w: displayWidth, h: displayHeight }
-
-    if size.w = invalid or size.h = invalid then
-        di = CreateObject("roDeviceInfo")
-        size = di.GetDisplaySize()
-    end if
+function getScaleInfo(deviceInfo = invalid, baseWidth = 1280.0, baseHeight = 720.0, safeZonePercent = 0.05 as float) as object
+    size = deviceInfo.GetDisplaySize()
 
     scaleX = size.w / baseWidth
     scaleY = size.h / baseHeight
     scale = scaleX
+
     if scaleY < scale then scale = scaleY
 
-    safePadding = {
-        x: Int(size.w * safeZonePercent),
-        y: Int(size.h * safeZonePercent)
-    }
+    safePadding = {x: Int(size.w * safeZonePercent), y: Int(size.h * safeZonePercent)}
 
     return {
         scale: scale,
@@ -124,7 +117,6 @@ end function
 ' variable Clave a buscar en las variables de configuracion (EqvAppConfigVariable)
 ' defaultValue Valor por defecto en caso de no encontrarla.
 function getIntValueConfigVariable(key as string, defaultValue as integer) as integer
-
     value = getConfigVariable(key)
 
     if value <> invalid
@@ -272,7 +264,8 @@ function clearPINDialogAndGetOption(screen, dialog)
   return {option: option, pin: pin}
 end function
 
-' Valida si el error debe disparar un logout, de ser asi dispara el Logout en la pantalla si es que este tiene la propeidad
+' Valida si el error debe disparar un logout, de ser asi dispara el Logout en la pantalla 
+' si es que este tiene la propiedad o se envia la pantalla
 function validateLogout(statusCode, screen = invalid)
   if statusCode = 401 then
     if screen <> invalid and screen.logout <> invalid then screen.logout = true
@@ -442,8 +435,11 @@ function GenerateErrorDescription(errorResponse as dynamic, description = invali
     descriptionAux = invalid
 
     if errorResponse <> invalid then
+        
+        if Type(errorResponse) = "roString" then
+            descriptionAux = errorResponse
         ' Tiene campo error (APIError)
-        if errorResponse.error <> invalid then
+        else if errorResponse.error <> invalid then
             err = errorResponse.error
 
             ' status
@@ -679,4 +675,40 @@ end function
 function scaleSize(size as object, scaleInfo as object) as object
     if size = invalid or size.count() < 2 then return size
     return [scaleValue(size[0], scaleInfo), scaleValue(size[1], scaleInfo)]
+end function
+
+function toDateTime(value as dynamic) as object
+  if value = invalid then return invalid
+  if type(value) = "roDateTime" then return value
+
+  dt = CreateObject("roDateTime")
+
+  ' En algunos firmwares, FromISO8601String no devuelve boolean confiable,
+  ' pero igual "carga" el objeto. Entonces validamos por AsSeconds().
+  dt.FromISO8601String(value)
+
+  if dt.AsSeconds() > 0 then
+    return dt
+  end if
+
+  return invalid
+end function
+
+
+function isSameOrAfter(a as object, b as object) as boolean
+  if a = invalid or b = invalid then return false
+  return a.AsSeconds() >= b.AsSeconds()
+end function
+
+function cloneDateTime(dt as object) as object
+  if dt = invalid then return invalid
+  c = CreateObject("roDateTime")
+  c.FromSeconds(dt.AsSeconds())
+  return c
+end function
+
+function diffSeconds(a as object, b as object) as integer
+  ' a - b en segundos
+  if a = invalid or b = invalid then return 0
+  return a.AsSeconds() - b.AsSeconds()
 end function

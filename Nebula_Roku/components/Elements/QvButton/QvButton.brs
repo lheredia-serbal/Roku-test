@@ -1,18 +1,16 @@
 ' Inicialización del componente (parte del ciclo de vida de Roku)
 sub init()
-  m.scaleInfo = m.global.scaleInfo
-  if m.scaleInfo = invalid then
-    m.scaleInfo = getScaleInfo()
-  end if
-
   m.borderSize = 1
-  m.buttonBg = m.top.FindNode("buttonBg")
+  m.butonBg = m.top.FindNode("butonBg")
   m.layoutContainer = m.top.FindNode("layoutContainer")
   m.btnText = m.top.FindNode("btnText")
   m.rectLeft = m.top.FindNode("rectLeft")
   m.rectTop = m.top.FindNode("rectTop")
   m.rectRight = m.top.FindNode("rectRight")
   m.rectBottom = m.top.FindNode("rectBottom")
+  
+  m.scaleInfo = m.global.scaleInfo
+
   m.top.observeField("focusedChild", "onFocusChange")
 
   m.HeightToHide = 1
@@ -61,17 +59,17 @@ end sub
 
 ' Actualiza el tamaño del boton
 sub changeSize()
-  size = [m.buttonBg.width, m.buttonBg.height]
+  size = scaleSize([m.butonBg.width, m.butonBg.height], m.scaleInfo)
   
   if m.top.size <> invalid then 
-    if m.top.size.count() = 1 then size = [scaleValue(m.top.size[0], m.scaleInfo), m.buttonBg.height]
-    if m.top.size.count() = 2 then size = scaleSize(m.top.size, m.scaleInfo)
+    if m.top.size.count() = 1 then size = [m.top.size[0], m.butonBg.height]
+    if m.top.size.count() = 2 then size = [m.top.size[0], m.top.size[1]]
     
-    if size[0] = 0 then size[0] = m.buttonBg.width
-    if size[1] = 0 then size[1] = m.buttonBg.height
+    if size[0] = 0 then size[0] = m.butonBg.width
+    if size[1] = 0 then size[1] = m.butonBg.height
 
-    m.buttonBg.width = size[0]
-    m.buttonBg.height = size[1]
+    m.butonBg.width = size[0]
+    m.butonBg.height = size[1]
 
     m.layoutContainer.translation = [size[0] / 2, size[1] / 2]
   end if 
@@ -131,10 +129,10 @@ end sub
 sub onFocusChange()
   if m.top.focusedChild <> invalid and m.top.focusedChild.focusable then 
     ' Tiene foco 
-    m.buttonBg.color = m.bgColorSelected
+    m.butonBg.color = m.bgColorSelected
   else 
     ' No tiene foco 
-    m.buttonBg.color = m.bgColorTransparent
+    m.butonBg.color = m.bgColorTransparent
   end if
 end sub
 

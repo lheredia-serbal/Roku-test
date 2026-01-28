@@ -7,6 +7,7 @@
     xsi:noNamespaceSchemaLocation="https://devtools.web.roku.com/schema/RokuSceneGraph.xsd">
     
     <script type="text/brightscript" uri="MenuItem.brs" />
+    <script type="text/brightscript" uri="pkg:/source/Utils.brs" />
 
     <interface>
         <!-- Paramentros de Entrada -->
@@ -27,6 +28,7 @@
     <children> 
         <Group id="menuItemContent">
             <LayoutGroup
+                id="menuItemLayout"
                 layoutDirection="horiz"
                 horizAlignment="left"
                 vertAlignment="top"
@@ -35,22 +37,16 @@
                 <Group>
                   <Poster 
                         id="itemImage"
-                        width="20"
-                        height="20"
                         loadDisplayMode="scaleToFit" />
                     
                     <Rectangle
                         id="itemIndicatorSelected"
-                        translation="[0, 25]"
-                        width="20"
-                        height="5"
                         visible="false" />
                 </Group>
 
                 <Label 
                     id="itemText"
                     opacity="0.0"
-                    height="25"
                     wrap="false" 
                     maxLines="1" 
                     vertAlign="center"

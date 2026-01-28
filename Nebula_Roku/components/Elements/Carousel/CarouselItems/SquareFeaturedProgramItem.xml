@@ -19,66 +19,60 @@
 
     <children>
         <Rectangle id="theRect" color="#000000">
+            <Group
+                id="contentGroup"
+                translation="[12, 14]">
                 <LayoutGroup
-                    layoutDirection="vert"
+                    layoutDirection="horiz"
                     horizAlignment="left"
-                    vertAlignment="top"
-                    itemSpacings="[12]"
-                    translation="[12, 14]">
+                    vertAlignment="top">
+
                     <LayoutGroup
-                        layoutDirection="horiz"
+                        layoutDirection="vert"
                         horizAlignment="left"
-                        vertAlignment="top">
+                        vertAlignment="center"
+                        itemSpacings="[1]">
+                        <Label 
+                            id="title" 
+                            width="190" 
+                            wrap="true" 
+                            maxLines="2" 
+                            visible="false"
+                            lineSpacing="2"
+                            font="font:TinySystemFont"/>
+                            
+                        <Label 
+                            id="category" 
+                            width="190" 
+                            wrap="false" 
+                            maxLines="1" 
+                            visible="false"
+                            font="font:TinySystemFont"/>
 
-                        <LayoutGroup
-                            layoutDirection="vert"
-                            horizAlignment="left"
-                            vertAlignment="center"
-                            itemSpacings="[6]">
-                            <Label 
-                                id="title" 
-                                width="190" 
-                                wrap="false" 
-                                maxLines="1" 
-                                visible="false"
-                                font="font:SmallestSystemFont"/>
-                                
-                            <Label 
-                                id="category" 
-                                width="190" 
-                                wrap="false" 
-                                maxLines="1" 
-                                visible="false"
-                                font="font:SmallestSystemFont"/>
+                        <Label 
+                            id="dateTime" 
+                            width="190" 
+                            wrap="false" 
+                            maxLines="1" 
+                            visible="false"
+                            font="font:TinySystemFont"/>
+                    </LayoutGroup> 
 
-                            <Label 
-                                id="dateTime" 
-                                width="190" 
-                                wrap="false" 
-                                maxLines="1" 
-                                visible="false"
-                                font="font:TinySystemFont"/>
-                        </LayoutGroup> 
-
-                        <Rectangle width="73.34" height="60" opacity="0.0"/>
-                    </LayoutGroup>
-                    
-                    <LayoutGroup
-                        layoutDirection="horiz"
-                        horizAlignment="left"
-                        vertAlignment="top">
-                        <Rectangle id="progressLeft" height="3"/>
-                        <Rectangle id="progressRight" height="3"/>
-                    </LayoutGroup>
+                    <Rectangle width="73.34" height="60" opacity="0.0"/>
                 </LayoutGroup>
+                
+                <LayoutGroup
+                    id="progressGroup"
+                    layoutDirection="horiz"
+                    horizAlignment="left"
+                    vertAlignment="top">
+                    <Rectangle id="progressLeft" height="3"/>
+                    <Rectangle id="progressRight" height="3"/>
+                </LayoutGroup>
+            </Group>
 
             <Poster 
                 id="imageItem" 
-                width="73.34" 
-                height="110"
-                loadWidth="73.34"
-                loadHeight="110"
-                translation="[206.66, 0]"
                 loadDisplayMode="scaleToZoom"/>
 
         </Rectangle>

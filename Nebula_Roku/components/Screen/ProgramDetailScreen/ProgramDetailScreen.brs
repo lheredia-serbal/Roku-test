@@ -1,14 +1,10 @@
 ' Inicialización del componente (parte del ciclo de vida de Roku)
 sub init()
-  m.scaleInfo = m.global.scaleInfo
-  if m.scaleInfo = invalid then
-    m.scaleInfo = getScaleInfo()
-  end if
-
   m.programDetailContent = m.top.findNode("programDetailContent")
   
   m.notFoundLayoutGroup = m.top.findNode("notFoundLayoutGroup")
   m.notFoundTitle = m.top.findNode("notFoundTitle")
+  m.programImageGroup = m.top.findNode("programImageGroup")
 
   m.programInfo = m.top.findNode("programInfo")
   m.programImage = m.top.findNode("programImage")
@@ -17,6 +13,7 @@ sub init()
   m.programTitleError = m.top.findNode("programTitleError")
 
   m.actionsBtn = m.top.findNode("actionsBtn")
+  m.creditsContainer = m.top.findNode("creditsContainer")
   
   m.relatedContainer = m.top.findNode("relatedContainer")
   m.selectedIndicator = m.top.findNode("selectedIndicator")
@@ -26,26 +23,14 @@ sub init()
   m.infoGradient = m.top.findNode("infoGradient")
   m.programImageBackground = m.top.findNode("programImageBackground")
 
+  m.scaleInfo = m.global.scaleInfo
+
   m.programImage.ObserveField("loadStatus", "onStatusChange")
   
   m.lastKey = invalid
   m.lastId = invalid
-
-  m.i18n = invalid
-  scene = m.top.getScene()
-  if scene <> invalid then
-      m.i18n = scene.findNode("i18n")
-  end if
-  applyTranslations()
 end sub
 
-sub applyTranslations()
-    if m.i18n = invalid then
-        return
-    end if
-
-    m.notFoundTitle.text = i18n_t(m.i18n, "shared.errorComponent.notFound")
-end sub
 
 ' Funcion que interpreta los eventos de teclado y retorna true si fue porcesada por este componente. Sino es porcesado por el
 ' entonces sigue con el siguente metodo onKeyEvent del compoente superior
@@ -57,10 +42,8 @@ function onKeyEvent(key as string, press as boolean) as boolean
   handled = false
 
   if m.actionsBtn.isInFocusChain() then 
-
     if key = KeyButtons().OK then
       if press then 
-
         if m.actionsBtn.focusedChild <> invalid and m.actionsBtn.focusedChild.id = "btnPlay" then 
           m.lastButtonSelect = m.actionsBtn.focusedChild
           __openPlayer(getStreamingAction().PLAY)
@@ -76,9 +59,9 @@ function onKeyEvent(key as string, press as boolean) as boolean
         else if m.actionsBtn.focusedChild <> invalid and m.actionsBtn.focusedChild.id = "btnBack" then 
           __goToBack()
         end if
-  
       end if
       handled = true
+
     else if key = KeyButtons().RIGHT then
       if press then
         if m.actionsBtn.focusedChild <> invalid and m.actionsBtn.focusedChild.focusRight <> invalid then
@@ -105,13 +88,18 @@ function onKeyEvent(key as string, press as boolean) as boolean
       end if
 
       handled = true
+    else if key = KeyButtons().UP then
+      handled = true
     end if
+
   else if key = KeyButtons().UP then
     if press and m.related.isInFocusChain() and m.lastButtonSelect <> invalid then 
       m.lastButtonSelect.setFocus(true)
       m.selectedIndicator.visible = false
     end if
 
+    handled = true
+  else if m.related.isInFocusChain() and key = KeyButtons().DOWN then 
     handled = true
   end if
 
@@ -136,6 +124,7 @@ end sub
 ' Inicializa el foco del componente seteando los valores necesarios
 sub initFocus()
   if m.top.onFocus then
+    __applyTranslations()
     if m.program <> invalid then 
       if not m.isOpenEmissions then 
         m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlProgramAction(m.apiUrl, m.program.key, m.program.id), "GET", "onActionsResponse")
@@ -166,16 +155,18 @@ sub onGetByIdResponse()
     statusCode = m.apiRequestManager.statusCode
     m.apiRequestManager = clearApiRequest(m.apiRequestManager) 
     
+    printError("ProgramSumary:", error)
+  
+    if validateLogout(statusCode, m.top) then return 
+
     if (statusCode = 408) or (statusCode = 500) then 
-      m.dialog = createAndShowDialog(m.top, i18n_t(m.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogReloadDetailClosed", [i18n_t(m.i18n, "button.retry"), i18n_t(m.i18n, "button.back")])
+      m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.global.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogReloadDetailClosed", [i18n_t(m.global.i18n, "button.retry"), i18n_t(m.global.i18n, "button.back")])
     else if (statusCode = 404) then
       __showNotFound()
     else
       __validateError(statusCode, 0, error, __showNotFound())
     end if
-    
-    printError("ProgramSumary:", error)
-
+  
     actionLog = createLogError(generateErrorDescription(error), generateErrorPageUrl("getDetail", "ProgramComponent"), getServerErrorStack(error), m.lastKey, m.lastId)
     __saveActionLog(actionLog)
   end if
@@ -238,7 +229,7 @@ sub onWatchValidateResponse()
     m.apiRequestManager = clearApiRequest(m.apiRequestManager) 
     
     if (statusCode = 408) then
-      m.dialog = createAndShowDialog(m.top, i18n_t(m.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogClosedLastFocus", [i18n_t(m.i18n, "button.cancel")])
+      m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.global.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogClosedLastFocus", [i18n_t(m.global.i18n, "button.cancel")])
     else 
       __validateError(statusCode, 0, errorResponse)
     end if
@@ -256,12 +247,13 @@ sub onStreamingsResponse()
       streaming = resp.data
       streaming.key = m.program.key 
       streaming.id = m.program.id
-      m.top.streaming = FormatJson(resp.data)
+      streaming.streamingType = getStreamingType().DEFAULT
+      m.top.streaming = FormatJson(streaming)
     else
       m.top.loading.visible = false
       printError("Streamings Emty:", m.apiRequestManager.response)
       m.apiRequestManager = clearApiRequest(m.apiRequestManager) 
-      m.dialog = createAndShowDialog(m.top, i18n_t(m.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogClosedLastFocus", [i18n_t(m.i18n, "button.cancel")])
+      m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.global.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogClosedLastFocus", [i18n_t(m.global.i18n, "button.cancel")])
     end if
   else 
     m.top.loading.visible = false
@@ -270,7 +262,7 @@ sub onStreamingsResponse()
     m.apiRequestManager = clearApiRequest(m.apiRequestManager) 
 
     if (statusCode = 408) then
-      m.dialog = createAndShowDialog(m.top, i18n_t(m.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogClosedLastFocus", [i18n_t(m.i18n, "button.cancel")])
+      m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.global.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogClosedLastFocus", [i18n_t(m.global.i18n, "button.cancel")])
     else 
       __validateError(statusCode, 0, errorResponse)
     end if
@@ -380,7 +372,7 @@ sub onParentalControlResponse()
       end if
     else
       m.top.loading.visible = false
-      m.dialog = createAndShowDialog(m.top, "", i18n_t(m.i18n, "shared.parentalControlModal.error.invalid"), "onDialogClosedLastFocus")
+      m.dialog = createAndShowDialog(m.top, "", i18n_t(m.global.i18n, "shared.parentalControlModal.error.invalid"), "onDialogClosedLastFocus")
     end if
   else     
     m.top.loading.visible = false
@@ -389,7 +381,7 @@ sub onParentalControlResponse()
     m.apiRequestManager = clearApiRequest(m.apiRequestManager)
     
     if (statusCode = 408) then
-      m.dialog = createAndShowDialog(m.top, i18n_t(m.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogClosedLastFocus", [i18n_t(m.i18n, "button.cancel")])
+      m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.global.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogClosedLastFocus", [i18n_t(m.global.i18n, "button.cancel")])
     else 
       __validateError(statusCode, 0, errorResponse)
     end if
@@ -424,12 +416,15 @@ end sub
 sub __processActions()
   focusElement = invalid
   lastBtnCreate = invalid
+  buttonSize = [ scaleValue(150, m.scaleInfo),  scaleValue(40, m.scaleInfo)]
+
   if m.program.actions <> invalid then
     if  m.program.actions.play <> invalid and m.program.actions.play then 
       btnPlay = m.actionsBtn.createChild("QvButton")
       btnPlay.id = "btnPlay"
-      btnPlay.text =  i18n_t(m.i18n, "program.programDetail.button.watch")
+      btnPlay.text =  i18n_t(m.global.i18n, "programDetail.button.watch")
       btnPlay.focusable = true
+      btnPlay.size = buttonSize
       lastBtnCreate = btnPlay 
       if focusElement = invalid then focusElement = btnPlay
     end if
@@ -437,8 +432,9 @@ sub __processActions()
     if  m.program.actions.continue <> invalid and m.program.actions.continue then 
       btnContinue = m.actionsBtn.createChild("QvButton")
       btnContinue.id = "btnContinue"
-      btnContinue.text = i18n_t(m.i18n, "program.programDetail.button.continue")
+      btnContinue.text = i18n_t(m.global.i18n, "programDetail.button.continue")
       btnContinue.focusable = true
+      btnContinue.size = buttonSize
       if lastBtnCreate <> invalid then 
         lastBtnCreate.focusRight = btnContinue
         btnContinue.focusLeft = lastBtnCreate
@@ -450,9 +446,9 @@ sub __processActions()
     if  m.program.actions.restart <> invalid and m.program.actions.restart then 
       btnRestart = m.actionsBtn.createChild("QvButton")
       btnRestart.id = "btnRestart"
-      btnRestart.text = i18n_t(m.i18n, "program.programDetail.button.restart")
+      btnRestart.text = i18n_t(m.global.i18n, "programDetail.button.restart")
       btnRestart.focusable = true
-      
+      btnRestart.size = buttonSize
       if lastBtnCreate <> invalid then 
         lastBtnCreate.focusRight = btnRestart
         btnRestart.focusLeft = lastBtnCreate
@@ -467,6 +463,7 @@ sub __processActions()
     '   btnEmissions.id = "btnEmissions"
     '   btnEmissions.text = "Emissions"
     '   btnEmissions.focusable = true
+    '   btnEmissions.size = buttonSize
 
     '   if lastBtnCreate <> invalid then 
     '     lastBtnCreate.focusRight = btnEmissions
@@ -479,7 +476,8 @@ sub __processActions()
 
     btnBack = m.actionsBtn.createChild("QvButton")
     btnBack.id = "btnBack"
-    btnBack.text = i18n_t(m.i18n, "button.back")
+    btnBack.size = buttonSize
+    btnBack.text = i18n_t(m.global.i18n, "button.back")
     btnBack.focusable = true
 
     if lastBtnCreate <> invalid then 
@@ -494,9 +492,16 @@ sub __processActions()
   if focusElement <> invalid then focusElement.setFocus(true)
 end sub
 
+' Aplicar las traducciones en el componente
+sub __applyTranslations()
+  if m.global.i18n = invalid then return
+
+  m.notFoundTitle.text = i18n_t(m.global.i18n, "shared.errorComponent.notFound")
+end sub
+
+
 ' Carga la informacion del programa actual en pantalla
 sub __loadProgramInfo(program)
-
   actionLog = getActionLog({ actionCode: ActionLogCode().PROGRAM_DETAIL, program: program })
   __saveActionLog(actionLog)
 
@@ -552,7 +557,7 @@ sub __openPlayer(streamingAction)
   if m.program <> invalid then 
     m.streamingAction = streamingAction
     if m.program.parentalControl <> invalid and m.program.parentalControl then
-      m.pinDialog = createAndShowPINDialog(m.top, i18n_t(m.i18n, "shared.parentalControlModal.title"), "onPinDialogLoad", [i18n_t(m.i18n, "button.ok"), i18n_t(m.i18n, "button.cancel")])
+      m.pinDialog = createAndShowPINDialog(m.top, i18n_t(m.global.i18n, "shared.parentalControlModal.title"), "onPinDialogLoad", [i18n_t(m.global.i18n, "button.ok"), i18n_t(m.global.i18n, "button.cancel")])
     else  
       if m.top.isOpenByPlayer then
         if streamingAction = invalid then streamingAction = getStreamingAction().PLAY
@@ -576,27 +581,45 @@ end sub
 
 ' Carga la configuracion inicial de la pantalla de detalle de programas.
 sub __configProgramDetail()
-  width = m.global.width
-  height = m.global.height
+  width = m.scaleInfo.width
+  height = m.scaleInfo.height
 
-  m.programInfo.width = (m.global.width - scaleValue(390, m.scaleInfo))
+  m.programInfo.width = (m.scaleInfo.width - scaleValue(400, m.scaleInfo))
+  m.programInfo.translation = [300, 0]
   m.programInfo.initConfig = true
-   
+
   m.infoGradient.width = width
   m.infoGradient.height = height
  
   m.programImageBackground.width = width
   m.programImageBackground.height = height
+
+  m.programImage.width = scaleValue(216, m.scaleInfo) 
+  m.programImage.height = scaleValue(324, m.scaleInfo)
+
+  if m.programImageGroup <> invalid then
+    m.programImageGroup.translation = [-scaleValue(70, m.scaleInfo), -scaleValue(50, m.scaleInfo)]
+  end if
+
+  m.programDetailContent.translation = scaleSize([70, 50], m.scaleInfo)
+  m.programTitleContainerByError.translation = scaleSize([160, 162], m.scaleInfo)
+
+  m.programTitleError.width = scaleValue(200, m.scaleInfo) 
+  m.programTitleError.height = scaleValue(300, m.scaleInfo)
   
   m.notFoundLayoutGroup.translation = [(width / 2), (height / 2)]
-
   m.notFoundTitle.width = width - scaleValue(230, m.scaleInfo)
+
+  m.relatedContainer.translation = scaleSize([-70, 0], m.scaleInfo)
+  m.related.translation = scaleSize([0, -100], m.scaleInfo)
 
   if m.top.isOpenByPlayer then 
     m.programImageBackground.visible = false
   else 
     m.programImageBackground.visible = true
   end if
+
+  m.selectedIndicator.translation = scaleSize([68, 30], m.scaleInfo)
 end sub
 
 ' Metodo encargado de limpiar todas las dependecias, cancelar las peticiones y quitar los escuchadores de la pantalla
@@ -611,10 +634,9 @@ sub _clearScreen()
   m.programImage.uri = ""
   m.programImageBackground.uri = ""
   __clearButtons()
-  credits = m.top.findNode("creditsContainer")
-  if credits <> invalid then
-    while credits.getChildCount() > 0
-      credits.removeChild(credits.getChild(0))
+  if m.creditsContainer <> invalid then
+    while m.creditsContainer.getChildCount() > 0
+      m.creditsContainer.removeChild(m.creditsContainer.getChild(0))
     end while
   end if
   m.lastButtonSelect = invalid
@@ -655,20 +677,20 @@ sub __validateError(statusCode, resultCode, errorResponse, callback = invalid)
 
   if (error <> invalid and error.code <> invalid) then 
     if (error.code = 5931) then
-      m.dialog = createAndShowDialog(m.top,i18n_t(m.i18n, "shared.errorComponent.weAreSorry"), (i18n_t(m.i18n, "shared.errorComponent.youCurrentlyDoNotHavePlan")).Replace("[ProductName]", m.productName), "onDialogClosedLastFocus", [i18n_t(m.i18n, "button.cancel")])
+      m.dialog = createAndShowDialog(m.top,i18n_t(m.global.i18n, "shared.errorComponent.weAreSorry"), (i18n_t(m.global.i18n, "shared.errorComponent.youCurrentlyDoNotHavePlan")).Replace("[ProductName]", m.productName), "onDialogClosedLastFocus", [i18n_t(m.global.i18n, "button.cancel")])
     
     else if (error.code = 5932) then
-      m.dialog = createAndShowDialog(m.top,i18n_t(m.i18n, "shared.errorComponent.weAreSorry"), (i18n_t(m.i18n, "shared.errorComponent.youCurrentlyDoNotHaveAnyActiveSubscriptions")).Replace("[ProductName]", m.productName), "onDialogClosedLastFocus", [i18n_t(m.i18n, "button.cancel")])
+      m.dialog = createAndShowDialog(m.top,i18n_t(m.global.i18n, "shared.errorComponent.weAreSorry"), (i18n_t(m.global.i18n, "shared.errorComponent.youCurrentlyDoNotHaveAnyActiveSubscriptions")).Replace("[ProductName]", m.productName), "onDialogClosedLastFocus", [i18n_t(m.global.i18n, "button.cancel")])
     
     else if (error.code = 5939) then
-      m.dialog = createAndShowDialog(m.top,i18n_t(m.i18n, "shared.errorComponent.weAreSorry"), i18n_t(m.i18n, "shared.errorComponent.youCurrentlyDoNotHaveSufficientBalance"), "onDialogClosedLastFocus", [i18n_t(m.i18n, "button.cancel")])
+      m.dialog = createAndShowDialog(m.top,i18n_t(m.global.i18n, "shared.errorComponent.weAreSorry"), i18n_t(m.global.i18n, "shared.errorComponent.youCurrentlyDoNotHaveSufficientBalance"), "onDialogClosedLastFocus", [i18n_t(m.global.i18n, "button.cancel")])
     
     else if (error.code = 5930) then
       __redirectToManySessionsScreeen()
     end if
   else 
     if (statusCode = 400) or (statusCode = 404) or (statusCode = 500) then 
-      m.dialog = createAndShowDialog(m.top, i18n_t(m.i18n, "shared.errorComponent.unhandled"), i18n_t(m.i18n, "shared.errorComponent.extendedMessage"), "onDialogClosedLastFocus", [i18n_t(m.i18n, "button.cancel")])
+      m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.unhandled"), i18n_t(m.global.i18n, "shared.errorComponent.extendedMessage"), "onDialogClosedLastFocus", [i18n_t(m.global.i18n, "button.cancel")])
     else 
       if (callback <> invalid) then callback()
     end if
@@ -717,53 +739,52 @@ end sub
 
 
 sub __renderCreditGroups()
-    container = m.top.findNode("creditsContainer")
-    if container = invalid then return
+    if m.creditsContainer = invalid then return
 
     ' limpiar anteriores
-    while container.getChildCount() > 0
-        container.removeChild(container.getChild(0))
+    while m.creditsContainer.getChildCount() > 0
+        m.creditsContainer.removeChild(m.creditsContainer.getChild(0))
     end while
 
     if m.program.creditGroups = invalid then return
     if Type(m.program.creditGroups) <> "roArray" then return
 
     for each grp in m.program.creditGroups
-        if grp = invalid then return
+      if grp = invalid then return
 
-        creditType = ""
-        if grp.creditType <> invalid then creditType = grp.creditType
+      creditType = ""
+      if grp.creditType <> invalid then creditType = grp.creditType
 
-        names = GetCreditsNames(grp.credits) ' devuelve array de strings
-        namesText = JoinStrings(names, ", ")
+      names = GetCreditsNames(grp.credits) ' devuelve array de strings
+      namesText = JoinStrings(names, ", ")
 
-        ' fila horizontal
-        row = CreateObject("roSGNode", "LayoutGroup")
-        row.layoutDirection = "horiz"
-        row.horizAlignment = KeyButtons().LEFT
-        row.vertAlignment = "top"
-        row.itemSpacings = [scaleValue(12, m.scaleInfo)]
+      ' fila horizontal
+      row = CreateObject("roSGNode", "LayoutGroup")
+      row.layoutDirection = "horiz"
+      row.horizAlignment = KeyButtons().LEFT
+      row.vertAlignment = "top"
+      row.itemSpacings = [scaleValue(12, m.scaleInfo)]
 
-        lType = CreateObject("roSGNode", "Label")
-        lType.text = creditType + ":"
-        lType.wrap = false
-        lType.font = "font:SmallSystemFont"
-        lType.maxLines = 1
-        lType.width = scaleValue(100, m.scaleInfo)
+      lType = CreateObject("roSGNode", "Label")
+      lType.text = creditType + ":"
+      lType.wrap = false
+      lType.font = "font:SmallerSystemFont"
+      lType.maxLines = 1
+      lType.width = scaleValue(100, m.scaleInfo)
 
-        lNames = CreateObject("roSGNode", "Label")
-        lNames.text = namesText
-        lNames.wrap = true
-        lNames.font = "font:SmallSystemFont"
-        lNames.maxLines = 2
-        lNames.color = m.global.colors.LIGHT_GRAY
-        ' opcional: para que no se te vaya infinito, poné un ancho razonable
-        lNames.width = scaleValue(800, m.scaleInfo)
+      lNames = CreateObject("roSGNode", "Label")
+      lNames.text = namesText
+      lNames.wrap = true
+      lNames.font = "font:SmallerSystemFont"
+      lNames.maxLines = 2
+      lNames.color = m.global.colors.LIGHT_GRAY
+      ' opcional: para que no se te vaya infinito, poné un ancho razonable
+      lNames.width = scaleValue(760, m.scaleInfo)
 
-        row.appendChild(lType)
-        row.appendChild(lNames)
+      row.appendChild(lType)
+      row.appendChild(lNames)
 
-        container.appendChild(row)
+      m.creditsContainer.appendChild(row)
     end for
 end sub
 

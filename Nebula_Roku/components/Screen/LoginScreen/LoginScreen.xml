@@ -21,14 +21,13 @@
     <field id="onFocus" type="boolean" value="false" onChange="initFocus" />
     
     <!-- Paramentros de Salida -->
-    <field id="finished" type="boolean" value="false" onChange="onFinished" />
+    <field id="finished" alwaysnotify="true" type="boolean" value="false" onChange="onFinished" />
   </interface>
   
   <children>
     <!-- Contenedor principal centrado -->
     <LayoutGroup 
       id="mainContainer" 
-      translation="[180, 120]"
       layoutDirection="vert"
       horizAlignment="custom"
       vertAlignment="top"
@@ -37,25 +36,21 @@
       <Label 
         id="email"
         font="font:SmallSystemFont"
-        width="300"
         horizAlign="left" />
 
       <!-- Campo de entrada para usuario -->
       <TextEditBox
-        id="userField"
-        width="910"/>
+        id="userField"/>
 
       <!-- Label de Contraseña -->
       <Label 
         id="passwordLabel"
         font="font:SmallSystemFont"
-        width="300"
         horizAlign="left" />
 
       <!-- Campo de entrada para contraseña -->
       <TextEditBox
         id="passwordField"
-        width="910"
         secureMode="true"/>
 
       <Group id="buttonContainer">
@@ -76,16 +71,12 @@
 
       </Group>
 
-      <Keyboard id="keyboard" translation="[-15,0]" />
+      <Keyboard id="keyboard" />
     </LayoutGroup>
 
     <!-- Logo -->
     <Poster
       id="logo"
-      width="200" 
-      height="100"
-      loadWidth="200"
-      loadHeight="100"
       loadDisplayMode="scaleToFit"
       uri="pkg:/images/client/logo.png" />
   </children>

@@ -25,7 +25,7 @@
     <field id="data" type="string" onChange="initData" />
     
     <!-- Paramentros de entrada/Salida -->
-    <field id="logout" type="boolean" value="false" onChange="onLogoutChange" />
+    <field id="logout" alwaysnotify="true" type="boolean" value="false" onChange="onLogoutChange" />
 
     <!-- Paramentros de Salida -->
     <field id="streaming" type="string" />
@@ -51,7 +51,7 @@
       <QvButton 
         id="backToHomeButton"
         focusable="true"
-        size="[180]"/>
+        size="[230, 50]"/>
     </LayoutGroup> 
 
 

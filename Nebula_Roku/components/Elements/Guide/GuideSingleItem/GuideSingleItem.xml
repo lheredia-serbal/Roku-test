@@ -33,13 +33,12 @@
             <!-- Imagen item -->
             <Poster 
                 id="imageItem"
-                loadDisplayMode="scaleToZoom"/>
+                loadDisplayMode="scaleToFit"/>
 
             <LayoutGroup
                 id="programTitleByError"
                 layoutDirection="vert"
                 horizAlignment="center"
-                vertAlignment="center"
                 visible="false" >
                 <Label 
                     id="programTitle"

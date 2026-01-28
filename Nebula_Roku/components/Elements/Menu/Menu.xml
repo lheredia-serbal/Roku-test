@@ -39,8 +39,6 @@
             <Group>
                 <Poster 
                     id="avatarImage"
-                    width="65"
-                    height="65"
                     visible="false"
                     focusable="true"
                     loadDisplayMode="scaleToFit"/>
@@ -48,8 +46,6 @@
                 <Rectangle 
                     id="avatarImageOpacity"
                     translation="[0,0]"
-                    width="65"
-                    height="66"
                     color="#000000"
                     opacity="0.33"/>
                     

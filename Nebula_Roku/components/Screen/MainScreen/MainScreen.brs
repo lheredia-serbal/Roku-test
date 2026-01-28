@@ -1,8 +1,5 @@
 ' Inicialización del componente (parte del ciclo de vida de Roku)
 sub init()
-  m.scaleInfo = m.global.scaleInfo
-  if m.scaleInfo = invalid then m.scaleInfo = getScaleInfo()
-
   m.opacityForMenu = m.top.findNode("opacityForMenu")
   m.groupOpacityForMenu = m.top.findNode("groupOpacityForMenu")
   m.myMenu = m.top.findNode("myMenu")
@@ -25,23 +22,8 @@ sub init()
   m.logo = m.top.findNode("mainLogo")
   m.nameOrganization = m.top.findNode("nameOrganization")
 
-  m.i18n = invalid
-  scene = m.top.getScene()
-  if scene <> invalid then
-      m.i18n = scene.findNode("i18n")
-  end if
-  applyTranslations()
+  m.scaleInfo = m.global.scaleInfo
 end sub
-
-sub applyTranslations()
-  if m.i18n = invalid then
-      return
-  end if
-
-  m.withoutContentTitle.text = i18n_t(m.i18n, "content.contentPage.notDisplayTitle")
-  m.withoutContentMessage.text = i18n_t(m.i18n, "content.contentPage.notDisplayContect")
-end sub
-
 
 ' Funcion que interpreta los eventos de teclado y retorna true si fue porcesada por este componente. Sino es porcesado por el
 ' entonces sigue con el siguente metodo onKeyEvent del compoente superior
@@ -117,7 +99,7 @@ sub initData()
     m.programImageBackground.width = width
     m.programImageBackground.height = height
     
-    m.groupOpacityForMenu.clippingRect = [0, 0, scaleValue(118, m.scaleInfo), height]
+    m.groupOpacityForMenu.clippingRect = [0, 0, safeX + scaleValue(60, m.scaleInfo), height]
 
     logoWidth = scaleValue(200, m.scaleInfo)
     logoHeight = scaleValue(100, m.scaleInfo)
@@ -125,15 +107,15 @@ sub initData()
     m.logo.height = logoHeight
     m.logo.loadWidth = logoWidth
     m.logo.loadHeight = logoHeight
-    m.logo.translation = [(width - safeX - scaleValue(280, m.scaleInfo)), safeY + scaleValue(30, m.scaleInfo)]
-    m.nameOrganization.translation = [(width - safeX - scaleValue(200, m.scaleInfo)), safeY + scaleValue(130, m.scaleInfo)]
+    m.logo.translation = [(width - scaleValue(250, m.scaleInfo)), scaleValue(30, m.scaleInfo)]
+    m.nameOrganization.translation = [(width - safeX - scaleValue(200, m.scaleInfo)), scaleValue(130, m.scaleInfo)]
     m.withoutContentLayoutGroup.translation = [(width / 2), (height / 2)]
     
     errorSafeZone = width - (safeX * 2) - scaleValue(230, m.scaleInfo)
     m.withoutContentTitle.width = errorSafeZone
     m.withoutContentMessage.width = errorSafeZone
 
-    m.programInfo.translation = [safeX + scaleValue(118, m.scaleInfo), safeY + scaleValue(50, m.scaleInfo)]
+    m.programInfo.translation = [safeX + scaleValue(60, m.scaleInfo), safeY + scaleValue(20, m.scaleInfo)]
 
     if m.productCode = invalid then m.productCode = getConfigVariable(m.global.configVariablesKeys.PRODUCT_CODE)
     if m.apiUrl = invalid then m.apiUrl = getConfigVariable(m.global.configVariablesKeys.API_URL) 
@@ -150,6 +132,11 @@ end sub
 
 ' Inicializa el foco del componente seteando los valores necesarios
 sub initFocus()
+  if m.top.onFocus then 
+    __applyTranslations()
+    __validateAutoUpgradeTime()
+  end if 
+  if m.dialog <> invalid and m.dialog.visible then return
   if m.top.onFocus and m.lastFocus <> invalid then
     __validateVariables()
     if m.lastRefreshDate <> invalid then
@@ -189,11 +176,11 @@ sub populateCarousels(data as Object)
   __clearContentView()
   __clearProgramInfo()
 
-  m.carouselContainer.translation = [m.scaleInfo.safeZone.x + scaleValue(50, m.scaleInfo), m.scaleInfo.safeZone.y + scaleValue(20, m.scaleInfo)]
+  m.carouselContainer.translation = [scaleValue(55, m.scaleInfo), m.scaleInfo.safeZone.y + scaleValue(20, m.scaleInfo)]
   m.xPosition = m.carouselContainer.translation[0]
   m.yPosition = m.carouselContainer.translation[1]
 
-  m.selectedIndicator.translation = [m.scaleInfo.safeZone.x + scaleValue(118, m.scaleInfo), m.scaleInfo.safeZone.y + scaleValue(147, m.scaleInfo)]
+  m.selectedIndicator.translation = [scaleValue(124, m.scaleInfo), m.scaleInfo.safeZone.y + scaleValue(148, m.scaleInfo)]
 
   for each carouselData in data.items
     if carouselData.style <> getCarouselStyles().NEWS then 
@@ -234,7 +221,7 @@ sub populateCarousels(data as Object)
   if m.carouselContainer.getChildCount() > 0 then
     firstCarousel = m.carouselContainer.getChild(0)
     firstList = firstCarousel.findNode("carouselList")
-    if firstList <> invalid then
+    if firstList <> invalid and m.autoUpgradeDialogOpen <> true then
       firstList.setFocus(true)
       m.selectedIndicator.size = firstCarousel.size
       m.selectedIndicator.visible = true
@@ -257,7 +244,7 @@ sub onSelectItem()
 
       if m.itemSelected.parentalControl <> invalid and m.itemSelected.parentalControl then
         __markLastFocus()
-        m.pinDialog = createAndShowPINDialog(m.top, i18n_t(m.i18n, "shared.parentalControlModal.title"), "onPinDialogLoad", [i18n_t(m.i18n, "button.ok"), i18n_t(m.i18n, "button.cancel")])
+        m.pinDialog = createAndShowPINDialog(m.top, i18n_t(m.global.i18n, "shared.parentalControlModal.title"), "onPinDialogLoad", [i18n_t(m.global.i18n, "button.ok"), i18n_t(m.global.i18n, "button.cancel")])
       else 
         m.top.loading.visible = true
         watchSessionId = getWatchSessionId()
@@ -317,7 +304,7 @@ sub onLastWatchedResponse()
       
       if (statusCode = 408) then
         __markLastFocus() 
-        m.dialog = createAndShowDialog(m.top, i18n_t(m.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogClosedLastFocus", [i18n_t(m.i18n, "button.cancel")])
+        m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.global.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogClosedLastFocus", [i18n_t(m.global.i18n, "button.cancel")])
       else 
         __validateError(statusCode, 0, invalid)
       end if
@@ -333,7 +320,7 @@ sub onLastWatchedResponse()
     
     if (statusCode = 408) then
       __markLastFocus() 
-      m.dialog = createAndShowDialog(m.top, i18n_t(m.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogClosedLastFocus", [i18n_t(m.i18n, "button.cancel")])
+      m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.global.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogClosedLastFocus", [i18n_t(m.global.i18n, "button.cancel")])
     else 
       __validateError(statusCode, 0, errorResponse)
     end if
@@ -369,7 +356,7 @@ sub onWatchValidateResponse()
     
     if (statusCode = 408) then
       __markLastFocus() 
-      m.dialog = createAndShowDialog(m.top, i18n_t(m.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogClosedLastFocus", [i18n_t(m.i18n, "button.cancel")])
+      m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.global.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogClosedLastFocus", [i18n_t(m.global.i18n, "button.cancel")])
     else 
       __validateError(statusCode, 0, errorResponse)
     end if
@@ -386,16 +373,16 @@ sub onStreamingsResponse()
       m.apiRequestManager = clearApiRequest(m.apiRequestManager)
       __markLastFocus()
       streaming = resp.data
-      
       streaming.key = m.itemSelected.redirectKey 
       streaming.id = m.itemSelected.redirectId
-      m.top.streaming = FormatJson(resp.data)
+      streaming.streamingType = getStreamingType().DEFAULT
+      m.top.streaming = FormatJson(streaming)
     else 
       m.top.loading.visible = false
       __markLastFocus()
       printError("Streamings Emty:", m.apiRequestManager.response)
       m.apiRequestManager = clearApiRequest(m.apiRequestManager)
-      m.dialog = createAndShowDialog(m.top, i18n_t(m.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogClosedLastFocus", [i18n_t(m.i18n, "button.cancel")])
+      m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.global.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogClosedLastFocus", [i18n_t(m.global.i18n, "button.cancel")])
     end if
   else 
     m.top.loading.visible = false
@@ -405,7 +392,7 @@ sub onStreamingsResponse()
 
     __markLastFocus()
     if (statusCode = 408) then 
-      m.dialog = createAndShowDialog(m.top, i18n_t(m.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogClosedLastFocus", [i18n_t(m.i18n, "button.cancel")])
+      m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.global.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogClosedLastFocus", [i18n_t(m.global.i18n, "button.cancel")])
     else 
       __validateError(statusCode, 0, errorResponse)
     end if
@@ -478,6 +465,7 @@ end sub
 ' Dispara la busqueda del programa que esta teniendo el foco. Usa un timer para buscarlo una vez que el 
 ' usuario se detuvo en la navegacion
 sub getProgramInfo()
+  try 
   clearTimer(m.programTimer)
   if m.itemfocused <> invalid then
     if m.program <> invalid and m.program.infoKey = m.itemfocused.redirectKey and m.program.infoId = m.itemfocused.redirectId then 
@@ -508,6 +496,9 @@ sub getProgramInfo()
 
     m.apiSummaryRequestManager = sendApiRequest(m.apiSummaryRequestManager, urlProgramSummary(m.apiUrl, m.itemfocused.redirectKey, m.itemfocused.redirectId, mainImageTypeId, getCarouselImagesTypes().SCENIC_LANDSCAPE), "GET", "onProgramSummaryResponse")
    end if 
+  catch error
+    printError("Error al cargar la programa summary", error)
+  end try
 end sub
 
 ' Procesa la respuesta de la peticion del Summay del programa
@@ -556,21 +547,23 @@ sub onMenuResponse()
     else 
       m.top.loading.visible = false
       m.myMenu.items = [] 
-      m.dialog = createAndShowDialog(m.top, i18n_t(m.i18n, "shared.errorComponent.unhandled"), i18n_t(m.i18n, "shared.errorComponent.extendedMessage"), "onDialogClosedFocusContainer", [i18n_t(m.i18n, "button.cancel")])
+      m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.unhandled"), i18n_t(m.global.i18n, "shared.errorComponent.extendedMessage"), "onDialogClosedFocusContainer", [i18n_t(m.global.i18n, "button.cancel")])
     end if 
   else 
     m.top.loading.visible = false
     error =  m.apiRequestManager.errorResponse
     statusCode =  m.apiRequestManager.statusCode
     m.apiRequestManager = clearApiRequest(m.apiRequestManager)
+    
+    printError("Menu:", error)
+    
+    if validateLogout(statusCode, m.top) then return 
 
     if (statusCode = 408 or statusCode = 400) then  
-      m.dialog = createAndShowDialog(m.top, i18n_t(m.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogReloadMenuClosed", [i18n_t(m.i18n, "button.retry"), i18n_t(m.i18n, "button.exit")])
+      m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.global.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogReloadMenuClosed", [i18n_t(m.global.i18n, "button.retry"), i18n_t(m.global.i18n, "button.exit")])
     else 
       __validateError(statusCode, 0, error)
     end if
-
-    printError("Menu:", error)
 
     actionLog = createLogError(generateErrorDescription(error), generateErrorPageUrl("getAllMenu", "AppComponent"), getServerErrorStack(error))
     __saveActionLog(actionLog)
@@ -615,16 +608,18 @@ sub onContentViewResponse()
     statusCode = m.apiRequestManager.statusCode
     m.apiRequestManager = clearApiRequest(m.apiRequestManager)
     
-    if (statusCode = 408) or (statusCode = 500) then  
-      m.dialog = createAndShowDialog(m.top, i18n_t(m.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogReloadContentViewClosed", [i18n_t(m.i18n, "button.retry"), i18n_t(m.i18n, "button.exit")])
+    printError("ContentView:", error)
+    
+    if validateLogout(statusCode, m.top) then return 
+    
+    if (statusCode = 408) or (statusCode = 500) then 
+      m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.global.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogReloadContentViewClosed", [i18n_t(m.global.i18n, "button.retry"), i18n_t(m.global.i18n, "button.exit")])
     else 
       __validateError(statusCode, 0, error, __showWithoutContent())
     end if
-    printError("ContentView:", error)
 
     actionLog = createLogError(generateErrorDescription(error), generateErrorPageUrl("getCarouselsById", "HomeComponent"), getServerErrorStack(error), menuSelected.key, menuSelected.id)
     __saveActionLog(actionLog)
-
   end if
 end sub
 
@@ -652,23 +647,25 @@ sub onParentalControlResponse()
       else
         m.top.loading.visible = false
         __markLastFocus() 
-        m.dialog = createAndShowDialog(m.top, "", i18n_t(m.i18n, "shared.parentalControlModal.error.invalid"), "onDialogClosedFocusContainer")
+        m.dialog = createAndShowDialog(m.top, "", i18n_t(m.global.i18n, "shared.parentalControlModal.error.invalid"), "onDialogClosedFocusContainer")
     end if
   else     
     m.top.loading.visible = false
     statusCode = m.apiRequestManager.statusCode
     errorResponse = m.apiRequestManager.errorResponse
     m.apiRequestManager = clearApiRequest(m.apiRequestManager)
+
+    printError("ParentalControl:", statusCode.toStr() + " " +  errorResponse)
     
+    if validateLogout(statusCode, m.top) then return 
+  
     if (statusCode = 408) then
       __markLastFocus() 
-      m.dialog = createAndShowDialog(m.top, i18n_t(m.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogClosedLastFocus", [i18n_t(m.i18n, "button.cancel")])
+      m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.global.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogClosedLastFocus", [i18n_t(m.global.i18n, "button.cancel")])
     else 
       __validateError(statusCode, 0, errorResponse)
     end if
-
-    printError("ParentalControl:", statusCode.toStr() + " " +  errorResponse)
-
+ 
     actionLog = createLogError(generateErrorDescription(errorResponse), generateErrorPageUrl("valdiatePin", "ParentalControlModalComponent"), getServerErrorStack(errorResponse))
     __saveActionLog(actionLog)
   end if
@@ -721,7 +718,7 @@ sub __selectMenuItem(menuSelectedItem)
   else if menuSelectedItem.key = "MenuId" and menuSelectedItem.id = -1 and menuSelectedItem.code <> invalid and menuSelectedItem.code = "logout" then
     m.myMenu.action = "collapse"
     m.selectedIndicator.visible = true 
-    m.dialog = createAndShowDialog(m.top, i18n_t(m.i18n, "shared.exitModal.title"), i18n_t(m.i18n, "shared.exitModal.askLogout"), "onDialogLogoutContainer", [ i18n_t(m.i18n, "button.yes"), i18n_t(m.i18n, "button.no")])
+    m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.exitModal.title"), i18n_t(m.global.i18n, "shared.exitModal.askLogout"), "onDialogLogoutContainer", [ i18n_t(m.global.i18n, "button.yes"), i18n_t(m.global.i18n, "button.no")])
 
   else if menuSelectedItem.key = "MenuId" and menuSelectedItem.id = -1 and menuSelectedItem.code <> invalid and menuSelectedItem.code = "profiles" then
     __redirectToProfilesScreen()
@@ -755,17 +752,15 @@ sub __selectMenuItem(menuSelectedItem)
 end sub
 
 sub onSuccessLogsTokenResponse() 
-
   if valdiateStatusCode(m.apiRequestLogsManager.statusCode) then
-    resp = ParseJson(m.apiRequestLogsManager.response)
+    ' resp = ParseJson(m.apiRequestLogsManager.response)
     m.apiRequestLogsManager = clearApiRequest(m.apiRequestLogsManager)
   else 
-    statusCode = m.apiRequestLogsManager.statusCode
+    ' statusCode = m.apiRequestLogsManager.statusCode
     errorResponse = m.apiRequestLogsManager.errorResponse
     
     m.apiRequestLogsManager = clearApiRequest(m.apiRequestLogsManager)
     printError("error:", errorResponse)
-
     end if
 end sub
 
@@ -784,7 +779,7 @@ end sub
 
 ' Carga la configuracion inicial de la Main.
 sub __configMain()
-  m.programInfo.width = (m.global.width - 500)
+  m.programInfo.width = (m.scaleInfo.width - scaleValue(400, m.scaleInfo))
   m.programInfo.initConfig = true
 
   m.myMenu.initConfig = true
@@ -838,13 +833,30 @@ sub __clearScreen()
   __clearProgramInfo()
 end sub
 
+' Aplicar las traducciones en el componente
+sub __applyTranslations()
+  if m.global.i18n = invalid then return
+
+  m.withoutContentTitle.text = i18n_t(m.global.i18n, "content.contentPage.notDisplayTitle")
+  m.withoutContentMessage.text = i18n_t(m.global.i18n, "content.contentPage.notDisplayContect")
+end sub
+
 ' Hace foco en los carruseles ya sea en el ultimo item de lso carouseles que tuvo foco o en el contenedor en si si no hay carouseles 
 sub __focusCarousels()
+  if m.autoUpgradeDialogOpen = true then return
   if m.carouselContainer.getChildCount() > 0 then 
     m.selectedIndicator.visible = true
     if m.lastFocus <> invalid then m.lastFocus.setFocus(true)
   else
     m.carouselContainer.setFocus(true)
+  end if
+end sub
+
+' Actualiza el indicador de seleccion segun el carrusel enfocado
+sub __updateSelectedIndicator()
+  if m.carouselContainer <> invalid and m.carouselContainer.focusedChild <> invalid then
+    m.selectedIndicator.size = m.carouselContainer.focusedChild.size
+    m.selectedIndicator.visible = true
   end if
 end sub
 
@@ -854,6 +866,121 @@ sub __showWithoutContent()
   __clearProgramInfo()
   __focusCarousels()
   m.withoutContentLayoutGroup.visible = true
+end sub
+
+' Valida si ya paso el tiempo para volver a consultar AutoUpgrade
+sub __validateAutoUpgradeTime()
+  nextCheck = getNextAutoUpgradeCheck()
+  if nextCheck = invalid or nextCheck = "" then return
+
+  nowDate = CreateObject("roDateTime")
+  nowDate.ToLocalTime()
+
+  if Val(nextCheck) <= nowDate.AsSeconds() then
+    __validateAutoUpgrade()
+  end if
+end sub
+
+' Dispara la validacion de AutoUpgrade con token
+sub __validateAutoUpgrade()
+  if m.apiUrl = invalid then m.apiUrl = getConfigVariable(m.global.configVariablesKeys.API_URL)
+  body = {
+    appCode: m.global.appCode,
+    versionCode: getVersionCode(),
+    signedByGooglePlay: true,
+    startUp: false
+  }
+  m.autoUpgradeRequestManager = sendApiRequest(m.autoUpgradeRequestManager, urlAutoUpgradeValidate(m.apiUrl), "POST", "onAutoUpgradeResponse", FormatJson(body))
+end sub
+
+' Procesa la respuesta del AutoUpgrade
+sub onAutoUpgradeResponse()
+  if valdiateStatusCode(m.autoUpgradeRequestManager.statusCode) then
+    resp = ParseJson(m.autoUpgradeRequestManager.response)
+    data = resp
+    if resp <> invalid and resp.data <> invalid then data = resp.data
+
+    if data <> invalid and data.checkTime <> invalid and data.checkTime > 0 then
+      nowDate = CreateObject("roDateTime")
+      nowDate.ToLocalTime()
+      setNextAutoUpgradeCheck((nowDate.asSeconds() + data.checkTime).ToStr())
+    end if
+
+    upgrade = false
+    if data <> invalid and data.upgrade <> invalid then
+      upgrade = data.upgrade
+    end if
+
+    mandatory = false
+    if data <> invalid and data.mandatory <> invalid then
+      mandatory = data.mandatory
+    end if
+
+    if upgrade then
+      m.autoUpgradeMandatory = mandatory
+      m.autoUpgradeDialogOpen = true
+      m.selectedIndicator.visible = false
+      __markLastFocus()
+      messageKey = "autoUpgrade.message"
+      buttons = [i18n_t(m.global.i18n, "autoUpgrade.remindLater"), i18n_t(m.global.i18n, "button.exit")]
+      if mandatory then
+        messageKey = "autoUpgrade.mandatoryMessage"
+        buttons = [i18n_t(m.global.i18n, "button.exit")]
+      end if
+      m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "autoUpgrade.title"), i18n_t(m.global.i18n, messageKey), "onAutoUpgradeAvailableDialogClosed", buttons)
+      m.dialog.setFocus(true)
+    else
+      m.autoUpgradeMandatory = false
+    end if
+    m.autoUpgradeRequestManager = clearApiRequest(m.autoUpgradeRequestManager)
+  else 
+    printError("AutoUpgrade: ", m.autoUpgradeRequestManager.errorResponse)
+    m.autoUpgradeRequestManager = clearApiRequest(m.autoUpgradeRequestManager)
+    m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.global.i18n, "shared.errorComponent.serverConnectionProblems"), "onAutoUpgradeDialogClosed", [i18n_t(m.global.i18n, "button.retry"), "Exit"])
+  end if
+end sub
+
+' Procesa el evento de cierre del dialogo de AutoUpgrade
+sub onAutoUpgradeDialogClosed(_event)
+  option = m.dialog.buttonSelected
+
+  m.dialog.visible = false
+  m.dialog.unobserveField("buttonSelected")
+  m.top.removeChild(m.dialog)
+  m.dialog = invalid
+
+  if option = 0 then
+    __validateAutoUpgrade()
+  else
+    m.top.forceExit = true
+  end if
+end sub
+
+' Procesa el evento de cierre del modal de upgrade disponible
+sub onAutoUpgradeAvailableDialogClosed(_event)
+  option = m.dialog.buttonSelected
+
+  m.dialog.visible = false
+  m.dialog.unobserveField("buttonSelected")
+  m.top.removeChild(m.dialog)
+  m.dialog = invalid
+  m.autoUpgradeDialogOpen = false
+
+  if m.autoUpgradeMandatory = true then
+    m.top.forceExit = true
+    return
+  end if
+
+  if option = 1 then
+    m.top.forceExit = true
+  else
+    if m.lastFocus <> invalid then
+      m.lastFocus.setFocus(true)
+    else
+      __focusCarousels()
+    end if
+    __updateSelectedIndicator()
+  end if
 end sub
 
 ' Valida si debe perdir nuevamente las variables y si es asi dispara la peticion parapedir la nueva variable
@@ -887,22 +1014,22 @@ sub __validateError(statusCode, resultCode, errorResponse, callback = invalid)
       __redirectToProfilesScreen()
     else if (error.code = 5931) then
       __markLastFocus() 
-      m.dialog = createAndShowDialog(m.top,i18n_t(m.i18n, "shared.errorComponent.weAreSorry"), (i18n_t(m.i18n, "shared.errorComponent.youCurrentlyDoNotHavePlan")).Replace("[ProductName]", m.productName), "onDialogClosedLastFocus", [i18n_t(m.i18n, "button.cancel")])
+      m.dialog = createAndShowDialog(m.top,i18n_t(m.global.i18n, "shared.errorComponent.weAreSorry"), (i18n_t(m.global.i18n, "shared.errorComponent.youCurrentlyDoNotHavePlan")).Replace("[ProductName]", m.productName), "onDialogClosedLastFocus", [i18n_t(m.global.i18n, "button.cancel")])
     
     else if (error.code = 5932) then
       __markLastFocus() 
-      m.dialog = createAndShowDialog(m.top,i18n_t(m.i18n, "shared.errorComponent.weAreSorry"), (i18n_t(m.i18n, "shared.errorComponent.youCurrentlyDoNotHaveAnyActiveSubscriptions")).Replace("[ProductName]", m.productName), "onDialogClosedLastFocus", [i18n_t(m.i18n, "button.cancel")])
+      m.dialog = createAndShowDialog(m.top,i18n_t(m.global.i18n, "shared.errorComponent.weAreSorry"), (i18n_t(m.global.i18n, "shared.errorComponent.youCurrentlyDoNotHaveAnyActiveSubscriptions")).Replace("[ProductName]", m.productName), "onDialogClosedLastFocus", [i18n_t(m.global.i18n, "button.cancel")])
     
     else if (error.code = 5939) then
       __markLastFocus() 
-      m.dialog = createAndShowDialog(m.top,i18n_t(m.i18n, "shared.errorComponent.weAreSorry"), i18n_t(m.i18n, "shared.errorComponent.youCurrentlyDoNotHaveSufficientBalance"), "onDialogClosedLastFocus", [i18n_t(m.i18n, "button.cancel")])
+      m.dialog = createAndShowDialog(m.top,i18n_t(m.global.i18n, "shared.errorComponent.weAreSorry"), i18n_t(m.global.i18n, "shared.errorComponent.youCurrentlyDoNotHaveSufficientBalance"), "onDialogClosedLastFocus", [i18n_t(m.global.i18n, "button.cancel")])
     
     else if (error.code = 5930) then
       __redirectToManySessionsScreeen()
     end if
   else 
     if (statusCode = 400) or (statusCode = 404) or (statusCode = 500) then  
-      m.dialog = createAndShowDialog(m.top, i18n_t(m.i18n, "shared.errorComponent.unhandled"), i18n_t(m.i18n, "shared.errorComponent.extendedMessage"), "onDialogClosedFocusContainer", [i18n_t(m.i18n, "button.cancel")])
+      m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.unhandled"), i18n_t(m.global.i18n, "shared.errorComponent.extendedMessage"), "onDialogClosedFocusContainer", [i18n_t(m.global.i18n, "button.cancel")])
     else 
       if (callback <> invalid) then callback()
     end if
@@ -956,7 +1083,6 @@ sub onActionLogResponse()
   m.apiLogRequestManager = clearApiRequest(m.apiLogRequestManager)
 end sub
 
-
 sub __loadOrganizationLogo()
 
   organization = m.global.organization
@@ -985,7 +1111,7 @@ sub __loadOrganizationLogo()
     ' El logo lo obtiene de la carpeta local
     else if m.logoDisplayType = LogoDisplayType().RESOURCE then
       m.nameOrganization.visible = false
-      m.logo.uri = "pkg:/images/client/logo.png"
+      m.logo.uri = "pkg:/images/client/header_icon.png"
 
     ' El logo lo obtiene desde la carpeta local y mostrar el nombre de la organización
     else if m.logoDisplayType = LogoDisplayType().RESOURCE_AND_ORGANIZATION_NAME then
@@ -995,7 +1121,7 @@ sub __loadOrganizationLogo()
         m.nameOrganization.visible = true
       end if
 
-      m.logo.uri = "pkg:/images/client/logo.png"
+      m.logo.uri = "pkg:/images/client/header_icon.png"
 
     ' No mostrar nada
     else if m.logoDisplayType = LogoDisplayType().NONE then
@@ -1009,7 +1135,7 @@ sub __loadOrganizationLogo()
       if organization.image <> invalid then
         m.logo.uri = getImageUrl(organization.image)
       else
-        m.logo.uri = "pkg:/images/client/logo.png"
+        m.logo.uri = "pkg:/images/client/header_icon.png"
       end if
     end if
       
@@ -1018,7 +1144,7 @@ sub __loadOrganizationLogo()
     if organization <> invalid and organization.image <> invalid then
       m.logo.uri = getImageUrl(organization.image)
     else 
-      m.logo.uri = "pkg:/images/client/logo.png"
+      m.logo.uri = "pkg:/images/client/header_icon.png"
     end if
   end if
 end sub

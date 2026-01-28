@@ -1,6 +1,11 @@
 ' Devuelve un objeto device con la info del dispositivo.
-function getDevice(appVersion, appVersionCode, appCode) as object
-    deviceInfo = CreateObject("roDeviceInfo")
+function getDevice(deviceInfo, scaleInfo, appVersion, appVersionCode, appCode, appLanguage = invalid) as object
+    OSVersion = deviceInfo.GetOSVersion()
+    modelDetails = deviceInfo.GetModelDetails()
+
+    versionDevice = OSVersion.major + "." + OSVersion.minor + "." + OSVersion.revision
+    build = OSVersion.build
+    
     return {
         id: getDeviceId(),
         token: getDeviceToken(),
@@ -10,25 +15,25 @@ function getDevice(appVersion, appVersionCode, appCode) as object
         browserName: invalid, ' Roku no tiene navegador
         userAgent: invalid, ' No hay userAgent disponible en Roku
         serialNumber: deviceInfo.GetChannelClientId(),
-        brand: "Roku",
-        model: deviceInfo.GetModel(),
-        fingerprint: invalid, ' Roku no tiene fingerprint
-        hardware: "Roku Hardware",
-        manufacturer: "Roku",
+        brand: modelDetails.VendorName,
+        model: deviceInfo.getmodelDisplayName(),
+        fingerprint: modelDetails.Manufacturer + "-" + modelDetails.ModelNumber + "-" + versionDevice + "-" + build, ' Roku no tiene fingerprint
+        hardware: deviceInfo.GetModel(),
+        manufacturer: modelDetails.Manufacturer,
         cpuAbi: invalid, ' No expuesto en Roku
         cpuAbi2: invalid, ' No expuesto en Roku
-        width: deviceInfo.GetDisplaySize().w,
-        height: deviceInfo.GetDisplaySize().h, 
-        retio: deviceInfo.GetDisplaySize().w / deviceInfo.GetDisplaySize().h
-        os: {
+        scaleInfo: scaleInfo,
+        width: scaleInfo.w,
+        height: scaleInfo.h,
+        operatingSystem: {
             name: "Roku OS",
-            version: deviceInfo.GetOSVersion(),
-            build: deviceInfo.GetOSVersion(),
-            apiLevel: deviceInfo.GetOSVersion()
+            version: versionDevice,
+            versionIncremental: build,
+            sdk: OSVersion.major
         },
         ipAddress: invalid,
         macWireless: invalid,
-        macEthernet: deviceInfo.GetConnectionInfo().mac,
+        macEthernet: "00:00:00:00:00:00",
         appVersion: appVersion,
         appCode: appCode,
         linkedToUser: false, ' Debe definirse con lógica adicional
@@ -36,7 +41,9 @@ function getDevice(appVersion, appVersionCode, appCode) as object
         signedByGooglePlay: true, ' Roku no tiene un concepto directo de "App Store Signing"
         appVersionCode: appVersionCode,
         guid: getDeviceGUID(),
-        alias: getDeviceAlias()
+        alias: getDeviceAlias(),
+        deviceLanguage: deviceInfo.GetCurrentLocale(),
+        appLanguage: appLanguage
     }
 end function
 
@@ -100,8 +107,16 @@ function getNextUpdateVariables()
     return __RegRead("NextUpdateVariables", "SessionData")
 end function
 
+function getNextAutoUpgradeCheck()
+    return __RegRead("NextAutoUpgradeCheck", "SessionData")
+end function
+
 Sub setDeviceAlias(value)
     if value <> invalid then __RegWrite("DeviceAlias", value, "SessionData")
+end Sub
+
+Sub setNextAutoUpgradeCheck(value)
+    if value <> invalid then __RegWrite("NextAutoUpgradeCheck", value, "SessionData")
 end Sub
 
 sub saveNextUpdateVariables()

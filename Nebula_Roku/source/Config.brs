@@ -11,8 +11,6 @@ function getSpecialColors()
     return {
         PRIMARY: "#21acfa",
         SECONDARY: "#ffb522",
-        PLAYER_TIMEBAR_NOT_FOCUCED: "#21acfa",
-        PLAYER_TIMEBAR_NOT_FOCUCED: "#003E61",
     }
 end function
 

@@ -9,6 +9,7 @@
   <script type="text/brightscript" uri="pkg:/source/Utils.brs" />
   <script type="text/brightscript" uri="pkg:/source/CarouselConstants.brs" />
   <script type="text/brightscript" uri="pkg:/source/Utils/DateFunctions.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Utils/i18nUtils.brs" />
 
   <interface>
     <!-- Paramentros de Entrada -->
@@ -37,7 +38,6 @@
   <children>
     <Label 
       id="carouselTitle"
-      translation="[70, 100]"
       font="font:SmallestBoldSystemFont" 
       />
 
@@ -45,7 +45,6 @@
           id="carouselList"
           advanceKey="right" 
           reverseKey="left" 
-          focusable="true"
-          translation="[-80, 130]"/>
+          focusable="true"/>
   </children>
 </component>

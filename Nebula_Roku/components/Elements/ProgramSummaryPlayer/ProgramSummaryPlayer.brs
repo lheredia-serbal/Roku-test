@@ -1,10 +1,5 @@
 ' Inicialización del componente (parte del ciclo de vida de Roku)
 sub init()
-    m.scaleInfo = m.global.scaleInfo
-    if m.scaleInfo = invalid then
-        m.scaleInfo = getScaleInfo()
-    end if
-
     m.programContainer = m.top.findNode("programContainer")
     m.programRectangleContainer = m.top.findNode("programRectangleContainer")
     m.programTitle = m.top.findNode("programTitle")
@@ -13,6 +8,8 @@ sub init()
     m.programDate = m.top.findNode("programDate")
     m.programSynopsis = m.top.findNode("programSynopsis")
     m.programAvailableView = m.top.findNode("programAvailableView")
+    
+    m.scaleInfo = m.global.scaleInfo
 
     m.reservedHeight = scaleValue(240, m.scaleInfo)
     m.reservedWidth = scaleValue(1200, m.scaleInfo)
@@ -21,21 +18,6 @@ sub init()
     m.spacings = scaleValue(10, m.scaleInfo)
     m.buttonExist = scaleSize([220, 30], m.scaleInfo)
     m.buttonNotExist = [1, 1]
-
-    m.i18n = invalid
-    scene = m.top.getScene()
-    if scene <> invalid then
-        m.i18n = scene.findNode("i18n")
-    end if
-    applyTranslations()
-end sub
-
-sub applyTranslations()
-    if m.i18n = invalid then
-        return
-    end if
-
-    m.programAvailableView.text = i18n_t(m.i18n, "player.guide.availableToView")
 end sub
 
 
@@ -43,7 +25,9 @@ end sub
 ' referencias de compenentes necesarios para su uso
 sub initConfig()
     if m.top.initConfig then 
-        width = m.global.width
+        m.programAvailableView.text = i18n_t(m.global.i18n, "player.guide.availableToView")
+        
+        width = m.scaleInfo.width
         m.reservedWidth = width - scaleValue(140, m.scaleInfo)
     
         m.programRectangleContainer.width = m.reservedWidth
@@ -115,8 +99,11 @@ sub changeProgram()
                 particularItemSpacings[4] = m.spacings
 
             else if m.top.catchupDuration <> 0 and catchupDateSeconds <= m.top.program.endSeconds and m.top.program.endSeconds <= nowSeconds then
-                showAvailableView = true
-                particularItemSpacings[4] = m.spacings
+                if m.global.contact.forTest = invalid or (m.global.contact.forTest <> invalid and not m.global.contact.forTest) then 
+                    showAvailableView = true
+                end if 
+                
+                if showAvailableView then particularItemSpacings[4] = m.spacings
             end if
         end if 
 
@@ -167,15 +154,15 @@ sub changeProgram()
                 if (m.top.program.durationInMinutes > 0) then durationStr = " - " + m.top.program.durationInMinutes.ToStr() + "min"
     
                 if (IsToday(m.top.program.startSeconds)) then
-                    date = "Today " + dateConverter(startTime, "HH:mm a") + durationStr
+                    date = i18n_t(m.global.i18n, "Time.Today") + " " + dateConverter(startTime, i18n_t(m.global.i18n, "time.formatHours")) + durationStr
                 else if (IsToday(m.top.program.startSeconds + 86400)) then
                     ' Si al sumar un día la fecha es hoy, el inicio fue ayer
-                    date = "Yesterday " + dateConverter(startTime, "HH:mm a") + durationStr
+                    date = i18n_t(m.global.i18n, "Time.Yesterday") + " " + dateConverter(startTime, i18n_t(m.global.i18n, "time.formatHours")) + durationStr
                 else if (IsToday(m.top.program.startSeconds - 86400)) then
                     ' Si al restar un día la fecha es hoy, el inicio será mañana
-                    date = "Tomorrow " + dateConverter(startTime, "HH:mm a") + durationStr
+                    date = i18n_t(m.global.i18n, "Time.Tomorrow") + " " + dateConverter(startTime, i18n_t(m.global.i18n, "time.formatHours")) + durationStr
                 else
-                    date = dateConverter(startTime, "MM/dd/yyyy") + " - " + dateConverter(startTime, "HH:mm a") + durationStr
+                    date = dateConverter(startTime, i18n_t(m.global.i18n, "time.formatDate")) + " - " + dateConverter(startTime, i18n_t(m.global.i18n, "time.formatHours")) + durationStr
                 end if
                 
                 if date <> invalid then 
@@ -208,7 +195,6 @@ end sub
 
 ' Limpia el contenedor del programa
 sub __clearProgramContainer()
-    
     if m.programTitle.visible then 
         m.programTitle.text = ""
         m.programTitle.height = m.HeightToHide

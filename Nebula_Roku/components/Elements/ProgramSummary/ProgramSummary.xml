@@ -23,7 +23,6 @@
       layoutDirection="vert"
       horizAlignment="left"
       vertAlignment="top"
-      translation="[0, 0]"
       itemSpacings="[10]">
       <Label 
         id="programTitle"
