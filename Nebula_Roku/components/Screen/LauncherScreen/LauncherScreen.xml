@@ -17,6 +17,7 @@
   <script type="text/brightscript" uri="pkg:/source/Services/Platforms.brs" />
   <script type="text/brightscript" uri="pkg:/source/Services/AutoUpgrade.brs" />
   <script type="text/brightscript" uri="pkg:/source/Services/Auth.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Services/DomainManager.brs" />
 
   <interface>
     <!-- Paramentros de Salida -->
@@ -30,6 +31,8 @@
       id="logo"
       loadDisplayMode="scaleToFit"
       uri="pkg:/images/client/logo.png" />
+
+      <CdnErrorDialog id="cdnErrorDialog" visible="false" />
       
       <!-- Versión -->
       <Label

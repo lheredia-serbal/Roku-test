@@ -10,6 +10,7 @@
     "previous": "Previous",
     "ready": "Done",
     "retry": "Retry",
+    "tryAgain": "Try again",
     "save": "Save",
     "yes": "YES",
     "continueSee": "Continue watching",
@@ -143,7 +144,12 @@
       "youCurrentlyDoNotHavePlan": "You currently do not have a plan that allows viewing on this type of device. Please contact the [ProductName] team.",
       "youCurrentlyDoNotHaveAnyActiveSubscriptions": "You currently do not have any active subscriptions. Please contact the [ProductName] team.",
       "youCurrentlyDoNotHaveSufficientBalance": "You currently do not have sufficient balance to continue watching content.",
-      "serverConnectionProblems": "Server connection problems..."
+      "serverConnectionProblems": "Server connection problems...",
+      "cdnError": {
+        "title": "The connection could not be established",
+        "message": "We encountered a problem while trying to connect. We recommend checking your internet connection and trying again in a few moments.",
+        "code": "Error code: [Code]"
+      }
     },
     "exitModal": {
       "title": "Go out",

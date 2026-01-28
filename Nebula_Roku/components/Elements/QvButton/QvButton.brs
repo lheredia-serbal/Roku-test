@@ -12,6 +12,9 @@ sub init()
   m.scaleInfo = m.global.scaleInfo
 
   m.top.observeField("focusedChild", "onFocusChange")
+  if m.global <> invalid and m.global.hasField("colors") then
+    m.global.observeField("colors", "onGlobalColorsChanged")
+  end if
 
   m.HeightToHide = 1
   m.defaultHeight = 0
@@ -138,12 +141,25 @@ end sub
 
 ' Define los colores iniciales del componente
 sub __initColors()
-  m.bgColorSelected = m.global.colors.PRIMARY
-  m.bgColorTransparent = m.global.colors.TRANSPARENT
-  borderColor = m.global.colors.WHITE
+  primaryColor = "0xFFFFFFFF"
+  transparentColor = "0x00000000"
+  whiteColor = "0xFFFFFFFF"
+  if m.global <> invalid and m.global.colors <> invalid then
+    if m.global.colors.PRIMARY <> invalid then primaryColor = m.global.colors.PRIMARY
+    if m.global.colors.TRANSPARENT <> invalid then transparentColor = m.global.colors.TRANSPARENT
+    if m.global.colors.WHITE <> invalid then whiteColor = m.global.colors.WHITE
+  end if
+
+  m.bgColorSelected = primaryColor
+  m.bgColorTransparent = transparentColor
+  borderColor = whiteColor
   m.rectLeft.color = borderColor
   m.rectTop.color = borderColor
   m.rectRight.color = borderColor
   m.rectBottom.color = borderColor
   m.btnText.color = borderColor
+end sub
+
+sub onGlobalColorsChanged()
+  __initColors()
 end sub

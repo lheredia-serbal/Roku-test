@@ -5,13 +5,29 @@ sub init()
     ball2 = m.top.findNode("ball2")
     ball3 = m.top.findNode("ball3")
 
-    primaryColor = m.global.colors.PRIMARY
-
-    ball1.blendColor = primaryColor
-    ball2.blendColor = primaryColor
-    ball3.blendColor = primaryColor
+     m.balls = [ball1, ball2, ball3]
+    __applyColors()
 
     m.top.observeField("visible", "onVisibleChange")
+
+    if m.global <> invalid and m.global.hasField("colors") then
+        m.global.observeField("colors", "onGlobalColorsChanged")
+    end if
+end sub
+
+sub __applyColors()
+    primaryColor = "0xFFFFFFFF"
+    if m.global <> invalid and m.global.colors <> invalid and m.global.colors.PRIMARY <> invalid then
+        primaryColor = m.global.colors.PRIMARY
+    end if
+
+    for each ball in m.balls
+        ball.blendColor = primaryColor
+    end for
+end sub
+
+sub onGlobalColorsChanged()
+    __applyColors()
 end sub
  
 ' Se ejecuta cuando cambia la propiedad "visible" del componente

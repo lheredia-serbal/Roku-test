@@ -19,7 +19,11 @@ sub init()
   'find Nodes
   m.versionLabel = m.top.findNode("versionLabel")
   m.copyrightLabel = m.top.findNode("copyrightLabel")
+  m.cdnErrorDialog = m.top.findNode("cdnErrorDialog")
+  m.cdnErrorDialog.observeField("retry", "onCdnErrorRetry")
   logo = m.top.findNode("logo")
+  m.simulateCdnFirstFailure = getSimulateCdnFirstFailure()
+  m.cdnFirstFailureTriggered = false
 
   logoWidth = scaleValue(700, scaleInfo)
   logoHeight = ((logoWidth/16)*9)
@@ -40,8 +44,18 @@ sub init()
   __startCdnInitialization()
 end sub
 
-sub __startCdnInitialization()
+sub __startCdnInitialization(keepDialogVisible = false)
+  if not keepDialogVisible then
+    __hideCdnErrorDialog()
+  end if
   m.cdnUrls = getCdnConfigUrls()
+
+  if m.simulateCdnFirstFailure and not m.cdnFirstFailureTriggered then
+    m.cdnFirstFailureTriggered = true
+    m.cdnUrls[0] = m.cdnUrls[0] + "1"
+    m.cdnUrls[1] = m.cdnUrls[1] + "1"
+  end if
+
   m.cdnIndex = 0
   __requestCdnConfig()
 end sub
@@ -97,6 +111,7 @@ sub onClientsApiHealthResponse()
     addAndSetFields(m.global, {activeApiUrl: baseUrl})
     m.apiUrl = baseUrl
     m.clientsHealthRequestManager = clearApiRequest(m.clientsHealthRequestManager)
+    __hideCdnErrorDialog()
     __valdiateInternetConnection()
   else
     printError("ClientsApiUrl health: ", m.clientsHealthRequestManager.errorResponse)
@@ -120,17 +135,28 @@ function __findResourceByName(resources, name)
 end function
 
 sub __showCdnErrorDialog()
-  if m.dialog <> invalid then return
-  m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.global.i18n, "shared.errorComponent.serverConnectionProblems"), "onCdnErrorDialogClosed", [i18n_t(m.global.i18n, "button.retry")])
+  if m.cdnErrorDialog = invalid then return
+  m.cdnErrorDialog.errorCode = getErrorCodeDemo()
+  m.cdnErrorDialog.showSpinner = false
+  m.cdnErrorDialog.buttonDisabled = false
+  m.cdnErrorDialog.visible = true
 end sub
 
-sub onCdnErrorDialogClosed(_event)
-  m.dialog.visible = false
-  m.dialog.unobserveField("buttonSelected")
-  m.top.removeChild(m.dialog)
-  m.dialog = invalid
+sub __hideCdnErrorDialog()
+  if m.cdnErrorDialog <> invalid then
+    m.cdnErrorDialog.showSpinner = false
+    m.cdnErrorDialog.buttonDisabled = false
+    m.cdnErrorDialog.visible = false
+  end if
+end sub
 
-  __startCdnInitialization()
+sub onCdnErrorRetry()
+  if m.cdnErrorDialog = invalid then return
+  if not m.cdnErrorDialog.retry then return
+  m.cdnErrorDialog.retry = false
+  m.cdnErrorDialog.showSpinner = true
+  m.cdnErrorDialog.buttonDisabled = true
+  __startCdnInitialization(true)
 end sub
 
 ' Procesa la respuesta al validar la conexion contra las APIs

@@ -10,6 +10,7 @@
     "previous": "Anterior",
     "ready": "Listo",
     "retry": "Reintentar",
+    "tryAgain": "Reintentar",
     "save": "Guardar",
     "yes": "SI",
     "continueSee": "Continuar viendo",
@@ -44,7 +45,7 @@
     "copyright": "@copyright {{year}} - Qvix Solutions"
   },
   "configPage": {
-    "title": "Información de dispositivo",
+    "title": "Información del dispositivo",
     "titleEmail": "Correo electrónico: ",
     "titleName": "Nombre de usuario: ",
     "titleDiveId": "ID de dispositivo: ",
@@ -143,7 +144,12 @@
       "youCurrentlyDoNotHavePlan": "Actualmente no tienes un plan que te permita ver contenido en este tipo de dispositivo. Contacta con el equipo de [ProductName].",
       "youCurrentlyDoNotHaveAnyActiveSubscriptions": "Actualmente no tienes ninguna suscripción activa. Contacta con el equipo de [ProductName].",
       "youCurrentlyDoNotHaveSufficientBalance": "Actualmente no tienes saldo suficiente para continuar viendo contenido.",
-      "serverConnectionProblems": "Problemas de conexión al servidor..."
+      "serverConnectionProblems": "Problemas de conexión al servidor...",
+      "cdnError": {
+        "title": "No se pudo establecer la conexión",
+        "message": "Tuvimos un problema al intentar conectarnos. Recomendamos revisar tu conexión a internet e intentarlo nuevamente en unos momentos.",
+        "code": "Código de error: [Code]"
+      }
     },
     "exitModal": {
       "title": "Salir",

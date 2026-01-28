@@ -10,6 +10,7 @@
     "previous": "Anterior",
     "ready": "Aceitar",
     "retry": "Tentar novamente",
+    "tryAgain": "Tentar novamente",
     "save": "Aceitar",
     "yes": "SIM",
     "continueSee": "Continuar assistindo",
@@ -143,7 +144,12 @@
       "youCurrentlyDoNotHavePlan": "Atualmente, você não possui um plano que permita a visualização neste tipo de dispositivo. Entre em contato com a equipe do [ProductName].",
       "youCurrentlyDoNotHaveAnyActiveSubscriptions": "Atualmente você não possui nenhuma assinatura ativa. Entre em contato com a equipe do [ProductName].",
       "youCurrentlyDoNotHaveSufficientBalance": "Você não possui saldo suficiente para continuar assistindo ao conteúdo.",
-      "serverConnectionProblems": "Problemas de conexão com o servidor..."
+      "serverConnectionProblems": "Problemas de conexão com o servidor...",
+        "cdnError": {
+        "title": "Não foi possível estabelecer a conexão",
+        "message": "Encontramos um problema ao tentar conectar. Recomendamos verificar sua conexão com a internet e tentar novamente em alguns instantes.",
+        "code": "Código de erro: [Code]"
+      }
     },
     "exitModal": {
       "title": "Sair",
