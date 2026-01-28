@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<component 
+    name="APIRequestManager" 
+    extends="Task">
+    <script type="text/brightscript" uri="APIRequestManager.brs" />
+      <script type="text/brightscript" uri="pkg:/source/Utils/i18nUtils.brs" />
+    <script type="text/brightscript" uri="pkg:/source/Utils.brs" />
+    <script type="text/brightscript" uri="pkg:/source/Storage.brs" />
+
+    <script type="text/brightscript" uri="pkg:/source/Services/Tokens.brs" />
+
+    <interface>
+        <!-- Paramentros de Entrada -->
+        <field id="url" type="string" />
+        <field id="method" type="string" />
+        <field id="body" type="string" />
+        <field id="token" type="string" />
+        <field id="publicApi" type="boolean" value="false" />
+
+        <!-- Paramentros de Entrada/Salida -->
+        <field id="dataAux" type="string" />
+
+        <!-- Paramentros de Salida -->
+        <field id="idRequest" type="integer" value="0"/>
+        <field id="statusCode" type="integer" value="0"/>
+        <field id="response" type="string" />
+        <field id="errorResponse" type="string" />
+    </interface>
+</component>

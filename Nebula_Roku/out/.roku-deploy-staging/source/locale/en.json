@@ -1,0 +1,160 @@
+{
+  "button": {
+    "back": "Back",
+    "backToHome": "Back to home",
+    "ok": "OK",
+    "cancel": "Cancel",
+    "close": "Close",
+    "next": "Next",
+    "no": "NO",
+    "previous": "Previous",
+    "ready": "Done",
+    "retry": "Retry",
+    "save": "Save",
+    "yes": "YES",
+    "continueSee": "Continue watching",
+    "exit": "Exit"
+  },
+  "time": {
+    "endsInHoursMin": "Ends in {{hours}}h {{minutes}}m",
+    "endsInMin": "Ends in {{minutes}} min",
+    "endsIn": "Ends in {{time}}",
+    "live": "Live",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "tomorrow": "Tomorrow",
+    "january": "January",
+    "february": "February",
+    "march": "March",
+    "april": "April",
+    "may": "May",
+    "june": "June",
+    "july": "July",
+    "august": "August",
+    "september": "September",
+    "october": "October",
+    "november": "November",
+    "december": "December",
+    "formatHours": "HH:mm a",
+    "formatDate": "MM/dd/yyyy",
+    "formatDateAndHours": "MM/dd/yy hh:mm a",
+    "formatDateAndTimeSpacing": "dd MMMM yyyy hh:mm a"
+  },
+  "launcherScreen": {
+    "copyright": "@copyright {{year}} - Qvix Solutions"
+  },
+  "configPage": {
+    "title": "Device information",
+    "titleEmail": "Email: ",
+    "titleName": "Username: ",
+    "titleDiveId": "Device ID: ",
+    "titleSerialNumber": "Serial number: ",
+    "titleVersion": "Version: ",
+    "orgName": "Qvix Solutions"
+  },
+  "content": {
+    "menuComponent": {
+      "changeProfile": "Change profile",
+      "Setting": "Setting",
+      "exit": "Exit",
+      "logout": "Logout"
+    },
+    "contentPage": {
+      "notDisplayTitle": "Nothing here...",
+      "notDisplayContect": "There is currently no content to display in this section. This may be because you do not have an active subscription or there is no content available, please contact us."
+    }
+  },
+  "loginPage": {
+    "titleUser": "User: ",
+    "enterYourUser": "Enter your user",
+    "password": "Password: ",
+    "enterYourPassword": "Enter your password",
+    "errorForm": {
+      "unAuthorized": "Incorrect user or password",
+      "notConfirmed": "unconfirmed account",
+      "notActivated": "Account not activated by administrator",
+      "unhandled": "Error processing the request",
+      "passwordRequired": "Password is required!",
+      "userRequired": "User is required!",
+      "invalidAccount": "Invalid user or password"
+    }
+  },
+  "errorPlanSession": {
+    "killer": "This session was closed on {{date}} by this device:",
+    "manyPeople": "There are many people using your account, to continue viewing, you must close an account and try again."
+  },
+  "player": {
+    "guide": {
+      "availableToView": "Available to watch",
+      "now": "NOW"
+    },
+    "video": {
+      "pause": "Pause",
+      "play": "Play",
+      "restart": "Restart",
+      "goLive": "Go Live",
+      "guide": "Guide"
+    },
+    "playerPage": {
+      "connecting": "Connecting Signal...",
+      "askHere": "Are you still there?"
+    }
+  },
+  "profiles": {
+    "confirmDeleteModal": {
+      "title": "Delete profile",
+      "askDelete": "Are you sure you want to delete the profile?"
+    },
+    "profilePage": {
+      "askTitle": "Who is watching?",
+      "titleButton": "Manage profiles",
+      "addProfile": "Add profile",
+      "EditProfile": "Edit profile",
+      "deleteProfile": "Delete profile",
+      "name": "Name",
+      "chooseAvatar": "Choose an avatar",
+      "error": {
+        "nameRequired": "The name is required",
+        "avatarRequired": "You must choose an avatar"
+      }
+    }
+  },
+  "programDetail": {
+    "button": {
+      "watch": "Watch",
+      "continue": "Continue",
+      "restart": "Restart"
+    }
+  },
+  "autoUpgrade": {
+    "title": "Update available",
+    "message": "A new version is available.",
+    "mandatoryMessage": "You must update the version to continue.",
+    "remindLater": "Remind me later"
+  },
+  "shared": {
+    "errorComponent": {
+      "notFound": "Information is not available",
+      "unhandled": "Oops! An error has occurred.",
+      "connection": "Server connection error",
+      "extendedMessage": "If the error persists please contact us.",
+      "anErrorOcurred": "An error occurred.",
+      "weAreSorry": "We are sorry...",
+      "youCurrentlyDoNotHavePlan": "You currently do not have a plan that allows viewing on this type of device. Please contact the [ProductName] team.",
+      "youCurrentlyDoNotHaveAnyActiveSubscriptions": "You currently do not have any active subscriptions. Please contact the [ProductName] team.",
+      "youCurrentlyDoNotHaveSufficientBalance": "You currently do not have sufficient balance to continue watching content.",
+      "serverConnectionProblems": "Server connection problems..."
+    },
+    "exitModal": {
+      "title": "Go out",
+      "askExit": "Are you sure you want to exit?",
+      "askLogout": "Are you sure you want to log out on this device?"
+    },
+    "parentalControlModal": {
+      "title": "Enter your PIN",
+      "error": {
+        "invalid": "Invalid PIN"
+      }
+    }
+  }
+}

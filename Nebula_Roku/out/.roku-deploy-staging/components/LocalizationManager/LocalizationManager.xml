@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<component name="LocalizationManager" extends="Node">
+    <interface>
+        <field id="language" type="string"/>
+        <!-- 👇 EXponer el diccionario a otros nodos -->
+        <field id="dict" type="assocarray" />
+        <field id="fallbackDict" type="assocarray" />
+    </interface>
+
+    <script type="text/brightscript" uri="pkg:/source/Utils.brs" />
+    <script type="text/brightscript" uri="pkg:/source/Utils/i18nUtils.brs" />
+    <script type="text/brightscript" uri="LocalizationManager.brs" />
+</component>

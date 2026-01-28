@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<component 
+  name="LauncherScreen" 
+  extends="Group" 
+  xsi:noNamespaceSchemaLocation="https://devtools.web.roku.com/schema/RokuSceneGraph.xsd">
+  
+  <script type="text/brightscript" uri="LauncherScreen.brs"/>
+  <script type="text/brightscript" uri="pkg:/source/Config.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Utils/i18nUtils.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Utils.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Enums.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Storage.brs" />
+  <script type="text/brightscript" uri="pkg:/source/BasicColor.brs" />
+
+  <script type="text/brightscript" uri="pkg:/source/Services/Health.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Services/Platforms.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Services/AutoUpgrade.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Services/Auth.brs" />
+
+  <interface>
+    <!-- Paramentros de Salida -->
+    <field id="finished" alwaysnotify="true" type="boolean" value="false" />
+    <field id="forceExit" alwaysnotify="true" type="boolean" value="false" />
+  </interface>
+  
+  <children>
+    <!-- Logo en el centro -->
+    <Poster
+      id="logo"
+      loadDisplayMode="scaleToFit"
+      uri="pkg:/images/client/logo.png" />
+      
+      <!-- Versión -->
+      <Label
+        id="versionLabel"
+        horizAlign="center"
+        font="font:SmallestSystemFont"/>
+
+      <!-- Copyright -->
+      <Label
+        id="copyrightLabel"
+        horizAlign="center"
+        font="font:TinySystemFont" />
+  </children>
+</component>

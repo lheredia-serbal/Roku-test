@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<component 
+  name="ProgramDetailScreen" 
+  extends="Group" 
+  xsi:noNamespaceSchemaLocation="https://devtools.web.roku.com/schema/RokuSceneGraph.xsd">
+
+  <script type="text/brightscript" uri="ProgramDetailScreen.brs" />
+  <script type="text/brightscript" uri="pkg:/source/StreamingConstants.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Storage.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Utils/i18nUtils.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Utils.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Utils/DateFunctions.brs" />
+  <script type="text/brightscript" uri="pkg:/source/CarouselConstants.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Enums.brs" />
+
+  <script type="text/brightscript" uri="pkg:/source/Services/ParentalControl.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Services/Streamings.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Services/Programs.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Services/Watch.brs" />
+
+  <script type="text/brightscript" uri="pkg:/source/Services/ActionLogs.brs" />
+  
+  <interface>
+    <!-- Paramentros de Entrada -->
+    <field id="loading" type="node" />
+    <field id="onFocus" type="boolean" value="false" onChange="initFocus" />
+    <field id="data" type="string" onChange="initData" />
+    <field id="isOpenByPlayer" type="boolean" value="false" />
+
+    <!-- Paramentros de entrada/Salida -->
+    <field id="logout" alwaysnotify="true" type="boolean" value="false" onChange="onLogoutChange" />
+    
+    <!-- Paramentros de Salida -->
+    <field id="streaming" type="string" />
+    <field id="programOpenInPlayer" type="string" />
+    <field id="pendingStreamingSession" type="string" />
+    <field id="onBack" alwaysnotify="true" type="boolean" value="false" />
+  </interface>
+
+  <children>
+    <Poster 
+      id="programImageBackground" 
+      loadDisplayMode="scaleToZoom"
+      uri="pkg:/images/client/info_gradient.png" />
+
+    <Poster 
+      id="infoGradient" 
+      loadDisplayMode="scaleToFit"
+      uri="pkg:/images/client/info_gradient.png" />
+      
+    <!-- Program Container -->
+    <LayoutGroup 
+      id="programDetailContent"
+      layoutDirection="vert"
+      horizAlignment="custom"
+      vertAlignment="top"
+      itemSpacings="[20]"> 
+      <LayoutGroup 
+        layoutDirection="horiz"
+        horizAlignment="left"
+        vertAlignment="top"
+        itemSpacings="[30]"> 
+
+         <Group id="programImageGroup" translation="[0,0]">
+          <Poster 
+            id="programImage"
+            translation="[0,0]"
+            loadDisplayMode="scaleToZoom"
+            visible="false"
+          />
+
+          <LayoutGroup
+            id="programTitleContainerByError"
+            layoutDirection="vert"
+            horizAlignment="center"
+            vertAlignment="center"
+            visible="false" >
+            <Label 
+              id="programTitleError"  
+              wrap="true"
+              maxLines="3"
+              vertAlign="center"
+              horizAlign="center"
+              font="font:MediumSystemFont" />
+          </LayoutGroup>
+        </Group>
+
+        <LayoutGroup 
+          layoutDirection="vert"
+          horizAlignment="left"
+          vertAlignment="top"
+          itemSpacings="[10]">
+          
+          <ProgramSummary id="programInfo" visible="false" width="50"/>
+          
+          <LayoutGroup 
+            id="actionsBtn"
+            layoutDirection="horiz"
+            horizAlignment="left"
+            vertAlignment="top"
+            itemSpacings="[10]">
+          </LayoutGroup>
+
+          <Rectangle
+            id="creditsSpacer"
+            width="1"
+            height="10"
+            opacity="0" >
+          </Rectangle>
+
+          <LayoutGroup
+            id="creditsContainer"
+            layoutDirection="vert"
+            horizAlignment="left"
+            vertAlignment="top"
+            itemSpacings="[20]" >
+          </LayoutGroup>
+
+        </LayoutGroup>
+        
+      </LayoutGroup>
+
+      <!-- carousel de relacionados -->
+      <Group id="relatedContainer" visible="false">
+        <Carousel id="related"/>
+        <SelectionBox id="selectedIndicator" visible="false"/>
+      </Group>
+    </LayoutGroup>
+
+    <!-- Contenedor para Error que no hay contenido -->
+    <LayoutGroup 
+      id="notFoundLayoutGroup"
+      visible="false"
+      layoutDirection="vert"
+      horizAlignment="center"
+      vertAlignment="center">
+      <Label
+        id="notFoundTitle"
+        visible="true"
+        wrap="false" 
+        maxLines="1" 
+        horizAlign="center"
+        font="font:MediumSystemFont" />
+    </LayoutGroup>
+
+
+    <!-- Animations -->
+    <Animation
+      id="liveAnimation"
+      duration="2"
+      repeat="true"
+      optional="true"
+      easeFunction="linear" >
+      <FloatFieldInterpolator
+        fieldToInterp="programLive.opacity"
+        key="[0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]"
+        keyValue="[1.0, 0.8, 0.6, 0.4, 0.2, 0.0, 0.0, 0.2, 0.4, 0.8, 1.0]" />
+    </Animation>
+
+  </children>
+</component>

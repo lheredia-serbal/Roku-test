@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<component 
+  name="QvImageButton" 
+  extends="Group" 
+  focusable="true"
+  xsi:noNamespaceSchemaLocation="https://devtools.web.roku.com/schema/RokuSceneGraph.xsd">
+
+  <script type="text/brightscript" uri="QvImageButton.brs"/>
+  <script type="text/brightscript" uri="pkg:/source/Utils.brs" />
+
+  <interface>
+    <!-- Paramentros de Entrada -->
+    <field id="uri" type="string" onChange="updateUri" />
+    <field id="tooltip" type="string" onChange="updateTooltip" />
+
+    <!-- Paramentros de Entrada/Salida -->
+    <field id="disable" type="boolean" value="false" onChange="onChangeDisable" />
+
+    <!-- Paramentros de Salida -->    
+    <field id="focusDown" type="node"/>
+    <field id="focusUp" type="node"/>
+    <field id="focusLeft" type="node"/>
+    <field id="focusRight" type="node"/>
+  </interface>
+
+  <children>
+      
+    <!-- item del fondo -->
+    <Rectangle
+      id="buttonBg"
+      translation="[0, 0]"
+      focusable="true"
+      color="0x00000000" >
+      <Poster 
+        id="btnImage"
+        loadDisplayMode="scaleToFit" />
+    </Rectangle>
+
+    <!-- Bordes del cuadro con separación de 2 píxeles -->
+    <Group id="borderContainer" translation="[-1,-1]" visible="false">
+      <Rectangle id="rectLeft" />  <!-- Izquierda -->
+      <Rectangle id="rectTop" />  <!-- Superior -->
+      <Rectangle id="rectRight" /> <!-- Derecha -->
+      <Rectangle id="rectBottom" /> <!-- Inferior -->
+    </Group>
+
+    <Label 
+      id="btnTooltip"
+      font="font:TinySystemFont"
+      horizAlign="center"
+      vertAlign="center"
+      maxLines="1"       
+      visible="false" />
+  </children>
+</component>

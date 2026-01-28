@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<component 
+    name="SquareFeaturedProgramItem" 
+    extends="Group" 
+    xsi:noNamespaceSchemaLocation="https://devtools.web.roku.com/schema/RokuSceneGraph.xsd">
+    
+    <script type="text/brightscript" uri="SquareFeaturedItem.brs"/>
+    <script type="text/brightscript" uri="pkg:/source/Utils.brs" />
+    <script type="text/brightscript" uri="pkg:/source/CarouselConstants.brs" />
+
+    <interface>
+        <!-- Paramentros de Entrada -->
+        <field id="itemContent" type="node"   onChange="itemContentChanged" />
+        <field id="currRect"    type="rect2d" onChange="currRectChanged" />
+        <field id="groupHasFocus" type="boolean" onChange="focusPercentChanged" />
+        <field id="focusPercent" type="float" onChange="focusPercentChanged" />
+    </interface>
+
+    <children>
+        <Rectangle id="theRect" color="#000000">
+            <Group
+                id="contentGroup"
+                translation="[12, 14]">
+                <LayoutGroup
+                    layoutDirection="horiz"
+                    horizAlignment="left"
+                    vertAlignment="top">
+
+                    <LayoutGroup
+                        layoutDirection="vert"
+                        horizAlignment="left"
+                        vertAlignment="center"
+                        itemSpacings="[1]">
+                        <Label 
+                            id="title" 
+                            width="190" 
+                            wrap="true" 
+                            maxLines="2" 
+                            visible="false"
+                            lineSpacing="2"
+                            font="font:TinySystemFont"/>
+                            
+                        <Label 
+                            id="category" 
+                            width="190" 
+                            wrap="false" 
+                            maxLines="1" 
+                            visible="false"
+                            font="font:TinySystemFont"/>
+
+                        <Label 
+                            id="dateTime" 
+                            width="190" 
+                            wrap="false" 
+                            maxLines="1" 
+                            visible="false"
+                            font="font:TinySystemFont"/>
+                    </LayoutGroup> 
+
+                    <Rectangle width="73.34" height="60" opacity="0.0"/>
+                </LayoutGroup>
+                
+                <LayoutGroup
+                    id="progressGroup"
+                    layoutDirection="horiz"
+                    horizAlignment="left"
+                    vertAlignment="top">
+                    <Rectangle id="progressLeft" height="3"/>
+                    <Rectangle id="progressRight" height="3"/>
+                </LayoutGroup>
+            </Group>
+
+            <Poster 
+                id="imageItem" 
+                loadDisplayMode="scaleToZoom"/>
+
+        </Rectangle>
+        <Rectangle id="opacityLayout" color="#000000" opacity="0.33" />
+    </children>
+</component>
