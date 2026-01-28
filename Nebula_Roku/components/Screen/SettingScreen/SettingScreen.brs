@@ -6,6 +6,7 @@ sub init()
   m.serialLabel   = m.top.findNode("serialLabel")
   m.deviceIdLabel = m.top.findNode("deviceIdLabel")
   m.versionLabel  = m.top.findNode("versionLabel")
+  m.orgNameLabel  = m.top.findNode("orgNameLabel")
   m.titleLabel  = m.top.findNode("titleLabel")
 end sub
 
@@ -25,7 +26,8 @@ sub initFocus()
     m.serialLabel.text = i18n_t(m.global.i18n, "configPage.titleSerialNumber") + m.device.serialNumber
     m.deviceIdLabel.text = i18n_t(m.global.i18n, "configPage.titleDiveId") + m.device.id.ToStr()
   
-    m.versionLabel.text = i18n_t(m.global.i18n, "configPage.titleVersion") + m.device.appVersion + " - " + i18n_t(m.global.i18n, "configPage.orgName")
+    m.versionLabel.text = i18n_t(m.global.i18n, "configPage.titleVersion") + m.device.appVersion + " " + getCurrentInitalConfig() + "/" + getCode()
+    m.orgNameLabel.text = i18n_t(m.global.i18n, "configPage.orgName")
 
     if m.apiUrl = invalid then m.apiUrl = getConfigVariable(m.global.configVariablesKeys.API_URL) 
     if m.beaconUrl = invalid then m.beaconUrl = getConfigVariable(m.global.configVariablesKeys.BEACON_URL) 

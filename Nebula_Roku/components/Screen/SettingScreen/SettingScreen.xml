@@ -13,6 +13,7 @@
   <script type="text/brightscript" uri="pkg:/source/Storage.brs" />
 
   <script type="text/brightscript" uri="pkg:/source/Services/ActionLogs.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Services/DomainManager.brs" />
 
   <interface>
     <!-- Paramentros de Entrada -->
@@ -53,9 +54,14 @@
         id="deviceIdLabel"
         font="font:SmallestSystemFont" />
 
-      <!-- Versión app y organización -->
+      <!-- Versión app -->
       <Label
         id="versionLabel"
+        font="font:SmallestSystemFont" />
+
+      <!-- Organización -->
+      <Label
+        id="orgNameLabel"
         font="font:SmallestSystemFont" />
     </LayoutGroup>
   </children>
