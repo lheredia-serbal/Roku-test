@@ -60,6 +60,8 @@ function __getDomainManagerState() as Object
             _fetchInitialConfig: true
             _existSecondary: false
             _currentInitialConfig: "Primary"
+            _initialConfigStatus: "idle"
+            _initialConfigCallback: invalid
         }
     end if
 
@@ -79,10 +81,15 @@ function getConfig(cdnRequestManager as Object, url as String, responseHandler a
     return sendApiRequest(cdnRequestManager, url, "GET", responseHandler, invalid, invalid, true)
 end function
 
-function getInitialConfiguration(mode as String) as Object
+function getInitialConfiguration(mode as String, responseHandler = invalid as Dynamic) as Object
     ' Obtiene el JSON inicial desde CDN (Primary/Secondary) y prepara el estado.
     state = __getDomainManagerState()
     state._mode = mode
+    state._initialConfigStatus = "pending"
+    state._initialConfigCallback = responseHandler
+    if m.global <> invalid then
+        addAndSetFields(m.global, { domainManagerInitStatus: "pending" })
+    end if
     state._initialConfigRequestManager = getConfig(state._initialConfigRequestManager, state.initialConfigPrimaryUrl, "onInitialConfigPrimaryResponse")
     return state._initialConfigRequestManager
 end function
@@ -130,6 +137,7 @@ sub restartConfiguration()
     state = __getDomainManagerState()
     state._mode = "Primary"
     state._fetchInitialConfig = true
+    state._initialConfigStatus = "idle"
 end sub
 
 function getEnableBeaconLogs() as Boolean
@@ -174,6 +182,30 @@ function getVariable(key as String) as String
     return ""
 end function
 
+function getResourceByName(name as String) as Object
+    ' Obtiene el resource desde el listado usando el nombre.
+    state = __getDomainManagerState()
+    if state._resources = invalid then return invalid
+    for each item in state._resources
+        if item <> invalid and item.name = name then return item
+    end for
+    return invalid
+end function
+
+function getInitialConfigStatus() as String
+    ' Retorna el estado del último intento de configuración inicial.
+    state = __getDomainManagerState()
+    return state._initialConfigStatus
+end function
+
+sub __notifyInitialConfigResult(success as Boolean)
+    state = __getDomainManagerState()
+    if state._initialConfigCallback <> invalid then
+        m.top.callFunc(state._initialConfigCallback, { success: success })
+        state._initialConfigCallback = invalid
+    end if
+end sub
+
 function validateErrorDNS(status as Integer, message as String) as Boolean
     ' Valida si el error corresponde a un problema de DNS comparando el catálogo HTTP.
     state = __getDomainManagerState()
@@ -200,6 +232,8 @@ sub onInitialConfigPrimaryResponse()
             state._fetchInitialConfig = false
             state._currentInitialConfig = "Primary"
             state._initialConfigSuccess = true
+            state._initialConfigStatus = "success"
+            __notifyInitialConfigResult(true)
             return
         end if
     end if
@@ -220,12 +254,16 @@ sub onInitialConfigSecondaryResponse()
             state._fetchInitialConfig = false
             state._currentInitialConfig = "Secondary"
             state._initialConfigSuccess = true
+            state._initialConfigStatus = "success"
+            __notifyInitialConfigResult(true)
             return
         end if
     end if
 
     state._initialConfigRequestManager = clearApiRequest(state._initialConfigRequestManager)
     state._initialConfigSuccess = false
+    state._initialConfigStatus = "failed"
+    __notifyInitialConfigResult(false)
 end sub
 
 sub setResources(response as Object)
