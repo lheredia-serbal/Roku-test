@@ -271,7 +271,22 @@ sub __login(user as String, password as String)
     }
     
     m.top.loading.visible = true  
-    m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlAuthCredentialsLogin(m.apiUrl), "POST", "onLoginResponse", FormatJson(credentials), invalid, true)
+    action = {
+      apiRequestManager: m.apiRequestManager
+      url: urlAuthCredentialsLogin(m.apiUrl)
+      method: "POST"
+      responseMethod: "onLoginResponse"
+      body: FormatJson(credentials)
+      token: invalid
+      publicApi: true
+      dataAux: invalid
+      run: function() as Object
+        m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.body, m.token, m.publicApi, m.dataAux)
+        return { success: true, error: invalid }
+      end function
+    }
+    executeWithRetry(action, __getApiUrlRefreshAction(), ApiType().AUTH_API_URL)
+    m.apiRequestManager = action.apiRequestManager
   end if 
 end sub
 
@@ -294,7 +309,22 @@ end sub
 sub __saveActionLog(actionLog as object)
 
   if beaconTokenExpired() and m.apiUrl <> invalid then
-    m.apiLogRequestManager = sendApiRequest(m.apiLogRequestManager, urlActionLogsToken(m.apiUrl), "GET", "onActionLogTokenResponse", invalid, invalid, false, FormatJson(actionLog))
+    action = {
+      apiRequestManager: m.apiLogRequestManager
+      url: urlActionLogsToken(m.apiUrl)
+      method: "GET"
+      responseMethod: "onActionLogTokenResponse"
+      body: invalid
+      token: invalid
+      publicApi: false
+      dataAux: FormatJson(actionLog)
+      run: function() as Object
+        m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.body, m.token, m.publicApi, m.dataAux)
+        return { success: true, error: invalid }
+      end function
+    }
+    executeWithRetry(action, __getApiUrlRefreshAction(), ApiType().LOGS_API_URL)
+    m.apiLogRequestManager = action.apiRequestManager
   else
       __sendActionLog(actionLog)
   end if
@@ -321,11 +351,37 @@ sub __sendActionLog(actionLog as object)
   beaconToken = getBeaconToken()
 
   if (beaconToken <> invalid and m.beaconUrl <> invalid)
-    m.apiLogRequestManager = sendApiRequest(m.apiLogRequestManager, urlActionLogs(m.beaconUrl), "POST", "onActionLogResponse", FormatJson(actionLog), beaconToken, false)
+    action = {
+      apiRequestManager: m.apiLogRequestManager
+      url: urlActionLogs(m.beaconUrl)
+      method: "POST"
+      responseMethod: "onActionLogResponse"
+      body: FormatJson(actionLog)
+      token: beaconToken
+      publicApi: false
+      dataAux: invalid
+      run: function() as Object
+        m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.body, m.token, m.publicApi, m.dataAux)
+        return { success: true, error: invalid }
+      end function
+    }
+    executeWithRetry(action, __getApiUrlRefreshAction(), ApiType().LOGS_API_URL)
+    m.apiLogRequestManager = action.apiRequestManager
   end if
 end sub
 
 ' Limpiar la llamada del log
 sub onActionLogResponse() 
   m.apiLogRequestManager = clearApiRequest(m.apiLogRequestManager)
+end sub
+
+' Actualiza la URL de API antes de ejecutar el retry.
+function __getApiUrlRefreshAction() as Object
+  return {
+    run: __refreshApiUrl
+  }
+end function
+
+sub __refreshApiUrl()
+  m.apiUrl = getConfigVariable(m.global.configVariablesKeys.API_URL)
 end sub

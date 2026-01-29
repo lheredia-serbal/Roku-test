@@ -22,6 +22,8 @@ sub init()
   m.cdnErrorDialog = m.top.findNode("cdnErrorDialog")
   m.cdnErrorDialog.observeField("retry", "onCdnErrorRetry")
   logo = m.top.findNode("logo")
+  m.domainManagerTimer = m.top.findNode("domainManagerTimer")
+  m.domainManagerTimer.observeField("fire", "onDomainManagerTimerFire")
   m.simulateCdnFirstFailure = getSimulateCdnFirstFailure()
   m.cdnFirstFailureTriggered = false
 
@@ -53,51 +55,48 @@ sub __startCdnInitialization(keepDialogVisible = false)
   if m.simulateCdnFirstFailure and not m.cdnFirstFailureTriggered then
     m.cdnFirstFailureTriggered = true
     m.cdnUrls[0] = m.cdnUrls[0] + "1"
-    m.cdnUrls[1] = m.cdnUrls[1] + "1"
+    m.cdnUrls[1] = m.cdnUrls[1]
   end if
 
   m.cdnIndex = 0
-  __requestCdnConfig()
+
+  setConfigUrls(m.cdnUrls[0], m.cdnUrls[1])
+  getInitialConfiguration("Primary")
+  __startDomainManagerPolling()
 end sub
 
-sub __requestCdnConfig()
-  if m.cdnUrls = invalid or m.cdnIndex >= m.cdnUrls.count() then
+sub __startDomainManagerPolling()
+  if m.domainManagerTimer = invalid then return
+  m.domainManagerTimer.control = "start"
+end sub
+
+sub onDomainManagerTimerFire()
+  status = getInitialConfigStatus()
+  if status = "pending" or status = "idle" then return
+  m.domainManagerTimer.control = "stop"
+  if status = "success" then
+    __handleInitialConfigSuccess()
+  else
+    __showCdnErrorDialog()
+  end if
+end sub
+
+sub __handleInitialConfigSuccess()
+  resource = getResourceByName("ClientsApiUrl")
+  if resource = invalid or resource.primary = invalid or resource.secondary = invalid then
     __showCdnErrorDialog()
     return
   end if
 
-  m.cdnRequestManager = sendApiRequest(m.cdnRequestManager, m.cdnUrls[m.cdnIndex], "GET", "onCdnConfigResponse", invalid, invalid, true)
+  m.clientsApiCandidates = [resource.primary, resource.secondary]
+  m.clientsApiIndex = 0
+  __requestClientsApiHealth()
 end sub
 
-sub onCdnConfigResponse()
-  if valdiateStatusCode(m.cdnRequestManager.statusCode) then
-    response = ParseJson(m.cdnRequestManager.response)
-    m.cdnRequestManager = clearApiRequest(m.cdnRequestManager)
-
-    if response = invalid or response.resources = invalid then
-      __tryNextCdn()
-      return
-    end if
-
-    resource = __findResourceByName(response.resources, "ClientsApiUrl")
-    if resource = invalid or resource.primary = invalid or resource.secondary = invalid then
-      __tryNextCdn()
-      return
-    end if
-
-    m.clientsApiCandidates = [resource.primary, resource.secondary]
-    m.clientsApiIndex = 0
-    __requestClientsApiHealth()
-  else
-    printError("CDN config: ", m.cdnRequestManager.errorResponse)
-    m.cdnRequestManager = clearApiRequest(m.cdnRequestManager)
-    __tryNextCdn()
-  end if
-end sub
 
 sub __requestClientsApiHealth()
   if m.clientsApiCandidates = invalid or m.clientsApiIndex >= m.clientsApiCandidates.count() then
-    __tryNextCdn()
+    __showCdnErrorDialog()
     return
   end if
 
@@ -120,19 +119,6 @@ sub onClientsApiHealthResponse()
     __requestClientsApiHealth()
   end if
 end sub
-
-sub __tryNextCdn()
-  m.cdnIndex = m.cdnIndex + 1
-  __requestCdnConfig()
-end sub
-
-function __findResourceByName(resources, name)
-  if resources = invalid then return invalid
-  for each item in resources
-    if item.name = name then return item
-  end for
-  return invalid
-end function
 
 sub __showCdnErrorDialog()
   if m.cdnErrorDialog = invalid then return

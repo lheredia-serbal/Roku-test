@@ -248,7 +248,22 @@ sub onSelectItem()
       else 
         m.top.loading.visible = true
         watchSessionId = getWatchSessionId()
-        m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlWatchValidate(m.apiUrl, watchSessionId, m.itemSelected.redirectKey, m.itemSelected.redirectId), "GET", "onWatchValidateResponse")
+        action = {
+          apiRequestManager: m.apiRequestManager
+          url: urlWatchValidate(m.apiUrl, watchSessionId, m.itemSelected.redirectKey, m.itemSelected.redirectId)
+          method: "GET"
+          responseMethod: "onWatchValidateResponse"
+          body: invalid
+          token: invalid
+          publicApi: false
+          dataAux: invalid
+          run: function() as Object
+            m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.body, m.token, m.publicApi, m.dataAux)
+            return { success: true, error: invalid }
+          end function
+        }
+        executeWithRetry(action, __getApiUrlRefreshAction(), ApiType().CLIENTS_API_URL)
+        m.apiRequestManager = action.apiRequestManager
       end if 
       
     else
@@ -295,7 +310,22 @@ sub onLastWatchedResponse()
 
       m.itemSelected = resp
       watchSessionId = getWatchSessionId()
-      m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlWatchValidate(m.apiUrl, watchSessionId.toStr(), resp.key, resp.id), "GET", "onWatchValidateResponse")
+      action = {
+        apiRequestManager: m.apiRequestManager
+        url: urlWatchValidate(m.apiUrl, watchSessionId.toStr(), resp.key, resp.id)
+        method: "GET"
+        responseMethod: "onWatchValidateResponse"
+        body: invalid
+        token: invalid
+        publicApi: false
+        dataAux: invalid
+        run: function() as Object
+          m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.body, m.token, m.publicApi, m.dataAux)
+          return { success: true, error: invalid }
+        end function
+      }
+      executeWithRetry(action, __getApiUrlRefreshAction(), ApiType().CLIENTS_API_URL)
+      m.apiRequestManager = action.apiRequestManager
     else
       m.top.loading.visible = false
       statusCode = m.apiRequestManager.statusCode
@@ -339,7 +369,22 @@ sub onWatchValidateResponse()
       setWatchSessionId(resp.watchSessionId)
       setWatchToken(resp.watchToken)
       if m.itemSelected <> invalid then
-        m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlStreaming(m.apiUrl, m.itemSelected.redirectKey, m.itemSelected.redirectId), "GET", "onStreamingsResponse")
+        action = {
+          apiRequestManager: m.apiRequestManager
+          url: urlStreaming(m.apiUrl, m.itemSelected.redirectKey, m.itemSelected.redirectId)
+          method: "GET"
+          responseMethod: "onStreamingsResponse"
+          body: invalid
+          token: invalid
+          publicApi: false
+          dataAux: invalid
+          run: function() as Object
+            m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.body, m.token, m.publicApi, m.dataAux)
+            return { success: true, error: invalid }
+          end function
+        }
+        executeWithRetry(action, __getApiUrlRefreshAction(), ApiType().CLIENTS_API_URL)
+        m.apiRequestManager = action.apiRequestManager
       end if
     else 
       m.top.loading.visible = false
@@ -494,7 +539,22 @@ sub getProgramInfo()
       mainImageTypeId = m.carouselContainer.focusedChild.imageType.ToStr()
     end if
 
-    m.apiSummaryRequestManager = sendApiRequest(m.apiSummaryRequestManager, urlProgramSummary(m.apiUrl, m.itemfocused.redirectKey, m.itemfocused.redirectId, mainImageTypeId, getCarouselImagesTypes().SCENIC_LANDSCAPE), "GET", "onProgramSummaryResponse")
+    action = {
+      apiRequestManager: m.apiSummaryRequestManager
+      url: urlProgramSummary(m.apiUrl, m.itemfocused.redirectKey, m.itemfocused.redirectId, mainImageTypeId, getCarouselImagesTypes().SCENIC_LANDSCAPE)
+      method: "GET"
+      responseMethod: "onProgramSummaryResponse"
+      body: invalid
+      token: invalid
+      publicApi: false
+      dataAux: invalid
+      run: function() as Object
+        m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.body, m.token, m.publicApi, m.dataAux)
+        return { success: true, error: invalid }
+      end function
+    }
+    executeWithRetry(action, __getApiUrlRefreshAction(), ApiType().CLIENTS_API_URL)
+    m.apiSummaryRequestManager = action.apiRequestManager
    end if 
   catch error
     printError("Error al cargar la programa summary", error)
@@ -630,7 +690,22 @@ sub onPinDialogLoad()
   
   if (resp.option = 0 and resp.pin <> invalid and Len(resp.pin) = 4) then 
     m.top.loading.visible = true
-    m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlParentalControlPin(m.apiUrl, resp.pin), "GET", "onParentalControlResponse")
+    action = {
+      apiRequestManager: m.apiRequestManager
+      url: urlParentalControlPin(m.apiUrl, resp.pin)
+      method: "GET"
+      responseMethod: "onParentalControlResponse"
+      body: invalid
+      token: invalid
+      publicApi: false
+      dataAux: invalid
+      run: function() as Object
+        m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.body, m.token, m.publicApi, m.dataAux)
+        return { success: true, error: invalid }
+      end function
+    }
+    executeWithRetry(action, __getApiUrlRefreshAction(), ApiType().CLIENTS_API_URL)
+    m.apiRequestManager = action.apiRequestManager
   else 
     __focusCarousels()
   end if 
@@ -643,7 +718,22 @@ sub onParentalControlResponse()
 
     if resp <> invalid and resp.data <> invalid and resp.data then 
       watchSessionId = getWatchSessionId()
-      m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlWatchValidate(m.apiUrl, watchSessionId, m.itemSelected.redirectKey, m.itemSelected.redirectId), "GET", "onWatchValidateResponse")
+      action = {
+        apiRequestManager: m.apiRequestManager
+        url: urlWatchValidate(m.apiUrl, watchSessionId, m.itemSelected.redirectKey, m.itemSelected.redirectId)
+        method: "GET"
+        responseMethod: "onWatchValidateResponse"
+        body: invalid
+        token: invalid
+        publicApi: false
+        dataAux: invalid
+        run: function() as Object
+          m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.body, m.token, m.publicApi, m.dataAux)
+          return { success: true, error: invalid }
+        end function
+      }
+      executeWithRetry(action, __getApiUrlRefreshAction(), ApiType().CLIENTS_API_URL)
+      m.apiRequestManager = action.apiRequestManager
       else
         m.top.loading.visible = false
         __markLastFocus() 
@@ -682,7 +772,22 @@ end sub
 
 ' Dispara la peticion del pedido de los items del munú
 sub __getMenu()
-  m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlMenu(m.apiUrl, m.productCode), "GET", "onMenuResponse")
+  action = {
+    apiRequestManager: m.apiRequestManager
+    url: urlMenu(m.apiUrl, m.productCode)
+    method: "GET"
+    responseMethod: "onMenuResponse"
+    body: invalid
+    token: invalid
+    publicApi: false
+    dataAux: invalid
+    run: function() as Object
+      m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.body, m.token, m.publicApi, m.dataAux)
+      return { success: true, error: invalid }
+    end function
+  }
+  executeWithRetry(action, __getApiUrlRefreshAction(), ApiType().CLIENTS_API_URL)
+  m.apiRequestManager = action.apiRequestManager
 end sub
 
 ' Procesa el item seleccionado en el menú cerrandolo y disparando la accion pertinente (Redirigir a otra pantalla, recargar una vista, etc)
@@ -732,7 +837,22 @@ sub __selectMenuItem(menuSelectedItem)
     ' Limpio el pedido de la Summary por si cambio la vista
     m.apiSummaryRequestManager = clearApiRequest(m.apiSummaryRequestManager)
 
-    m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlContentViewsCrousels(m.apiUrl, menuSelectedItem.id), "GET", "onContentViewResponse", invalid, invalid, false, FormatJson(menuSelectedItem))
+    action = {
+      apiRequestManager: m.apiRequestManager
+      url: urlContentViewsCrousels(m.apiUrl, menuSelectedItem.id)
+      method: "GET"
+      responseMethod: "onContentViewResponse"
+      body: invalid
+      token: invalid
+      publicApi: false
+      dataAux: FormatJson(menuSelectedItem)
+      run: function() as Object
+        m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.body, m.token, m.publicApi, m.dataAux)
+        return { success: true, error: invalid }
+      end function
+    }
+    executeWithRetry(action, __getApiUrlRefreshAction(), ApiType().CLIENTS_API_URL)
+    m.apiRequestManager = action.apiRequestManager
 
   else if menuSelectedItem.key = "MenuId" and menuSelectedItem.code <> invalid and menuSelectedItem.code = "epg" then
     m.top.openGuide = true
@@ -741,7 +861,22 @@ sub __selectMenuItem(menuSelectedItem)
     __focusCarousels()
 
     m.top.loading.visible = true
-    m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlChannelsLastWatched(m.apiUrl), "GET", "onLastWatchedResponse")
+    action = {
+      apiRequestManager: m.apiRequestManager
+      url: urlChannelsLastWatched(m.apiUrl)
+      method: "GET"
+      responseMethod: "onLastWatchedResponse"
+      body: invalid
+      token: invalid
+      publicApi: false
+      dataAux: invalid
+      run: function() as Object
+        m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.body, m.token, m.publicApi, m.dataAux)
+        return { success: true, error: invalid }
+      end function
+    }
+    executeWithRetry(action, __getApiUrlRefreshAction(), ApiType().CLIENTS_API_URL)
+    m.apiRequestManager = action.apiRequestManager
   else 
     __showWithoutContent()
     m.top.loading.visible = false
@@ -890,7 +1025,22 @@ sub __validateAutoUpgrade()
     signedByGooglePlay: true,
     startUp: false
   }
-  m.autoUpgradeRequestManager = sendApiRequest(m.autoUpgradeRequestManager, urlAutoUpgradeValidate(m.apiUrl), "POST", "onAutoUpgradeResponse", FormatJson(body))
+  action = {
+    apiRequestManager: m.autoUpgradeRequestManager
+    url: urlAutoUpgradeValidate(m.apiUrl)
+    method: "POST"
+    responseMethod: "onAutoUpgradeResponse"
+    body: FormatJson(body)
+    token: invalid
+    publicApi: false
+    dataAux: invalid
+    run: function() as Object
+      m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.body, m.token, m.publicApi, m.dataAux)
+      return { success: true, error: invalid }
+    end function
+  }
+  executeWithRetry(action, __getApiUrlRefreshAction(), ApiType().CLIENTS_API_URL)
+  m.autoUpgradeRequestManager = action.apiRequestManager
 end sub
 
 ' Procesa la respuesta del AutoUpgrade
@@ -992,7 +1142,22 @@ sub __validateVariables()
   
   if expired <> invalid and Val(expired) <= nowDate.AsSeconds() then
     m.apiVariableRequest = clearApiRequest(m.apiVariableRequest)
-    m.apiVariableRequest = sendApiRequest(m.apiVariableRequest, urlPlatformsVariables(m.apiUrl, m.global.appCode, getVersionCode()), "GET", "onPlatformResponse")
+    action = {
+      apiRequestManager: m.apiVariableRequest
+      url: urlPlatformsVariables(m.apiUrl, m.global.appCode, getVersionCode())
+      method: "GET"
+      responseMethod: "onPlatformResponse"
+      body: invalid
+      token: invalid
+      publicApi: false
+      dataAux: invalid
+      run: function() as Object
+        m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.body, m.token, m.publicApi, m.dataAux)
+        return { success: true, error: invalid }
+      end function
+    }
+    executeWithRetry(action, __getApiUrlRefreshAction(), ApiType().CLIENTS_API_URL)
+    m.apiVariableRequest = action.apiRequestManager
   end if
 end sub
 
@@ -1047,7 +1212,22 @@ end sub
 sub __saveActionLog(actionLog as object)
 
   if beaconTokenExpired() and m.apiUrl <> invalid then
-    m.apiLogRequestManager = sendApiRequest(m.apiLogRequestManager, urlActionLogsToken(m.apiUrl), "GET", "onActionLogTokenResponse", invalid, invalid, false, FormatJson(actionLog))
+    action = {
+      apiRequestManager: m.apiLogRequestManager
+      url: urlActionLogsToken(m.apiUrl)
+      method: "GET"
+      responseMethod: "onActionLogTokenResponse"
+      body: invalid
+      token: invalid
+      publicApi: false
+      dataAux: FormatJson(actionLog)
+      run: function() as Object
+        m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.body, m.token, m.publicApi, m.dataAux)
+        return { success: true, error: invalid }
+      end function
+    }
+    executeWithRetry(action, __getApiUrlRefreshAction(), ApiType().LOGS_API_URL)
+    m.apiLogRequestManager = action.apiRequestManager
   else
       __sendActionLog(actionLog)
   end if
@@ -1074,7 +1254,22 @@ sub __sendActionLog(actionLog as object)
   beaconToken = getBeaconToken()
 
   if (beaconToken <> invalid and m.beaconUrl <> invalid)
-    m.apiLogRequestManager = sendApiRequest(m.apiLogRequestManager, urlActionLogs(m.beaconUrl), "POST", "onActionLogResponse", FormatJson(actionLog), beaconToken, false)
+    action = {
+      apiRequestManager: m.apiLogRequestManager
+      url: urlActionLogs(m.beaconUrl)
+      method: "POST"
+      responseMethod: "onActionLogResponse"
+      body: FormatJson(actionLog)
+      token: beaconToken
+      publicApi: false
+      dataAux: invalid
+      run: function() as Object
+        m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.body, m.token, m.publicApi, m.dataAux)
+        return { success: true, error: invalid }
+      end function
+    }
+    executeWithRetry(action, __getApiUrlRefreshAction(), ApiType().LOGS_API_URL)
+    m.apiLogRequestManager = action.apiRequestManager
   end if
 end sub
 
@@ -1147,4 +1342,15 @@ sub __loadOrganizationLogo()
       m.logo.uri = "pkg:/images/client/header_icon.png"
     end if
   end if
+end sub
+
+' Actualiza la URL de API antes de ejecutar el retry.
+function __getApiUrlRefreshAction() as Object
+  return {
+    run: __refreshApiUrl
+  }
+end function
+
+sub __refreshApiUrl()
+  m.apiUrl = getConfigVariable(m.global.configVariablesKeys.API_URL)
 end sub

@@ -127,7 +127,22 @@ sub initFocus()
     __applyTranslations()
     if m.program <> invalid then 
       if not m.isOpenEmissions then 
-        m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlProgramAction(m.apiUrl, m.program.key, m.program.id), "GET", "onActionsResponse")
+        action = {
+          apiRequestManager: m.apiRequestManager
+          url: urlProgramAction(m.apiUrl, m.program.key, m.program.id)
+          method: "GET"
+          responseMethod: "onActionsResponse"
+          body: invalid
+          token: invalid
+          publicApi: false
+          dataAux: invalid
+          run: function() as Object
+            m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.body, m.token, m.publicApi, m.dataAux)
+            return { success: true, error: invalid }
+          end function
+        }
+        executeWithRetry(action, __getApiUrlRefreshAction(), ApiType().CLIENTS_API_URL)
+        m.apiRequestManager = action.apiRequestManager
       else
         m.isOpenEmissions = false
         if m.lastButtonSelect <> invalid then m.lastButtonSelect.setFocus(true)
@@ -213,7 +228,22 @@ sub onWatchValidateResponse()
       setWatchToken(resp.watchToken)
       if m.program <> invalid then
         if m.streamingAction = invalid then m.streamingAction = getStreamingAction().PLAY
-        m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlStreaming(m.apiUrl, m.program.key, m.program.id, m.streamingAction), "GET", "onStreamingsResponse")
+        action = {
+          apiRequestManager: m.apiRequestManager
+          url: urlStreaming(m.apiUrl, m.program.key, m.program.id, m.streamingAction)
+          method: "GET"
+          responseMethod: "onStreamingsResponse"
+          body: invalid
+          token: invalid
+          publicApi: false
+          dataAux: invalid
+          run: function() as Object
+            m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.body, m.token, m.publicApi, m.dataAux)
+            return { success: true, error: invalid }
+          end function
+        }
+        executeWithRetry(action, __getApiUrlRefreshAction(), ApiType().CLIENTS_API_URL)
+        m.apiRequestManager = action.apiRequestManager
       end if
     else
       m.top.loading.visible = false
@@ -345,7 +375,22 @@ sub onPinDialogLoad()
   
   if (resp.option = 0 and resp.pin <> invalid and Len(resp.pin) = 4) then 
     m.top.loading.visible = true
-    m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlParentalControlPin(m.apiUrl, resp.pin), "GET", "onParentalControlResponse")
+     action = {
+      apiRequestManager: m.apiRequestManager
+      url: urlParentalControlPin(m.apiUrl, resp.pin)
+      method: "GET"
+      responseMethod: "onParentalControlResponse"
+      body: invalid
+      token: invalid
+      publicApi: false
+      dataAux: invalid
+      run: function() as Object
+        m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.body, m.token, m.publicApi, m.dataAux)
+        return { success: true, error: invalid }
+      end function
+    }
+    executeWithRetry(action, __getApiUrlRefreshAction(), ApiType().CLIENTS_API_URL)
+    m.apiRequestManager = action.apiRequestManager
   else 
     if m.lastButtonSelect <> invalid then m.lastButtonSelect.setFocus(true)
   end if 
@@ -368,7 +413,22 @@ sub onParentalControlResponse()
       else
         m.top.loading.visible = true
         watchSessionId = getWatchSessionId()
-        m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlWatchValidate(m.apiUrl, watchSessionId, m.program.key, m.program.id), "GET", "onWatchValidateResponse")
+                action = {
+          apiRequestManager: m.apiRequestManager
+          url: urlWatchValidate(m.apiUrl, watchSessionId, m.program.key, m.program.id)
+          method: "GET"
+          responseMethod: "onWatchValidateResponse"
+          body: invalid
+          token: invalid
+          publicApi: false
+          dataAux: invalid
+          run: function() as Object
+            m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.body, m.token, m.publicApi, m.dataAux)
+            return { success: true, error: invalid }
+          end function
+        }
+        executeWithRetry(action, __getApiUrlRefreshAction(), ApiType().CLIENTS_API_URL)
+        m.apiRequestManager = action.apiRequestManager
       end if
     else
       m.top.loading.visible = false
@@ -409,7 +469,22 @@ end sub
 sub __getProgramDetail(key, id)
   m.lastKey = key
   m.lastId = id
-  m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlProgramById(m.apiUrl, m.lastKey, m.lastId, getCarouselImagesTypes().POSTER_PORTRAIT, getCarouselImagesTypes().SCENIC_LANDSCAPE), "GET", "onGetByIdResponse")
+  action = {
+    apiRequestManager: m.apiRequestManager
+    url: urlProgramById(m.apiUrl, m.lastKey, m.lastId, getCarouselImagesTypes().POSTER_PORTRAIT, getCarouselImagesTypes().SCENIC_LANDSCAPE)
+    method: "GET"
+    responseMethod: "onGetByIdResponse"
+    body: invalid
+    token: invalid
+    publicApi: false
+    dataAux: invalid
+    run: function() as Object
+      m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.body, m.token, m.publicApi, m.dataAux)
+      return { success: true, error: invalid }
+    end function
+  }
+  executeWithRetry(action, __getApiUrlRefreshAction(), ApiType().CLIENTS_API_URL)
+  m.apiRequestManager = action.apiRequestManager
 end sub
 
 ' Crea y define cada uno de los botones en base a las acciones disponibles para el programa
@@ -528,7 +603,22 @@ sub __loadProgramInfo(program)
 
   __renderCreditGroups()
   
-  m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlProgramRelated(m.apiUrl, m.program.key, m.program.id), "GET", "onGetRelatedResponse")
+  action = {
+    apiRequestManager: m.apiRequestManager
+    url: urlProgramRelated(m.apiUrl, m.program.key, m.program.id)
+    method: "GET"
+    responseMethod: "onGetRelatedResponse"
+    body: invalid
+    token: invalid
+    publicApi: false
+    dataAux: invalid
+    run: function() as Object
+      m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.body, m.token, m.publicApi, m.dataAux)
+      return { success: true, error: invalid }
+    end function
+  }
+  executeWithRetry(action, __getApiUrlRefreshAction(), ApiType().CLIENTS_API_URL)
+  m.apiRequestManager = action.apiRequestManager
 end sub
 
 ' Carga el carousel de programas relacionados.
@@ -567,7 +657,22 @@ sub __openPlayer(streamingAction)
       else
         m.top.loading.visible = true
         watchSessionId = getWatchSessionId()
-        m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlWatchValidate(m.apiUrl, watchSessionId, m.program.key, m.program.id), "GET", "onWatchValidateResponse")
+        action = {
+          apiRequestManager: m.apiRequestManager
+          url: urlWatchValidate(m.apiUrl, watchSessionId, m.program.key, m.program.id)
+          method: "GET"
+          responseMethod: "onWatchValidateResponse"
+          body: invalid
+          token: invalid
+          publicApi: false
+          dataAux: invalid
+          run: function() as Object
+            m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.body, m.token, m.publicApi, m.dataAux)
+            return { success: true, error: invalid }
+          end function
+        }
+        executeWithRetry(action, __getApiUrlRefreshAction(), ApiType().CLIENTS_API_URL)
+        m.apiRequestManager = action.apiRequestManager
       end if
     end if 
   end if 
@@ -697,11 +802,37 @@ sub __validateError(statusCode, resultCode, errorResponse, callback = invalid)
   end if 
 end sub
 
+' Actualiza la URL de API antes de ejecutar el retry.
+function __getApiUrlRefreshAction() as Object
+  return {
+    run: __refreshApiUrl
+  }
+end function
+
+sub __refreshApiUrl()
+  m.apiUrl = getConfigVariable(m.global.configVariablesKeys.API_URL)
+end sub
+
 ' Guardar el log cuandos se cambia una opción del menú 
 sub __saveActionLog(actionLog as object)
 
   if beaconTokenExpired() and m.apiUrl <> invalid then
-    m.apiLogRequestManager = sendApiRequest(m.apiLogRequestManager, urlActionLogsToken(m.apiUrl), "GET", "onActionLogTokenResponse", invalid, invalid, false, FormatJson(actionLog))
+    action = {
+      apiRequestManager: m.apiLogRequestManager
+      url: urlActionLogsToken(m.apiUrl)
+      method: "GET"
+      responseMethod: "onActionLogTokenResponse"
+      body: invalid
+      token: invalid
+      publicApi: false
+      dataAux: FormatJson(actionLog)
+      run: function() as Object
+        m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.body, m.token, m.publicApi, m.dataAux)
+        return { success: true, error: invalid }
+      end function
+    }
+    executeWithRetry(action, __getApiUrlRefreshAction(), ApiType().LOGS_API_URL)
+    m.apiLogRequestManager = action.apiRequestManager
   else
       __sendActionLog(actionLog)
   end if
@@ -728,7 +859,22 @@ sub __sendActionLog(actionLog as object)
   beaconToken = getBeaconToken()
 
   if (beaconToken <> invalid and m.beaconUrl <> invalid)
-    m.apiLogRequestManager = sendApiRequest(m.apiLogRequestManager, urlActionLogs(m.beaconUrl), "POST", "onActionLogResponse", FormatJson(actionLog), beaconToken, false)
+    action = {
+      apiRequestManager: m.apiLogRequestManager
+      url: urlActionLogs(m.beaconUrl)
+      method: "POST"
+      responseMethod: "onActionLogResponse"
+      body: FormatJson(actionLog)
+      token: beaconToken
+      publicApi: false
+      dataAux: invalid
+      run: function() as Object
+        m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.body, m.token, m.publicApi, m.dataAux)
+        return { success: true, error: invalid }
+      end function
+    }
+    executeWithRetry(action, __getApiUrlRefreshAction(), ApiType().LOGS_API_URL)
+    m.apiLogRequestManager = action.apiRequestManager
   end if
 end sub
 

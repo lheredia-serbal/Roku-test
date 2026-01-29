@@ -373,7 +373,22 @@ sub onDialogDeleteClosed(_event)
     'Disparar el delete
     m.top.loading.visible = true
     m.blockLoading = true
-    m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlProfilesbyId(m.apiUrl, m.profileByEdit.id), "DELETE", "onSussessDeleteResponse")
+    action = {
+    apiRequestManager: m.apiRequestManager
+    url: urlProfilesbyId(m.apiUrl, m.profileByEdit.id)
+    method: "DELETE"
+    responseMethod: "onSussessDeleteResponse"
+    body: invalid
+    token: invalid
+    publicApi: false
+    dataAux: invalid
+    run: function() as Object
+      m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.body, m.token, m.publicApi, m.dataAux)
+      return { success: true, error: invalid }
+    end function
+  }
+  executeWithRetry(action, __getApiUrlRefreshAction(), ApiType().CLIENTS_API_URL)
+  m.apiRequestManager = action.apiRequestManager
   else
     ' Se cancela el modal
     m.btnDeleteProfile.setFocus(true)
@@ -592,7 +607,22 @@ sub __getAllProfile()
   m.apiRequestManager = clearApiRequest(m.apiRequestManager)
   __clearArrayProfile()
 
-  m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlProfiles(m.apiUrl), "GET", "onGetAllProfileResponse")
+  action = {
+    apiRequestManager: m.apiRequestManager
+    url: urlProfiles(m.apiUrl)
+    method: "GET"
+    responseMethod: "onGetAllProfileResponse"
+    body: invalid
+    token: invalid
+    publicApi: false
+    dataAux: invalid
+    run: function() as Object
+      m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.body, m.token, m.publicApi, m.dataAux)
+      return { success: true, error: invalid }
+    end function
+  }
+  executeWithRetry(action, __getApiUrlRefreshAction(), ApiType().CLIENTS_API_URL)
+  m.apiRequestManager = action.apiRequestManager
 end sub
 
 ' carga en pantalla cada uno de los perfiles de la lista de perfiles obtenido.
@@ -653,7 +683,22 @@ sub __editProfile(profileId)
   m.screenProfileSelected.visible = false
   m.screenProfileEdit.visible = true
   
-  m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlProfilesbyId(m.apiUrl, profileId), "GET", "onGetByIdResponse")
+  action = {
+    apiRequestManager: m.apiRequestManager
+    url: urlProfilesbyId(m.apiUrl, profileId)
+    method: "GET"
+    responseMethod: "onGetByIdResponse"
+    body: invalid
+    token: invalid
+    publicApi: false
+    dataAux: invalid
+    run: function() as Object
+      m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.body, m.token, m.publicApi, m.dataAux)
+      return { success: true, error: invalid }
+    end function
+  }
+  executeWithRetry(action, __getApiUrlRefreshAction(), ApiType().CLIENTS_API_URL)
+  m.apiRequestManager = action.apiRequestManager
 end sub
 
 ' Dispara la peticion para selecionar un el perfil para usar
@@ -662,7 +707,22 @@ sub __selectProfile(profileId, auxInfo)
   m.blockLoading = true
   m.auxInfo = auxInfo
   
-  m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlAuthProfile(m.apiUrl, profileId), "PUT", "onSussessSelectResponse", invalid, invalid, false, StrI(profileId))
+  action = {
+    apiRequestManager: m.apiRequestManager
+    url: urlAuthProfile(m.apiUrl, profileId)
+    method: "PUT"
+    responseMethod: "onSussessSelectResponse"
+    body: invalid
+    token: invalid
+    publicApi: false
+    dataAux: StrI(profileId)
+    run: function() as Object
+      m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.body, m.token, m.publicApi, m.dataAux)
+      return { success: true, error: invalid }
+    end function
+  }
+  executeWithRetry(action, __getApiUrlRefreshAction(), ApiType().CLIENTS_API_URL)
+  m.apiRequestManager = action.apiRequestManager
 end sub
 
 ' Dispara la peticion para editar el avatar del perfil selecionado y carga la pantalla de avatars
@@ -675,7 +735,22 @@ sub __editAvatar()
   m.profileNameInAvatars.text = m.profileByEdit.name
   m.profileImageInAvatars.uri = getImageUrl(m.profileByEdit.avatar.image)
 
-  m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlAvatarsAll(m.apiUrl), "GET", "onGetAllAvatarsResponse")
+  action = {
+    apiRequestManager: m.apiRequestManager
+    url: urlAvatarsAll(m.apiUrl)
+    method: "GET"
+    responseMethod: "onGetAllAvatarsResponse"
+    body: invalid
+    token: invalid
+    publicApi: false
+    dataAux: invalid
+    run: function() as Object
+      m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.body, m.token, m.publicApi, m.dataAux)
+      return { success: true, error: invalid }
+    end function
+  }
+  executeWithRetry(action, __getApiUrlRefreshAction(), ApiType().CLIENTS_API_URL)
+  m.apiRequestManager = action.apiRequestManager
 end sub
 
 ' Dispara la peticion para obtener un avatar por defecto y carga la pantalla de edicion de perfiles
@@ -686,7 +761,22 @@ sub __addProfile()
   m.screenProfileSelected.visible = false
   m.screenProfileEdit.visible = true
   
-  m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlAvatarsDefault(m.apiUrl), "GET", "onGetDefaultAvatarResponse")
+    action = {
+    apiRequestManager: m.apiRequestManager
+    url: urlAvatarsDefault(m.apiUrl)
+    method: "GET"
+    responseMethod: "onGetDefaultAvatarResponse"
+    body: invalid
+    token: invalid
+    publicApi: false
+    dataAux: invalid
+    run: function() as Object
+      m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.body, m.token, m.publicApi, m.dataAux)
+      return { success: true, error: invalid }
+    end function
+  }
+  executeWithRetry(action, __getApiUrlRefreshAction(), ApiType().CLIENTS_API_URL)
+  m.apiRequestManager = action.apiRequestManager
 end sub
 
 ' Dispara la peticion para guardar/crear el perfil en la pantalla de perfiles, validando que tenga avatar y nombre 
@@ -712,10 +802,40 @@ sub __saveProfile()
 
   if m.profileByEdit.id <> 0 then
     'update
-    m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlProfilesbyId(m.apiUrl, m.profileByEdit.id), "PUT", "onSussessSaveResponse", FormatJson(m.profileByEdit))
+    action = {
+      apiRequestManager: m.apiRequestManager
+      url: urlProfilesbyId(m.apiUrl, m.profileByEdit.id)
+      method: "PUT"
+      responseMethod: "onSussessSaveResponse"
+      body: FormatJson(m.profileByEdit)
+      token: invalid
+      publicApi: false
+      dataAux: invalid
+      run: function() as Object
+        m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.body, m.token, m.publicApi, m.dataAux)
+        return { success: true, error: invalid }
+      end function
+    }
+    executeWithRetry(action, __getApiUrlRefreshAction(), ApiType().CLIENTS_API_URL)
+    m.apiRequestManager = action.apiRequestManager
   else
     'insert
-    m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlProfiles(m.apiUrl), "POST", "onSussessSaveResponse", FormatJson(m.profileByEdit))
+    action = {
+      apiRequestManager: m.apiRequestManager
+      url: urlProfiles(m.apiUrl)
+      method: "POST"
+      responseMethod: "onSussessSaveResponse"
+      body: FormatJson(m.profileByEdit)
+      token: invalid
+      publicApi: false
+      dataAux: invalid
+      run: function() as Object
+        m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.body, m.token, m.publicApi, m.dataAux)
+        return { success: true, error: invalid }
+      end function
+    }
+    executeWithRetry(action, __getApiUrlRefreshAction(), ApiType().CLIENTS_API_URL)
+    m.apiRequestManager = action.apiRequestManager
   end if
 end sub
 
@@ -867,11 +987,37 @@ sub __clearScreen()
   m.screenAvatarEdit.visible = false
 end sub
 
+' Actualiza la URL de API antes de ejecutar el retry.
+function __getApiUrlRefreshAction() as Object
+  return {
+    run: __refreshApiUrl
+  }
+end function
+
+sub __refreshApiUrl()
+  m.apiUrl = getConfigVariable(m.global.configVariablesKeys.API_URL)
+end sub
+
 ' Guardar el log cuandos se cambia una opción del menú 
 sub __saveActionLog(actionLog as object)
 
   if beaconTokenExpired() and m.apiUrl <> invalid then
-    m.apiLogRequestManager = sendApiRequest(m.apiLogRequestManager, urlActionLogsToken(m.apiUrl), "GET", "onActionLogTokenResponse", invalid, invalid, false, FormatJson(actionLog))
+    action = {
+      apiRequestManager: m.apiLogRequestManager
+      url: urlActionLogsToken(m.apiUrl)
+      method: "GET"
+      responseMethod: "onActionLogTokenResponse"
+      body: invalid
+      token: invalid
+      publicApi: false
+      dataAux: FormatJson(actionLog)
+      run: function() as Object
+        m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.body, m.token, m.publicApi, m.dataAux)
+        return { success: true, error: invalid }
+      end function
+    }
+    executeWithRetry(action, __getApiUrlRefreshAction(), ApiType().LOGS_API_URL)
+    m.apiLogRequestManager = action.apiRequestManager
   else
     __sendActionLog(actionLog)
   end if
@@ -898,7 +1044,22 @@ sub __sendActionLog(actionLog as object)
   beaconToken = getBeaconToken()
 
   if (beaconToken <> invalid and m.beaconUrl <> invalid)
-    m.apiLogRequestManager = sendApiRequest(m.apiLogRequestManager, urlActionLogs(m.beaconUrl), "POST", "onActionLogResponse", FormatJson(actionLog), beaconToken, false)
+    action = {
+      apiRequestManager: m.apiLogRequestManager
+      url: urlActionLogs(m.beaconUrl)
+      method: "POST"
+      responseMethod: "onActionLogResponse"
+      body: FormatJson(actionLog)
+      token: beaconToken
+      publicApi: false
+      dataAux: invalid
+      run: function() as Object
+        m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.body, m.token, m.publicApi, m.dataAux)
+        return { success: true, error: invalid }
+      end function
+    }
+    executeWithRetry(action, __getApiUrlRefreshAction(), ApiType().LOGS_API_URL)
+    m.apiLogRequestManager = action.apiRequestManager
   end if
 end sub
 

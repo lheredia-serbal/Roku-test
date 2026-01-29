@@ -23,6 +23,12 @@
 
 function __getDomainManagerState() as Object
     ' Inicializa y retorna el estado del DomainManager si aún no existe.
+
+    if m.global <> invalid and m.global.domainManagerState <> invalid then
+        m.domainManagerState = m.global.domainManagerState
+        return m.domainManagerState
+    end if
+
     if m.domainManagerState = invalid then
         m.domainManagerState = {
             initialConfigPrimaryUrl: ""
@@ -65,8 +71,17 @@ function __getDomainManagerState() as Object
         }
     end if
 
+    if m.global <> invalid then m.global.domainManagerState = m.domainManagerState
+
     return m.domainManagerState
 end function
+
+sub __syncDomainManagerState(state as Object)
+    ' Sincroniza el estado actual con el global para mantener los valores persistentes.
+    if m.global <> invalid then 
+        addAndSetFields(m.global, { domainManagerState: state })
+    end if
+end sub
 
 ' API pública (funciones sin prefijo "__").
 sub setConfigUrls(initialConfigUrl as String, secondaryConfigUrl as String)
@@ -74,6 +89,7 @@ sub setConfigUrls(initialConfigUrl as String, secondaryConfigUrl as String)
     state = __getDomainManagerState()
     state.initialConfigPrimaryUrl = initialConfigUrl
     state.initialConfigSecondaryUrl = secondaryConfigUrl
+    __syncDomainManagerState(state)
 end sub
 
 function getConfig(cdnRequestManager as Object, url as String, responseHandler as String) as Object
@@ -91,6 +107,7 @@ function getInitialConfiguration(mode as String, responseHandler = invalid as Dy
         addAndSetFields(m.global, { domainManagerInitStatus: "pending" })
     end if
     state._initialConfigRequestManager = getConfig(state._initialConfigRequestManager, state.initialConfigPrimaryUrl, "onInitialConfigPrimaryResponse")
+    __syncDomainManagerState(state)
     return state._initialConfigRequestManager
 end function
 
@@ -120,6 +137,7 @@ function changeMode(response as Object) as Boolean
         else
             state._mode = "Primary"
         end if
+        __syncDomainManagerState(state)
         return true
     end if
 
@@ -138,6 +156,7 @@ sub restartConfiguration()
     state._mode = "Primary"
     state._fetchInitialConfig = true
     state._initialConfigStatus = "idle"
+    __syncDomainManagerState(state)
 end sub
 
 function getEnableBeaconLogs() as Boolean
@@ -204,6 +223,7 @@ sub __notifyInitialConfigResult(success as Boolean)
         m.top.callFunc(state._initialConfigCallback, { success: success })
         state._initialConfigCallback = invalid
     end if
+    __syncDomainManagerState(state)
 end sub
 
 function validateErrorDNS(status as Integer, message as String) as Boolean
@@ -227,12 +247,7 @@ sub onInitialConfigPrimaryResponse()
         response = ParseJson(state._initialConfigRequestManager.response)
         state._initialConfigRequestManager = clearApiRequest(state._initialConfigRequestManager)
         if response <> invalid then
-            state._jsonMode = "Primary"
             setConfigResponse(response, state._mode)
-            state._fetchInitialConfig = false
-            state._currentInitialConfig = "Primary"
-            state._initialConfigSuccess = true
-            state._initialConfigStatus = "success"
             __notifyInitialConfigResult(true)
             return
         end if
@@ -256,6 +271,7 @@ sub onInitialConfigSecondaryResponse()
             state._initialConfigSuccess = true
             state._initialConfigStatus = "success"
             __notifyInitialConfigResult(true)
+            __syncDomainManagerState(state)
             return
         end if
     end if
@@ -264,11 +280,18 @@ sub onInitialConfigSecondaryResponse()
     state._initialConfigSuccess = false
     state._initialConfigStatus = "failed"
     __notifyInitialConfigResult(false)
+    __syncDomainManagerState(state)
 end sub
 
-sub setResources(response as Object)
-    ' Setea las variables para ser usadas en toda la aplicación desde el JSON de config.
+sub setConfigResponse(response as Object, mode as String)
+    ' Setea la respuesta del config en el estado y actualiza el modo actual.
     state = __getDomainManagerState()
+    state._currentConfig = mode
+    state._jsonMode = "Primary"
+    state._fetchInitialConfig = false
+    state._currentInitialConfig = "Primary"
+    state._initialConfigSuccess = true
+    state._initialConfigStatus = "success"
 
     refreshSeconds = 14400
     if response <> invalid and response.config <> invalid and response.config.refresh_interval_seconds <> invalid then
@@ -308,13 +331,8 @@ sub setResources(response as Object)
             end if
         end for
     end if
-end sub
 
-sub setConfigResponse(response as Object, mode as String)
-    ' Setea la respuesta del config en el estado y actualiza el modo actual.
-    setResources(response)
-    state = __getDomainManagerState()
-    state._currentConfig = mode
+    __syncDomainManagerState(state)
 end sub
 
 function getErrorCodeDemo() As String
