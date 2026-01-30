@@ -195,6 +195,7 @@ function performHealthCheck(url as String, timeoutMS = 20000 as Integer) as Bool
     if url = invalid or url = "" then return false
     transfer = CreateObject("roUrlTransfer")
     port = CreateObject("roMessagePort")
+    if transfer = invalid or port = invalid then return false
     transfer.SetCertificatesFile("common:/certs/ca-bundle.crt")
     transfer.SetPort(port)
     transfer.RetainBodyOnError(true)
@@ -222,6 +223,7 @@ function __fetchConfigFromUrl(url as String, timeoutMS = 20000 as Integer) as Ob
 
     transfer = CreateObject("roUrlTransfer")
     port = CreateObject("roMessagePort")
+    if transfer = invalid or port = invalid then return response
     transfer.SetCertificatesFile("common:/certs/ca-bundle.crt")
     transfer.SetPort(port)
     transfer.RetainBodyOnError(true)

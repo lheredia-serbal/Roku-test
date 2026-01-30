@@ -36,6 +36,10 @@ sub init()
 
   m.profileByEdit = invalid
   m.blockLoading = false
+
+  if m.global <> invalid then
+    m.global.observeField("activeApiUrl", "onActiveApiUrlChanged")
+  end if
 end sub
 
 ' Funcion que interpreta los eventos de teclado y retorna true si fue porcesada por este componente. Sino es porcesado por el
@@ -387,7 +391,7 @@ sub onDialogDeleteClosed(_event)
       return { success: true, error: invalid }
     end function
   }
-  executeWithRetry(action, __getApiUrlRefreshAction(), ApiType().CLIENTS_API_URL)
+  executeWithRetry(action, ApiType().CLIENTS_API_URL)
   m.apiRequestManager = action.apiRequestManager
   else
     ' Se cancela el modal
@@ -621,7 +625,7 @@ sub __getAllProfile()
       return { success: true, error: invalid }
     end function
   }
-  executeWithRetry(action, __getApiUrlRefreshAction(), ApiType().CLIENTS_API_URL)
+  executeWithRetry(action, ApiType().CLIENTS_API_URL)
   m.apiRequestManager = action.apiRequestManager
 end sub
 
@@ -697,7 +701,7 @@ sub __editProfile(profileId)
       return { success: true, error: invalid }
     end function
   }
-  executeWithRetry(action, __getApiUrlRefreshAction(), ApiType().CLIENTS_API_URL)
+  executeWithRetry(action, ApiType().CLIENTS_API_URL)
   m.apiRequestManager = action.apiRequestManager
 end sub
 
@@ -721,7 +725,7 @@ sub __selectProfile(profileId, auxInfo)
       return { success: true, error: invalid }
     end function
   }
-  executeWithRetry(action, __getApiUrlRefreshAction(), ApiType().CLIENTS_API_URL)
+  executeWithRetry(action, ApiType().CLIENTS_API_URL)
   m.apiRequestManager = action.apiRequestManager
 end sub
 
@@ -749,7 +753,7 @@ sub __editAvatar()
       return { success: true, error: invalid }
     end function
   }
-  executeWithRetry(action, __getApiUrlRefreshAction(), ApiType().CLIENTS_API_URL)
+  executeWithRetry(action, ApiType().CLIENTS_API_URL)
   m.apiRequestManager = action.apiRequestManager
 end sub
 
@@ -775,7 +779,7 @@ sub __addProfile()
       return { success: true, error: invalid }
     end function
   }
-  executeWithRetry(action, __getApiUrlRefreshAction(), ApiType().CLIENTS_API_URL)
+  executeWithRetry(action, ApiType().CLIENTS_API_URL)
   m.apiRequestManager = action.apiRequestManager
 end sub
 
@@ -816,7 +820,7 @@ sub __saveProfile()
         return { success: true, error: invalid }
       end function
     }
-    executeWithRetry(action, __getApiUrlRefreshAction(), ApiType().CLIENTS_API_URL)
+    executeWithRetry(action, ApiType().CLIENTS_API_URL)
     m.apiRequestManager = action.apiRequestManager
   else
     'insert
@@ -834,7 +838,7 @@ sub __saveProfile()
         return { success: true, error: invalid }
       end function
     }
-    executeWithRetry(action, __getApiUrlRefreshAction(), ApiType().CLIENTS_API_URL)
+    executeWithRetry(action, ApiType().CLIENTS_API_URL)
     m.apiRequestManager = action.apiRequestManager
   end if
 end sub
@@ -987,15 +991,14 @@ sub __clearScreen()
   m.screenAvatarEdit.visible = false
 end sub
 
-' Actualiza la URL de API antes de ejecutar el retry.
-function __getApiUrlRefreshAction() as Object
-  return {
-    run: __refreshApiUrl
-  }
-end function
+sub onActiveApiUrlChanged()
+  __syncApiUrlFromGlobal()
+end sub
 
-sub __refreshApiUrl()
-  m.apiUrl = getConfigVariable(m.global.configVariablesKeys.API_URL)
+sub __syncApiUrlFromGlobal()
+  if m.global.activeApiUrl <> invalid and m.global.activeApiUrl <> "" then
+    m.apiUrl = m.global.activeApiUrl
+  end if
 end sub
 
 ' Guardar el log cuandos se cambia una opción del menú 
@@ -1016,7 +1019,7 @@ sub __saveActionLog(actionLog as object)
         return { success: true, error: invalid }
       end function
     }
-    executeWithRetry(action, __getApiUrlRefreshAction(), ApiType().LOGS_API_URL)
+    executeWithRetry(action, ApiType().LOGS_API_URL)
     m.apiLogRequestManager = action.apiRequestManager
   else
     __sendActionLog(actionLog)
@@ -1058,7 +1061,7 @@ sub __sendActionLog(actionLog as object)
         return { success: true, error: invalid }
       end function
     }
-    executeWithRetry(action, __getApiUrlRefreshAction(), ApiType().LOGS_API_URL)
+    executeWithRetry(action, ApiType().LOGS_API_URL)
     m.apiLogRequestManager = action.apiRequestManager
   end if
 end sub
