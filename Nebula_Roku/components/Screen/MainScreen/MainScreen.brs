@@ -266,6 +266,7 @@ sub onSelectItem()
             return { success: true, error: invalid }
           end function
         }
+        __setRequestId(action)
         executeWithRetry(action, ApiType().CLIENTS_API_URL)
         m.apiRequestManager = action.apiRequestManager
       end if 
@@ -328,6 +329,7 @@ sub onLastWatchedResponse()
           return { success: true, error: invalid }
         end function
       }
+      __setRequestId(action)
       executeWithRetry(action, ApiType().CLIENTS_API_URL)
       m.apiRequestManager = action.apiRequestManager
     else
@@ -387,6 +389,7 @@ sub onWatchValidateResponse()
             return { success: true, error: invalid }
           end function
         }
+        __setRequestId(action)
         executeWithRetry(action, ApiType().CLIENTS_API_URL)
         m.apiRequestManager = action.apiRequestManager
       end if
@@ -557,6 +560,7 @@ sub getProgramInfo()
         return { success: true, error: invalid }
       end function
     }
+    __setRequestId(action)
     executeWithRetry(action, ApiType().CLIENTS_API_URL)
     m.apiSummaryRequestManager = action.apiRequestManager
    end if 
@@ -717,6 +721,7 @@ sub onPinDialogLoad()
         return { success: true, error: invalid }
       end function
     }
+    __setRequestId(action)
     executeWithRetry(action, ApiType().CLIENTS_API_URL)
     m.apiRequestManager = action.apiRequestManager
   else 
@@ -741,12 +746,13 @@ sub onParentalControlResponse()
         publicApi: false
         dataAux: invalid
         run: function() as Object
-          m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.body, m.token, m.publicApi, m.dataAux)
-          return { success: true, error: invalid }
-        end function
-      }
-      executeWithRetry(action, ApiType().CLIENTS_API_URL)
-      m.apiRequestManager = action.apiRequestManager
+            m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.body, m.token, m.publicApi, m.dataAux)
+            return { success: true, error: invalid }
+          end function
+        }
+        __setRequestId(action)
+        executeWithRetry(action, ApiType().CLIENTS_API_URL)
+        m.apiRequestManager = action.apiRequestManager
       else
         m.top.loading.visible = false
         __markLastFocus() 
@@ -799,6 +805,7 @@ sub __getMenu()
       return { success: true, error: invalid }
     end function
   }
+  __setRequestId(action)
   executeWithRetry(action, ApiType().CLIENTS_API_URL)
   m.apiRequestManager = action.apiRequestManager
 end sub
@@ -865,6 +872,7 @@ sub __selectMenuItem(menuSelectedItem)
       end function
     }
     m.lastContentViewAction = action
+    __setRequestId(action)
     executeWithRetry(action, ApiType().CLIENTS_API_URL)
     m.apiRequestManager = action.apiRequestManager
 
@@ -889,6 +897,7 @@ sub __selectMenuItem(menuSelectedItem)
         return { success: true, error: invalid }
       end function
     }
+    __setRequestId(action)
     executeWithRetry(action, ApiType().CLIENTS_API_URL)
     m.apiRequestManager = action.apiRequestManager
   else 
@@ -1053,6 +1062,7 @@ sub __validateAutoUpgrade()
       return { success: true, error: invalid }
     end function
   }
+  __setRequestId(action)
   executeWithRetry(action, ApiType().CLIENTS_API_URL)
   m.autoUpgradeRequestManager = action.apiRequestManager
 end sub
@@ -1170,6 +1180,7 @@ sub __validateVariables()
         return { success: true, error: invalid }
       end function
     }
+    __setRequestId(action)
     executeWithRetry(action, ApiType().CLIENTS_API_URL)
     m.apiVariableRequest = action.apiRequestManager
   end if
@@ -1215,6 +1226,15 @@ sub __validateError(statusCode, resultCode, errorResponse, callback = invalid)
   end if 
 end sub
 
+' Setear un id unico para cada action
+sub __setRequestId(action as Object)
+  if action = invalid then return
+  if action.requestId = invalid or action.requestId = "" then
+    now = CreateObject("roDateTime")
+    action.requestId = now.AsSeconds().toStr() + "-" + now.GetMilliseconds().toStr()
+  end if
+end sub
+
 ' Guarda el ultimo utem que a tenido foco en los carouseles en la variable lastFocus
 sub __markLastFocus()
   if m.carouselContainer.focusedChild <> invalid and  m.carouselContainer.focusedChild.findNode("carouselList") <> invalid then 
@@ -1240,6 +1260,7 @@ sub __saveActionLog(actionLog as object)
         return { success: true, error: invalid }
       end function
     }
+    __setRequestId(action)
     executeWithRetry(action, ApiType().LOGS_API_URL)
     m.apiLogRequestManager = action.apiRequestManager
   else
@@ -1282,6 +1303,7 @@ sub __sendActionLog(actionLog as object)
         return { success: true, error: invalid }
       end function
     }
+    __setRequestId(action)
     executeWithRetry(action, ApiType().LOGS_API_URL)
     m.apiLogRequestManager = action.apiRequestManager
   end if
