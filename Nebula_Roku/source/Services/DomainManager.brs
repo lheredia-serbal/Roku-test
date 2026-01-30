@@ -178,7 +178,9 @@ end function
 sub __updateActiveApiUrl(baseUrl as String)
     if baseUrl = invalid or baseUrl = "" then return
     if m.global <> invalid then
+        previousApiUrl = m.global.activeApiUrl
         addAndSetFields(m.global, { activeApiUrl: baseUrl })
+        updatePendingActionsApiUrl(previousApiUrl, baseUrl)
     end if
 end sub
 

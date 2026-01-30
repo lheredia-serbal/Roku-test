@@ -238,6 +238,27 @@ function executePendingActions() as Boolean
     return allSuccessful
 end function
 
+sub updatePendingActionsApiUrl(previousApiUrl as Dynamic, nextApiUrl as Dynamic)
+    if previousApiUrl = invalid or previousApiUrl = "" then return
+    if nextApiUrl = invalid or nextApiUrl = "" then return
+    if previousApiUrl = nextApiUrl then return
+    state = __getRetryServiceState()
+    if state.pendingActions = invalid then return
+    for each item in state.pendingActions
+        if item <> invalid and item.action <> invalid then
+            __updateActionUrl(item.action, previousApiUrl, nextApiUrl)
+        end if
+    end for
+    __syncRetryState(state)
+end sub
+
+sub __updateActionUrl(action as Object, previousApiUrl as String, nextApiUrl as String)
+    if action = invalid then return
+    if action.url <> invalid and InStr(1, action.url, previousApiUrl) > 0 then
+        action.url = action.url.Replace(previousApiUrl, nextApiUrl)
+    end if
+end sub
+
 function __validateCurrentApiHealth() as Boolean
     apiUrl = getActiveApiUrl()
     if apiUrl = invalid or apiUrl = "" then return false
