@@ -88,10 +88,14 @@ sub removeFields(node, keysToRemove)
     end for
 end sub
 
-' Funcion encargada de validar si una peticion HTTP respondio notificacondo que pudo completar la accion.
-' Valida que el Status Code este entre el resultado 2XX 
-function valdiateStatusCode(statusCode as integer) as boolean
+' Función encargada de validar si una petición HTTP respondió notificando que pudo completar la acción.
+' Valida que el Status Code esté entre el resultado 2XX 
+function validateStatusCode(statusCode as integer) as boolean
     return statusCode >= 200 and statusCode < 300
+end function
+
+function validateErrorServer() as boolean
+    
 end function
 
 ' Obtiene las variables de configuracion del global
@@ -531,6 +535,9 @@ end function
 
 ' Genera la pila de errores (APIError) a partir de un CqvHttpErrorResponse.
 function GetServerErrorStack(errorResponse as dynamic) as dynamic
+
+    if errorResponse <> invalid and errorResponse = "" then return invalid
+    
     if errorResponse <> invalid and errorResponse.error <> invalid then
         ' let apiError = { detail: JSON.stringify(errorResponse), ...errorResponse.error }
         ' En TS, el spread final puede pisar detail; acá preservamos detail si ya existe.

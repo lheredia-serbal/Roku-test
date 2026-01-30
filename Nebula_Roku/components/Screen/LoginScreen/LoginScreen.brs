@@ -104,7 +104,7 @@ end sub
 
 ' Procesa la respuesta al tratar de loguear al usuario a traves de credenciales
 sub onLoginResponse()
-  if valdiateStatusCode(m.apiRequestManager.statusCode) then
+  if validateStatusCode(m.apiRequestManager.statusCode) then
 
     actionLog = getActionLog({ actionCode: ActionLogCode().LOGIN_BY_CREDENTIALS })
     __saveActionLog(actionLog)

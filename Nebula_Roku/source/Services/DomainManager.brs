@@ -71,15 +71,13 @@ function __getDomainManagerState() as Object
         }
     end if
 
-    if m.global <> invalid then m.global.domainManagerState = m.domainManagerState
-
     return m.domainManagerState
 end function
 
 sub __syncDomainManagerState(state as Object)
     ' Sincroniza el estado actual con el global para mantener los valores persistentes.
     if m.global <> invalid then 
-        addAndSetFields(m.global, { domainManagerState: state })
+        'addAndSetFields(m.global, { domainManagerState: state })
     end if
 end sub
 
@@ -104,7 +102,7 @@ function getInitialConfiguration(mode as String, responseHandler = invalid as Dy
     state._initialConfigStatus = "pending"
     state._initialConfigCallback = responseHandler
     if m.global <> invalid then
-        addAndSetFields(m.global, { domainManagerInitStatus: "pending" })
+        'addAndSetFields(m.global, { domainManagerInitStatus: "pending" })
     end if
     state._initialConfigRequestManager = getConfig(state._initialConfigRequestManager, state.initialConfigPrimaryUrl, "onInitialConfigPrimaryResponse")
     __syncDomainManagerState(state)
@@ -121,27 +119,22 @@ sub getNeedRefresh()
     end if
 end sub
 
-function changeMode(response as Object) as Boolean
+function changeMode() as Boolean
     ' Cambiar de Primario a Secundario solo cuando el error sea de DNS.
     state = __getDomainManagerState()
-    status = 0
-    message = ""
-    if response <> invalid then
-        if response.status <> invalid then status = response.status
-        if response.message <> invalid then message = response.message
-    end if
 
-    if validateErrorDNS(status, message) then
-        if state._mode = "Primary" and existSecondary() then
-            state._mode = "Secondary"
-        else
+    if state._mode = "Primary" then
+        state._mode = "Secondary"
+    else
+        if state._jsonMode = "Primary" then
+            state._jsonMode = "Secondary"
             state._mode = "Primary"
+        else
+            return false
         end if
-        __syncDomainManagerState(state)
-        return true
+        
     end if
 
-    return false
 end function
 
 sub enableFetchConfigJson()
@@ -243,7 +236,7 @@ end function
 sub onInitialConfigPrimaryResponse()
     ' Procesa la respuesta del CDN primario y en caso de error intenta el secundario.
     state = __getDomainManagerState()
-    if valdiateStatusCode(state._initialConfigRequestManager.statusCode) then
+    if validateStatusCode(state._initialConfigRequestManager.statusCode) then
         response = ParseJson(state._initialConfigRequestManager.response)
         state._initialConfigRequestManager = clearApiRequest(state._initialConfigRequestManager)
         if response <> invalid then
@@ -260,7 +253,7 @@ end sub
 sub onInitialConfigSecondaryResponse()
     ' Procesa la respuesta del CDN secundario si el primario falla.
     state = __getDomainManagerState()
-    if valdiateStatusCode(state._initialConfigRequestManager.statusCode) then
+    if validateStatusCode(state._initialConfigRequestManager.statusCode) then
         response = ParseJson(state._initialConfigRequestManager.response)
         state._initialConfigRequestManager = clearApiRequest(state._initialConfigRequestManager)
         if response <> invalid then

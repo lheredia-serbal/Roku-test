@@ -9,7 +9,7 @@
             "type": "brightscript",
             "request": "launch",
             "name": "Deploy to Roku",
-            "host": "192.168.100.221",
+            "host": "192.168.0.108",
             "password": "admin123",
             "rootDir": "${workspaceFolder}"
         }

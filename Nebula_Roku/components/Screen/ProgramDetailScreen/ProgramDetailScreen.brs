@@ -153,7 +153,7 @@ end sub
 
 ' Procesa la respuesta al obtener la informacion completa del programa
 sub onGetByIdResponse() 
-  if valdiateStatusCode(m.apiRequestManager.statusCode) then
+  if validateStatusCode(m.apiRequestManager.statusCode) then
     resp = ParseJson(m.apiRequestManager.response)
     m.apiRequestManager = clearApiRequest(m.apiRequestManager) 
 
@@ -189,7 +189,7 @@ end sub
 
 ' Procesa la respuesta al obtener la acciones disposnibles para el programa actual
 sub onActionsResponse()
-  if valdiateStatusCode(m.apiRequestManager.statusCode) then
+  if validateStatusCode(m.apiRequestManager.statusCode) then
     m.lastButtonSelect = invalid
     resp = ParseJson(m.apiRequestManager.response)
     m.apiRequestManager = clearApiRequest(m.apiRequestManager)
@@ -219,7 +219,7 @@ end sub
 
 ' Procesa la respuesta de si el ususario puede ver
 sub onWatchValidateResponse()
-  if valdiateStatusCode(m.apiRequestManager.statusCode) then
+  if validateStatusCode(m.apiRequestManager.statusCode) then
     resp = ParseJson(m.apiRequestManager.response).data
     m.apiRequestManager = clearApiRequest(m.apiRequestManager) 
 
@@ -270,7 +270,7 @@ end sub
 
 ' Procesa la respuesta al obtener la url de lo que se quiere ver
 sub onStreamingsResponse() 
-  if valdiateStatusCode(m.apiRequestManager.statusCode) then
+  if validateStatusCode(m.apiRequestManager.statusCode) then
     resp = ParseJson(m.apiRequestManager.response)
     if resp.data <> invalid then
       m.apiRequestManager = clearApiRequest(m.apiRequestManager) 
@@ -322,7 +322,7 @@ end sub
 
 ' Procesa la respuesta de programas relacionados al programa actual
 sub onGetRelatedResponse()
-  if valdiateStatusCode(m.apiRequestManager.statusCode) then
+  if validateStatusCode(m.apiRequestManager.statusCode) then
     resp = ParseJson(m.apiRequestManager.response)
     m.apiRequestManager = clearApiRequest(m.apiRequestManager) 
     
@@ -398,7 +398,7 @@ end sub
 
 ' Procesa la respuesta de la validacion del PIN
 sub onParentalControlResponse()
-  if valdiateStatusCode(m.apiRequestManager.statusCode) then
+  if validateStatusCode(m.apiRequestManager.statusCode) then
     resp = ParseJson(m.apiRequestManager.response)
 
     if resp <> invalid and resp.data <> invalid and resp.data then
