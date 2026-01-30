@@ -23,6 +23,10 @@ sub init()
   m.nameOrganization = m.top.findNode("nameOrganization")
 
   m.scaleInfo = m.global.scaleInfo
+
+  if m.global <> invalid then
+    m.global.observeField("activeApiUrl", "onActiveApiUrlChanged")
+  end if
 end sub
 
 ' Funcion que interpreta los eventos de teclado y retorna true si fue porcesada por este componente. Sino es porcesado por el
@@ -262,7 +266,7 @@ sub onSelectItem()
             return { success: true, error: invalid }
           end function
         }
-        executeWithRetry(action, __getApiUrlRefreshAction(), ApiType().CLIENTS_API_URL)
+        executeWithRetry(action, ApiType().CLIENTS_API_URL)
         m.apiRequestManager = action.apiRequestManager
       end if 
       
@@ -324,7 +328,7 @@ sub onLastWatchedResponse()
           return { success: true, error: invalid }
         end function
       }
-      executeWithRetry(action, __getApiUrlRefreshAction(), ApiType().CLIENTS_API_URL)
+      executeWithRetry(action, ApiType().CLIENTS_API_URL)
       m.apiRequestManager = action.apiRequestManager
     else
       m.top.loading.visible = false
@@ -383,7 +387,7 @@ sub onWatchValidateResponse()
             return { success: true, error: invalid }
           end function
         }
-        executeWithRetry(action, __getApiUrlRefreshAction(), ApiType().CLIENTS_API_URL)
+        executeWithRetry(action, ApiType().CLIENTS_API_URL)
         m.apiRequestManager = action.apiRequestManager
       end if
     else 
@@ -553,7 +557,7 @@ sub getProgramInfo()
         return { success: true, error: invalid }
       end function
     }
-    executeWithRetry(action, __getApiUrlRefreshAction(), ApiType().CLIENTS_API_URL)
+    executeWithRetry(action, ApiType().CLIENTS_API_URL)
     m.apiSummaryRequestManager = action.apiRequestManager
    end if 
   catch error
@@ -669,7 +673,7 @@ sub onContentViewResponse()
     statusCode = m.apiRequestManager.statusCode
 
     if statusCode = 9000 then
-      if tryRetryFromResponse(m.lastContentViewAction, m.apiRequestManager, __getApiUrlRefreshAction(), ApiType().CLIENTS_API_URL) then
+      if tryRetryFromResponse(m.lastContentViewAction, m.apiRequestManager, ApiType().CLIENTS_API_URL) then
         m.apiRequestManager = m.lastContentViewAction.apiRequestManager
         return
       end if
@@ -713,7 +717,7 @@ sub onPinDialogLoad()
         return { success: true, error: invalid }
       end function
     }
-    executeWithRetry(action, __getApiUrlRefreshAction(), ApiType().CLIENTS_API_URL)
+    executeWithRetry(action, ApiType().CLIENTS_API_URL)
     m.apiRequestManager = action.apiRequestManager
   else 
     __focusCarousels()
@@ -741,7 +745,7 @@ sub onParentalControlResponse()
           return { success: true, error: invalid }
         end function
       }
-      executeWithRetry(action, __getApiUrlRefreshAction(), ApiType().CLIENTS_API_URL)
+      executeWithRetry(action, ApiType().CLIENTS_API_URL)
       m.apiRequestManager = action.apiRequestManager
       else
         m.top.loading.visible = false
@@ -795,7 +799,7 @@ sub __getMenu()
       return { success: true, error: invalid }
     end function
   }
-  executeWithRetry(action, __getApiUrlRefreshAction(), ApiType().CLIENTS_API_URL)
+  executeWithRetry(action, ApiType().CLIENTS_API_URL)
   m.apiRequestManager = action.apiRequestManager
 end sub
 
@@ -861,7 +865,7 @@ sub __selectMenuItem(menuSelectedItem)
       end function
     }
     m.lastContentViewAction = action
-    executeWithRetry(action, __getApiUrlRefreshAction(), ApiType().CLIENTS_API_URL)
+    executeWithRetry(action, ApiType().CLIENTS_API_URL)
     m.apiRequestManager = action.apiRequestManager
 
   else if menuSelectedItem.key = "MenuId" and menuSelectedItem.code <> invalid and menuSelectedItem.code = "epg" then
@@ -885,7 +889,7 @@ sub __selectMenuItem(menuSelectedItem)
         return { success: true, error: invalid }
       end function
     }
-    executeWithRetry(action, __getApiUrlRefreshAction(), ApiType().CLIENTS_API_URL)
+    executeWithRetry(action, ApiType().CLIENTS_API_URL)
     m.apiRequestManager = action.apiRequestManager
   else 
     __showWithoutContent()
@@ -1049,7 +1053,7 @@ sub __validateAutoUpgrade()
       return { success: true, error: invalid }
     end function
   }
-  executeWithRetry(action, __getApiUrlRefreshAction(), ApiType().CLIENTS_API_URL)
+  executeWithRetry(action, ApiType().CLIENTS_API_URL)
   m.autoUpgradeRequestManager = action.apiRequestManager
 end sub
 
@@ -1152,7 +1156,6 @@ sub __validateVariables()
   
   if expired <> invalid and Val(expired) <= nowDate.AsSeconds() then
     m.apiVariableRequest = clearApiRequest(m.apiVariableRequest)
-    __refreshApiUrl()
     action = {
       apiRequestManager: m.apiVariableRequest
       url: urlPlatformsVariables(m.apiUrl, m.global.appCode, getVersionCode())
@@ -1167,7 +1170,7 @@ sub __validateVariables()
         return { success: true, error: invalid }
       end function
     }
-    executeWithRetry(action, __getApiUrlRefreshAction(), ApiType().CLIENTS_API_URL)
+    executeWithRetry(action, ApiType().CLIENTS_API_URL)
     m.apiVariableRequest = action.apiRequestManager
   end if
 end sub
@@ -1237,7 +1240,7 @@ sub __saveActionLog(actionLog as object)
         return { success: true, error: invalid }
       end function
     }
-    executeWithRetry(action, __getApiUrlRefreshAction(), ApiType().LOGS_API_URL)
+    executeWithRetry(action, ApiType().LOGS_API_URL)
     m.apiLogRequestManager = action.apiRequestManager
   else
       __sendActionLog(actionLog)
@@ -1279,7 +1282,7 @@ sub __sendActionLog(actionLog as object)
         return { success: true, error: invalid }
       end function
     }
-    executeWithRetry(action, __getApiUrlRefreshAction(), ApiType().LOGS_API_URL)
+    executeWithRetry(action, ApiType().LOGS_API_URL)
     m.apiLogRequestManager = action.apiRequestManager
   end if
 end sub
@@ -1355,15 +1358,12 @@ sub __loadOrganizationLogo()
   end if
 end sub
 
-' Actualiza la URL de API antes de ejecutar el retry.
-function __getApiUrlRefreshAction() as Object
-  return {
-    run: function() as Object
-      __refreshApiUrl()
-    end function
-  }
-end function
+sub onActiveApiUrlChanged()
+  __syncApiUrlFromGlobal()
+end sub
 
-sub __refreshApiUrl()
-  m.apiUrl = getConfigVariable(m.global.configVariablesKeys.API_URL)
+sub __syncApiUrlFromGlobal()
+  if m.global.activeApiUrl <> invalid and m.global.activeApiUrl <> "" then
+    m.apiUrl = m.global.activeApiUrl
+  end if
 end sub

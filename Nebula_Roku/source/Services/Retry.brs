@@ -95,7 +95,7 @@ sub clear()
     state.errorVisibleSubject = false
 end sub
 
-function tryRetryFromResponse(action as Object, apiRequestManager as Object, searchUrl as Object, apiTypeParam as Dynamic, executeFailover = true as Boolean) as Boolean
+function tryRetryFromResponse(action as Object, apiRequestManager as Object, apiTypeParam as Dynamic, executeFailover = true as Boolean) as Boolean
 
     if action = invalid then return false
 
@@ -160,10 +160,9 @@ sub retryAll()
     state.failedActions = remaining
 end sub
 
-function executeWithRetry(httpRequest as Object, searchUrl as Object, apiTypeParam as Dynamic, executeFailover = true as Boolean) as Object
+function executeWithRetry(httpRequest as Object, apiTypeParam as Dynamic, executeFailover = true as Boolean) as Object
     ' Ejecuta llamadas HTTP con failover y reconfiguración si es necesario.
     state = __getRetryServiceState()
-    searchUrl.run()
     result = __runRetryAction(httpRequest)
     if result.success then return result
 
@@ -173,8 +172,6 @@ function executeWithRetry(httpRequest as Object, searchUrl as Object, apiTypePar
         error = setErrorApi(error, apiTypeParam)
         return { success: false, error: error }
     end if
-
-    if searchUrl <> invalid and searchUrl.run <> invalid then searchUrl.run()
 
     finalResult = __runRetryAction(httpRequest)
     if finalResult.success then return finalResult
@@ -187,8 +184,7 @@ function executeWithRetry(httpRequest as Object, searchUrl as Object, apiTypePar
             state._reconfigInProgress = invalid
         end if
 
-        if searchUrl <> invalid and searchUrl.run <> invalid then searchUrl.run()
-        return executeWithRetry(httpRequest, searchUrl, apiTypeParam, false)
+        return executeWithRetry(httpRequest, apiTypeParam, false)
     end if
 
     finalError = setErrorApi(finalError, apiTypeParam)
