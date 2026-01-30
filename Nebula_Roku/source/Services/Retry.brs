@@ -6,6 +6,7 @@ function __getRetryServiceState() as Object
             failedActions: []
             errorVisibleSubject: false
             _reconfigInProgress: invalid
+            _changeModeInProgress: false
         }
     end if
 
@@ -96,11 +97,28 @@ end sub
 
 function tryRetryFromResponse(action as Object, apiRequestManager as Object, searchUrl as Object, apiTypeParam as Dynamic, executeFailover = true as Boolean) as Boolean
 
-    if not __hasPending() then
-        changeMode()
-    end if 
-    
+    if action = invalid then return false
+
+    if __validateCurrentApiHealth() then
+        result = __runRetryAction(action)
+        return result.success
+    end if
+
+    state = __getRetryServiceState()
+    wasEmpty = state.failedActions = invalid or state.failedActions.count() = 0
     __register(action)
+
+    if wasEmpty and not state._changeModeInProgress then
+        state._changeModeInProgress = true
+        __syncRetryState(state)
+        changeModeResult = changeMode()
+        state = __getRetryServiceState()
+        state._changeModeInProgress = false
+        __syncRetryState(state)
+        return changeModeResult
+    end if
+
+    return true
 end function
 
 sub __register(action as Object)
@@ -175,6 +193,32 @@ function executeWithRetry(httpRequest as Object, searchUrl as Object, apiTypePar
 
     finalError = setErrorApi(finalError, apiTypeParam)
     return { success: false, error: finalError }
+end function
+function executePendingActions() as Boolean
+    ' Ejecuta las funciones pendientes en orden y mantiene las que fallan.
+    state = __getRetryServiceState()
+    remaining = []
+    allSuccessful = true
+    for each action in state.failedActions
+        if action <> invalid then
+            result = __runRetryAction(action)
+            if not result.success then
+                remaining.push(action)
+                allSuccessful = false
+            end if
+        end if
+    end for
+    state.failedActions = remaining
+    state.errorVisibleSubject = remaining.count() > 0
+    __syncRetryState(state)
+    return allSuccessful
+end function
+
+function __validateCurrentApiHealth() as Boolean
+    apiUrl = getActiveApiUrl()
+    if apiUrl = invalid or apiUrl = "" then return false
+    healthUrl = urlClientsHealth(apiUrl)
+    return performHealthCheck(healthUrl)
 end function
 
 sub __syncRetryState(state as Object)

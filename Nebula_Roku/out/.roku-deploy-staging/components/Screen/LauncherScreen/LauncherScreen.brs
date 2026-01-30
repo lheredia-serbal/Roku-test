@@ -105,7 +105,7 @@ sub __requestClientsApiHealth()
 end sub
 
 sub onClientsApiHealthResponse()
-  if valdiateStatusCode(m.clientsHealthRequestManager.statusCode) then
+  if validateStatusCode(m.clientsHealthRequestManager.statusCode) then
     baseUrl = m.clientsApiCandidates[m.clientsApiIndex]
     addAndSetFields(m.global, {activeApiUrl: baseUrl})
     m.apiUrl = baseUrl
@@ -150,7 +150,7 @@ sub onValdiateConnectionResponse()
   m.versionLabel.text = "v " + getVersion()
   m.copyrightLabel.text = i18n_t(m.global.i18n, "launcherScreen.copyright").Replace("{{year}}",getCurrentYear())
   
-  if valdiateStatusCode(m.apiRequestManager.statusCode) then
+  if validateStatusCode(m.apiRequestManager.statusCode) then
     apiUrl = getActiveApiUrl()
     m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlPlatformsVariables(apiUrl, m.global.appCode, getVersionCode()), "GET", "onPlatformResponse", invalid, invalid, true)
   else 
@@ -161,7 +161,7 @@ end sub
 
 ' Procesa la respuesta al obtener las variables de la plataforma
 sub onPlatformResponse() ' invoked when EpisodesScreen content is changed
-  if valdiateStatusCode(m.apiRequestManager.statusCode) then    
+  if validateStatusCode(m.apiRequestManager.statusCode) then    
     addAndSetFields(m.global, {variables: ParseJson(m.apiRequestManager.response).data} )
     m.apiRequestManager = clearApiRequest(m.apiRequestManager) 
     
@@ -180,7 +180,7 @@ end sub
 ' Dispara la regeneracion de la infromacion del usuario logueado
 sub onRegenerateSession()
   statusCode = m.apiRequestManager.statusCode
-  if valdiateStatusCode(statusCode) then
+  if validateStatusCode(statusCode) then
     resp = ParseJson(m.apiRequestManager.response)
     m.apiRequestManager = clearApiRequest(m.apiRequestManager) 
 
@@ -238,7 +238,7 @@ end sub
 
 ' Procesa la respuesta del AutoUpgrade y continua con el flujo actual
 sub onAutoUpgradeResponse()
-  if valdiateStatusCode(m.apiRequestManager.statusCode) then
+  if validateStatusCode(m.apiRequestManager.statusCode) then
     resp = ParseJson(m.apiRequestManager.response)
     data = resp
     if resp <> invalid and resp.data <> invalid then data = resp.data

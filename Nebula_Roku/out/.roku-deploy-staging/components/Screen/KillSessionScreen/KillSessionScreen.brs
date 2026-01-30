@@ -95,7 +95,7 @@ end sub
 
 ' Procesa la respuesta de todos los que estan mirando actualemnte con la cuenta del usuario 
 sub onAllWhoAreWatchingResponse()
-  if valdiateStatusCode(m.apiRequestManager.statusCode) then
+  if validateStatusCode(m.apiRequestManager.statusCode) then
     resp = ParseJson(m.apiRequestManager.response).data
     m.apiRequestManager = clearApiRequest(m.apiRequestManager)
 
@@ -141,7 +141,7 @@ end sub
 
 ' Procesa la respuesta de si el ususario puede ver
 sub onWatchValidateResponse()
-  if valdiateStatusCode(m.apiRequestManager.statusCode) then
+  if validateStatusCode(m.apiRequestManager.statusCode) then
     resp = ParseJson(m.apiRequestManager.response).data
     m.apiRequestManager = clearApiRequest(m.apiRequestManager)
 
@@ -174,7 +174,7 @@ end sub
 
 ' Procesa la respuesta al obtener la url de lo que se quiere ver
 sub onStreamingsResponse() 
-  if valdiateStatusCode(m.apiRequestManager.statusCode) then
+  if validateStatusCode(m.apiRequestManager.statusCode) then
     resp = ParseJson(m.apiRequestManager.response)
     if resp.data <> invalid then
       m.apiRequestManager = clearApiRequest(m.apiRequestManager)
@@ -218,7 +218,7 @@ end sub
 
 ' Procesa la respuesta de que se elimino una sesion
 sub onkillSessionResponse()
-  if valdiateStatusCode(m.apiRequestManager.statusCode) then
+  if validateStatusCode(m.apiRequestManager.statusCode) then
     watchSessionId = getWatchSessionId()
     m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlWatchValidate(m.apiUrl, watchSessionId, m.redirectKey, m.redirectId), "GET", "onWatchValidateResponse")
   else 
@@ -240,7 +240,7 @@ end sub
 ' Procesa la respuesta de quien es que elimino mi sesion
 sub onKillerResponse()
   textError = i18n_t(m.global.i18n, "errorPlanSession.killer")
-  if valdiateStatusCode(m.apiRequestManager.statusCode) then
+  if validateStatusCode(m.apiRequestManager.statusCode) then
     resp = ParseJson(m.apiRequestManager.response)
     m.apiRequestManager = clearApiRequest(m.apiRequestManager)
 

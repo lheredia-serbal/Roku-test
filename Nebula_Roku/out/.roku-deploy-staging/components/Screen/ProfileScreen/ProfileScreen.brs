@@ -225,7 +225,7 @@ end sub
 
 ' Procesa la respuesta de la lista de perfiles del usuario
 sub onGetAllProfileResponse()
-  if valdiateStatusCode(m.apiRequestManager.statusCode) then
+  if validateStatusCode(m.apiRequestManager.statusCode) then
     resp = ParseJson(m.apiRequestManager.response)
     m.allowAddingProfiles = (resp.metadata <> invalid and resp.metadata.actions <> invalid and resp.metadata.actions.add <> invalid and resp.metadata.actions.add)
     if resp.data <> invalid and resp.data.count() > 0 then 
@@ -253,7 +253,7 @@ end sub
 
 ' Procesa la respuesta de eleccion de nuevo perfil del usuario.
 sub onSussessSelectResponse()
-  if valdiateStatusCode(m.apiRequestManager.statusCode) then
+  if validateStatusCode(m.apiRequestManager.statusCode) then
     resp = ParseJson(m.apiRequestManager.response)
 
     actionLog =  getActionLog({ actionCode: ActionLogCode().SELECT_PROFILE })
@@ -295,7 +295,7 @@ end sub
 
 ' Procesa la respuesta que obtiene todos los de avatars disposnibles
 sub onGetAllAvatarsResponse()
-  if valdiateStatusCode(m.apiRequestManager.statusCode) then
+  if validateStatusCode(m.apiRequestManager.statusCode) then
     avatars = ParseJson(m.apiRequestManager.response).data
     
     if avatars.count() > 0 then 
@@ -438,7 +438,7 @@ end sub
 
 ' Procesa la respuesta de que se confirmo eliminar el perfil selecioando
 sub onSussessDeleteResponse()
-  if valdiateStatusCode(m.apiRequestManager.statusCode) then
+  if validateStatusCode(m.apiRequestManager.statusCode) then
     m.blockLoading = false
     m.apiRequestManager = clearApiRequest(m.apiRequestManager)
     __backToSelectProfile(true)
@@ -461,7 +461,7 @@ end sub
 
 ' Procesa la respuesta de que se confirmo el guardado del perfil selecioando
 sub onSussessSaveResponse()
-  if valdiateStatusCode(m.apiRequestManager.statusCode) then
+  if validateStatusCode(m.apiRequestManager.statusCode) then
     m.blockLoading = false
     m.apiRequestManager = clearApiRequest(m.apiRequestManager)
     __backToSelectProfile(true)
@@ -484,7 +484,7 @@ end sub
 
 ' Procesa la respuesta del avatar por defecto para el nuevo perfil.
 sub onGetDefaultAvatarResponse()
-  if valdiateStatusCode(m.apiRequestManager.statusCode) then
+  if validateStatusCode(m.apiRequestManager.statusCode) then
     defaultAvatar = ParseJson(m.apiRequestManager.response).data
     m.apiRequestManager = clearApiRequest(m.apiRequestManager)
     __loadEditProfile({id: 0, avatar: defaultAvatar, kids: false, name: ""})
@@ -505,7 +505,7 @@ end sub
 
 ' Procesa la respuesta al obtener la informacion completa del perfil
 sub onGetByIdResponse()
-  if valdiateStatusCode(m.apiRequestManager.statusCode) then
+  if validateStatusCode(m.apiRequestManager.statusCode) then
     __loadEditProfile(ParseJson(m.apiRequestManager.response).data)
     m.apiRequestManager = clearApiRequest(m.apiRequestManager)
   else 

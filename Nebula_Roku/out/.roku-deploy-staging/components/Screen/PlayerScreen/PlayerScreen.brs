@@ -634,7 +634,7 @@ end sub
 
 ' Procesa la respuesta de la lista de  canales
 sub onChannelsResponse()
-  if valdiateStatusCode(m.apiRequestManager.statusCode) then
+  if validateStatusCode(m.apiRequestManager.statusCode) then
     resp = ParseJson(m.apiRequestManager.response)
     if resp.data <> invalid then
       if  m.channelList <> invalid then m.channelList.items = invalid
@@ -721,7 +721,7 @@ sub onVideoDurationChanged()
 end sub
 
 sub onUpdateWatchSessionResponse()
-  if valdiateStatusCode(m.apiSessionRequestManager.statusCode) then
+  if validateStatusCode(m.apiSessionRequestManager.statusCode) then
     resp = ParseJson(m.apiSessionRequestManager.response)
     if resp.data <> invalid then
       if resp.data.watchToken <> invalid then setWatchToken(resp.data.watchToken)
@@ -805,7 +805,7 @@ end sub
 ' Procesa la respuesta al obtener la url de lo que se quiere ver
 sub onStreamingsResponse() 
   print "onStreamingsResponse()"
-  if valdiateStatusCode(m.apiRequestManager.statusCode) then
+  if validateStatusCode(m.apiRequestManager.statusCode) then
     resp = ParseJson(m.apiRequestManager.response)
     if resp.data <> invalid then
 
@@ -943,7 +943,7 @@ end sub
 sub onProgramSummaryResponse()
   m.blockTuShowControls = false
 
-  if valdiateStatusCode(m.apiRequestManager.statusCode) then
+  if validateStatusCode(m.apiRequestManager.statusCode) then
     resp = ParseJson(m.apiRequestManager.response)
     if resp.data <> invalid then
       fistLoad = false
@@ -978,7 +978,7 @@ end sub
 
 ' Procesa la respuesta al validar la conexion contra las APIs
 sub onValdiateConnectionResponse()
-  if valdiateStatusCode(m.apiRequestManager.statusCode) then
+  if validateStatusCode(m.apiRequestManager.statusCode) then
     m.disableLayoutChannelConnection = false
     m.apiRequestManager = clearApiRequest(m.apiRequestManager)
     now = CreateObject("roDateTime")
@@ -1021,7 +1021,7 @@ end sub
 
 ' Procesa la respuesta al guardado del ultimo canal vistro
 sub onLastWatchedResponse()
-  if valdiateStatusCode(m.apiLastWatchedRequestManager.statusCode) then
+  if validateStatusCode(m.apiLastWatchedRequestManager.statusCode) then
     m.apiLastWatchedRequestManager = clearApiRequest(m.apiLastWatchedRequestManager) 
   else 
     error = m.apiLastWatchedRequestManager.errorResponse
@@ -1066,7 +1066,7 @@ end sub
 
 ' procesa el guardado del beacon
 sub onSendBeaconResponse()
-  if valdiateStatusCode(m.apiBeaconRequestManager.statusCode) then
+  if validateStatusCode(m.apiBeaconRequestManager.statusCode) then
     resp = ParseJson(m.apiBeaconRequestManager.response).data
     m.apiBeaconRequestManager = clearApiRequest(m.apiBeaconRequestManager)
     if resp <> invalid and resp.finished <> invalid and resp.finished then
@@ -1089,7 +1089,7 @@ end sub
 
 ' Procesa la respuesta de si el ususario puede ver
 sub onWatchValidateResponse()
-  if valdiateStatusCode(m.apiBeaconRequestManager.statusCode) then
+  if validateStatusCode(m.apiBeaconRequestManager.statusCode) then
     resp = ParseJson(m.apiBeaconRequestManager.response).data
     m.apiRequestManager = clearApiRequest(m.apiRequestManager)
     if resp.resultCode = 200 then
@@ -1135,7 +1135,7 @@ end sub
 
 ' Procesa la respuesta de la validacion del PIN
 sub onParentalControlResponse()
-  if valdiateStatusCode(m.apiRequestManager.statusCode) then
+  if validateStatusCode(m.apiRequestManager.statusCode) then
     resp = ParseJson(m.apiRequestManager.response)
 
     if resp <> invalid and resp.data <> invalid and resp.data then

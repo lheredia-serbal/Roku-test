@@ -6,6 +6,7 @@ function __getRetryServiceState() as Object
             failedActions: []
             errorVisibleSubject: false
             _reconfigInProgress: invalid
+            _changeModeInProgress: false
         }
     end if
 
@@ -31,7 +32,30 @@ function __runRetryAction(action as Object) as Object
             if response.error <> invalid then result.error = response.error
         end if
     end if
+        if result.success and result.error = invalid and action.apiRequestManager <> invalid then
+        statusCode = action.apiRequestManager.statusCode
+        errorResponse = action.apiRequestManager.errorResponse
+        if statusCode = 0 and errorResponse = invalid then
+            statusCode = __waitForStatusCode(action.apiRequestManager)
+            errorResponse = action.apiRequestManager.errorResponse
+        end if
+        if (statusCode <> invalid and statusCode <> 0 and not validateStatusCode(statusCode)) or (errorResponse <> invalid and errorResponse <> "") then
+            result.success = false
+            statusText = ""
+            if errorResponse <> invalid then statusText = errorResponse
+            result.error = { status: statusCode, statusText: statusText }
+        end if
+    end if
     return result
+end function
+
+function __waitForStatusCode(apiRequestManager as Object, timeoutMS = 20000 as Integer) as Integer
+    if apiRequestManager = invalid then return 0
+    port = CreateObject("roMessagePort")
+    apiRequestManager.ObserveField("statusCode", port)
+    event = wait(timeoutMS, port)
+    if event = invalid then return apiRequestManager.statusCode
+    return apiRequestManager.statusCode
 end function
 
 ' API pública (funciones sin prefijo "__").
@@ -58,7 +82,7 @@ function setErrorApi(error as Object, apiTypeParam as Dynamic) as Object
     return error
 end function
 
-function hasPending() as Boolean
+function __hasPending() as Boolean
     ' Valida que exista aunque sea una función pendiente de ejecutar.
     state = __getRetryServiceState()
     return state.failedActions <> invalid and state.failedActions.count() > 0
@@ -71,7 +95,33 @@ sub clear()
     state.errorVisibleSubject = false
 end sub
 
-sub register(action as Object)
+function tryRetryFromResponse(action as Object, apiRequestManager as Object, searchUrl as Object, apiTypeParam as Dynamic, executeFailover = true as Boolean) as Boolean
+
+    if action = invalid then return false
+
+    if __validateCurrentApiHealth() then
+        result = __runRetryAction(action)
+        return result.success
+    end if
+
+    state = __getRetryServiceState()
+    wasEmpty = state.failedActions = invalid or state.failedActions.count() = 0
+    __register(action)
+
+    if wasEmpty and not state._changeModeInProgress then
+        state._changeModeInProgress = true
+        __syncRetryState(state)
+        changeModeResult = changeMode()
+        state = __getRetryServiceState()
+        state._changeModeInProgress = false
+        __syncRetryState(state)
+        return changeModeResult
+    end if
+
+    return true
+end function
+
+sub __register(action as Object)
     ' Guarda las funciones en cola cuando fallan las peticiones por API.
     if action = invalid then return
     state = __getRetryServiceState()
@@ -86,6 +136,8 @@ sub register(action as Object)
         state.failedActions.push(action)
         state.errorVisibleSubject = true
     end if
+
+    __syncRetryState(state)
 end sub
 
 sub retryAll()
@@ -111,11 +163,11 @@ end sub
 function executeWithRetry(httpRequest as Object, searchUrl as Object, apiTypeParam as Dynamic, executeFailover = true as Boolean) as Object
     ' Ejecuta llamadas HTTP con failover y reconfiguración si es necesario.
     state = __getRetryServiceState()
+    searchUrl.run()
     result = __runRetryAction(httpRequest)
     if result.success then return result
 
     error = result.error
-    if not changeMode(error) then return { success: false, error: error }
 
     if not existSecondary() then
         error = setErrorApi(error, apiTypeParam)
@@ -142,3 +194,36 @@ function executeWithRetry(httpRequest as Object, searchUrl as Object, apiTypePar
     finalError = setErrorApi(finalError, apiTypeParam)
     return { success: false, error: finalError }
 end function
+function executePendingActions() as Boolean
+    ' Ejecuta las funciones pendientes en orden y mantiene las que fallan.
+    state = __getRetryServiceState()
+    remaining = []
+    allSuccessful = true
+    for each action in state.failedActions
+        if action <> invalid then
+            result = __runRetryAction(action)
+            if not result.success then
+                remaining.push(action)
+                allSuccessful = false
+            end if
+        end if
+    end for
+    state.failedActions = remaining
+    state.errorVisibleSubject = remaining.count() > 0
+    __syncRetryState(state)
+    return allSuccessful
+end function
+
+function __validateCurrentApiHealth() as Boolean
+    apiUrl = getActiveApiUrl()
+    if apiUrl = invalid or apiUrl = "" then return false
+    healthUrl = urlClientsHealth(apiUrl)
+    return performHealthCheck(healthUrl)
+end function
+
+sub __syncRetryState(state as Object)
+    ' Sincroniza el estado actual con el global para mantener los valores persistentes.
+    if m.global <> invalid then 
+        addAndSetFields(m.global, { retryServiceState: state })
+    end if
+end sub

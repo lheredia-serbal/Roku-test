@@ -19,6 +19,7 @@
 
   <script type="text/brightscript" uri="pkg:/source/Services/Auth.brs" />
   <script type="text/brightscript" uri="pkg:/source/Services/ActionLogs.brs" />
+    <script type="text/brightscript" uri="pkg:/source/Services/Health.brs" />
 
   <interface>
     <!-- Paramentros de Entrada -->

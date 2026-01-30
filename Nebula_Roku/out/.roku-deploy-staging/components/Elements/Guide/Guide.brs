@@ -285,7 +285,7 @@ end sub
 
 ' Procesa la respuesta de la guia del canal actual
 sub onCurrentCarouselResponse()
-    if valdiateStatusCode(m.apiRequestCurrentChannel.statusCode) then 
+    if validateStatusCode(m.apiRequestCurrentChannel.statusCode) then 
         m.currentCarouselGuide = ParseJson(m.apiRequestCurrentChannel.response)
 
          if m.apiRequestCurrentChannel.dataAux <> invalid and m.apiRequestCurrentChannel.dataAux <> "" then
@@ -322,7 +322,7 @@ end sub
 
 ' Procesa la respuesta de la guia del canal anterior
 sub onPrevCarouselResponse()
-    if valdiateStatusCode(m.apiRequestPrevChannel.statusCode) then
+    if validateStatusCode(m.apiRequestPrevChannel.statusCode) then
         m.prevCarouselGuide = ParseJson(m.apiRequestPrevChannel.response)
 
         if m.apiRequestPrevChannel.dataAux <> invalid and m.apiRequestPrevChannel.dataAux <> "" then
@@ -343,7 +343,7 @@ end sub
 
 ' Procesa la respuesta de la guia del canal siguiente
 sub onNextCarouselResponse()
-    if valdiateStatusCode(m.apiRequestNextChannel.statusCode) then 
+    if validateStatusCode(m.apiRequestNextChannel.statusCode) then 
         m.nextCarouselGuide = ParseJson(m.apiRequestNextChannel.response)
 
         if m.apiRequestNextChannel.dataAux <> invalid and m.apiRequestNextChannel.dataAux <> "" then
@@ -499,7 +499,7 @@ end sub
 
 ' Procesa la respuesta de la validacion del PIN
 sub onParentalControlResponse()
-  if valdiateStatusCode(m.apiRequestManager.statusCode) then
+  if validateStatusCode(m.apiRequestManager.statusCode) then
     resp = ParseJson(m.apiRequestManager.response)
 
     if resp <> invalid and resp.data <> invalid and resp.data then

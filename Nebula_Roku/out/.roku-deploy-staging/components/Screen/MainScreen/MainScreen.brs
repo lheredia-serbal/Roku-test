@@ -301,7 +301,7 @@ end sub
 
 ' Procesa la respuesta al pedir el ultimo canal visto disparando la validacion si puede ver y navegando al player con la guia abierta.
 sub onLastWatchedResponse()
-  if valdiateStatusCode(m.apiRequestManager.statusCode) then
+  if validateStatusCode(m.apiRequestManager.statusCode) then
     resp = ParseJson(m.apiRequestManager.response).data
     if (resp <> invalid) then 
       resp.key = "ChannelId"
@@ -361,7 +361,7 @@ end sub
 
 ' Procesa la respuesta de si el ususario puede ver
 sub onWatchValidateResponse()
-  if valdiateStatusCode(m.apiRequestManager.statusCode) then
+  if validateStatusCode(m.apiRequestManager.statusCode) then
     resp = ParseJson(m.apiRequestManager.response).data
     m.apiRequestManager = clearApiRequest(m.apiRequestManager)
 
@@ -412,7 +412,7 @@ end sub
 
 ' Procesa la respuesta al obtener la url de lo que se quiere ver
 sub onStreamingsResponse() 
-  if valdiateStatusCode(m.apiRequestManager.statusCode) then
+  if validateStatusCode(m.apiRequestManager.statusCode) then
     resp = ParseJson(m.apiRequestManager.response)
     if resp.data <> invalid then
       m.apiRequestManager = clearApiRequest(m.apiRequestManager)
@@ -563,7 +563,7 @@ end sub
 
 ' Procesa la respuesta de la peticion del Summay del programa
 sub onProgramSummaryResponse()
-  if valdiateStatusCode(m.apiSummaryRequestManager.statusCode) then
+  if validateStatusCode(m.apiSummaryRequestManager.statusCode) then
     m.itemfocused = invalid
     resp = ParseJson(m.apiSummaryRequestManager.response)
     if resp.data <> invalid then
@@ -599,7 +599,7 @@ end sub
 
 ' Procesa la respuesta de la peticion del menú
 sub onMenuResponse()
-  if valdiateStatusCode(m.apiRequestManager.statusCode) then
+  if validateStatusCode(m.apiRequestManager.statusCode) then
     resp = ParseJson(m.apiRequestManager.response)
     m.apiRequestManager = clearApiRequest(m.apiRequestManager)
     if resp.data <> invalid then
@@ -633,9 +633,10 @@ end sub
 ' Procesa la respuesta de la peticion de la vista de contenido
 sub onContentViewResponse()
 
-  if valdiateStatusCode(m.apiRequestManager.statusCode) then
+  menuSelected = ParseJson(m.apiRequestManager.dataAux) 
+
+  if validateStatusCode(m.apiRequestManager.statusCode) then
     resp = ParseJson(m.apiRequestManager.response)  
-    menuSelected = ParseJson(m.apiRequestManager.dataAux)  
     m.apiRequestManager = clearApiRequest(m.apiRequestManager)
 
     if resp.metadata.resultCode = 200 then
@@ -666,20 +667,28 @@ sub onContentViewResponse()
     m.top.loading.visible = false
     error = m.apiRequestManager.errorResponse
     statusCode = m.apiRequestManager.statusCode
-    m.apiRequestManager = clearApiRequest(m.apiRequestManager)
-    
-    printError("ContentView:", error)
-    
-    if validateLogout(statusCode, m.top) then return 
-    
-    if (statusCode = 408) or (statusCode = 500) then 
-      m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.global.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogReloadContentViewClosed", [i18n_t(m.global.i18n, "button.retry"), i18n_t(m.global.i18n, "button.exit")])
-    else 
-      __validateError(statusCode, 0, error, __showWithoutContent())
-    end if
 
-    actionLog = createLogError(generateErrorDescription(error), generateErrorPageUrl("getCarouselsById", "HomeComponent"), getServerErrorStack(error), menuSelected.key, menuSelected.id)
-    __saveActionLog(actionLog)
+    if statusCode = 9000 then
+      if tryRetryFromResponse(m.lastContentViewAction, m.apiRequestManager, __getApiUrlRefreshAction(), ApiType().CLIENTS_API_URL) then
+        m.apiRequestManager = m.lastContentViewAction.apiRequestManager
+        return
+      end if
+    else
+      m.apiRequestManager = clearApiRequest(m.apiRequestManager)
+      
+      printError("ContentView:", error)
+      
+      if validateLogout(statusCode, m.top) then return 
+      
+      if (statusCode = 408) or (statusCode = 500) then 
+        m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.global.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogReloadContentViewClosed", [i18n_t(m.global.i18n, "button.retry"), i18n_t(m.global.i18n, "button.exit")])
+      else 
+        __validateError(statusCode, 0, error, __showWithoutContent())
+      end if
+
+      actionLog = createLogError(generateErrorDescription(error), generateErrorPageUrl("getCarouselsById", "HomeComponent"), getServerErrorStack(error), menuSelected.key, menuSelected.id)
+      __saveActionLog(actionLog)
+    end if
   end if
 end sub
 
@@ -713,7 +722,7 @@ end sub
 
 ' Procesa la respuesta de la validacion del PIN
 sub onParentalControlResponse()
-  if valdiateStatusCode(m.apiRequestManager.statusCode) then
+  if validateStatusCode(m.apiRequestManager.statusCode) then
     resp = ParseJson(m.apiRequestManager.response)
 
     if resp <> invalid and resp.data <> invalid and resp.data then 
@@ -763,7 +772,7 @@ end sub
 
 ' Procesa la respuesta de la actualizacion las variables de plataforma 
 sub onPlatformResponse()
-  if valdiateStatusCode(m.apiVariableRequest.statusCode) then
+  if validateStatusCode(m.apiVariableRequest.statusCode) then
     addAndSetFields(m.global, {variables: ParseJson(m.apiVariableRequest.response).data} )
     m.apiVariableRequest = clearApiRequest(m.apiVariableRequest)
     saveNextUpdateVariables()
@@ -851,6 +860,7 @@ sub __selectMenuItem(menuSelectedItem)
         return { success: true, error: invalid }
       end function
     }
+    m.lastContentViewAction = action
     executeWithRetry(action, __getApiUrlRefreshAction(), ApiType().CLIENTS_API_URL)
     m.apiRequestManager = action.apiRequestManager
 
@@ -887,7 +897,7 @@ sub __selectMenuItem(menuSelectedItem)
 end sub
 
 sub onSuccessLogsTokenResponse() 
-  if valdiateStatusCode(m.apiRequestLogsManager.statusCode) then
+  if validateStatusCode(m.apiRequestLogsManager.statusCode) then
     ' resp = ParseJson(m.apiRequestLogsManager.response)
     m.apiRequestLogsManager = clearApiRequest(m.apiRequestLogsManager)
   else 
@@ -1045,7 +1055,7 @@ end sub
 
 ' Procesa la respuesta del AutoUpgrade
 sub onAutoUpgradeResponse()
-  if valdiateStatusCode(m.autoUpgradeRequestManager.statusCode) then
+  if validateStatusCode(m.autoUpgradeRequestManager.statusCode) then
     resp = ParseJson(m.autoUpgradeRequestManager.response)
     data = resp
     if resp <> invalid and resp.data <> invalid then data = resp.data
@@ -1142,6 +1152,7 @@ sub __validateVariables()
   
   if expired <> invalid and Val(expired) <= nowDate.AsSeconds() then
     m.apiVariableRequest = clearApiRequest(m.apiVariableRequest)
+    __refreshApiUrl()
     action = {
       apiRequestManager: m.apiVariableRequest
       url: urlPlatformsVariables(m.apiUrl, m.global.appCode, getVersionCode())
@@ -1347,7 +1358,9 @@ end sub
 ' Actualiza la URL de API antes de ejecutar el retry.
 function __getApiUrlRefreshAction() as Object
   return {
-    run: __refreshApiUrl
+    run: function() as Object
+      __refreshApiUrl()
+    end function
   }
 end function
 

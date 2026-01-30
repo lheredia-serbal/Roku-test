@@ -14,6 +14,10 @@
 
   <script type="text/brightscript" uri="pkg:/source/Services/ActionLogs.brs" />
   <script type="text/brightscript" uri="pkg:/source/Services/DomainManager.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Services/Retry.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Services/ErrorManager.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Services/ErrorCode.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Services/Health.brs" />
 
   <interface>
     <!-- Paramentros de Entrada -->

@@ -29,7 +29,7 @@ sub GetContent()
         if now.asSeconds() < expirationTimeToken then
             resp = __apiRequest(m.top.url, method, body, accToken)
             
-            if valdiateStatusCode(resp.statusCode) then
+            if validateStatusCode(resp.statusCode) then
                 __emitResponse(resp)
             else
                 if resp.statusCode <> 401 then
@@ -37,7 +37,7 @@ sub GetContent()
                 else 
                     newToken = __updateToken(accToken)
 
-                    if valdiateStatusCode(newToken.statusCode) then
+                    if validateStatusCode(newToken.statusCode) then
                         tokenResponse = ParseJson(newToken.response)
                         
                         __emitResponse(__apiRequest(m.top.url, method, body, tokenResponse.accessToken))
@@ -49,7 +49,7 @@ sub GetContent()
         else
             newToken = __updateToken(accToken)
 
-            if valdiateStatusCode(newToken.statusCode) then
+            if validateStatusCode(newToken.statusCode) then
                 tokenResponse = ParseJson(newToken.response)
 
                 __emitResponse(__apiRequest(m.top.url, method, body, tokenResponse.accessToken))
@@ -121,11 +121,16 @@ function __apiRequest(url, method, body, token)
             If event <> invalid Then
                 if type(event) = "roUrlEvent" then                
                     statusCode = event.GetResponseCode()
-                    
-                    if valdiateStatusCode(statusCode) then
+
+                    if validateStatusCode(statusCode) then
                         response = event.GetString()
                         errorResponse = invalid
-                    else 
+                    else if __validateServerError(event) then
+                        printError("SERVER (" + method + "): - " + statusCode.toStr() + " " + url, event.GetFailureReason())
+                        errorResponse = event.GetString()
+                        statusCode = 9000
+                        response = invalid
+                    else  
                         printError("API (" + method + "): - " + statusCode.toStr() + " " + url, event.GetFailureReason())
                         errorResponse = event.GetString()
                         response = invalid
@@ -147,9 +152,14 @@ function __apiRequest(url, method, body, token)
                 if type(event) = "roUrlEvent" then
                     statusCode = event.GetResponseCode()
                     
-                    if valdiateStatusCode(statusCode) then
+                    if validateStatusCode(statusCode) then
                         response = event.GetString()
                         errorResponse = invalid
+                    else if __validateServerError(event) then
+                        printError("SERVER (" + method + "): - " + statusCode.toStr() + " " + url, event.GetFailureReason())
+                        errorResponse = event.GetString()
+                        statusCode = 9000
+                        response = invalid
                     else 
                         printError("API (" + method + "): - " + statusCode.toStr() + " " + url, event.GetFailureReason())
                         errorResponse = event.GetString()
@@ -178,7 +188,7 @@ function __updateToken(accToken) as object
     newAuxToken = __apiRequest(urlTokensUpdate(authUrl), "POST", tokenBody, refToken)
 
     
-    if valdiateStatusCode(newAuxToken.statusCode) then
+    if validateStatusCode(newAuxToken.statusCode) then
         respToken = ParseJson(newAuxToken.response)
         saveTokens(respToken)
 
@@ -208,7 +218,7 @@ function __reAuthenticate(authUrl, accToken, refToken) as object
     newAuxToken = __apiRequest(urlTokensReAuthenticate(authUrl), "POST", tokenBody, reAuthToken)
 
     
-    if valdiateStatusCode(newAuxToken.statusCode) then
+    if validateStatusCode(newAuxToken.statusCode) then
         respToken = ParseJson(newAuxToken.response)
         saveTokens(respToken)
 
@@ -218,4 +228,29 @@ function __reAuthenticate(authUrl, accToken, refToken) as object
 
         return { statusCode: newAuxToken.statusCode }
     end if
+end function
+
+'Valida si el error fue por error de conexión con el servidor
+function __validateServerError(event as object) as boolean
+
+    headers = event.GetResponseHeaders()
+
+    if (__getHeaderValue(headers, "x-service-id")) then
+        'El error no fue por no poderse conectar con el servidor, ya que el servidor devuelve en el header el atributo "x-service-id" en sus response
+        return false
+    else 
+        'No se pudo conectar con el servidor
+        return true
+    end if
+end function
+
+' Función que valida que exista el atributo x-service-id en el header
+function __getHeaderValue(headers as Object, key as String) as boolean
+    if headers = invalid or Type(headers) <> "roAssociativeArray" then return false
+
+    if headers.Count() = 0 then return false
+
+    if not headers.doesexist("x-service-id") then return false
+
+    return true
 end function

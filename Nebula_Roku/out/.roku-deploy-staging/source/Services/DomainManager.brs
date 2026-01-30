@@ -71,8 +71,6 @@ function __getDomainManagerState() as Object
         }
     end if
 
-    if m.global <> invalid then m.global.domainManagerState = m.domainManagerState
-
     return m.domainManagerState
 end function
 
@@ -104,7 +102,7 @@ function getInitialConfiguration(mode as String, responseHandler = invalid as Dy
     state._initialConfigStatus = "pending"
     state._initialConfigCallback = responseHandler
     if m.global <> invalid then
-        addAndSetFields(m.global, { domainManagerInitStatus: "pending" })
+        'addAndSetFields(m.global, { domainManagerInitStatus: "pending" })
     end if
     state._initialConfigRequestManager = getConfig(state._initialConfigRequestManager, state.initialConfigPrimaryUrl, "onInitialConfigPrimaryResponse")
     __syncDomainManagerState(state)
@@ -121,22 +119,151 @@ sub getNeedRefresh()
     end if
 end sub
 
-function changeMode(response as Object) as Boolean
+function changeMode() as Boolean
     ' Cambiar de Primario a Secundario solo cuando el error sea de DNS.
     state = __getDomainManagerState()
-    status = 0
-    message = ""
-    if response <> invalid then
-        if response.status <> invalid then status = response.status
-        if response.message <> invalid then message = response.message
+
+    if state._mode = "Primary" then
+        if __attemptHealthAndRetry("Secondary") then return true
     end if
 
-    if validateErrorDNS(status, message) then
-        if state._mode = "Primary" and existSecondary() then
-            state._mode = "Secondary"
-        else
-            state._mode = "Primary"
+    state = __getDomainManagerState()
+    if state._mode = "Secondary" then
+        if state._jsonMode = "Primary" then
+            state._jsonMode = "Secondary"
+            __syncDomainManagerState(state)
+
+            if __attemptHealthAndRetry("Primary") then return true
+            if __attemptHealthAndRetry("Secondary") then return true
         end if
+    end if
+
+    state = __getDomainManagerState()
+    if state._mode = "Secondary" and state._jsonMode = "Secondary" then
+        state._jsonMode = "Primary"
+        state._mode = "Primary"
+        state._currentConfig = "Primary"
+        __syncDomainManagerState(state)
+
+        if __refreshConfigFromCdns() then
+            if __attemptHealthAndRetry("Primary") then return true
+            if __attemptHealthAndRetry("Secondary") then return true
+        end if
+    end if
+
+    return false
+end function
+
+function __attemptHealthAndRetry(mode as String) as Boolean
+    state = __getDomainManagerState()
+    state._mode = mode
+    state._currentConfig = mode
+    __syncDomainManagerState(state)
+
+    if __validateHealthForMode(mode) then
+        return executePendingActions()
+    end if
+
+    return false
+end function
+
+function __getApiUrlForMode(mode as String) as String
+    resource = getResourceByName("ClientsApiUrl")
+    if resource = invalid then return ""
+    if mode = "Primary" then return resource.primary
+    if mode = "Secondary" then return resource.secondary
+    return ""
+end function
+
+sub __updateActiveApiUrl(baseUrl as String)
+    if baseUrl = invalid or baseUrl = "" then return
+    if m.global <> invalid then
+        addAndSetFields(m.global, { activeApiUrl: baseUrl })
+    end if
+end sub
+
+function __validateHealthForMode(mode as String) as Boolean
+    baseUrl = __getApiUrlForMode(mode)
+    if baseUrl = invalid or baseUrl = "" then return false
+    healthUrl = urlClientsHealth(baseUrl)
+    success = performHealthCheck(healthUrl)
+    if success then __updateActiveApiUrl(baseUrl)
+    return success
+end function
+
+function performHealthCheck(url as String, timeoutMS = 20000 as Integer) as Boolean
+    if url = invalid or url = "" then return false
+    transfer = CreateObject("roUrlTransfer")
+    port = CreateObject("roMessagePort")
+    transfer.SetCertificatesFile("common:/certs/ca-bundle.crt")
+    transfer.SetPort(port)
+    transfer.RetainBodyOnError(true)
+    transfer.AddHeader("Content-Type", "application/json")
+    lang = getAppLanguage()
+    if lang <> invalid and lang <> "" then
+        transfer.AddHeader("Accept-Language", lang)
+    end if
+    transfer.SetURL(url)
+
+    if transfer.AsyncGetToString() then
+        event = wait(timeoutMS, port)
+        if event <> invalid and type(event) = "roUrlEvent" then
+            statusCode = event.GetResponseCode()
+            return validateStatusCode(statusCode)
+        end if
+    end if
+
+    return false
+end function
+
+function __fetchConfigFromUrl(url as String, timeoutMS = 20000 as Integer) as Object
+    response = { success: false, data: invalid }
+    if url = invalid or url = "" then return response
+
+    transfer = CreateObject("roUrlTransfer")
+    port = CreateObject("roMessagePort")
+    transfer.SetCertificatesFile("common:/certs/ca-bundle.crt")
+    transfer.SetPort(port)
+    transfer.RetainBodyOnError(true)
+    transfer.AddHeader("Content-Type", "application/json")
+    transfer.SetURL(url)
+
+    if transfer.AsyncGetToString() then
+        event = wait(timeoutMS, port)
+        if event <> invalid and type(event) = "roUrlEvent" then
+            statusCode = event.GetResponseCode()
+            if validateStatusCode(statusCode) then
+                payload = event.GetString()
+                if payload <> invalid then
+                    response.data = ParseJson(payload)
+                    response.success = response.data <> invalid
+                end if
+            end if
+        end if
+    end if
+
+    return response
+end function
+
+function __refreshConfigFromCdns() as Boolean
+    state = __getDomainManagerState()
+    primaryResponse = __fetchConfigFromUrl(state.initialConfigPrimaryUrl)
+    if primaryResponse.success then
+        setConfigResponse(primaryResponse.data, "Primary")
+        state = __getDomainManagerState()
+        state._jsonMode = "Primary"
+        state._currentInitialConfig = "Primary"
+        __syncDomainManagerState(state)
+        return true
+    end if
+
+    secondaryResponse = __fetchConfigFromUrl(state.initialConfigSecondaryUrl)
+    if secondaryResponse.success then
+        setConfigResponse(secondaryResponse.data, "Primary")
+        state = __getDomainManagerState()
+        state._jsonMode = "Secondary"
+        state._currentInitialConfig = "Secondary"
+        state._fetchInitialConfig = false
         __syncDomainManagerState(state)
         return true
     end if
@@ -243,7 +370,7 @@ end function
 sub onInitialConfigPrimaryResponse()
     ' Procesa la respuesta del CDN primario y en caso de error intenta el secundario.
     state = __getDomainManagerState()
-    if valdiateStatusCode(state._initialConfigRequestManager.statusCode) then
+    if validateStatusCode(state._initialConfigRequestManager.statusCode) then
         response = ParseJson(state._initialConfigRequestManager.response)
         state._initialConfigRequestManager = clearApiRequest(state._initialConfigRequestManager)
         if response <> invalid then
@@ -260,7 +387,7 @@ end sub
 sub onInitialConfigSecondaryResponse()
     ' Procesa la respuesta del CDN secundario si el primario falla.
     state = __getDomainManagerState()
-    if valdiateStatusCode(state._initialConfigRequestManager.statusCode) then
+    if validateStatusCode(state._initialConfigRequestManager.statusCode) then
         response = ParseJson(state._initialConfigRequestManager.response)
         state._initialConfigRequestManager = clearApiRequest(state._initialConfigRequestManager)
         if response <> invalid then
