@@ -74,5 +74,7 @@
 
     <!-- Loading -->  
     <Loading id="Loading" visible="false"/>
+
+    <CdnErrorDialog id="cdnErrorDialog" visible="false" />
   </children>
 </component>

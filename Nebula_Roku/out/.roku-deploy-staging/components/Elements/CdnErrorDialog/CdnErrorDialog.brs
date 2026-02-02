@@ -109,6 +109,7 @@ sub __refreshFromGlobal()
   onErrorCodeChange()
 end sub
 
+' Maneja eventos de tecla.
 function onKeyEvent(key as String, press as Boolean) as Boolean
   if press and key = "OK" and m.retryButton.isInFocusChain() and not m.retryButton.disable then
     m.top.retry = true

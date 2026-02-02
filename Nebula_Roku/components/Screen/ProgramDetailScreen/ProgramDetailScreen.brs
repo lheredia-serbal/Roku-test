@@ -144,6 +144,7 @@ sub initFocus()
             return { success: true, error: invalid }
           end function
         }
+        TrackAction(m, action)
         executeWithRetry(action, ApiType().CLIENTS_API_URL)
         m.apiRequestManager = action.apiRequestManager
       else
@@ -169,6 +170,11 @@ sub onGetByIdResponse()
     end if 
   else
     m.top.loading.visible = false
+    retryManager = RetryOn9000(m, "onGetByIdResponse", m.apiRequestManager, ApiType().CLIENTS_API_URL)
+    if retryManager <> invalid then
+      m.apiRequestManager = retryManager
+      return
+    end if
     error = m.apiRequestManager.errorResponse
     statusCode = m.apiRequestManager.statusCode
     m.apiRequestManager = clearApiRequest(m.apiRequestManager) 
@@ -204,6 +210,11 @@ sub onActionsResponse()
       m.top.loading.visible = false
     end if 
   else
+    retryManager = RetryOn9000(m, "onActionsResponse", m.apiRequestManager, ApiType().CLIENTS_API_URL)
+    if retryManager <> invalid then
+      m.apiRequestManager = retryManager
+      return
+    end if
     m.top.loading.visible = false
     statusCode = m.apiRequestManager.statusCode
     errorResponse = m.apiRequestManager.errorResponse
@@ -245,6 +256,7 @@ sub onWatchValidateResponse()
             return { success: true, error: invalid }
           end function
         }
+        TrackAction(m, action)
         executeWithRetry(action, ApiType().CLIENTS_API_URL)
         m.apiRequestManager = action.apiRequestManager
       end if
@@ -256,6 +268,11 @@ sub onWatchValidateResponse()
       printError("WatchValidate ResultCode:", resp.resultCode)
     end if
   else 
+    retryManager = RetryOn9000(m, "onWatchValidateResponse", m.apiRequestManager, ApiType().CLIENTS_API_URL)
+    if retryManager <> invalid then
+      m.apiRequestManager = retryManager
+      return
+    end if
     m.top.loading.visible = false
     statusCode = m.apiRequestManager.statusCode
     errorResponse = m.apiRequestManager.errorResponse
@@ -289,6 +306,11 @@ sub onStreamingsResponse()
       m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.global.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogClosedLastFocus", [i18n_t(m.global.i18n, "button.cancel")])
     end if
   else 
+    retryManager = RetryOn9000(m, "onStreamingsResponse", m.apiRequestManager, ApiType().CLIENTS_API_URL)
+    if retryManager <> invalid then
+      m.apiRequestManager = retryManager
+      return
+    end if
     m.top.loading.visible = false
     statusCode = m.apiRequestManager.statusCode
     errorResponse = m.apiRequestManager.errorResponse
@@ -334,6 +356,11 @@ sub onGetRelatedResponse()
       __loadRelatedCarousel(resp.data)
     end if 
   else
+    retryManager = RetryOn9000(m, "onGetRelatedResponse", m.apiRequestManager, ApiType().CLIENTS_API_URL)
+    if retryManager <> invalid then
+      m.apiRequestManager = retryManager
+      return
+    end if
     statusCode = m.apiRequestManager.statusCode
     errorResponse = m.apiRequestManager.errorResponse
     m.apiRequestManager = clearApiRequest(m.apiRequestManager) 
@@ -392,6 +419,7 @@ sub onPinDialogLoad()
         return { success: true, error: invalid }
       end function
     }
+    TrackAction(m, action)
     executeWithRetry(action, ApiType().CLIENTS_API_URL)
     m.apiRequestManager = action.apiRequestManager
   else 
@@ -416,7 +444,7 @@ sub onParentalControlResponse()
       else
         m.top.loading.visible = true
         watchSessionId = getWatchSessionId()
-                action = {
+        action = {
           apiRequestManager: m.apiRequestManager
           url: urlWatchValidate(m.apiUrl, watchSessionId, m.program.key, m.program.id)
           method: "GET"
@@ -430,7 +458,9 @@ sub onParentalControlResponse()
             return { success: true, error: invalid }
           end function
         }
+        TrackAction(m, action)
         executeWithRetry(action, ApiType().CLIENTS_API_URL)
+        m.apiRequestManager = action.apiRequestManager
         m.apiRequestManager = action.apiRequestManager
       end if
     else
@@ -438,6 +468,11 @@ sub onParentalControlResponse()
       m.dialog = createAndShowDialog(m.top, "", i18n_t(m.global.i18n, "shared.parentalControlModal.error.invalid"), "onDialogClosedLastFocus")
     end if
   else     
+    retryManager = RetryOn9000(m, "onParentalControlResponse", m.apiRequestManager, ApiType().CLIENTS_API_URL)
+    if retryManager <> invalid then
+      m.apiRequestManager = retryManager
+      return
+    end if
     m.top.loading.visible = false
     statusCode = m.apiRequestManager.statusCode
     errorResponse = m.apiRequestManager.errorResponse
@@ -486,6 +521,7 @@ sub __getProgramDetail(key, id)
       return { success: true, error: invalid }
     end function
   }
+  TrackAction(m, action)
   executeWithRetry(action, ApiType().CLIENTS_API_URL)
   m.apiRequestManager = action.apiRequestManager
 end sub
@@ -620,6 +656,7 @@ sub __loadProgramInfo(program)
       return { success: true, error: invalid }
     end function
   }
+  TrackAction(m, action)
   executeWithRetry(action, ApiType().CLIENTS_API_URL)
   m.apiRequestManager = action.apiRequestManager
 end sub
@@ -674,6 +711,7 @@ sub __openPlayer(streamingAction)
             return { success: true, error: invalid }
           end function
         }
+        TrackAction(m, action)
         executeWithRetry(action, ApiType().CLIENTS_API_URL)
         m.apiRequestManager = action.apiRequestManager
       end if
@@ -833,6 +871,7 @@ sub __saveActionLog(actionLog as object)
         return { success: true, error: invalid }
       end function
     }
+    TrackAction(m, action)
     executeWithRetry(action, ApiType().LOGS_API_URL)
     m.apiLogRequestManager = action.apiRequestManager
   else
@@ -843,6 +882,11 @@ end sub
 ' Obtener el beacon token
 sub onActionLogTokenResponse() 
 
+  retryManager = RetryOn9000(m, "onActionLogTokenResponse", m.apiLogRequestManager, ApiType().LOGS_API_URL)
+  if retryManager <> invalid then
+    m.apiLogRequestManager = retryManager
+    return
+  end if
   resp = ParseJson(m.apiLogRequestManager.response)
   actionLog = ParseJson(m.apiLogRequestManager.dataAux)
 
@@ -875,6 +919,7 @@ sub __sendActionLog(actionLog as object)
         return { success: true, error: invalid }
       end function
     }
+    TrackAction(m, action)
     executeWithRetry(action, ApiType().LOGS_API_URL)
     m.apiLogRequestManager = action.apiRequestManager
   end if
@@ -882,6 +927,11 @@ end sub
 
 ' Limpiar la llamada del log
 sub onActionLogResponse() 
+  retryManager = RetryOn9000(m, "onActionLogResponse", m.apiLogRequestManager, ApiType().LOGS_API_URL)
+  if retryManager <> invalid then
+    m.apiLogRequestManager = retryManager
+    return
+  end if
   m.apiLogRequestManager = clearApiRequest(m.apiLogRequestManager)
 end sub
 

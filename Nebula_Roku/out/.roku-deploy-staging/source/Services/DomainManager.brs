@@ -100,6 +100,7 @@ function getInitialConfiguration(mode as String, responseHandler = invalid as Dy
     state = __getDomainManagerState()
     state._mode = mode
     state._initialConfigStatus = "pending"
+    state._fetchInitialConfig = false
     state._initialConfigCallback = responseHandler
     if m.global <> invalid then
         'addAndSetFields(m.global, { domainManagerInitStatus: "pending" })
@@ -279,6 +280,7 @@ sub enableFetchConfigJson()
     ' Esta función se ejecuta cuando algún DNS dio OK, limpia las banderas.
     state = __getDomainManagerState()
     state._fetchInitialConfig = true
+    __syncDomainManagerState(state)
 end sub
 
 sub restartConfiguration()

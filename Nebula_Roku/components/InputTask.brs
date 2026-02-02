@@ -3,6 +3,7 @@ Sub Init()
     m.top.functionName = "listenInput"
 End Sub
 
+' Describe la operación listen input.
 function ListenInput()
     port=createobject("romessageport")
     InputObject=createobject("roInput")

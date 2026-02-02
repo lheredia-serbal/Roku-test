@@ -140,6 +140,7 @@ function getScaledItemSize() as object
     return [0, 0]
 end function
 
+' Obtiene el rectángulo escalado actual.
 function getScaledCurrRect() as object
     scaledWidth = m.top.currRect.width
     scaledHeight = m.top.currRect.height

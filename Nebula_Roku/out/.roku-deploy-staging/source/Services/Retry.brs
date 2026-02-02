@@ -82,6 +82,17 @@ sub __maybeRemovePendingAction(action as Object, error as Object)
     end if
 end sub
 
+sub __updateFetchInitialConfigFromResult(action as Object, result as Object)
+    if action = invalid or result = invalid then return
+    statusCode = __getActionStatusCode(action, result.error)
+    if statusCode = invalid or statusCode = 0 then return
+    if validateStatusCode(statusCode) then
+        enableFetchConfigJson()
+    else if statusCode <> 9000 then
+        enableFetchConfigJson()
+    end if
+end sub
+
 function __runRetryAction(action as Object) as Object
     ' Ejecuta una acción y espera un resultado con { success, error }.
     result = { success: false, error: invalid }
@@ -107,6 +118,7 @@ function __runRetryAction(action as Object) as Object
             result.error = { status: statusCode, statusText: statusText }
         end if
     end if
+    __updateFetchInitialConfigFromResult(action, result)
     return result
 end function
 
@@ -255,7 +267,7 @@ end sub
 sub __updateActionUrl(action as Object, previousApiUrl as String, nextApiUrl as String)
     if action = invalid then return
     if action.url <> invalid and InStr(1, action.url, previousApiUrl) > 0 then
-        action.url = action.url.Replace(previousApiUrl, nextApiUrl)
+        action.url = action.url.Replace(previousApiUrl, nextApiUrl).Replace("1https", "https")
     end if
 end sub
 

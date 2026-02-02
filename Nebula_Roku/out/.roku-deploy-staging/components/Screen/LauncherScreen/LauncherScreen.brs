@@ -19,21 +19,26 @@ sub init()
   'find Nodes
   m.versionLabel = m.top.findNode("versionLabel")
   m.copyrightLabel = m.top.findNode("copyrightLabel")
-  m.cdnErrorDialog = m.top.findNode("cdnErrorDialog")
-  m.cdnErrorDialog.observeField("retry", "onCdnErrorRetry")
-  logo = m.top.findNode("logo")
+  m.splashBackground = m.top.findNode("splashBackground")
   m.domainManagerTimer = m.top.findNode("domainManagerTimer")
   m.domainManagerTimer.observeField("fire", "onDomainManagerTimerFire")
   m.simulateCdnFirstFailure = getSimulateCdnFirstFailure()
   m.cdnFirstFailureTriggered = false
 
-  logoWidth = scaleValue(700, scaleInfo)
-  logoHeight = ((logoWidth/16)*9)
-  logo.width = logoWidth
-  logo.height = logoHeight
-  logo.loadWidth = logoWidth
-  logo.loadHeight = logoHeight
-  logo.translation = [((scaleInfo.width - logoWidth) / 2), (scaleInfo.height - logoHeight) / 2]
+  if m.splashBackground <> invalid then
+    m.splashBackground.width = scaleInfo.width
+    m.splashBackground.height = scaleInfo.height
+    m.splashBackground.loadWidth = scaleInfo.width
+    m.splashBackground.loadHeight = scaleInfo.height
+    m.splashBackground.translation = [0, 0]
+    if scaleInfo.width >= 1920 then
+      m.splashBackground.uri = "pkg:/images/client/splash-screen_fhd.jpg"
+    else if scaleInfo.width >= 1280 then
+      m.splashBackground.uri = "pkg:/images/client/splash-screen_hd.jpg"
+    else
+      m.splashBackground.uri = "pkg:/images/client/splash-screen_sd.jpg"
+    end if
+  end if
 
   m.versionLabel.color = m.global.colors.PRIMARY
   m.versionLabel.width = scaleInfo.width
@@ -47,6 +52,10 @@ sub init()
 end sub
 
 sub __startCdnInitialization(keepDialogVisible = false)
+  if not getFetchInitialConfig() then
+    __showCdnErrorDialog()
+    return
+  end if
   if not keepDialogVisible then
     __hideCdnErrorDialog()
   end if
@@ -63,6 +72,10 @@ sub __startCdnInitialization(keepDialogVisible = false)
   setConfigUrls(m.cdnUrls[0], m.cdnUrls[1])
   getInitialConfiguration("Primary")
   __startDomainManagerPolling()
+end sub
+
+sub startCdnInitialization(keepDialogVisible = false)
+  __startCdnInitialization(keepDialogVisible)
 end sub
 
 sub __startDomainManagerPolling()
@@ -121,19 +134,11 @@ sub onClientsApiHealthResponse()
 end sub
 
 sub __showCdnErrorDialog()
-  if m.cdnErrorDialog = invalid then return
-  m.cdnErrorDialog.errorCode = getErrorCodeDemo()
-  m.cdnErrorDialog.showSpinner = false
-  m.cdnErrorDialog.buttonDisabled = false
-  m.cdnErrorDialog.visible = true
+  showCdnErrorDialog()
 end sub
 
 sub __hideCdnErrorDialog()
-  if m.cdnErrorDialog <> invalid then
-    m.cdnErrorDialog.showSpinner = false
-    m.cdnErrorDialog.buttonDisabled = false
-    m.cdnErrorDialog.visible = false
-  end if
+  hideCdnErrorDialog()
 end sub
 
 sub onCdnErrorRetry()

@@ -253,6 +253,33 @@ function createAndShowPINDialog(screen, title as string,  method, buttons = [])
   return pinDialog
 end function
 
+sub showCdnErrorDialog()
+    if m.global = invalid then return
+    dialog = m.global.cdnErrorDialog
+    if dialog = invalid and m.top <> invalid then
+        scene = m.top.getScene()
+        if scene <> invalid then dialog = scene.findNode("cdnErrorDialog")
+    end if
+    if dialog = invalid then return
+    'dialog.errorCode = getErrorCodeDemo()
+    dialog.showSpinner = false
+    dialog.buttonDisabled = false
+    dialog.visible = true
+end sub
+
+sub hideCdnErrorDialog()
+    if m.global = invalid then return
+    dialog = m.global.cdnErrorDialog
+    if dialog = invalid and m.top <> invalid then
+        scene = m.top.getScene()
+        if scene <> invalid then dialog = scene.findNode("cdnErrorDialog")
+    end if
+    if dialog = invalid then return
+    dialog.showSpinner = false
+    dialog.buttonDisabled = false
+    dialog.visible = false
+end sub
+
 ' Limipia las variables del modal y retornan la respuesta. Se debe asignar la variable del modal con invalid 
 ' para que sea limpiado por el garbage collection 
 function clearDialogAndGetOption(screen, dialog)

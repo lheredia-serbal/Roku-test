@@ -31,11 +31,8 @@
   <children>
     <!-- Logo en el centro -->
     <Poster
-      id="logo"
-      loadDisplayMode="scaleToFit"
-      uri="pkg:/images/client/logo.png" />
-
-      <CdnErrorDialog id="cdnErrorDialog" visible="false" />
+      id="splashBackground"
+      loadDisplayMode="scaleToFill" />
 
       <Timer
         id="domainManagerTimer"

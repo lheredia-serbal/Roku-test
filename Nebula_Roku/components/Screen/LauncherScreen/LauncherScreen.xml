@@ -31,9 +31,8 @@
   <children>
     <!-- Logo en el centro -->
     <Poster
-      id="logo"
-      loadDisplayMode="scaleToFit"
-      uri="pkg:/images/client/logo.png" />
+      id="splashBackground"
+      loadDisplayMode="scaleToFill" />
 
       <Timer
         id="domainManagerTimer"

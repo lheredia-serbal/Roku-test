@@ -1440,6 +1440,7 @@ sub __hideInactivityPrompt(logout = false)
   end if
 end sub
 
+' Convierte iso to seconds.
 function __parseIsoToSeconds(dateString as String) as dynamic
   if dateString = invalid or dateString = "" then return invalid
 
@@ -2039,6 +2040,7 @@ sub __applyControlsVisibility()
   end if
 end sub
 
+' Obtiene en foco botón del controlador index.
 function __getFocusedControllerButtonIndex() as Integer
   if m.controllerButtons = invalid then return -1
 

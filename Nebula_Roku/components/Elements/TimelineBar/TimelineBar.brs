@@ -284,6 +284,7 @@ sub __updateProgress()
   m.top.previewVisible = true
 end sub
 
+' Formatea tiempo.
 function __formatTime(seconds as float) as string
   if seconds < 0 then seconds = 0
 
@@ -299,6 +300,7 @@ function __formatTime(seconds as float) as string
   end if
 end function
 
+' Rellena el valor solicitado.
 function __pad(value as integer) as string
   if value < 10 then
     return "0" + value.toStr()
@@ -403,12 +405,14 @@ sub onPauseTick()
   end if
 end sub
 
+' Limita el valor solicitado.
 function __clamp(v as float, mn as float, mx as float) as float
   if v < mn then return mn
   if v > mx then return mx
   return v
 end function
 
+' Construye thumb URL.
 function __buildThumbUrl(epochSeconds as integer) as string
   if m.thumbnailsUrlTemplate = invalid or m.thumbnailsUrlTemplate = "" then return ""
   return m.thumbnailsUrlTemplate.Replace("[DateInEpoch]", epochSeconds.toStr())
@@ -422,6 +426,7 @@ sub __cacheUi()
   end if
 end sub
 
+' Obtiene dispositivo UTC offset seconds.
 sub __restoreCachedUi()
   if m.cachedProgressWidth <> invalid and m.progress <> invalid then 
     print "progress 5" 
@@ -467,6 +472,7 @@ sub __commitSelection()
   end if
 end sub
 
+' Obtiene epoch seconds.
 function __getEpochSeconds() as integer
   dt = CreateObject("roDateTime")
   dt.Mark()
