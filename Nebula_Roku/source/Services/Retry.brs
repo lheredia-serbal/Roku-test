@@ -82,6 +82,17 @@ sub __maybeRemovePendingAction(action as Object, error as Object)
     end if
 end sub
 
+sub __updateFetchInitialConfigFromResult(action as Object, result as Object)
+    if action = invalid or result = invalid then return
+    statusCode = __getActionStatusCode(action, result.error)
+    if statusCode = invalid or statusCode = 0 then return
+    if validateStatusCode(statusCode) then
+        enableFetchConfigJson()
+    else if statusCode <> 9000 then
+        enableFetchConfigJson()
+    end if
+end sub
+
 function __runRetryAction(action as Object) as Object
     ' Ejecuta una acción y espera un resultado con { success, error }.
     result = { success: false, error: invalid }
@@ -107,6 +118,7 @@ function __runRetryAction(action as Object) as Object
             result.error = { status: statusCode, statusText: statusText }
         end if
     end if
+    __updateFetchInitialConfigFromResult(action, result)
     return result
 end function
 

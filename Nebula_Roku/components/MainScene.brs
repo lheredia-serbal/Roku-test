@@ -17,11 +17,16 @@ sub init()
   m.KillSessionScreen = m.top.FindNode("KillSessionScreen")
   m.PlayerScreen = m.top.FindNode("PlayerScreen")
 
+  m.cdnErrorDialog = m.top.FindNode("cdnErrorDialog")
+  if m.cdnErrorDialog <> invalid then
+    m.cdnErrorDialog.observeField("retry", "onCdnErrorRetry")
+  end if
+
   i18n = invalid
   scene = m.top.getScene()
   if scene <> invalid then i18n = scene.findNode("i18n")
   
-  addAndSetFields(m.global, {i18n: i18n})
+  addAndSetFields(m.global, {i18n: i18n, cdnErrorDialog: m.cdnErrorDialog})
   __initConfig()
 end sub
 
@@ -148,6 +153,17 @@ end sub
 ' Cierra la aplicacion.
 sub onExitApp()
   m.top.appExit = true
+end sub
+
+sub onCdnErrorRetry()
+  if m.cdnErrorDialog = invalid then return
+  if not m.cdnErrorDialog.retry then return
+  m.cdnErrorDialog.retry = false
+  m.cdnErrorDialog.showSpinner = true
+  m.cdnErrorDialog.buttonDisabled = true
+  if m.LauncherScreen <> invalid then
+    m.LauncherScreen.callFunc("startCdnInitialization", true)
+  end if
 end sub
 
 ' Metodo que se ejecuta al elegir una opcion del dialogo.

@@ -35,8 +35,6 @@
       loadDisplayMode="scaleToFit"
       uri="pkg:/images/client/logo.png" />
 
-      <CdnErrorDialog id="cdnErrorDialog" visible="false" />
-
       <Timer
         id="domainManagerTimer"
         repeat="true"
