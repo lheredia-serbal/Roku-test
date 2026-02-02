@@ -68,6 +68,10 @@ sub init()
   m.timelinePreviewPoster  = m.top.findNode("timelinePreviewPoster")
 
   m.scaleInfo = m.global.scaleInfo
+
+  if m.global <> invalid then
+    m.global.observeField("activeApiUrl", "onActiveApiUrlChanged")
+  end if
   
   if m.videoPlayer <> invalid then m.videoPlayer.enableUI = false
   
@@ -3208,6 +3212,16 @@ function __isPlayerPaused() as boolean
   if m.videoPlayer = invalid then return true
   return (m.videoPlayer.state = "paused")
 end function
+
+sub onActiveApiUrlChanged()
+  __syncApiUrlFromGlobal()
+end sub
+
+sub __syncApiUrlFromGlobal()
+  if m.global.activeApiUrl <> invalid and m.global.activeApiUrl <> "" then
+    m.apiUrl = m.global.activeApiUrl
+  end if
+end sub
 
 sub __playerPause()
   if m.videoPlayer = invalid then return
