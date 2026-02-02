@@ -255,7 +255,7 @@ end sub
 sub __updateActionUrl(action as Object, previousApiUrl as String, nextApiUrl as String)
     if action = invalid then return
     if action.url <> invalid and InStr(1, action.url, previousApiUrl) > 0 then
-        action.url = action.url.Replace(previousApiUrl, nextApiUrl)
+        action.url = action.url.Replace(previousApiUrl, nextApiUrl).Replace("1https", "https")
     end if
 end sub
 
