@@ -391,9 +391,6 @@ sub onInitialConfigPrimaryResponse()
             __notifyInitialConfigResult(true)
             return
         end if
-    else
-        ' Status HTTP inválido: mapear error de red al diálogo CDN.
-        setCdnErrorCodeFromStatus(state._initialConfigRequestManager.statusCode, ApiType().CONFIGURATION_URL)
     end if
 
     state._initialConfigRequestManager = clearApiRequest(state._initialConfigRequestManager)

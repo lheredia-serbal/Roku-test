@@ -253,7 +253,7 @@ function createAndShowPINDialog(screen, title as string,  method, buttons = [])
   return pinDialog
 end function
 
-sub showCdnErrorDialog()
+sub showCdnErrorDialog(overlayTransparent = false as Boolean)
     if m.global = invalid then return
     dialog = m.global.cdnErrorDialog
     if dialog = invalid and m.top <> invalid then
@@ -262,6 +262,8 @@ sub showCdnErrorDialog()
     end if
     if dialog = invalid then return
     'dialog.errorCode = getErrorCodeDemo()
+    'permite overlay transparente cuando se solicita.
+    dialog.overlayTransparent = overlayTransparent
     dialog.showSpinner = false
     dialog.buttonDisabled = false
     dialog.visible = true
@@ -275,6 +277,8 @@ sub hideCdnErrorDialog()
         if scene <> invalid then dialog = scene.findNode("cdnErrorDialog")
     end if
     if dialog = invalid then return
+    ' Resetea el overlay transparente al ocultar el diálogo CDN.
+    dialog.overlayTransparent = false
     dialog.showSpinner = false
     dialog.buttonDisabled = false
     dialog.visible = false

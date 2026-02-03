@@ -656,6 +656,11 @@ sub onChannelsResponse()
       printError("ChannelsList Emty:", m.apiRequestManager.response)
     end if 
   else
+    retryManager = RetryOn9000(m, "onChannelsResponse", m.apiRequestManager, ApiType().CLIENTS_API_URL)
+    if retryManager <> invalid then
+      m.apiRequestManager = retryManager
+      return
+    end if
     error = m.apiRequestManager.errorResponse
     statusCode = m.apiRequestManager.statusCode
     m.apiRequestManager = clearApiRequest(m.apiRequestManager) 
@@ -663,6 +668,8 @@ sub onChannelsResponse()
     printError("ChannelsList:", error)
     
     if validateLogout(statusCode, m.top) then return
+    ' Cambio agregado: mostrar CDN dialog desde Player cuando aplica 9000.
+    __showPlayerCdnErrorDialog(statusCode, ApiType().CLIENTS_API_URL)
     if m.showChannelListAfterUpdate then m.showChannelListAfterUpdate = false 
   end if
 end sub
@@ -734,7 +741,15 @@ sub onUpdateWatchSessionResponse()
     printError("WatchSesionToken:", m.apiRequestManager.errorResponse)
     end if
   else
+    retryManager = RetryOn9000(m, "onUpdateWatchSessionResponse", m.apiSessionRequestManager, ApiType().CLIENTS_API_URL)
+    if retryManager <> invalid then
+      m.apiSessionRequestManager = retryManager
+      return
+    end if
+    statusCode = m.apiSessionRequestManager.statusCode
     printError("WatchSesionToken:", m.apiRequestManager.errorResponse)
+    ' Cambio agregado: mostrar CDN dialog desde Player cuando aplica 9000.
+    __showPlayerCdnErrorDialog(statusCode, ApiType().CLIENTS_API_URL)
   end if  
 end sub
 
@@ -925,6 +940,11 @@ sub onStreamingsResponse()
       printError("Streamings Emty:", response)
     end if
   else 
+    retryManager = RetryOn9000(m, "onStreamingsResponse", m.apiRequestManager, ApiType().CLIENTS_API_URL)
+    if retryManager <> invalid then
+      m.apiRequestManager = retryManager
+      return
+    end if
     errorResponse = m.apiRequestManager.errorResponse
     statusCode = m.apiRequestManager.statusCode
     m.apiRequestManager = clearApiRequest(m.apiRequestManager)
@@ -932,6 +952,9 @@ sub onStreamingsResponse()
     printError("Streamings:", errorResponse)
     
     if validateLogout(statusCode, m.top) then return
+
+    ' Cambio agregado: mostrar CDN dialog desde Player cuando aplica 9000.
+    __showPlayerCdnErrorDialog(statusCode, ApiType().CLIENTS_API_URL)
 
     if m.lastErrorTime <> invalid then 
       clearTimer(m.retryReconnection)
@@ -963,6 +986,11 @@ sub onProgramSummaryResponse()
       printError("ProgramSumary Empty:", errorResponse)
     end if 
   else
+    retryManager = RetryOn9000(m, "onProgramSummaryResponse", m.apiRequestManager, ApiType().CLIENTS_API_URL)
+    if retryManager <> invalid then
+      m.apiRequestManager = retryManager
+      return
+    end if
     statusCode = m.apiRequestManager.statusCode
     errorResponse = m.apiRequestManager.errorResponse
     m.apiRequestManager = clearApiRequest(m.apiRequestManager)
@@ -970,6 +998,9 @@ sub onProgramSummaryResponse()
     printError("ProgramSumary:", errorResponse)
     
     if validateLogout(statusCode, m.top) then return
+
+    ' Cambio agregado: mostrar CDN dialog desde Player cuando aplica 9000.
+    __showPlayerCdnErrorDialog(statusCode, ApiType().CLIENTS_API_URL)
 
     if statusCode >= 400 and statusCode <= 599 then  
       clearTimer(m.newProgramTimer)
@@ -991,6 +1022,11 @@ sub onValdiateConnectionResponse()
     m.lastErrorTime = now.AsSeconds() + 30 
     __loadStreamingURL(m.lastKey, m.lastId, getStreamingType().DEFAULT)
   else
+    retryManager = RetryOn9000(m, "onValdiateConnectionResponse", m.apiRequestManager, ApiType().CLIENTS_API_URL)
+    if retryManager <> invalid then
+      m.apiRequestManager = retryManager
+      return
+    end if
     m.lastErrorTime = invalid
     errorResponse = m.apiRequestManager.errorResponse
     clearTimer(m.retryReconnection)
@@ -1028,6 +1064,11 @@ sub onLastWatchedResponse()
   if validateStatusCode(m.apiLastWatchedRequestManager.statusCode) then
     m.apiLastWatchedRequestManager = clearApiRequest(m.apiLastWatchedRequestManager) 
   else 
+    retryManager = RetryOn9000(m, "onLastWatchedResponse", m.apiLastWatchedRequestManager, ApiType().CLIENTS_API_URL)
+    if retryManager <> invalid then
+      m.apiLastWatchedRequestManager = retryManager
+      return
+    end if
     error = m.apiLastWatchedRequestManager.errorResponse
     statusCode = m.apiLastWatchedRequestManager.statusCode
     m.apiLastWatchedRequestManager = clearApiRequest(m.apiLastWatchedRequestManager) 
@@ -1035,6 +1076,9 @@ sub onLastWatchedResponse()
     printError("WatchValidate ResultCode:", error)
 
     if validateLogout(statusCode, m.top) then return
+
+    ' Cambio agregado: mostrar CDN dialog desde Player cuando aplica 9000.
+    __showPlayerCdnErrorDialog(statusCode, ApiType().CLIENTS_API_URL)
   end if 
 end sub
 
@@ -1078,6 +1122,11 @@ sub onSendBeaconResponse()
       __closePlayer(true)
     end if 
   else
+    retryManager = RetryOn9000(m, "onSendBeaconResponse", m.apiBeaconRequestManager, ApiType().CLIENTS_API_URL)
+    if retryManager <> invalid then
+      m.apiBeaconRequestManager = retryManager
+      return
+    end if
     statusCode = m.apiBeaconRequestManager.statusCode
     errorResponse = m.apiBeaconRequestManager.errorResponse 
     m.apiBeaconRequestManager = clearApiRequest(m.apiBeaconRequestManager)
@@ -1088,6 +1137,9 @@ sub onSendBeaconResponse()
     end if
 
     printError("onSendBeaconResponse:", errorResponse)
+
+    ' Cambio agregado: mostrar CDN dialog desde Player cuando aplica 9000.
+    __showPlayerCdnErrorDialog(statusCode, ApiType().CLIENTS_API_URL)
   end if
 end sub
 
@@ -1105,6 +1157,11 @@ sub onWatchValidateResponse()
       printError("WatchValidate ResultCode:", resp.resultCode)
     end if
   else 
+    retryManager = RetryOn9000(m, "onWatchValidateResponse", m.apiBeaconRequestManager, ApiType().CLIENTS_API_URL)
+    if retryManager <> invalid then
+      m.apiBeaconRequestManager = retryManager
+      return
+    end if
     statusCode = m.apiBeaconRequestManager.statusCode
     errorResponse = m.apiBeaconRequestManager.errorResponse
     m.apiBeaconRequestManager = clearApiRequest(m.apiBeaconRequestManager)
@@ -1113,6 +1170,9 @@ sub onWatchValidateResponse()
     
     if validateLogout(statusCode, m.top) then return
 
+    ' Cambio agregado: mostrar CDN dialog desde Player cuando aplica 9000.
+    __showPlayerCdnErrorDialog(statusCode, ApiType().CLIENTS_API_URL)
+
     actionLog = createLogError(generateErrorDescription(errorResponse), generateErrorPageUrl("errorWatchValidate", "PlayerComponent"), getServerErrorStack(errorResponse), m.lastKey, m.lastId)
     __saveActionLog(actionLog)
   end if
@@ -1120,6 +1180,11 @@ end sub
 
 ' procesa el guardado de que se dejo de ver en el player
 sub onEndWatchResponse()
+  retryManager = RetryOn9000(m, "onEndWatchResponse", m.apiRequestManager, ApiType().CLIENTS_API_URL)
+  if retryManager <> invalid then
+    m.apiRequestManager = retryManager
+    return
+  end if
   ' printLog("End Watch")
 end sub
 
@@ -1152,7 +1217,12 @@ sub onParentalControlResponse()
       m.top.loading.visible = false
       m.dialog = createAndShowDialog(m.top, "", i18n_t(m.global.i18n, "shared.parentalControlModal.error.invalid"), "onDialogClosedLastFocus")
     end if
-  else     
+  else
+    retryManager = RetryOn9000(m, "onParentalControlResponse", m.apiRequestManager, ApiType().CLIENTS_API_URL)
+    if retryManager <> invalid then
+      m.apiRequestManager = retryManager
+      return
+    end if
     m.top.loading.visible = false
     statusCode = m.apiRequestManager.statusCode
     errorResponse = m.apiRequestManager.errorResponse
@@ -1161,6 +1231,9 @@ sub onParentalControlResponse()
     printError("ParentalControl:", statusCode.toStr() + " " +  errorResponse)
     
     if validateLogout(statusCode, m.top) then return
+
+     ' Cambio agregado: mostrar CDN dialog desde Player cuando aplica 9000.
+    __showPlayerCdnErrorDialog(statusCode, ApiType().CLIENTS_API_URL)
   end if
 end sub
 
@@ -1208,6 +1281,11 @@ end sub
 
 ' Obtener el beacon token
 sub onActionLogTokenResponse() 
+  retryManager = RetryOn9000(m, "onActionLogTokenResponse", m.apiLogRequestManager, ApiType().LOGS_API_URL)
+  if retryManager <> invalid then
+    m.apiLogRequestManager = retryManager
+    return
+  end if
   resp = ParseJson(m.apiLogRequestManager.response)
   actionLog = ParseJson(m.apiLogRequestManager.dataAux)
 
@@ -1223,7 +1301,23 @@ end sub
 
 ' Limpiar la llamada del log
 sub onActionLogResponse() 
+  retryManager = RetryOn9000(m, "onActionLogResponse", m.apiLogRequestManager, ApiType().LOGS_API_URL)
+  if retryManager <> invalid then
+    m.apiLogRequestManager = retryManager
+    return
+  end if
   m.apiLogRequestManager = clearApiRequest(m.apiLogRequestManager)
+end sub
+
+' Cambio agregado: helper activo para abrir CdnErrorDialog en Player cuando aplica.
+sub __showPlayerCdnErrorDialog(statusCode as Integer, apiTypeParam as Dynamic)
+  if statusCode = invalid then return
+  if statusCode <> 9000 then return
+  if apiTypeParam = ApiType().LOGS_API_URL then return
+  if m.global = invalid or m.global.retryServiceState = invalid then return
+  if m.global.retryServiceState.errorVisibleSubject <> true then return
+  setCdnErrorCodeFromStatus(statusCode, apiTypeParam)
+  showCdnErrorDialog(true)
 end sub
 
 sub startHideChannelListTimer()
