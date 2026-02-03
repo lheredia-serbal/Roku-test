@@ -1231,40 +1231,51 @@ end sub
 
 ' Valdia el error obtenido desde la API
 sub __validateError(statusCode, resultCode, errorResponse, callback = invalid)
+  ' Centraliza la validación de errores HTTP/resultCode para la MainScreen.
+  ' Decide cuándo redirigir, mostrar diálogos y setear códigos específicos en el CDN dialog.
   error = invalid
   
   if validateLogout(statusCode, m.top) then return 
 
   if errorResponse <> invalid and errorResponse <> "" then 
-    error = ParseJson(errorResponse) 
+    ' Si llega un body de error, intenta parsearlo para obtener el code interno.
   else 
+    ' Si no hay body de error, usa el resultCode recibido.
     error = { code: resultCode }
   end if
 
   if (error <> invalid and error.code <> invalid) then 
     if (error.code = 5014) then 
+      ' El usuario debe regresar al selector de perfiles.
       m.top.loading.visible = true
       __redirectToProfilesScreen()
     else if (error.code = 5931) then
+      ' No tiene plan: mostrar diálogo con mensaje específico.
       __markLastFocus() 
       m.dialog = createAndShowDialog(m.top,i18n_t(m.global.i18n, "shared.errorComponent.weAreSorry"), (i18n_t(m.global.i18n, "shared.errorComponent.youCurrentlyDoNotHavePlan")).Replace("[ProductName]", m.productName), "onDialogClosedLastFocus", [i18n_t(m.global.i18n, "button.cancel")])
     
     else if (error.code = 5932) then
+      ' No tiene suscripciones activas: mostrar diálogo con mensaje específico.
       __markLastFocus() 
       m.dialog = createAndShowDialog(m.top,i18n_t(m.global.i18n, "shared.errorComponent.weAreSorry"), (i18n_t(m.global.i18n, "shared.errorComponent.youCurrentlyDoNotHaveAnyActiveSubscriptions")).Replace("[ProductName]", m.productName), "onDialogClosedLastFocus", [i18n_t(m.global.i18n, "button.cancel")])
     
     else if (error.code = 5939) then
+      ' Saldo insuficiente: mostrar diálogo con mensaje específico.
       __markLastFocus() 
       m.dialog = createAndShowDialog(m.top,i18n_t(m.global.i18n, "shared.errorComponent.weAreSorry"), i18n_t(m.global.i18n, "shared.errorComponent.youCurrentlyDoNotHaveSufficientBalance"), "onDialogClosedLastFocus", [i18n_t(m.global.i18n, "button.cancel")])
     
     else if (error.code = 5930) then
+      ' Demasiadas sesiones activas: redirigir a la pantalla correspondiente.
       __redirectToManySessionsScreeen()
-    end if
-  else 
-    if (statusCode = 400) or (statusCode = 404) or (statusCode = 500) then  
-      m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.unhandled"), i18n_t(m.global.i18n, "shared.errorComponent.extendedMessage"), "onDialogClosedFocusContainer", [i18n_t(m.global.i18n, "button.cancel")])
-    else 
-      if (callback <> invalid) then callback()
+    else if (error.code = 9000) then
+      ' Error de configuración inicial: mapear a código CDN usando statusCode.
+      setCdnErrorCodeFromStatus(statusCode, ApiType().CLIENTS_API_URL)
+    else if (error.code = 100) or (error.code = 101) then
+      ' Errores de parseo/estructura JSON de CDN: mapear a códigos PR.
+      setCdnErrorCodeFromStatus(error.code, ApiType().CLIENTS_API_URL)
+    else if (error.code = 404) or (error.code = 521) or (error.code = 523) then
+      ' Errores al cargar módulos cliente: mapear a códigos CL.
+      setClientModuleErrorCodeFromStatus(error.code, ApiType().CLIENTS_API_URL)
     end if
   end if 
 end sub

@@ -379,11 +379,21 @@ sub onInitialConfigPrimaryResponse()
     if validateStatusCode(state._initialConfigRequestManager.statusCode) then
         response = ParseJson(state._initialConfigRequestManager.response)
         state._initialConfigRequestManager = clearApiRequest(state._initialConfigRequestManager)
-        if response <> invalid then
+        if response = invalid then
+            ' JSON inválido: mapear a PR-100 para CDN (parse error).
+            setCdnErrorCodeFromStatus(100, ApiType().CONFIGURATION_URL)
+        else if response.config = invalid or response.resources = invalid then
+            ' JSON válido pero sin campos requeridos: mapear a PR-101.
+            setCdnErrorCodeFromStatus(101, ApiType().CONFIGURATION_URL)
+        else
+            ' JSON correcto: guardar configuración y notificar éxito.
             setConfigResponse(response, state._mode)
             __notifyInitialConfigResult(true)
             return
         end if
+    else
+        ' Status HTTP inválido: mapear error de red al diálogo CDN.
+        setCdnErrorCodeFromStatus(state._initialConfigRequestManager.statusCode, ApiType().CONFIGURATION_URL)
     end if
 
     state._initialConfigRequestManager = clearApiRequest(state._initialConfigRequestManager)
@@ -396,7 +406,14 @@ sub onInitialConfigSecondaryResponse()
     if validateStatusCode(state._initialConfigRequestManager.statusCode) then
         response = ParseJson(state._initialConfigRequestManager.response)
         state._initialConfigRequestManager = clearApiRequest(state._initialConfigRequestManager)
-        if response <> invalid then
+        if response = invalid then
+            ' JSON inválido en CDN secundario: mapear a PR-100.
+            setCdnErrorCodeFromStatus(100, ApiType().CONFIGURATION_URL)
+        else if response.config = invalid or response.resources = invalid then
+            ' JSON sin campos requeridos en CDN secundario: mapear a PR-101.
+            setCdnErrorCodeFromStatus(101, ApiType().CONFIGURATION_URL)
+        else
+            ' JSON correcto en CDN secundario: aplicar modo Secondary y notificar éxito.
             state._jsonMode = "Secondary"
             setConfigResponse(response, state._mode)
             state._fetchInitialConfig = false
@@ -407,6 +424,9 @@ sub onInitialConfigSecondaryResponse()
             __syncDomainManagerState(state)
             return
         end if
+    else
+        ' Error de status HTTP en CDN secundario: mapear error de red al diálogo CDN.
+        setCdnErrorCodeFromStatus(state._initialConfigRequestManager.statusCode, ApiType().CONFIGURATION_URL)
     end if
 
     state._initialConfigRequestManager = clearApiRequest(state._initialConfigRequestManager)
