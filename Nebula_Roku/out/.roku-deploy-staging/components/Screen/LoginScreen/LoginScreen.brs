@@ -127,6 +127,11 @@ sub onLoginResponse()
     m.sendLoginPost = false
     m.top.finished = true
   else 
+    retryManager = RetryOn9000(m, "onLoginResponse", m.apiRequestManager, ApiType().AUTH_API_URL)
+    if retryManager <> invalid then
+      m.apiRequestManager = retryManager
+      return
+    end if
     if m.resultCodes = invalid then m.resultCodes = getResultCodes()
     m.top.loading.visible = false
 
@@ -289,6 +294,7 @@ sub __login(user as String, password as String)
         return { success: true, error: invalid }
       end function
     }
+    TrackAction(m, action)
     executeWithRetry(action, ApiType().AUTH_API_URL)
     m.apiRequestManager = action.apiRequestManager
   end if 
@@ -327,6 +333,7 @@ sub __saveActionLog(actionLog as object)
         return { success: true, error: invalid }
       end function
     }
+    TrackAction(m, action)
     executeWithRetry(action, ApiType().LOGS_API_URL)
     m.apiLogRequestManager = action.apiRequestManager
   else
@@ -336,6 +343,12 @@ end sub
 
 ' Obtener el beacon token
 sub onActionLogTokenResponse() 
+
+  retryManager = RetryOn9000(m, "onActionLogTokenResponse", m.apiLogRequestManager, ApiType().LOGS_API_URL)
+  if retryManager <> invalid then
+    m.apiLogRequestManager = retryManager
+    return
+  end if
 
   resp = ParseJson(m.apiLogRequestManager.response)
   actionLog = ParseJson(m.apiLogRequestManager.dataAux)
@@ -369,6 +382,7 @@ sub __sendActionLog(actionLog as object)
         return { success: true, error: invalid }
       end function
     }
+    TrackAction(m, action)
     executeWithRetry(action, ApiType().LOGS_API_URL)
     m.apiLogRequestManager = action.apiRequestManager
   end if
@@ -376,6 +390,11 @@ end sub
 
 ' Limpiar la llamada del log
 sub onActionLogResponse() 
+  retryManager = RetryOn9000(m, "onActionLogResponse", m.apiLogRequestManager, ApiType().LOGS_API_URL)
+  if retryManager <> invalid then
+    m.apiLogRequestManager = retryManager
+    return
+  end if
   m.apiLogRequestManager = clearApiRequest(m.apiLogRequestManager)
 end sub
 

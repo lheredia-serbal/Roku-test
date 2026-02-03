@@ -15,6 +15,8 @@
       <field id="errorCode" type="string" value="--" onChange="onErrorCodeChange" />
       <field id="showSpinner" type="boolean" value="false" onChange="onShowSpinnerChange" />
       <field id="buttonDisabled" type="boolean" value="false" onChange="onButtonDisabledChange" />
+      <!-- Permite overlay transparente cuando el Player lo necesita. -->
+      <field id="overlayTransparent" type="boolean" value="false" onChange="onOverlayTransparentChange" />
     </interface>
 
     <children>

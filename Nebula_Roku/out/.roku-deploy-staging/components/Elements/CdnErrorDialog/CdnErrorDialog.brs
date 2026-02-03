@@ -17,6 +17,8 @@ sub init()
 
   onShowSpinnerChange()
   onButtonDisabledChange()
+  ' Cambio agregado: aplicar overlay transparente cuando el diálogo lo indique.
+  onOverlayTransparentChange()
 end sub
 
 sub __applyLayout()
@@ -95,6 +97,15 @@ end sub
 
 sub onButtonDisabledChange()
   m.retryButton.disable = m.top.buttonDisabled
+end sub
+
+' El overlay puede ser transparente para el Player.
+sub onOverlayTransparentChange()
+  if m.top.overlayTransparent then
+    m.overlay.color = "0x00000000"
+  else
+    m.overlay.color = "0x00000099"
+  end if
 end sub
 
 sub __refreshFromGlobal()

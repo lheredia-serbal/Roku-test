@@ -11,6 +11,7 @@
   <script type="text/brightscript" uri="pkg:/source/Utils/i18nUtils.brs" />
   <script type="text/brightscript" uri="pkg:/source/Utils.brs" />
   <script type="text/brightscript" uri="pkg:/source/Utils/DateFunctions.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Utils/RetryUtils.brs" />
   <script type="text/brightscript" uri="pkg:/source/CarouselConstants.brs" />
   <script type="text/brightscript" uri="pkg:/source/Enums.brs" />
 

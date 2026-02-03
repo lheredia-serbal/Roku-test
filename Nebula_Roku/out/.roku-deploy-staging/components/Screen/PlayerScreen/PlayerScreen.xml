@@ -13,6 +13,7 @@
   <script type="text/brightscript" uri="pkg:/source/Utils.brs" />
   <script type="text/brightscript" uri="pkg:/source/Utils/PlayerUtils.brs" />
   <script type="text/brightscript" uri="pkg:/source/Utils/DateFunctions.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Utils/RetryUtils.brs" />
   <script type="text/brightscript" uri="pkg:/source/CarouselConstants.brs" />
   <script type="text/brightscript" uri="pkg:/source/Enums.brs" />
 
@@ -24,6 +25,11 @@
   <script type="text/brightscript" uri="pkg:/source/Services/Watch.brs" />
 
   <script type="text/brightscript" uri="pkg:/source/Services/ActionLogs.brs" />
+
+  <script type="text/brightscript" uri="pkg:/source/Services/ErrorCode.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Services/Retry.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Services/DomainManager.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Services/ErrorManager.brs" />
 
   <interface>
     <!-- Paramentros de Entrada -->

@@ -155,6 +155,55 @@ function setErrorApi(error as Object, apiTypeParam as Dynamic) as Object
     return error
 end function
 
+sub setCdnErrorCodeFromStatus(statusCode as Integer, apiTypeParam as Dynamic, category = "NW" as string )
+    ' Traduce un statusCode de red/CDN a un código de error visible en el diálogo CDN.
+    ' Usa el apiTypeParam para inyectar el identificador [A] en el código (p.ej. NW[A]-408).
+    ' Este método solo actualiza el diálogo global si está disponible.
+    if m.global = invalid or m.global.cdnErrorDialog = invalid then return
+    uiError = UiErrorCodeManager()
+    if statusCode = 408 then
+        m.global.cdnErrorDialog.errorCode = uiError.NW_REQUEST_TIMEOUT(apiTypeParam)
+    else if statusCode = 495 then
+        m.global.cdnErrorDialog.errorCode = uiError.NW_SSL_CERTIFICATE_ERROR(apiTypeParam)
+    else if statusCode = 502 then
+        m.global.cdnErrorDialog.errorCode = uiError.NW_BAD_GATEWAY(apiTypeParam)
+    else if statusCode = 503 then
+        m.global.cdnErrorDialog.errorCode = uiError.NW_SERVICE_UNAVAILABLE(apiTypeParam)
+    else if statusCode = 521 then
+        m.global.cdnErrorDialog.errorCode = uiError.NW_CONNECTION_REFUSED(apiTypeParam)
+    else if statusCode = 523 then
+        m.global.cdnErrorDialog.errorCode = uiError.NW_DOMAIN_UNAVAILABLE(apiTypeParam)
+    else if statusCode = 9000 then
+        m.global.cdnErrorDialog.errorCode = uiError.NW_INITIAL_CONFIG_ERROR(apiTypeParam)
+    else if statusCode = 9001 then
+        m.global.cdnErrorDialog.errorCode = uiError.NW_BACKEND_UNAVAILABLE(apiTypeParam)
+    else if statusCode = 100 then
+        m.global.cdnErrorDialog.errorCode = uiError.PR_PARSE_JSON_ERROR(apiTypeParam)
+    else if statusCode = 101 then
+        m.global.cdnErrorDialog.errorCode = uiError.PR_MISSING_REQUIRED_DATA_ERROR(apiTypeParam)
+    else if statusCode = 404 then
+        if (category = "NW") then
+            m.global.cdnErrorDialog.errorCode = uiError.NW_NOT_FOUND(apiTypeParam)
+        else if category = "CL"
+            m.global.cdnErrorDialog.errorCode = uiError.CL_NOT_FOUND(apiTypeParam)
+        end if
+    end if
+end sub
+
+sub setClientModuleErrorCodeFromStatus(statusCode as Integer, apiTypeParam as Dynamic)
+    ' Traduce errores al obtener módulos del cliente (CL) a códigos visibles en el diálogo CDN.
+    ' Soporta 404/521/523 para diferenciar módulo no encontrado, conexión rechazada y no disponible.
+    ' Usa el apiTypeParam para definir el identificador [A] del servicio.
+    if m.global = invalid or m.global.cdnErrorDialog = invalid then return
+    uiError = UiErrorCodeManager()
+    if statusCode = 404 then
+        m.global.cdnErrorDialog.errorCode = uiError.CL_MODULE_ERROR_NOT_FOUND(apiTypeParam)
+    else if statusCode = 521 then
+        m.global.cdnErrorDialog.errorCode = uiError.CL_MODULE_ERROR_CONNECTION_REFUSED(apiTypeParam)
+    else if statusCode = 523 then
+        m.global.cdnErrorDialog.errorCode = uiError.CL_MODULE_ERROR_UNAVAILABLE(apiTypeParam)
+    end if
+end sub
 sub clear()
     ' Limpia las funciones de la cola.
     state = __getRetryServiceState()

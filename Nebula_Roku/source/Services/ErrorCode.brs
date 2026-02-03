@@ -49,6 +49,7 @@ function UiErrorCodeManager() as Object
         NW_INITIAL_CONFIG_ERROR: NW_INITIAL_CONFIG_ERROR
         NW_BACKEND_UNAVAILABLE: NW_BACKEND_UNAVAILABLE
         NW_NOT_FOUND: NW_NOT_FOUND
+        CL_NOT_FOUND: CL_NOT_FOUND
         PR_PARSE_JSON_ERROR: PR_PARSE_JSON_ERROR
         PR_MISSING_REQUIRED_DATA_ERROR: PR_MISSING_REQUIRED_DATA_ERROR
         CL_MODULE_ERROR_NOT_FOUND: CL_MODULE_ERROR_NOT_FOUND
@@ -97,6 +98,10 @@ end function
 
 function NW_NOT_FOUND(apiTypeParam as Dynamic) as String
     return __formatUiErrorCode(UiErrorCategory().NETWORK_CATEGORY, apiTypeParam, "404")
+end function
+
+function CL_NOT_FOUND(apiTypeParam as Dynamic) as String
+    return __formatUiErrorCode(UiErrorCategory().CLIENT_CATEGORY, apiTypeParam, "404")
 end function
 
 function PR_PARSE_JSON_ERROR(apiTypeParam as Dynamic) as String

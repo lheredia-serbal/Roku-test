@@ -155,7 +155,7 @@ function setErrorApi(error as Object, apiTypeParam as Dynamic) as Object
     return error
 end function
 
-sub setCdnErrorCodeFromStatus(statusCode as Integer, apiTypeParam as Dynamic)
+sub setCdnErrorCodeFromStatus(statusCode as Integer, apiTypeParam as Dynamic, category = "NW" as string )
     ' Traduce un statusCode de red/CDN a un código de error visible en el diálogo CDN.
     ' Usa el apiTypeParam para inyectar el identificador [A] en el código (p.ej. NW[A]-408).
     ' Este método solo actualiza el diálogo global si está disponible.
@@ -182,7 +182,11 @@ sub setCdnErrorCodeFromStatus(statusCode as Integer, apiTypeParam as Dynamic)
     else if statusCode = 101 then
         m.global.cdnErrorDialog.errorCode = uiError.PR_MISSING_REQUIRED_DATA_ERROR(apiTypeParam)
     else if statusCode = 404 then
-        m.global.cdnErrorDialog.errorCode = uiError.NW_NOT_FOUND(apiTypeParam)
+        if (category = "NW") then
+            m.global.cdnErrorDialog.errorCode = uiError.NW_NOT_FOUND(apiTypeParam)
+        else if category = "CL"
+            m.global.cdnErrorDialog.errorCode = uiError.CL_NOT_FOUND(apiTypeParam)
+        end if
     end if
 end sub
 

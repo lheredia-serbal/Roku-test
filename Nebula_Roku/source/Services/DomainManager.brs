@@ -381,10 +381,10 @@ sub onInitialConfigPrimaryResponse()
         state._initialConfigRequestManager = clearApiRequest(state._initialConfigRequestManager)
         if response = invalid then
             ' JSON inválido: mapear a PR-100 para CDN (parse error).
-            setCdnErrorCodeFromStatus(100, ApiType().CONFIGURATION_URL)
+            setCdnErrorCodeFromStatus(100, ApiType().CONFIGURATION_URL, "CL")
         else if response.config = invalid or response.resources = invalid then
             ' JSON válido pero sin campos requeridos: mapear a PR-101.
-            setCdnErrorCodeFromStatus(101, ApiType().CONFIGURATION_URL)
+            setCdnErrorCodeFromStatus(101, ApiType().CONFIGURATION_URL, "CL")
         else
             ' JSON correcto: guardar configuración y notificar éxito.
             setConfigResponse(response, state._mode)
@@ -405,10 +405,10 @@ sub onInitialConfigSecondaryResponse()
         state._initialConfigRequestManager = clearApiRequest(state._initialConfigRequestManager)
         if response = invalid then
             ' JSON inválido en CDN secundario: mapear a PR-100.
-            setCdnErrorCodeFromStatus(100, ApiType().CONFIGURATION_URL)
+            setCdnErrorCodeFromStatus(100, ApiType().CONFIGURATION_URL, "CL")
         else if response.config = invalid or response.resources = invalid then
             ' JSON sin campos requeridos en CDN secundario: mapear a PR-101.
-            setCdnErrorCodeFromStatus(101, ApiType().CONFIGURATION_URL)
+            setCdnErrorCodeFromStatus(101, ApiType().CONFIGURATION_URL, "CL")
         else
             ' JSON correcto en CDN secundario: aplicar modo Secondary y notificar éxito.
             state._jsonMode = "Secondary"
@@ -423,7 +423,7 @@ sub onInitialConfigSecondaryResponse()
         end if
     else
         ' Error de status HTTP en CDN secundario: mapear error de red al diálogo CDN.
-        setCdnErrorCodeFromStatus(state._initialConfigRequestManager.statusCode, ApiType().CONFIGURATION_URL)
+        setCdnErrorCodeFromStatus(state._initialConfigRequestManager.statusCode, ApiType().CONFIGURATION_URL, "CL")
     end if
 
     state._initialConfigRequestManager = clearApiRequest(state._initialConfigRequestManager)

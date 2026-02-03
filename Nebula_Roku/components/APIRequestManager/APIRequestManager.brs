@@ -89,6 +89,7 @@ function __apiRequest(url, method, body, token)
     response = invalid
     errorResponse = invalid
     statusCode = 0
+    serverError = false
     
     ' Crea el objeto roUrlTransfer
     m.transfer = CreateObject("roURLTransfer")
@@ -128,7 +129,7 @@ function __apiRequest(url, method, body, token)
                     else if __validateServerError(event) then
                         printError("SERVER (" + method + "): - " + statusCode.toStr() + " " + url, event.GetFailureReason())
                         errorResponse = event.GetString()
-                        statusCode = 9000
+                        serverError = true
                         response = invalid
                     else  
                         printError("API (" + method + "): - " + statusCode.toStr() + " " + url, event.GetFailureReason())
@@ -137,7 +138,7 @@ function __apiRequest(url, method, body, token)
                     end if 
                 end if 
 
-                return { response: response, errorResponse: errorResponse, statusCode: statusCode }
+                return { response: response, errorResponse: errorResponse, statusCode: statusCode, serverError: serverError }
             else
                 return { response: invalid, errorResponse: "Error: timed out", statusCode: 408 } 
             end if
@@ -158,7 +159,6 @@ function __apiRequest(url, method, body, token)
                     else if __validateServerError(event) then
                         printError("SERVER (" + method + "): - " + statusCode.toStr() + " " + url, event.GetFailureReason())
                         errorResponse = event.GetString()
-                        statusCode = 9000
                         response = invalid
                     else 
                         printError("API (" + method + "): - " + statusCode.toStr() + " " + url, event.GetFailureReason())
@@ -166,7 +166,7 @@ function __apiRequest(url, method, body, token)
                         response = invalid
                     end if 
 
-                    return { response: response, errorResponse: errorResponse, statusCode: statusCode }
+                    return { response: response, errorResponse: errorResponse, statusCode: statusCode, serverError: serverError }
                 end if
             else
                 return { response: invalid, errorResponse: "Error: timed out", statusCode: 408 } 

@@ -238,6 +238,11 @@ sub onGetAllProfileResponse()
       __loadProfiles(profiles)
     end if
   else 
+    retryManager = RetryOn9000(m, "onGetAllProfileResponse", m.apiRequestManager, ApiType().CLIENTS_API_URL)
+    if retryManager <> invalid then
+      m.apiRequestManager = retryManager
+      return
+    end if
     statusCode = m.apiRequestManager.statusCode
     errorResponse = m.apiRequestManager.errorResponse
     
@@ -274,6 +279,11 @@ sub onSussessSelectResponse()
     m.blockLoading = false
     m.top.finished = true
   else
+    retryManager = RetryOn9000(m, "onSussessSelectResponse", m.apiRequestManager, ApiType().CLIENTS_API_URL)
+    if retryManager <> invalid then
+      m.apiRequestManager = retryManager
+      return
+    end if
     statusCode = m.apiRequestManager.statusCode
     errorResponse = m.apiRequestManager.errorResponse
 
@@ -355,6 +365,11 @@ sub onGetAllAvatarsResponse()
     end if
     m.top.loading.visible = false
   else
+    retryManager = RetryOn9000(m, "onGetAllAvatarsResponse", m.apiRequestManager, ApiType().CLIENTS_API_URL)
+    if retryManager <> invalid then
+      m.apiRequestManager = retryManager
+      return
+    end if
     statusCode = m.apiRequestManager.statusCode
     errorResponse = m.apiRequestManager.errorResponse
 
@@ -391,6 +406,7 @@ sub onDialogDeleteClosed(_event)
       return { success: true, error: invalid }
     end function
   }
+  TrackAction(m, action)
   executeWithRetry(action, ApiType().CLIENTS_API_URL)
   m.apiRequestManager = action.apiRequestManager
   else
@@ -447,6 +463,11 @@ sub onSussessDeleteResponse()
     m.apiRequestManager = clearApiRequest(m.apiRequestManager)
     __backToSelectProfile(true)
   else 
+    retryManager = RetryOn9000(m, "onSussessDeleteResponse", m.apiRequestManager, ApiType().CLIENTS_API_URL)
+    if retryManager <> invalid then
+      m.apiRequestManager = retryManager
+      return
+    end if
     statusCode = m.apiRequestManager.statusCode
     errorResponse = m.apiRequestManager.errorResponse
     
@@ -470,6 +491,11 @@ sub onSussessSaveResponse()
     m.apiRequestManager = clearApiRequest(m.apiRequestManager)
     __backToSelectProfile(true)
   else 
+    retryManager = RetryOn9000(m, "onSussessSaveResponse", m.apiRequestManager, ApiType().CLIENTS_API_URL)
+    if retryManager <> invalid then
+      m.apiRequestManager = retryManager
+      return
+    end if
     statusCode = m.apiRequestManager.statusCode
     errorResponse = m.apiRequestManager.errorResponse
     m.apiRequestManager = clearApiRequest(m.apiRequestManager)
@@ -493,6 +519,11 @@ sub onGetDefaultAvatarResponse()
     m.apiRequestManager = clearApiRequest(m.apiRequestManager)
     __loadEditProfile({id: 0, avatar: defaultAvatar, kids: false, name: ""})
   else 
+    retryManager = RetryOn9000(m, "onGetDefaultAvatarResponse", m.apiRequestManager, ApiType().CLIENTS_API_URL)
+    if retryManager <> invalid then
+      m.apiRequestManager = retryManager
+      return
+    end if
     statusCode = m.apiRequestManager.statusCode
     errorResponse = m.apiRequestManager.errorResponse
     
@@ -513,6 +544,11 @@ sub onGetByIdResponse()
     __loadEditProfile(ParseJson(m.apiRequestManager.response).data)
     m.apiRequestManager = clearApiRequest(m.apiRequestManager)
   else 
+    retryManager = RetryOn9000(m, "onGetByIdResponse", m.apiRequestManager, ApiType().CLIENTS_API_URL)
+    if retryManager <> invalid then
+      m.apiRequestManager = retryManager
+      return
+    end if
     statusCode = m.apiRequestManager.statusCode
     errorResponse = m.apiRequestManager.errorResponse
     
@@ -625,6 +661,7 @@ sub __getAllProfile()
       return { success: true, error: invalid }
     end function
   }
+  TrackAction(m, action)
   executeWithRetry(action, ApiType().CLIENTS_API_URL)
   m.apiRequestManager = action.apiRequestManager
 end sub
@@ -701,6 +738,7 @@ sub __editProfile(profileId)
       return { success: true, error: invalid }
     end function
   }
+  TrackAction(m, action)
   executeWithRetry(action, ApiType().CLIENTS_API_URL)
   m.apiRequestManager = action.apiRequestManager
 end sub
@@ -725,6 +763,7 @@ sub __selectProfile(profileId, auxInfo)
       return { success: true, error: invalid }
     end function
   }
+  TrackAction(m, action)
   executeWithRetry(action, ApiType().CLIENTS_API_URL)
   m.apiRequestManager = action.apiRequestManager
 end sub
@@ -753,6 +792,7 @@ sub __editAvatar()
       return { success: true, error: invalid }
     end function
   }
+  TrackAction(m, action)
   executeWithRetry(action, ApiType().CLIENTS_API_URL)
   m.apiRequestManager = action.apiRequestManager
 end sub
@@ -779,6 +819,7 @@ sub __addProfile()
       return { success: true, error: invalid }
     end function
   }
+  TrackAction(m, action)
   executeWithRetry(action, ApiType().CLIENTS_API_URL)
   m.apiRequestManager = action.apiRequestManager
 end sub
@@ -820,6 +861,7 @@ sub __saveProfile()
         return { success: true, error: invalid }
       end function
     }
+    TrackAction(m, action)
     executeWithRetry(action, ApiType().CLIENTS_API_URL)
     m.apiRequestManager = action.apiRequestManager
   else
@@ -1019,6 +1061,7 @@ sub __saveActionLog(actionLog as object)
         return { success: true, error: invalid }
       end function
     }
+    TrackAction(m, action)
     executeWithRetry(action, ApiType().LOGS_API_URL)
     m.apiLogRequestManager = action.apiRequestManager
   else
@@ -1029,6 +1072,11 @@ end sub
 ' Obtener el beacon token
 sub onActionLogTokenResponse() 
 
+  retryManager = RetryOn9000(m, "onActionLogTokenResponse", m.apiLogRequestManager, ApiType().LOGS_API_URL)
+  if retryManager <> invalid then
+    m.apiLogRequestManager = retryManager
+    return
+  end if
   resp = ParseJson(m.apiLogRequestManager.response)
   actionLog = ParseJson(m.apiLogRequestManager.dataAux)
 
@@ -1061,6 +1109,7 @@ sub __sendActionLog(actionLog as object)
         return { success: true, error: invalid }
       end function
     }
+    TrackAction(m, action)
     executeWithRetry(action, ApiType().LOGS_API_URL)
     m.apiLogRequestManager = action.apiRequestManager
   end if
@@ -1068,5 +1117,10 @@ end sub
 
 ' Limpiar la llamada del log
 sub onActionLogResponse() 
+  retryManager = RetryOn9000(m, "onActionLogResponse", m.apiLogRequestManager, ApiType().LOGS_API_URL)
+  if retryManager <> invalid then
+    m.apiLogRequestManager = retryManager
+    return
+  end if
   m.apiLogRequestManager = clearApiRequest(m.apiLogRequestManager)
 end sub

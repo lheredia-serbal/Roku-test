@@ -348,6 +348,11 @@ sub onLastWatchedResponse()
       printError("LastWatched (Emty):")
     end if 
   else
+    retryManager = RetryOn9000(m, "onLastWatchedResponse", m.apiRequestManager, ApiType().CLIENTS_API_URL)
+    if retryManager <> invalid then
+      m.apiRequestManager = retryManager
+      return
+    end if
     m.top.loading.visible = false
     statusCode = m.apiRequestManager.statusCode
     errorResponse = m.apiRequestManager.errorResponse
@@ -401,6 +406,11 @@ sub onWatchValidateResponse()
       printError("WatchValidate ResultCode:", resp.resultCode)
     end if
   else 
+    retryManager = RetryOn9000(m, "onWatchValidateResponse", m.apiRequestManager, ApiType().CLIENTS_API_URL)
+    if retryManager <> invalid then
+      m.apiRequestManager = retryManager
+      return
+    end if
     m.top.loading.visible = false
     statusCode = m.apiRequestManager.statusCode
     errorResponse = m.apiRequestManager.errorResponse
@@ -437,6 +447,11 @@ sub onStreamingsResponse()
       m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.global.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogClosedLastFocus", [i18n_t(m.global.i18n, "button.cancel")])
     end if
   else 
+    retryManager = RetryOn9000(m, "onStreamingsResponse", m.apiRequestManager, ApiType().CLIENTS_API_URL)
+    if retryManager <> invalid then
+      m.apiRequestManager = retryManager
+      return
+    end if
     m.top.loading.visible = false
     statusCode = m.apiRequestManager.statusCode
     errorResponse = m.apiRequestManager.errorResponse
@@ -594,6 +609,11 @@ sub onProgramSummaryResponse()
       m.apiSummaryRequestManager = clearApiRequest(m.apiSummaryRequestManager)
     end if 
   else
+    retryManager = RetryOn9000(m, "onProgramSummaryResponse", m.apiSummaryRequestManager, ApiType().CLIENTS_API_URL)
+    if retryManager <> invalid then
+      m.apiSummaryRequestManager = retryManager
+      return
+    end if
     statusCode = m.apiSummaryRequestManager.statusCode
     errorResponse = m.apiSummaryRequestManager.errorResponse
     m.apiSummaryRequestManager = clearApiRequest(m.apiSummaryRequestManager)
@@ -618,6 +638,11 @@ sub onMenuResponse()
       m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.unhandled"), i18n_t(m.global.i18n, "shared.errorComponent.extendedMessage"), "onDialogClosedFocusContainer", [i18n_t(m.global.i18n, "button.cancel")])
     end if 
   else 
+    retryManager = RetryOn9000(m, "onMenuResponse", m.apiRequestManager, ApiType().CLIENTS_API_URL)
+    if retryManager <> invalid then
+      m.apiRequestManager = retryManager
+      return
+    end if
     m.top.loading.visible = false
     error =  m.apiRequestManager.errorResponse
     statusCode =  m.apiRequestManager.statusCode
@@ -677,8 +702,9 @@ sub onContentViewResponse()
     statusCode = m.apiRequestManager.statusCode
 
     if statusCode = 9000 then
-      if tryRetryFromResponse(m.lastContentViewAction, m.apiRequestManager, ApiType().CLIENTS_API_URL) then
-        m.apiRequestManager = m.lastContentViewAction.apiRequestManager
+      retryManager = RetryOn9000Action(m, m.lastContentViewAction, m.apiRequestManager, ApiType().CLIENTS_API_URL)
+      if retryManager <> invalid then
+        m.apiRequestManager = retryManager
         return
       end if
     else
@@ -759,6 +785,11 @@ sub onParentalControlResponse()
         m.dialog = createAndShowDialog(m.top, "", i18n_t(m.global.i18n, "shared.parentalControlModal.error.invalid"), "onDialogClosedFocusContainer")
     end if
   else     
+    retryManager = RetryOn9000(m, "onParentalControlResponse", m.apiRequestManager, ApiType().CLIENTS_API_URL)
+    if retryManager <> invalid then
+      m.apiRequestManager = retryManager
+      return
+    end if
     m.top.loading.visible = false
     statusCode = m.apiRequestManager.statusCode
     errorResponse = m.apiRequestManager.errorResponse
@@ -786,6 +817,13 @@ sub onPlatformResponse()
     addAndSetFields(m.global, {variables: ParseJson(m.apiVariableRequest.response).data} )
     m.apiVariableRequest = clearApiRequest(m.apiVariableRequest)
     saveNextUpdateVariables()
+  else
+    retryManager = RetryOn9000(m, "onPlatformResponse", m.apiVariableRequest, ApiType().CLIENTS_API_URL)
+    if retryManager <> invalid then
+      m.apiVariableRequest = retryManager
+      return
+    end if
+    m.apiVariableRequest = clearApiRequest(m.apiVariableRequest)
   end if
 end sub
 
@@ -1108,6 +1146,11 @@ sub onAutoUpgradeResponse()
     end if
     m.autoUpgradeRequestManager = clearApiRequest(m.autoUpgradeRequestManager)
   else 
+    retryManager = RetryOn9000(m, "onAutoUpgradeResponse", m.autoUpgradeRequestManager, ApiType().CLIENTS_API_URL)
+    if retryManager <> invalid then
+      m.autoUpgradeRequestManager = retryManager
+      return
+    end if
     printError("AutoUpgrade: ", m.autoUpgradeRequestManager.errorResponse)
     m.autoUpgradeRequestManager = clearApiRequest(m.autoUpgradeRequestManager)
     m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.global.i18n, "shared.errorComponent.serverConnectionProblems"), "onAutoUpgradeDialogClosed", [i18n_t(m.global.i18n, "button.retry"), "Exit"])
@@ -1188,40 +1231,51 @@ end sub
 
 ' Valdia el error obtenido desde la API
 sub __validateError(statusCode, resultCode, errorResponse, callback = invalid)
+  ' Centraliza la validación de errores HTTP/resultCode para la MainScreen.
+  ' Decide cuándo redirigir, mostrar diálogos y setear códigos específicos en el CDN dialog.
   error = invalid
   
   if validateLogout(statusCode, m.top) then return 
 
   if errorResponse <> invalid and errorResponse <> "" then 
-    error = ParseJson(errorResponse) 
+    ' Si llega un body de error, intenta parsearlo para obtener el code interno.
   else 
+    ' Si no hay body de error, usa el resultCode recibido.
     error = { code: resultCode }
   end if
 
   if (error <> invalid and error.code <> invalid) then 
     if (error.code = 5014) then 
+      ' El usuario debe regresar al selector de perfiles.
       m.top.loading.visible = true
       __redirectToProfilesScreen()
     else if (error.code = 5931) then
+      ' No tiene plan: mostrar diálogo con mensaje específico.
       __markLastFocus() 
       m.dialog = createAndShowDialog(m.top,i18n_t(m.global.i18n, "shared.errorComponent.weAreSorry"), (i18n_t(m.global.i18n, "shared.errorComponent.youCurrentlyDoNotHavePlan")).Replace("[ProductName]", m.productName), "onDialogClosedLastFocus", [i18n_t(m.global.i18n, "button.cancel")])
     
     else if (error.code = 5932) then
+      ' No tiene suscripciones activas: mostrar diálogo con mensaje específico.
       __markLastFocus() 
       m.dialog = createAndShowDialog(m.top,i18n_t(m.global.i18n, "shared.errorComponent.weAreSorry"), (i18n_t(m.global.i18n, "shared.errorComponent.youCurrentlyDoNotHaveAnyActiveSubscriptions")).Replace("[ProductName]", m.productName), "onDialogClosedLastFocus", [i18n_t(m.global.i18n, "button.cancel")])
     
     else if (error.code = 5939) then
+      ' Saldo insuficiente: mostrar diálogo con mensaje específico.
       __markLastFocus() 
       m.dialog = createAndShowDialog(m.top,i18n_t(m.global.i18n, "shared.errorComponent.weAreSorry"), i18n_t(m.global.i18n, "shared.errorComponent.youCurrentlyDoNotHaveSufficientBalance"), "onDialogClosedLastFocus", [i18n_t(m.global.i18n, "button.cancel")])
     
     else if (error.code = 5930) then
+      ' Demasiadas sesiones activas: redirigir a la pantalla correspondiente.
       __redirectToManySessionsScreeen()
-    end if
-  else 
-    if (statusCode = 400) or (statusCode = 404) or (statusCode = 500) then  
-      m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.unhandled"), i18n_t(m.global.i18n, "shared.errorComponent.extendedMessage"), "onDialogClosedFocusContainer", [i18n_t(m.global.i18n, "button.cancel")])
-    else 
-      if (callback <> invalid) then callback()
+    else if (error.code = 9000) then
+      ' Error de configuración inicial: mapear a código CDN usando statusCode.
+      setCdnErrorCodeFromStatus(statusCode, ApiType().CLIENTS_API_URL)
+    else if (error.code = 100) or (error.code = 101) then
+      ' Errores de parseo/estructura JSON de CDN: mapear a códigos PR.
+      setCdnErrorCodeFromStatus(error.code, ApiType().CLIENTS_API_URL)
+    else if (error.code = 404) or (error.code = 521) or (error.code = 523) then
+      ' Errores al cargar módulos cliente: mapear a códigos CL.
+      setClientModuleErrorCodeFromStatus(error.code, ApiType().CLIENTS_API_URL)
     end if
   end if 
 end sub
@@ -1233,6 +1287,7 @@ sub __setRequestId(action as Object)
     now = CreateObject("roDateTime")
     action.requestId = now.AsSeconds().toStr() + "-" + now.GetMilliseconds().toStr()
   end if
+  TrackAction(m, action)
 end sub
 
 ' Guarda el ultimo utem que a tenido foco en los carouseles en la variable lastFocus
@@ -1271,6 +1326,11 @@ end sub
 ' Obtener el beacon token
 sub onActionLogTokenResponse() 
 
+  retryManager = RetryOn9000(m, "onActionLogTokenResponse", m.apiLogRequestManager, ApiType().LOGS_API_URL)
+  if retryManager <> invalid then
+    m.apiLogRequestManager = retryManager
+    return
+  end if
   resp = ParseJson(m.apiLogRequestManager.response)
   actionLog = ParseJson(m.apiLogRequestManager.dataAux)
 
@@ -1311,6 +1371,11 @@ end sub
 
 ' Limpiar la llamada del log
 sub onActionLogResponse() 
+  retryManager = RetryOn9000(m, "onActionLogResponse", m.apiLogRequestManager, ApiType().LOGS_API_URL)
+  if retryManager <> invalid then
+    m.apiLogRequestManager = retryManager
+    return
+  end if
   m.apiLogRequestManager = clearApiRequest(m.apiLogRequestManager)
 end sub
 
