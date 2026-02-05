@@ -92,7 +92,7 @@ end sub
 
 function getConfig(cdnRequestManager as Object, url as String, responseHandler as String) as Object
     ' Llama al servicio para obtener el config desde el servidor (JSON) usando el request manager.
-    return sendApiRequest(cdnRequestManager, url, "GET", responseHandler, invalid, invalid, true)
+    return sendApiRequest(cdnRequestManager, url, "GET", responseHandler, invalid, invalid, invalid, true)
 end function
 
 function getInitialConfiguration(mode as String, responseHandler = invalid as Dynamic) as Object
@@ -120,36 +120,51 @@ sub getNeedRefresh()
     end if
 end sub
 
+' Esta función se ejecuta cuando alguna api dió error de conexión con el servidor,
+' Prueba de nuevo con Primario y Secundario
 function changeMode() as Boolean
     ' Cambiar de Primario a Secundario solo cuando el error sea de DNS.
     state = __getDomainManagerState()
 
-    if state._mode = "Primary" then
-        if __attemptHealthAndRetry("Secondary") then return true
+    state._mode = "Primary"
+
+    ' Probar primero con Primario
+    if __attemptHealthAndRetry("Primary") then 
+        return true
+    else
+        state._mode = "Secondary"
     end if
 
-    state = __getDomainManagerState()
-    if state._mode = "Secondary" then
-        if state._jsonMode = "Primary" then
-            state._jsonMode = "Secondary"
-            __syncDomainManagerState(state)
-
-            if __attemptHealthAndRetry("Primary") then return true
-            if __attemptHealthAndRetry("Secondary") then return true
-        end if
+    ' Fallo Primario, probar con secundario
+    if __attemptHealthAndRetry("Secondary") then
+        return true
+    else 
+        ' Fallo con secundario, volver a buscar los archivos de configuración
+        enableFetchConfigJson()
     end if
 
-    state = __getDomainManagerState()
-    if state._mode = "Secondary" and state._jsonMode = "Secondary" then
-        state._jsonMode = "Primary"
-        state._mode = "Primary"
-        state._currentConfig = "Primary"
-        __syncDomainManagerState(state)
+    if state._fetchInitialConfig then
+        configResponse = __refreshConfigFromCdns()
 
-        if __refreshConfigFromCdns() then
-            if __attemptHealthAndRetry("Primary") then return true
-            if __attemptHealthAndRetry("Secondary") then return true
-        end if
+        ' No pudo obtener los archivos de configuración, mostrar el mensaje de error
+        if not configResponse then return false
+    end if
+
+    ' Volver a probar los primario y secundario de nuevo y por última vez
+    state._mode = "Primary"
+
+    if __attemptHealthAndRetry("Primary") then 
+        return true
+    else
+        state._mode = "Secondary"
+    end if
+
+    ' Fallo Primario, probar con secundario
+    if __attemptHealthAndRetry("Secondary") then
+        return true
+    else 
+        ' Volvió a fallar con Secundario, y ya se actualizaron los archivos  
+        return false
     end if
 
     return false
@@ -207,7 +222,7 @@ function performHealthCheck(url as String, timeoutMS = 20000 as Integer) as Bool
     if lang <> invalid and lang <> "" then
         transfer.AddHeader("Accept-Language", lang)
     end if
-    transfer.SetURL(url)
+    transfer.SetURL("1" + url)
 
     if transfer.AsyncGetToString() then
         event = wait(timeoutMS, port)
@@ -258,6 +273,7 @@ function __refreshConfigFromCdns() as Boolean
         state = __getDomainManagerState()
         state._jsonMode = "Primary"
         state._currentInitialConfig = "Primary"
+        state._fetchInitialConfig = false
         __syncDomainManagerState(state)
         return true
     end if
@@ -391,10 +407,12 @@ sub onInitialConfigPrimaryResponse()
             __notifyInitialConfigResult(true)
             return
         end if
+    else
+        state._initialConfigRequestManager = clearApiRequest(state._initialConfigRequestManager)
+        state._initialConfigRequestManager = getConfig(state._initialConfigRequestManager, state.initialConfigSecondaryUrl, "onInitialConfigSecondaryResponse")
     end if
 
-    state._initialConfigRequestManager = clearApiRequest(state._initialConfigRequestManager)
-    state._initialConfigRequestManager = getConfig(state._initialConfigRequestManager, state.initialConfigSecondaryUrl, "onInitialConfigSecondaryResponse")
+    __syncDomainManagerState(state)
 end sub
 
 sub onInitialConfigSecondaryResponse()
@@ -406,9 +424,15 @@ sub onInitialConfigSecondaryResponse()
         if response = invalid then
             ' JSON inválido en CDN secundario: mapear a PR-100.
             setCdnErrorCodeFromStatus(100, ApiType().CONFIGURATION_URL, "CL")
+            state._initialConfigSuccess = false
+            state._initialConfigStatus = "failed"
+            __notifyInitialConfigResult(false)
         else if response.config = invalid or response.resources = invalid then
             ' JSON sin campos requeridos en CDN secundario: mapear a PR-101.
             setCdnErrorCodeFromStatus(101, ApiType().CONFIGURATION_URL, "CL")
+            state._initialConfigSuccess = false
+            state._initialConfigStatus = "failed"
+            __notifyInitialConfigResult(false)
         else
             ' JSON correcto en CDN secundario: aplicar modo Secondary y notificar éxito.
             state._jsonMode = "Secondary"
@@ -418,18 +442,18 @@ sub onInitialConfigSecondaryResponse()
             state._initialConfigSuccess = true
             state._initialConfigStatus = "success"
             __notifyInitialConfigResult(true)
-            __syncDomainManagerState(state)
             return
         end if
     else
         ' Error de status HTTP en CDN secundario: mapear error de red al diálogo CDN.
         setCdnErrorCodeFromStatus(state._initialConfigRequestManager.statusCode, ApiType().CONFIGURATION_URL, "CL")
+        state._initialConfigSuccess = false
+        state._initialConfigStatus = "failed"
+        __notifyInitialConfigResult(false)
     end if
 
     state._initialConfigRequestManager = clearApiRequest(state._initialConfigRequestManager)
-    state._initialConfigSuccess = false
-    state._initialConfigStatus = "failed"
-    __notifyInitialConfigResult(false)
+    
     __syncDomainManagerState(state)
 end sub
 
@@ -437,6 +461,7 @@ sub setConfigResponse(response as Object, mode as String)
     ' Setea la respuesta del config en el estado y actualiza el modo actual.
     state = __getDomainManagerState()
     state._currentConfig = mode
+    state._mode = mode
     state._jsonMode = "Primary"
     state._fetchInitialConfig = false
     state._currentInitialConfig = "Primary"

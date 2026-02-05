@@ -26,6 +26,7 @@
     <!-- Paramentros de Salida -->
     <field id="finished" alwaysnotify="true" type="boolean" value="false" />
     <field id="forceExit" alwaysnotify="true" type="boolean" value="false" />
+    <function name="startCdnInitialization" />
   </interface>
   
   <children>

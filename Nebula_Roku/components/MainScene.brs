@@ -156,8 +156,11 @@ sub onExitApp()
 end sub
 
 sub onCdnErrorRetry()
+  enableFetchConfigJson()
   if m.cdnErrorDialog = invalid then return
   if not m.cdnErrorDialog.retry then return
+  if m.cdnErrorDialog.buttonDisabled then return
+  m.cdnRetryInProgress = true
   m.cdnErrorDialog.retry = false
   m.cdnErrorDialog.showSpinner = true
   m.cdnErrorDialog.buttonDisabled = true

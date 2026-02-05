@@ -40,7 +40,7 @@ end sub
 sub __saveActionLog(actionLog as object)
 
   if beaconTokenExpired() and m.apiUrl <> invalid then
-    m.apiLogRequestManager = sendApiRequest(m.apiLogRequestManager, urlActionLogsToken(m.apiUrl), "GET", "onActionLogTokenResponse", invalid, invalid, false, FormatJson(actionLog))
+    m.apiLogRequestManager = sendApiRequest(m.apiLogRequestManager, urlActionLogsToken(m.apiUrl), "GET", "onActionLogTokenResponse", invalid, invalid, invalid, false, FormatJson(actionLog))
   else
       __sendActionLog(actionLog)
   end if
@@ -67,7 +67,7 @@ sub __sendActionLog(actionLog as object)
   beaconToken = getBeaconToken()
 
   if (beaconToken <> invalid and m.beaconUrl <> invalid)
-    m.apiLogRequestManager = sendApiRequest(m.apiLogRequestManager, urlActionLogs(m.beaconUrl), "POST", "onActionLogResponse", FormatJson(actionLog), beaconToken, false)
+    m.apiLogRequestManager = sendApiRequest(m.apiLogRequestManager, urlActionLogs(m.beaconUrl), "POST", "onActionLogResponse", invalid, FormatJson(actionLog), beaconToken, false)
   end if
 end sub
 

@@ -1048,14 +1048,14 @@ sub onValidateConnectionAndRetry()
     m.disableLayoutChannelConnection = false
     __loadStreamingURL(m.lastKey, m.lastId, getStreamingType().DEFAULT)
   else
-    m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlHealth(m.apiUrl), "GET", "onValdiateConnectionResponse", invalid, invalid, true)
+    m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlHealth(m.apiUrl), "GET", "onValdiateConnectionResponse", invalid, invalid, invalid, true)
   end if
 end sub
 
 ' Metodo que dispara el guardado del ultimo canal visto. La llamada a este metodo esta definida por un timer
 sub onSaveLastWatched()
   if m.program <> invalid and m.program.channel <> invalid  and m.streaming <> invalid and (m.streaming.type <> invalid and m.streaming.type <> "" and (LCase(m.streaming.type) = getVideoType().LIVE) or (LCase(m.streaming.type) = getVideoType().LIVE_REWIND)) then 
-    m.apiLastWatchedRequestManager = sendApiRequest(m.apiLastWatchedRequestManager, urlChannelsLastWatched(m.apiUrl), "PUT", "onLastWatchedResponse", FormatJson({ key: "ChannelId", id: m.program.channel.id }))
+    m.apiLastWatchedRequestManager = sendApiRequest(m.apiLastWatchedRequestManager, urlChannelsLastWatched(m.apiUrl), "PUT", "onLastWatchedResponse", invalid, FormatJson({ key: "ChannelId", id: m.program.channel.id }))
   end if
 end sub
 
@@ -1109,7 +1109,7 @@ sub onSendBeacon()
     secondsElapsed: Int(position)
   }
 
-  m.apiBeaconRequestManager = sendApiRequest(m.apiBeaconRequestManager, url, "POST", "onSendBeaconResponse", FormatJson(body), getWatchToken())
+  m.apiBeaconRequestManager = sendApiRequest(m.apiBeaconRequestManager, url, "POST", "onSendBeaconResponse", invalid, FormatJson(body), getWatchToken())
 end sub
 
 ' procesa el guardado del beacon
@@ -1133,7 +1133,8 @@ sub onSendBeaconResponse()
 
     watchSessionId = getWatchSessionId()
     if statusCode = 401 then 
-      m.apiBeaconRequestManager = sendApiRequest(m.apiBeaconRequestManager, urlWatchValidate(m.apiUrl, watchSessionId, m.streaming.redirectKey, m.streaming.redirectId), "GET", "onWatchValidateResponse")
+      requestId = createRequestId()
+      m.apiBeaconRequestManager = sendApiRequest(requestId,m.apiBeaconRequestManager, urlWatchValidate(m.apiUrl, watchSessionId, m.streaming.redirectKey, m.streaming.redirectId), "GET", "onWatchValidateResponse")
     end if
 
     printError("onSendBeaconResponse:", errorResponse)
@@ -1195,7 +1196,8 @@ sub onPinDialogLoad()
   
   if (resp.option = 0 and resp.pin <> invalid and Len(resp.pin) = 4) then 
     if m.lastButtonSelect <> invalid then m.lastButtonSelect.setFocus(true)
-    m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlParentalControlPin(m.apiUrl, resp.pin), "GET", "onParentalControlResponse")
+    requestId = createRequestId()
+    m.apiRequestManager = sendApiRequest(requestId, m.apiRequestManager, urlParentalControlPin(m.apiUrl, resp.pin), "GET", "onParentalControlResponse")
   else 
     m.repositionChannnelList = true
     if m.lastButtonSelect <> invalid then m.lastButtonSelect.setFocus(true)
@@ -1249,10 +1251,11 @@ end sub
 
 ' Dispara la opctencion de la info del nuevo programa que se esta viendo
 sub onGetNewProgramInfo()
+  requestId = createRequestId()
   if m.program <> invalid then
-    m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlProgramSummary(m.apiUrl, m.program.infoKey, m.program.infoId, getCarouselImagesTypes().NONE, getCarouselImagesTypes().NONE), "GET", "onProgramSummaryResponse")
+    m.apiRequestManager = sendApiRequest(requestId, m.apiRequestManager, urlProgramSummary(m.apiUrl, m.program.infoKey, m.program.infoId, getCarouselImagesTypes().NONE, getCarouselImagesTypes().NONE), "GET", "onProgramSummaryResponse")
   else if m.lastKey <> invalid AND  m.lastId <> invalid then 
-    m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlProgramSummary(m.apiUrl, m.lastKey, m.lastId, getCarouselImagesTypes().NONE, getCarouselImagesTypes().NONE), "GET", "onProgramSummaryResponse")
+    m.apiRequestManager = sendApiRequest(requestId, m.apiRequestManager, urlProgramSummary(m.apiUrl, m.lastKey, m.lastId, getCarouselImagesTypes().NONE, getCarouselImagesTypes().NONE), "GET", "onProgramSummaryResponse")
   end if
 end sub
 
@@ -1441,7 +1444,8 @@ sub __loadPlayer(streaming, focusPlayer = true)
 
     ' Si estoy cambiando la url del Live por la de Rewind entonces no es necesario dispara la busuqeda del programa de nuevo
     if (m.streaming.streamingType = getStreamingType().DEFAULT) then
-      m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlProgramSummary(m.apiUrl, streaming.key, streaming.id, getCarouselImagesTypes().NONE, getCarouselImagesTypes().NONE), "GET", "onProgramSummaryResponse")
+      requestId = createRequestId()
+      m.apiRequestManager = sendApiRequest(requestId, m.apiRequestManager, urlProgramSummary(m.apiUrl, streaming.key, streaming.id, getCarouselImagesTypes().NONE, getCarouselImagesTypes().NONE), "GET", "onProgramSummaryResponse")
     end if
     
     if m.inactivityPromptTimeInSeconds <> -1 then __extendTimeWatching()
@@ -1550,7 +1554,8 @@ end function
 
 ' Dispara la busqueda de la lista de canales 
 sub __getChannels(getNewChannels = true)
-  if getNewChannels then m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlChannels(m.apiUrl), "GET", "onChannelsResponse")
+  requestId = createRequestId()
+  if getNewChannels then m.apiRequestManager = sendApiRequest(requestId,m.apiRequestManager, urlChannels(m.apiUrl), "GET", "onChannelsResponse")
 end sub
 
 ' Carga la informacion del programa actual en pantalla
@@ -1883,7 +1888,7 @@ sub __closePlayer(onBack = false, logout = false)
         secondsElapsed: Int(position)
       }
     
-      m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlWatchEnd(m.apiUrl), "POST", "onEndWatchResponse", FormatJson(body), invalid, true)
+      m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlWatchEnd(m.apiUrl), "POST", "onEndWatchResponse", invalid, FormatJson(body), invalid, true)
     end if
   end if 
   
@@ -1982,7 +1987,8 @@ sub __loadStreamingURL(key, id, streamingAction, streamingType = getStreamingTyp
   m.newStreamingType = streamingType
   
   ' Falta agregar el update Session
-  m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlStreaming(m.apiUrl, m.lastKey, m.lastId, streamingAction, streamingType, startpid), "GET", "onStreamingsResponse") 
+  requestId = createRequestId()
+  m.apiRequestManager = sendApiRequest(requestId, m.apiRequestManager, urlStreaming(m.apiUrl, m.lastKey, m.lastId, streamingAction, streamingType, startpid), "GET", "onStreamingsResponse") 
 end sub
 
 ' Metodo que procesa el error que puede ocurrir al reproducir en el player y dispara los timers para
@@ -2027,7 +2033,7 @@ end function
 ' Guardar el log cuandos se cambia una opción del menú 
 sub __saveActionLog(actionLog as object)
   if beaconTokenExpired() and m.apiUrl <> invalid then
-    m.apiLogRequestManager = sendApiRequest(m.apiLogRequestManager, urlActionLogsToken(m.apiUrl), "GET", "onActionLogTokenResponse", invalid, invalid, false, FormatJson(actionLog))
+    m.apiLogRequestManager = sendApiRequest(m.apiLogRequestManager, urlActionLogsToken(m.apiUrl), "GET", "onActionLogTokenResponse", invalid, invalid, invalid, false, FormatJson(actionLog))
   else
     __sendActionLog(actionLog)
   end if
@@ -2038,7 +2044,7 @@ sub __sendActionLog(actionLog as object)
   beaconToken = getBeaconToken()
 
   if (beaconToken <> invalid and m.beaconUrl <> invalid)
-    m.apiLogRequestManager = sendApiRequest(m.apiLogRequestManager, urlActionLogs(m.beaconUrl), "POST", "onActionLogResponse", FormatJson(actionLog), beaconToken, false)
+    m.apiLogRequestManager = sendApiRequest(m.apiLogRequestManager, urlActionLogs(m.beaconUrl), "POST", "onActionLogResponse", invalid, FormatJson(actionLog), beaconToken, false)
   end if
 end sub
 

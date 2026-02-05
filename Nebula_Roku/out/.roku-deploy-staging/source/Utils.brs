@@ -170,11 +170,12 @@ end function
 ' url: Direcion a donde realizara la llamada.
 ' method: Metodo a realizar (GET / POST / PUT / DELETE / PATCH).
 ' responseMethod: Funcion a llamar al terminar la peticion.
+' responseMethod: Funcion a llamar al terminar la peticion.
 ' body: Cuerpo a enviar en la peticion. Debe enviarse como un string. Por defecto es vacio.
 ' token: Token a enviar, si se setea entocnes anula el Token de la aplicacion. Por defecto es vacio.
 ' publicApi: Si la llamada debe realizarse con Token, si se setea en False entonces valida que el token de la aplciaicon sea valido antes de llamar. Por defecto es False
 ' dataAux: Informacion adicional que necestio que el objeto concerve para cuando vuelva la respuesta 
-function sendApiRequest(apiRequestManager, url, method, responseMethod, body = invalid, token = invalid, publicApi = false, dataAux = invalid)
+function sendApiRequest(apiRequestManager, url, method, responseMethod, requestId = invalid, body = invalid, token = invalid, publicApi = false, dataAux = invalid)
   apiRequestManager = clearApiRequest(apiRequestManager)
   apiRequestManager = CreateObject("roSGNode", "APIRequestManager")
   apiRequestManager.setField("url", url)
@@ -183,6 +184,7 @@ function sendApiRequest(apiRequestManager, url, method, responseMethod, body = i
   if body <> invalid and body <> "" then  apiRequestManager.setField("body", body) 
   if token <> invalid and token <> "" then  apiRequestManager.setField("token", token) 
   if dataAux <> invalid and dataAux <> "" then  apiRequestManager.setField("dataAux", dataAux) 
+  if requestId <> invalid and requestId <> "" then apiRequestManager.setField("requestId", requestId) 
   apiRequestManager.ObserveField("statusCode", responseMethod)
   apiRequestManager.control = "RUN"
   return apiRequestManager
@@ -267,6 +269,7 @@ sub showCdnErrorDialog(overlayTransparent = false as Boolean)
     dialog.showSpinner = false
     dialog.buttonDisabled = false
     dialog.visible = true
+    dialog.setFocus(true)
 end sub
 
 sub hideCdnErrorDialog()

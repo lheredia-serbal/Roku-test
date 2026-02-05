@@ -124,6 +124,8 @@ end sub
 function onKeyEvent(key as String, press as Boolean) as Boolean
   if press and key = "OK" and m.retryButton.isInFocusChain() and not m.retryButton.disable then
     m.top.retry = true
+    m.top.showSpinner = true
+    m.top.buttonDisabled = true
     return true
   end if
   return false

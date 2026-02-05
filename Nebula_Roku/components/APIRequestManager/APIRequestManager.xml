@@ -22,9 +22,10 @@
         <field id="dataAux" type="string" />
 
         <!-- Paramentros de Salida -->
-        <field id="idRequest" type="integer" value="0"/>
+        <field id="requestId" type="string" value=""/>
         <field id="statusCode" type="integer" value="0"/>
         <field id="response" type="string" />
+        <field id="serverError" type="boolean" />
         <field id="errorResponse" type="string" />
     </interface>
 </component>

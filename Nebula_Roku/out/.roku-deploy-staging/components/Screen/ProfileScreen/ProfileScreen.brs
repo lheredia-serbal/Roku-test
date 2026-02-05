@@ -392,6 +392,8 @@ sub onDialogDeleteClosed(_event)
     'Disparar el delete
     m.top.loading.visible = true
     m.blockLoading = true
+    requestId = createRequestId()
+
     action = {
     apiRequestManager: m.apiRequestManager
     url: urlProfilesbyId(m.apiUrl, m.profileByEdit.id)
@@ -400,14 +402,15 @@ sub onDialogDeleteClosed(_event)
     body: invalid
     token: invalid
     publicApi: false
+    requestId: requestId
     dataAux: invalid
     run: function() as Object
-      m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.body, m.token, m.publicApi, m.dataAux)
+      m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux)
       return { success: true, error: invalid }
     end function
   }
-  TrackAction(m, action)
-  executeWithRetry(action, ApiType().CLIENTS_API_URL)
+  
+  runAction(requestId, action, ApiType().CLIENTS_API_URL)
   m.apiRequestManager = action.apiRequestManager
   else
     ' Se cancela el modal
@@ -646,6 +649,7 @@ end sub
 sub __getAllProfile()
   m.apiRequestManager = clearApiRequest(m.apiRequestManager)
   __clearArrayProfile()
+  requestId = createRequestId()
 
   action = {
     apiRequestManager: m.apiRequestManager
@@ -657,12 +661,12 @@ sub __getAllProfile()
     publicApi: false
     dataAux: invalid
     run: function() as Object
-      m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.body, m.token, m.publicApi, m.dataAux)
+      m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux)
       return { success: true, error: invalid }
     end function
   }
-  TrackAction(m, action)
-  executeWithRetry(action, ApiType().CLIENTS_API_URL)
+  
+  runAction(requestId, action, ApiType().CLIENTS_API_URL)
   m.apiRequestManager = action.apiRequestManager
 end sub
 
@@ -724,6 +728,7 @@ sub __editProfile(profileId)
   m.screenProfileSelected.visible = false
   m.screenProfileEdit.visible = true
   
+  requestId = createRequestId()
   action = {
     apiRequestManager: m.apiRequestManager
     url: urlProfilesbyId(m.apiUrl, profileId)
@@ -733,13 +738,14 @@ sub __editProfile(profileId)
     token: invalid
     publicApi: false
     dataAux: invalid
+    requestId: requestId
     run: function() as Object
-      m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.body, m.token, m.publicApi, m.dataAux)
+      m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux)
       return { success: true, error: invalid }
     end function
   }
-  TrackAction(m, action)
-  executeWithRetry(action, ApiType().CLIENTS_API_URL)
+  
+  runAction(requestId, action, ApiType().CLIENTS_API_URL)
   m.apiRequestManager = action.apiRequestManager
 end sub
 
@@ -749,6 +755,7 @@ sub __selectProfile(profileId, auxInfo)
   m.blockLoading = true
   m.auxInfo = auxInfo
   
+  requestId = createRequestId()
   action = {
     apiRequestManager: m.apiRequestManager
     url: urlAuthProfile(m.apiUrl, profileId)
@@ -757,14 +764,15 @@ sub __selectProfile(profileId, auxInfo)
     body: invalid
     token: invalid
     publicApi: false
+    requestId: requestId
     dataAux: StrI(profileId)
     run: function() as Object
-      m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.body, m.token, m.publicApi, m.dataAux)
+      m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux)
       return { success: true, error: invalid }
     end function
   }
-  TrackAction(m, action)
-  executeWithRetry(action, ApiType().CLIENTS_API_URL)
+  
+  runAction(requestId, action, ApiType().CLIENTS_API_URL)
   m.apiRequestManager = action.apiRequestManager
 end sub
 
@@ -778,6 +786,7 @@ sub __editAvatar()
   m.profileNameInAvatars.text = m.profileByEdit.name
   m.profileImageInAvatars.uri = getImageUrl(m.profileByEdit.avatar.image)
 
+  requestId = createRequestId()
   action = {
     apiRequestManager: m.apiRequestManager
     url: urlAvatarsAll(m.apiUrl)
@@ -787,13 +796,14 @@ sub __editAvatar()
     token: invalid
     publicApi: false
     dataAux: invalid
+    requestId: requestId
     run: function() as Object
-      m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.body, m.token, m.publicApi, m.dataAux)
+      m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux)
       return { success: true, error: invalid }
     end function
   }
-  TrackAction(m, action)
-  executeWithRetry(action, ApiType().CLIENTS_API_URL)
+  
+  runAction(requestId, action, ApiType().CLIENTS_API_URL)
   m.apiRequestManager = action.apiRequestManager
 end sub
 
@@ -805,7 +815,8 @@ sub __addProfile()
   m.screenProfileSelected.visible = false
   m.screenProfileEdit.visible = true
   
-    action = {
+  requestId = createRequestId()
+  action = {
     apiRequestManager: m.apiRequestManager
     url: urlAvatarsDefault(m.apiUrl)
     method: "GET"
@@ -814,13 +825,14 @@ sub __addProfile()
     token: invalid
     publicApi: false
     dataAux: invalid
+    requestId: requestId
     run: function() as Object
-      m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.body, m.token, m.publicApi, m.dataAux)
+      m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux)
       return { success: true, error: invalid }
     end function
   }
-  TrackAction(m, action)
-  executeWithRetry(action, ApiType().CLIENTS_API_URL)
+  
+  runAction(requestId, action, ApiType().CLIENTS_API_URL)
   m.apiRequestManager = action.apiRequestManager
 end sub
 
@@ -847,6 +859,7 @@ sub __saveProfile()
 
   if m.profileByEdit.id <> 0 then
     'update
+    requestId = createRequestId()
     action = {
       apiRequestManager: m.apiRequestManager
       url: urlProfilesbyId(m.apiUrl, m.profileByEdit.id)
@@ -856,16 +869,18 @@ sub __saveProfile()
       token: invalid
       publicApi: false
       dataAux: invalid
+      requestId: requestId
       run: function() as Object
-        m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.body, m.token, m.publicApi, m.dataAux)
+        m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux)
         return { success: true, error: invalid }
       end function
     }
-    TrackAction(m, action)
-    executeWithRetry(action, ApiType().CLIENTS_API_URL)
+    
+    runAction(requestId, action, ApiType().CLIENTS_API_URL)
     m.apiRequestManager = action.apiRequestManager
   else
     'insert
+    requestId = createRequestId()
     action = {
       apiRequestManager: m.apiRequestManager
       url: urlProfiles(m.apiUrl)
@@ -875,12 +890,13 @@ sub __saveProfile()
       token: invalid
       publicApi: false
       dataAux: invalid
+      requestId: requestId
       run: function() as Object
-        m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.body, m.token, m.publicApi, m.dataAux)
+        m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux)
         return { success: true, error: invalid }
       end function
     }
-    executeWithRetry(action, ApiType().CLIENTS_API_URL)
+    runAction(requestId, action, ApiType().CLIENTS_API_URL)
     m.apiRequestManager = action.apiRequestManager
   end if
 end sub
@@ -1047,6 +1063,7 @@ end sub
 sub __saveActionLog(actionLog as object)
 
   if beaconTokenExpired() and m.apiUrl <> invalid then
+    requestId = createRequestId()
     action = {
       apiRequestManager: m.apiLogRequestManager
       url: urlActionLogsToken(m.apiUrl)
@@ -1055,14 +1072,15 @@ sub __saveActionLog(actionLog as object)
       body: invalid
       token: invalid
       publicApi: false
+      requestId: requestId
       dataAux: FormatJson(actionLog)
       run: function() as Object
-        m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.body, m.token, m.publicApi, m.dataAux)
+        m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux)
         return { success: true, error: invalid }
       end function
     }
-    TrackAction(m, action)
-    executeWithRetry(action, ApiType().LOGS_API_URL)
+    
+    runAction(requestId, action, ApiType().LOGS_API_URL)
     m.apiLogRequestManager = action.apiRequestManager
   else
     __sendActionLog(actionLog)
@@ -1095,6 +1113,8 @@ sub __sendActionLog(actionLog as object)
   beaconToken = getBeaconToken()
 
   if (beaconToken <> invalid and m.beaconUrl <> invalid)
+    requestId = createRequestId()
+
     action = {
       apiRequestManager: m.apiLogRequestManager
       url: urlActionLogs(m.beaconUrl)
@@ -1104,13 +1124,14 @@ sub __sendActionLog(actionLog as object)
       token: beaconToken
       publicApi: false
       dataAux: invalid
+      requestId: requestId
       run: function() as Object
-        m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.body, m.token, m.publicApi, m.dataAux)
+        m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux)
         return { success: true, error: invalid }
       end function
     }
-    TrackAction(m, action)
-    executeWithRetry(action, ApiType().LOGS_API_URL)
+    
+    runAction(requestId, action, ApiType().LOGS_API_URL)
     m.apiLogRequestManager = action.apiRequestManager
   end if
 end sub

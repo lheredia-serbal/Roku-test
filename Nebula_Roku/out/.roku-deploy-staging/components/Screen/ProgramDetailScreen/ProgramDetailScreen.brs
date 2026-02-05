@@ -130,6 +130,8 @@ sub initFocus()
     __applyTranslations()
     if m.program <> invalid then 
       if not m.isOpenEmissions then 
+        requestId = createRequestId()
+
         action = {
           apiRequestManager: m.apiRequestManager
           url: urlProgramAction(m.apiUrl, m.program.key, m.program.id)
@@ -138,14 +140,15 @@ sub initFocus()
           body: invalid
           token: invalid
           publicApi: false
+          requestId: requestId
           dataAux: invalid
           run: function() as Object
             m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.body, m.token, m.publicApi, m.dataAux)
             return { success: true, error: invalid }
           end function
         }
-        TrackAction(m, action)
-        executeWithRetry(action, ApiType().CLIENTS_API_URL)
+        
+        runAction(requestId, action, ApiType().CLIENTS_API_URL)
         m.apiRequestManager = action.apiRequestManager
       else
         m.isOpenEmissions = false
@@ -242,6 +245,8 @@ sub onWatchValidateResponse()
       setWatchToken(resp.watchToken)
       if m.program <> invalid then
         if m.streamingAction = invalid then m.streamingAction = getStreamingAction().PLAY
+        requestId = createRequestId()
+
         action = {
           apiRequestManager: m.apiRequestManager
           url: urlStreaming(m.apiUrl, m.program.key, m.program.id, m.streamingAction)
@@ -250,14 +255,15 @@ sub onWatchValidateResponse()
           body: invalid
           token: invalid
           publicApi: false
+          requestId: requestId
           dataAux: invalid
           run: function() as Object
-            m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.body, m.token, m.publicApi, m.dataAux)
+            m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux)
             return { success: true, error: invalid }
           end function
         }
-        TrackAction(m, action)
-        executeWithRetry(action, ApiType().CLIENTS_API_URL)
+        
+        runAction(requestId, action, ApiType().CLIENTS_API_URL)
         m.apiRequestManager = action.apiRequestManager
       end if
     else
@@ -405,6 +411,8 @@ sub onPinDialogLoad()
   
   if (resp.option = 0 and resp.pin <> invalid and Len(resp.pin) = 4) then 
     m.top.loading.visible = true
+    requestId = createRequestId()
+
      action = {
       apiRequestManager: m.apiRequestManager
       url: urlParentalControlPin(m.apiUrl, resp.pin)
@@ -413,14 +421,15 @@ sub onPinDialogLoad()
       body: invalid
       token: invalid
       publicApi: false
+      requestId: requestId
       dataAux: invalid
       run: function() as Object
-        m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.body, m.token, m.publicApi, m.dataAux)
+        m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux)
         return { success: true, error: invalid }
       end function
     }
-    TrackAction(m, action)
-    executeWithRetry(action, ApiType().CLIENTS_API_URL)
+    
+    runAction(requestId, action, ApiType().CLIENTS_API_URL)
     m.apiRequestManager = action.apiRequestManager
   else 
     if m.lastButtonSelect <> invalid then m.lastButtonSelect.setFocus(true)
@@ -444,6 +453,8 @@ sub onParentalControlResponse()
       else
         m.top.loading.visible = true
         watchSessionId = getWatchSessionId()
+        requestId = createRequestId()
+
         action = {
           apiRequestManager: m.apiRequestManager
           url: urlWatchValidate(m.apiUrl, watchSessionId, m.program.key, m.program.id)
@@ -452,14 +463,15 @@ sub onParentalControlResponse()
           body: invalid
           token: invalid
           publicApi: false
+          requestId: requestId
           dataAux: invalid
           run: function() as Object
-            m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.body, m.token, m.publicApi, m.dataAux)
+            m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux)
             return { success: true, error: invalid }
           end function
         }
-        TrackAction(m, action)
-        executeWithRetry(action, ApiType().CLIENTS_API_URL)
+        
+        runAction(requestId, action, ApiType().CLIENTS_API_URL)
         m.apiRequestManager = action.apiRequestManager
         m.apiRequestManager = action.apiRequestManager
       end if
@@ -507,6 +519,8 @@ end sub
 sub __getProgramDetail(key, id)
   m.lastKey = key
   m.lastId = id
+  requestId = createRequestId()
+
   action = {
     apiRequestManager: m.apiRequestManager
     url: urlProgramById(m.apiUrl, m.lastKey, m.lastId, getCarouselImagesTypes().POSTER_PORTRAIT, getCarouselImagesTypes().SCENIC_LANDSCAPE)
@@ -515,14 +529,15 @@ sub __getProgramDetail(key, id)
     body: invalid
     token: invalid
     publicApi: false
+    requestId: requestId
     dataAux: invalid
     run: function() as Object
-      m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.body, m.token, m.publicApi, m.dataAux)
+      m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux)
       return { success: true, error: invalid }
     end function
   }
-  TrackAction(m, action)
-  executeWithRetry(action, ApiType().CLIENTS_API_URL)
+  
+  runAction(requestId,action, ApiType().CLIENTS_API_URL)
   m.apiRequestManager = action.apiRequestManager
 end sub
 
@@ -641,6 +656,7 @@ sub __loadProgramInfo(program)
   __processActions()
 
   __renderCreditGroups()
+  requestId = createRequestId()
   
   action = {
     apiRequestManager: m.apiRequestManager
@@ -651,13 +667,14 @@ sub __loadProgramInfo(program)
     token: invalid
     publicApi: false
     dataAux: invalid
+    requestId: requestId
     run: function() as Object
-      m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.body, m.token, m.publicApi, m.dataAux)
+      m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux)
       return { success: true, error: invalid }
     end function
   }
-  TrackAction(m, action)
-  executeWithRetry(action, ApiType().CLIENTS_API_URL)
+  
+  runAction(requestId, action, ApiType().CLIENTS_API_URL)
   m.apiRequestManager = action.apiRequestManager
 end sub
 
@@ -697,6 +714,8 @@ sub __openPlayer(streamingAction)
       else
         m.top.loading.visible = true
         watchSessionId = getWatchSessionId()
+        requestId = createRequestId()
+
         action = {
           apiRequestManager: m.apiRequestManager
           url: urlWatchValidate(m.apiUrl, watchSessionId, m.program.key, m.program.id)
@@ -706,13 +725,14 @@ sub __openPlayer(streamingAction)
           token: invalid
           publicApi: false
           dataAux: invalid
+          requestId: requestId
           run: function() as Object
-            m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.body, m.token, m.publicApi, m.dataAux)
+            m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux)
             return { success: true, error: invalid }
           end function
         }
-        TrackAction(m, action)
-        executeWithRetry(action, ApiType().CLIENTS_API_URL)
+        
+        runAction(requestId, action, ApiType().CLIENTS_API_URL)
         m.apiRequestManager = action.apiRequestManager
       end if
     end if 
@@ -857,6 +877,8 @@ end sub
 sub __saveActionLog(actionLog as object)
 
   if beaconTokenExpired() and m.apiUrl <> invalid then
+    requestId = createRequestId()
+
     action = {
       apiRequestManager: m.apiLogRequestManager
       url: urlActionLogsToken(m.apiUrl)
@@ -865,14 +887,15 @@ sub __saveActionLog(actionLog as object)
       body: invalid
       token: invalid
       publicApi: false
+      requestId: requestId
       dataAux: FormatJson(actionLog)
       run: function() as Object
-        m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.body, m.token, m.publicApi, m.dataAux)
+        m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux)
         return { success: true, error: invalid }
       end function
     }
-    TrackAction(m, action)
-    executeWithRetry(action, ApiType().LOGS_API_URL)
+    
+    runAction(requestId, action, ApiType().LOGS_API_URL)
     m.apiLogRequestManager = action.apiRequestManager
   else
       __sendActionLog(actionLog)
@@ -905,6 +928,7 @@ sub __sendActionLog(actionLog as object)
   beaconToken = getBeaconToken()
 
   if (beaconToken <> invalid and m.beaconUrl <> invalid)
+    requestId = createRequestId()
     action = {
       apiRequestManager: m.apiLogRequestManager
       url: urlActionLogs(m.beaconUrl)
@@ -913,14 +937,15 @@ sub __sendActionLog(actionLog as object)
       body: FormatJson(actionLog)
       token: beaconToken
       publicApi: false
+      requestId: requestId
       dataAux: invalid
       run: function() as Object
-        m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.body, m.token, m.publicApi, m.dataAux)
+        m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux)
         return { success: true, error: invalid }
       end function
     }
-    TrackAction(m, action)
-    executeWithRetry(action, ApiType().LOGS_API_URL)
+    
+    runAction(requestId, action, ApiType().LOGS_API_URL)
     m.apiLogRequestManager = action.apiRequestManager
   end if
 end sub

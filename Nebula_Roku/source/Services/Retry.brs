@@ -21,34 +21,26 @@ function __getHeaderValue(headers as Object, key as String) as Dynamic
     return invalid
 end function
 
-function __ensureRequestId(action as Object) as String
-    if action = invalid then return ""
-    if action.requestId = invalid or action.requestId = "" then
-        now = CreateObject("roDateTime")
-        action.requestId = now.AsSeconds().toStr() + "-" + now.GetMilliseconds().toStr()
-    end if
-    return action.requestId
-end function
-
-function __registerPendingAction(action as Object) as String
-    if action = invalid then return ""
+' Registra todas las acciones que se vayan ejecutando en un historial
+sub __registerPendingAction(requestId, action as Object)
     state = __getRetryServiceState()
-    requestId = __ensureRequestId(action)
-    if requestId = "" then return ""
+    if action = invalid then return
+    ' Validar que la misma acción no este registrada
     for each item in state.pendingActions
-        if item <> invalid and item.id = requestId then return requestId
-    end for
+        if item <> invalid and item.responseMethod = action.responseMethod then return
+    end for    
+    ' Registrar la nueva acción
     state.pendingActions.push({ id: requestId, action: action })
     __syncRetryState(state)
-    return requestId
-end function
+end sub
 
-sub __removePendingAction(requestId as String)
+' Remover las acciones que quedaron pendientes por request id
+sub removePendingAction(requestId as String)
     if requestId = invalid or requestId = "" then return
     state = __getRetryServiceState()
     remaining = []
     for each item in state.pendingActions
-        if item <> invalid and item.id <> requestId then
+        if item <> invalid and item.id <> requestId and item.action.status = "running" then
             remaining.push(item)
         end if
     end for
@@ -56,71 +48,37 @@ sub __removePendingAction(requestId as String)
     __syncRetryState(state)
 end sub
 
-function __getActionStatusCode(action as Object, error as Object) as Integer
-    statusCode = invalid
-    if action <> invalid and action.apiRequestManager <> invalid then
-        statusCode = action.apiRequestManager.statusCode
-    end if
-    if statusCode = invalid or statusCode = 0 then
-        if error <> invalid and error.status <> invalid then
-            statusCode = error.status
-        else if error <> invalid and error.error <> invalid and error.error.code <> invalid then
-            statusCode = error.error.code
-        end if
-    end if
-    if statusCode = invalid then statusCode = 0
-    return statusCode
-end function
-
-sub __maybeRemovePendingAction(action as Object, error as Object)
-    if action = invalid then return
-    requestId = action.requestId
+' Cambiar el estado de una acción pendiente
+sub changeStatusAction(requestId as String, status as String)
     if requestId = invalid or requestId = "" then return
-    statusCode = __getActionStatusCode(action, error)
-    if statusCode <> 9000 then
-        __removePendingAction(requestId)
-    end if
+    state = __getRetryServiceState()
+    remaining = []
+    for each item in state.pendingActions
+        if item <> invalid and item.id = requestId and item.action.status = "running" then
+            item.action.status = status
+        end if
+    end for
+    __syncRetryState(state)
 end sub
 
-sub __updateFetchInitialConfigFromResult(action as Object, result as Object)
-    if action = invalid or result = invalid then return
-    statusCode = __getActionStatusCode(action, result.error)
-    if statusCode = invalid or statusCode = 0 then return
-    if validateStatusCode(statusCode) then
-        enableFetchConfigJson()
-    else if statusCode <> 9000 then
-        enableFetchConfigJson()
-    end if
-end sub
 
-function __runRetryAction(action as Object) as Object
-    ' Ejecuta una acción y espera un resultado con { success, error }.
+' Ejecuta una acción y espera un resultado con { success, error }.
+function __runAction(action as Object) as Object
     result = { success: false, error: invalid }
     if action = invalid then return result
-    if action.run <> invalid then
-        response = action.run()
-        if response <> invalid then
-            if response.success <> invalid then result.success = response.success
-            if response.error <> invalid then result.error = response.error
-        end if
+    
+    response = action.run()
+    if response <> invalid then
+        if response.success <> invalid then result.success = response.success
+        if response.error <> invalid then result.error = response.error
     end if
-        if result.success and result.error = invalid and action.apiRequestManager <> invalid then
-        statusCode = action.apiRequestManager.statusCode
-        errorResponse = action.apiRequestManager.errorResponse
-        if statusCode = 0 and errorResponse = invalid then
-            statusCode = __waitForStatusCode(action.apiRequestManager)
-            errorResponse = action.apiRequestManager.errorResponse
-        end if
-        if (statusCode <> invalid and statusCode <> 0 and not validateStatusCode(statusCode)) or (errorResponse <> invalid and errorResponse <> "") then
-            result.success = false
-            statusText = ""
-            if errorResponse <> invalid then statusText = errorResponse
-            result.error = { status: statusCode, statusText: statusText }
-        end if
-    end if
-    __updateFetchInitialConfigFromResult(action, result)
     return result
 end function
+
+' Cambia el estado de las action
+sub __changeActionState(action as object) as object
+
+end sub
 
 function __waitForStatusCode(apiRequestManager as Object, timeoutMS = 20000 as Integer) as Integer
     if apiRequestManager = invalid then return 0
@@ -211,17 +169,16 @@ sub clear()
     state.errorVisibleSubject = false
 end sub
 
-function tryRetryFromResponse(action as Object, apiRequestManager as Object, apiTypeParam as Dynamic, executeFailover = true as Boolean) as Boolean
+function tryRetryFromResponse(requestId, action as Object, apiRequestManager as Object, apiTypeParam as Dynamic, executeFailover = true as Boolean) as Boolean
 
     if action = invalid then return false
 
     state = __getRetryServiceState()
     wasEmpty = state.pendingActions = invalid or state.pendingActions.count() = 0
-    __registerPendingAction(action)
+    __registerPendingAction(requestId, action)
 
     if wasEmpty and not state._changeModeInProgress then
         state._changeModeInProgress = true
-        __syncRetryState(state)
         changeModeResult = changeMode()
         state = __getRetryServiceState()
         state._changeModeInProgress = false
@@ -232,51 +189,44 @@ function tryRetryFromResponse(action as Object, apiRequestManager as Object, api
     return true
 end function
 
+' Intenta todas las funciones que quedaron pendientes con el status error
 sub retryAll()
-    ' Intenta todas las funciones que quedaron pendientes.
-    state = __getRetryServiceState()
-    actions = state.pendingActions
-    for each item in actions
-        if item <> invalid and item.action <> invalid then
-            result = __runRetryAction(item.action)
-            __maybeRemovePendingAction(item.action, result.error)
-        end if
-    end for
+    response = changeMode()
+    if response then
+        state = __getRetryServiceState()
+        actions = state.pendingActions
+        for each item in actions
+            if item <> invalid and item.action <> invalid then
+                result = __runAction(item.action)
+            end if
+        end for
+    else 
+        
+    end if
 end sub
 
-function executeWithRetry(httpRequest as Object, apiTypeParam as Dynamic, executeFailover = true as Boolean) as Object
-    ' Ejecuta llamadas HTTP con failover y reconfiguración si es necesario.
-    state = __getRetryServiceState()
-    __registerPendingAction(httpRequest)
-    result = __runRetryAction(httpRequest)
-    __maybeRemovePendingAction(httpRequest, result.error)
-    if result.success then return result
+' Obtener todas las acciones que dieron error
+function __getErrorActions(actions as Object) as Object
 
-    error = result.error
+    if actions = invalid return []
 
-    if not existSecondary() then
-        error = setErrorApi(error, apiTypeParam)
-        return { success: false, error: error }
-    end if
+    actionsError = []
 
-    finalResult = __runRetryAction(httpRequest)
-    __maybeRemovePendingAction(httpRequest, finalResult.error)
-    if finalResult.success then return finalResult
-
-    finalError = finalResult.error
-    if validateErrorDNS(finalError.status, finalError.statusText) and getFetchInitialConfig() and executeFailover then
-        if state._reconfigInProgress = invalid then
-            state._reconfigInProgress = true
-            getInitialConfiguration("Primary")
-            state._reconfigInProgress = invalid
+    for each item in actions
+        if item <> invalid and item.action <> invalid and item.action.status = "error"
+            actionsError.push(item)
         end if
+    end for
 
-        return executeWithRetry(httpRequest, apiTypeParam, false)
-    end if
-
-    finalError = setErrorApi(finalError, apiTypeParam)
-    return { success: false, error: finalError }
+    return actionsError
 end function
+
+sub runAction(requestId, httpRequest as Object, apiTypeParam as Dynamic, executeFailover = true as Boolean)
+    ' Ejecuta llamadas HTTP con failover y reconfiguración si es necesario.
+    httpRequest.status = "running"
+    __registerPendingAction(requestId, httpRequest)
+    result = __runAction(httpRequest)
+end sub
 
 function executePendingActions() as Boolean
     ' Ejecuta las funciones pendientes en orden y mantiene las que fallan.
@@ -285,10 +235,9 @@ function executePendingActions() as Boolean
     actions = state.pendingActions
     for each item in actions
         if item <> invalid and item.action <> invalid then
-            result = __runRetryAction(item.action)
-            __maybeRemovePendingAction(item.action, result.error)
+            result = __runAction(item.action)
             if not result.success then
-                statusCode = __getActionStatusCode(item.action, result.error)
+                statusCode = 0
                 if statusCode = 9000 then allSuccessful = false
             end if
         end if
@@ -316,7 +265,7 @@ end sub
 sub __updateActionUrl(action as Object, previousApiUrl as String, nextApiUrl as String)
     if action = invalid then return
     if action.url <> invalid and InStr(1, action.url, previousApiUrl) > 0 then
-        action.url = action.url.Replace(previousApiUrl, nextApiUrl).Replace("1https", "https")
+        action.url = action.url.Replace(previousApiUrl, nextApiUrl).Replace("https", "https")
     end if
 end sub
 

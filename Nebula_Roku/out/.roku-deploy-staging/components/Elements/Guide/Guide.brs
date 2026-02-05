@@ -747,17 +747,17 @@ end sub
 
 ' Realiza la busca la guia del canal actual
 sub __searchCurrentChannel()
-    m.apiRequestCurrentChannel = sendApiRequest(m.apiRequestCurrentChannel, urlEpgCarouselGuide(m.apiUrl, m.currentChannel.id), "GET", "onCurrentCarouselResponse", invalid, invalid, false, FormatJson({channelId: m.currentChannel.id}))
+    m.apiRequestCurrentChannel = sendApiRequest(m.apiRequestCurrentChannel, urlEpgCarouselGuide(m.apiUrl, m.currentChannel.id), "GET", "onCurrentCarouselResponse", invalid, invalid, invalid, false, FormatJson({channelId: m.currentChannel.id}))
 end sub
 
 ' Realiza la busca la guia del canal anterior
 sub __searchPrevChannel() 
-    m.apiRequestPrevChannel = sendApiRequest(m.apiRequestPrevChannel, urlEpgCarouselGuide(m.apiUrl, m.prevChannel.id), "GET", "onPrevCarouselResponse", invalid, invalid, false, FormatJson({channelId: m.prevChannel.id}))
+    m.apiRequestPrevChannel = sendApiRequest(m.apiRequestPrevChannel, urlEpgCarouselGuide(m.apiUrl, m.prevChannel.id), "GET", "onPrevCarouselResponse", invalid, invalid, invalid, false, FormatJson({channelId: m.prevChannel.id}))
 end sub
 
 ' Realiza la busca la guia del canal siguiente
 sub __searchNextChannel() 
-    m.apiRequestNextChannel = sendApiRequest(m.apiRequestNextChannel, urlEpgCarouselGuide(m.apiUrl, m.nextChannel.id), "GET", "onNextCarouselResponse", invalid, invalid, false, FormatJson({channelId: m.nextChannel.id}))
+    m.apiRequestNextChannel = sendApiRequest(m.apiRequestNextChannel, urlEpgCarouselGuide(m.apiUrl, m.nextChannel.id), "GET", "onNextCarouselResponse", invalid, invalid, invalid, false, FormatJson({channelId: m.nextChannel.id}))
 end sub
 
 ' Función para configurar un TargetList con su TargetSet y contenido

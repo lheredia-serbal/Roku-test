@@ -220,7 +220,7 @@ end sub
 sub onkillSessionResponse()
   if validateStatusCode(m.apiRequestManager.statusCode) then
     watchSessionId = getWatchSessionId()
-    m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlWatchValidate(m.apiUrl, watchSessionId, m.redirectKey, m.redirectId), "GET", "onWatchValidateResponse")
+    m.apiRequestManager = sendApiRequest("", m.apiRequestManager, urlWatchValidate(m.apiUrl, watchSessionId, m.redirectKey, m.redirectId), "GET", "onWatchValidateResponse")
   else 
     m.top.loading.visible = false
     statusCode = m.apiRequestManager.statusCode
@@ -228,7 +228,7 @@ sub onkillSessionResponse()
     m.apiRequestManager = clearApiRequest(m.apiRequestManager)
 
     if (statusCode = 408) then
-      m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.global.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogClosedLastFocus", [i18n_t(m.global.i18n, "button.cancel")])
+      m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.global.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogClosedLastFocus", invalid [i18n_t(m.global.i18n, "button.cancel")])
     else 
       __validateError(statusCode, 0, errorResponse)
     end if
@@ -341,12 +341,12 @@ end sub
 
 ' Dispara la busqueda de todas las sesiones activas
 sub __getAllSessions()
-  m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlWatchAll(m.apiUrl), "GET", "onAllWhoAreWatchingResponse")
+  m.apiRequestManager = sendApiRequest("", m.apiRequestManager, urlWatchAll(m.apiUrl), "GET", "onAllWhoAreWatchingResponse")
 end sub
 
 ' Dispara la busqueda de la informacion de quien cerro mi sesion
 sub __getKiller(profileId, deviceId)
-  m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlWatchKiller(m.apiUrl, profileId, deviceId), "GET", "onKillerResponse")
+  m.apiRequestManager = sendApiRequest("", m.apiRequestManager, urlWatchKiller(m.apiUrl, profileId, deviceId), "GET", "onKillerResponse")
 end sub
 
 ' Valdia el error obtenido desde la API

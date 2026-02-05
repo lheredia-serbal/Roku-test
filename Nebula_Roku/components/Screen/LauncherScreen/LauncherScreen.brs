@@ -56,6 +56,7 @@ sub __startCdnInitialization(keepDialogVisible = false)
     __showCdnErrorDialog()
     return
   end if
+  
   if not keepDialogVisible then
     __hideCdnErrorDialog()
   end if
@@ -74,9 +75,9 @@ sub __startCdnInitialization(keepDialogVisible = false)
   __startDomainManagerPolling()
 end sub
 
-sub startCdnInitialization(keepDialogVisible = false)
+function startCdnInitialization(keepDialogVisible = false)
   __startCdnInitialization(keepDialogVisible)
-end sub
+end function
 
 sub __startDomainManagerPolling()
   if m.domainManagerTimer = invalid then return
@@ -114,7 +115,7 @@ sub __requestClientsApiHealth()
   end if
 
   url = urlClientsHealth(m.clientsApiCandidates[m.clientsApiIndex])
-  m.clientsHealthRequestManager = sendApiRequest(m.clientsHealthRequestManager, url, "GET", "onClientsApiHealthResponse", invalid, invalid, true)
+  m.clientsHealthRequestManager = sendApiRequest(m.clientsHealthRequestManager, url, "GET", "onClientsApiHealthResponse", invalid, invalid, invalid, true)
 end sub
 
 sub onClientsApiHealthResponse()
@@ -157,7 +158,7 @@ sub onValdiateConnectionResponse()
   
   if validateStatusCode(m.apiRequestManager.statusCode) then
     apiUrl = getActiveApiUrl()
-    m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlPlatformsVariables(apiUrl, m.global.appCode, getVersionCode()), "GET", "onPlatformResponse", invalid, invalid, true)
+    m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlPlatformsVariables(apiUrl, m.global.appCode, getVersionCode()), "GET", "onPlatformResponse", invalid, invalid, invalid, true)
   else 
     printError("Launcher Connection: " , m.apiRequestManager.errorResponse)
     m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.global.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogClosed", [i18n_t(m.global.i18n, "button.retry"), i18n_t(m.global.i18n, "button.exit")])
@@ -172,7 +173,7 @@ sub onPlatformResponse() ' invoked when EpisodesScreen content is changed
     
     if isLoginUser() then
       if m.apiUrl = invalid then m.apiUrl = getConfigVariable(m.global.configVariablesKeys.API_URL) 
-      m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlAuthRegenerateSession(m.apiUrl), "POST", "onRegenerateSession", FormatJson({device: m.global.device}))
+      m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlAuthRegenerateSession(m.apiUrl), "POST", "onRegenerateSession", invalid, FormatJson({device: m.global.device}))
     else
       __validateAutoUpgrade(true)
     end if
@@ -238,7 +239,7 @@ sub __validateAutoUpgrade(isPublicApi)
     signedByGooglePlay: true,
     startUp: true
   }
-  m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlAutoUpgradeValidate(m.apiUrl), "POST", "onAutoUpgradeResponse", FormatJson(body), invalid, isPublicApi)
+  m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlAutoUpgradeValidate(m.apiUrl), "POST", "onAutoUpgradeResponse", invalid, FormatJson(body), invalid, isPublicApi)
 end sub
 
 ' Procesa la respuesta del AutoUpgrade y continua con el flujo actual
@@ -330,5 +331,5 @@ sub __valdiateInternetConnection()
     __showCdnErrorDialog()
     return
   end if
-  m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlHealth(apiUrl), "GET", "onValdiateConnectionResponse", invalid, invalid, true)
+  m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlHealth(apiUrl), "GET", "onValdiateConnectionResponse", invalid, invalid, invalid, true)
 end sub

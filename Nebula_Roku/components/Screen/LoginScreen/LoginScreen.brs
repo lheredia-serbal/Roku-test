@@ -280,6 +280,8 @@ sub __login(user as String, password as String)
     }
     
     m.top.loading.visible = true  
+    requestId = createRequestId()
+
     action = {
       apiRequestManager: m.apiRequestManager
       url: urlAuthCredentialsLogin(m.apiUrl)
@@ -288,14 +290,15 @@ sub __login(user as String, password as String)
       body: FormatJson(credentials)
       token: invalid
       publicApi: true
+      requestId: requestId
       dataAux: invalid
       run: function() as Object
-        m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.body, m.token, m.publicApi, m.dataAux)
+        m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, invalid, m.body, m.token, m.publicApi, m.dataAux)
         return { success: true, error: invalid }
       end function
     }
-    TrackAction(m, action)
-    executeWithRetry(action, ApiType().AUTH_API_URL)
+    
+    runAction(requestId, action, ApiType().AUTH_API_URL)
     m.apiRequestManager = action.apiRequestManager
   end if 
 end sub
@@ -319,6 +322,8 @@ end sub
 sub __saveActionLog(actionLog as object)
 
   if beaconTokenExpired() and m.apiUrl <> invalid then
+    requestId = createRequestId()
+
     action = {
       apiRequestManager: m.apiLogRequestManager
       url: urlActionLogsToken(m.apiUrl)
@@ -327,14 +332,14 @@ sub __saveActionLog(actionLog as object)
       body: invalid
       token: invalid
       publicApi: false
+      requestId: requestId
       dataAux: FormatJson(actionLog)
       run: function() as Object
-        m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.body, m.token, m.publicApi, m.dataAux)
+        m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, invalid, m.body, m.token, m.publicApi, m.dataAux)
         return { success: true, error: invalid }
       end function
     }
-    TrackAction(m, action)
-    executeWithRetry(action, ApiType().LOGS_API_URL)
+    runAction(requestId, action, ApiType().LOGS_API_URL)
     m.apiLogRequestManager = action.apiRequestManager
   else
       __sendActionLog(actionLog)
@@ -368,6 +373,8 @@ sub __sendActionLog(actionLog as object)
   beaconToken = getBeaconToken()
 
   if (beaconToken <> invalid and m.beaconUrl <> invalid)
+    requestId = createRequestId()
+
     action = {
       apiRequestManager: m.apiLogRequestManager
       url: urlActionLogs(m.beaconUrl)
@@ -377,13 +384,13 @@ sub __sendActionLog(actionLog as object)
       token: beaconToken
       publicApi: false
       dataAux: invalid
+      requestId: requestId
       run: function() as Object
-        m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.body, m.token, m.publicApi, m.dataAux)
+        m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, invalid, m.body, m.token, m.publicApi, m.dataAux)
         return { success: true, error: invalid }
       end function
     }
-    TrackAction(m, action)
-    executeWithRetry(action, ApiType().LOGS_API_URL)
+    runAction(requestId, action, ApiType().LOGS_API_URL)
     m.apiLogRequestManager = action.apiRequestManager
   end if
 end sub

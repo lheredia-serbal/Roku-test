@@ -16,9 +16,9 @@ sub GetContent()
     if body = invalid then body = ""
     
     if publicApi then
-        __emitResponse(__apiRequest(m.top.url, method, body, invalid))
+        __emitResponse(__apiRequest(m.top.url, method, body, invalid, m.top.requestId))
     else if m.top.token <> invalid and m.top.token <> ""
-        __emitResponse(__apiRequest(m.top.url, method, body, m.top.token))
+        __emitResponse(__apiRequest(m.top.url, method, body, m.top.token, m.top.requestId))
     else
         accToken = getAccessToken()
         expirationTimeToken = Val(getAccessTokenExpirationDate())
@@ -27,7 +27,7 @@ sub GetContent()
         now.ToLocalTime()
 
         if now.asSeconds() < expirationTimeToken then
-            resp = __apiRequest(m.top.url, method, body, accToken)
+            resp = __apiRequest(m.top.url, method, body, accToken, m.top.requestId)
             
             if validateStatusCode(resp.statusCode) then
                 __emitResponse(resp)
@@ -40,7 +40,7 @@ sub GetContent()
                     if validateStatusCode(newToken.statusCode) then
                         tokenResponse = ParseJson(newToken.response)
                         
-                        __emitResponse(__apiRequest(m.top.url, method, body, tokenResponse.accessToken))
+                        __emitResponse(__apiRequest(m.top.url, method, body, tokenResponse.accessToken, m.top.requestId))
                     else
                         __emitResponse({resposne:invalid, errorResponse:invalid, statusCode: resp.statusCode})
                     end if
@@ -52,7 +52,7 @@ sub GetContent()
             if validateStatusCode(newToken.statusCode) then
                 tokenResponse = ParseJson(newToken.response)
 
-                __emitResponse(__apiRequest(m.top.url, method, body, tokenResponse.accessToken))
+                __emitResponse(__apiRequest(m.top.url, method, body, tokenResponse.accessToken, m.top.requestId))
             else
                 __emitResponse({resposne:invalid, errorResponse:invalid, statusCode: newToken.statusCode})
             end if
@@ -81,11 +81,12 @@ sub __emitResponse(response)
 
     m.top.response = response.response
     m.top.errorResponse = response.errorResponse
+    m.top.serverError = response.serverError
     m.top.statusCode = response.statusCode
 end sub
 
 ' Realiza una llamada HTTP
-function __apiRequest(url, method, body, token)
+function __apiRequest(url, method, body, token, requestId = invalid)
     response = invalid
     errorResponse = invalid
     statusCode = 0
@@ -138,9 +139,9 @@ function __apiRequest(url, method, body, token)
                     end if 
                 end if 
 
-                return { response: response, errorResponse: errorResponse, statusCode: statusCode, serverError: serverError }
+                return { response: response, errorResponse: errorResponse, statusCode: statusCode, serverError: serverError, requestId: requestId }
             else
-                return { response: invalid, errorResponse: "Error: timed out", statusCode: 408 } 
+                return { response: invalid, errorResponse: "Error: timed out", statusCode: 408, requestId: requestId } 
             end if
         end if
     elseif method = "POST" or method = "PUT" or method = "PATCH" then
@@ -159,6 +160,7 @@ function __apiRequest(url, method, body, token)
                     else if __validateServerError(event) then
                         printError("SERVER (" + method + "): - " + statusCode.toStr() + " " + url, event.GetFailureReason())
                         errorResponse = event.GetString()
+                        serverError = true
                         response = invalid
                     else 
                         printError("API (" + method + "): - " + statusCode.toStr() + " " + url, event.GetFailureReason())
@@ -166,10 +168,10 @@ function __apiRequest(url, method, body, token)
                         response = invalid
                     end if 
 
-                    return { response: response, errorResponse: errorResponse, statusCode: statusCode, serverError: serverError }
+                    return { response: response, errorResponse: errorResponse, statusCode: statusCode, serverError: serverError, requestId: requestId }
                 end if
             else
-                return { response: invalid, errorResponse: "Error: timed out", statusCode: 408 } 
+                return { response: invalid, errorResponse: "Error: timed out", statusCode: 408, requestId: requestId } 
             end if
         end if
     else
