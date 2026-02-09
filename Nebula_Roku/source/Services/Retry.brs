@@ -3,16 +3,54 @@ function __getRetryServiceState() as Object
     ' Inicializa y retorna el estado del RetryService si aún no existe.
     if m.retryServiceState = invalid then
         m.retryServiceState = {
-            pendingActions: []
             errorVisibleSubject: false
             _reconfigInProgress: invalid
             _changeModeInProgress: false
         }
     end if
 
+    __getPendingActions()
     return m.retryServiceState
 end function
 
+' Obtener todas las actions que fallaron las peticiones http por problemas del servidor
+function __getPendingActions(status = "all") as Object
+    actions = []
+
+    if m.global <> invalid then
+        if m.global.pendingActions = invalid then
+            addAndSetFields(m.global, { pendingActions: [] })
+        end if
+        actions = m.global.pendingActions
+    else
+        if m.pendingActions = invalid then
+            m.pendingActions = []
+        end if
+        actions = m.pendingActions
+    end if
+
+    errorActions = []
+    for each item in actions
+        if item <> invalid and item.action <> invalid and (item.action.status = status or status = "all")  then
+            errorActions.push(item)
+        end if
+    end for
+
+    return errorActions
+end function
+
+' Setear las actions que fallaron las peticiones http por problemas del servidor
+sub __setPendingActions(actions as Object)
+    if actions = invalid then actions = []
+
+    if m.global <> invalid then
+        addAndSetFields(m.global, { pendingActions: actions })
+    else
+        m.pendingActions = actions
+    end if
+end sub
+
+' Obtiene el valor de un header de http response
 function __getHeaderValue(headers as Object, key as String) as Dynamic
     ' Obtiene un header desde un objeto compatible (map o con método get).
     if headers = invalid then return invalid
@@ -23,15 +61,18 @@ end function
 
 ' Registra todas las acciones que se vayan ejecutando en un historial
 sub __registerPendingAction(requestId, action as Object)
-    state = __getRetryServiceState()
-    if action = invalid then return
+    if action = invalid and action.run <> invalid and action.responseMethod = "onProgramSummaryResponse" then return
+    actions = __getPendingActions()
     ' Validar que la misma acción no este registrada
-    for each item in state.pendingActions
-        if item <> invalid and item.responseMethod = action.responseMethod then return
+    newActions = []
+    for each item in actions
+        if item <> invalid and item.action <> invalid and item.action.responseMethod <> action.responseMethod and item.action.run <> invalid then 
+            newActions.push(item)
+        end if
     end for    
     ' Registrar la nueva acción
-    state.pendingActions.push({ id: requestId, action: action })
-    __syncRetryState(state)
+    newActions.push({ id: requestId, action: action })
+    __setPendingActions(newActions)
 end sub
 
 ' Remover las acciones que quedaron pendientes por request id
@@ -39,7 +80,7 @@ sub removePendingAction(requestId as String)
     if requestId = invalid or requestId = "" then return
     state = __getRetryServiceState()
     remaining = []
-    for each item in state.pendingActions
+    for each item in __getPendingActions()
         if item <> invalid and item.id <> requestId and item.action.status = "running" then
             remaining.push(item)
         end if
@@ -51,21 +92,21 @@ end sub
 ' Cambiar el estado de una acción pendiente
 sub changeStatusAction(requestId as String, status as String)
     if requestId = invalid or requestId = "" then return
-    state = __getRetryServiceState()
+    pendingActions = __getPendingActions()
     remaining = []
-    for each item in state.pendingActions
+    for each item in pendingActions
         if item <> invalid and item.id = requestId and item.action.status = "running" then
             item.action.status = status
         end if
     end for
-    __syncRetryState(state)
+    __setPendingActions(pendingActions)
 end sub
 
 
 ' Ejecuta una acción y espera un resultado con { success, error }.
 function __runAction(action as Object) as Object
     result = { success: false, error: invalid }
-    if action = invalid then return result
+    if action = invalid or action.run = invalid then return result
     
     response = action.run()
     if response <> invalid then
@@ -74,11 +115,6 @@ function __runAction(action as Object) as Object
     end if
     return result
 end function
-
-' Cambia el estado de las action
-sub __changeActionState(action as object) as object
-
-end sub
 
 function __waitForStatusCode(apiRequestManager as Object, timeoutMS = 20000 as Integer) as Integer
     if apiRequestManager = invalid then return 0
@@ -94,7 +130,7 @@ function setErrorApi(error as Object, apiTypeParam as Dynamic) as Object
     ' Setea el código de error 9000 cuando es un error DNS sin X-Service-Id.
     if error = invalid then return error
 
-    serviceId = __getHeaderValue(error.headers, "X-Service-Id")
+    serviceId = __getHeaderValue(error.headers, "x-Service-Id")
     statusText = ""
     if error.statusText <> invalid then statusText = error.statusText
 
@@ -164,9 +200,7 @@ sub setClientModuleErrorCodeFromStatus(statusCode as Integer, apiTypeParam as Dy
 end sub
 sub clear()
     ' Limpia las funciones de la cola.
-    state = __getRetryServiceState()
-    state.pendingActions = []
-    state.errorVisibleSubject = false
+    __setPendingActions([])
 end sub
 
 function tryRetryFromResponse(requestId, action as Object, apiRequestManager as Object, apiTypeParam as Dynamic, executeFailover = true as Boolean) as Boolean
@@ -174,7 +208,8 @@ function tryRetryFromResponse(requestId, action as Object, apiRequestManager as 
     if action = invalid then return false
 
     state = __getRetryServiceState()
-    wasEmpty = state.pendingActions = invalid or state.pendingActions.count() = 0
+    pendingActions = __getPendingActions("error")
+    wasEmpty = pendingActions = invalid or pendingActions.count() = 0
     __registerPendingAction(requestId, action)
 
     if wasEmpty and not state._changeModeInProgress then
@@ -191,17 +226,22 @@ end function
 
 ' Intenta todas las funciones que quedaron pendientes con el status error
 sub retryAll()
-    response = changeMode()
-    if response then
-        state = __getRetryServiceState()
-        actions = state.pendingActions
-        for each item in actions
-            if item <> invalid and item.action <> invalid then
-                result = __runAction(item.action)
-            end if
-        end for
-    else 
-        
+
+    addAndSetFields(m.global, { fakeRequest: false })
+    actions = __getPendingActions("error")
+
+    wasEmpty = actions = invalid or actions.count() = 0
+    if not wasEmpty then
+        response = changeMode()
+        if response then
+            for each item in actions
+                if item <> invalid and item.action <> invalid then
+                    result = __runAction(item.action)
+                end if
+            end for
+        else 
+            showCdnErrorDialog()
+        end if
     end if
 end sub
 
@@ -230,9 +270,8 @@ end sub
 
 function executePendingActions() as Boolean
     ' Ejecuta las funciones pendientes en orden y mantiene las que fallan.
-    state = __getRetryServiceState()
     allSuccessful = true
-    actions = state.pendingActions
+    actions = __getPendingActions()
     for each item in actions
         if item <> invalid and item.action <> invalid then
             result = __runAction(item.action)
@@ -242,9 +281,6 @@ function executePendingActions() as Boolean
             end if
         end if
     end for
-    state = __getRetryServiceState()
-    state.errorVisibleSubject = state.pendingActions.count() > 0
-    __syncRetryState(state)
     return allSuccessful
 end function
 
@@ -252,14 +288,15 @@ sub updatePendingActionsApiUrl(previousApiUrl as Dynamic, nextApiUrl as Dynamic)
     if previousApiUrl = invalid or previousApiUrl = "" then return
     if nextApiUrl = invalid or nextApiUrl = "" then return
     if previousApiUrl = nextApiUrl then return
-    state = __getRetryServiceState()
-    if state.pendingActions = invalid then return
-    for each item in state.pendingActions
+    actions = __getPendingActions()
+    if actions = invalid then return
+    for each item in actions
         if item <> invalid and item.action <> invalid then
             __updateActionUrl(item.action, previousApiUrl, nextApiUrl)
         end if
     end for
-    __syncRetryState(state)
+
+    __setPendingActions(actions)
 end sub
 
 sub __updateActionUrl(action as Object, previousApiUrl as String, nextApiUrl as String)
@@ -268,13 +305,6 @@ sub __updateActionUrl(action as Object, previousApiUrl as String, nextApiUrl as 
         action.url = action.url.Replace(previousApiUrl, nextApiUrl).Replace("https", "https")
     end if
 end sub
-
-function __validateCurrentApiHealth() as Boolean
-    apiUrl = getActiveApiUrl()
-    if apiUrl = invalid or apiUrl = "" then return false
-    healthUrl = urlClientsHealth(apiUrl)
-    return performHealthCheck(healthUrl)
-end function
 
 sub __syncRetryState(state as Object)
     ' Sincroniza el estado actual con el global para mantener los valores persistentes.

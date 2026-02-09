@@ -110,6 +110,8 @@ end sub
 sub onLoginResponse()
   if validateStatusCode(m.apiRequestManager.statusCode) then
 
+    removePendingAction(m.apiRequestManager.requestId)
+
     actionLog = getActionLog({ actionCode: ActionLogCode().LOGIN_BY_CREDENTIALS })
     __saveActionLog(actionLog)
 
@@ -127,33 +129,35 @@ sub onLoginResponse()
     m.sendLoginPost = false
     m.top.finished = true
   else 
-    retryManager = RetryOn9000(m, "onLoginResponse", m.apiRequestManager, ApiType().AUTH_API_URL)
-    if retryManager <> invalid then
-      m.apiRequestManager = retryManager
-      return
+    if m.apiRequestManager.serverError then
+      changeStatusAction(m.apiRequestManager.requestId, "error")
+      retryAll()
+    else
+      removePendingAction(m.apiRequestManager.requestId)
+      if m.resultCodes = invalid then m.resultCodes = getResultCodes()
+      m.top.loading.visible = false
+
+      error = ParseJson(m.apiRequestManager.errorResponse)
+
+      errorAPI = ""
+
+      if error.code = m.resultCodes.UNAUTHORIZED then
+        errorAPI = i18n_t(m.global.i18n, "loginPage.errorForm.unAuthorized")
+      else if error.code = m.resultCodes.NOT_CONFIRMED then
+        errorAPI = i18n_t(m.global.i18n, "loginPage.errorForm.notConfirmed")
+      else if error.code = m.resultCodes.NOT_ACTIVATED then
+        errorAPI = i18n_t(m.global.i18n, "loginPage.errorForm.notActivated")
+      else if error.code = m.resultCodes.REQUESTTIMEOUT then
+        errorAPI = i18n_t(m.global.i18n, "shared.errorComponent.connection")
+      else 
+        errorAPI = i18n_t(m.global.i18n, "loginPage.errorForm.unhandled")
+      end if
+        
+      m.apiRequestManager = clearApiRequest(m.apiRequestManager)
+      __showDialog(errorAPI)
     end if
-    if m.resultCodes = invalid then m.resultCodes = getResultCodes()
-    m.top.loading.visible = false
-
-    error = ParseJson(m.apiRequestManager.errorResponse)
-
-    errorAPI = ""
-
-    if error.code = m.resultCodes.UNAUTHORIZED then
-      errorAPI = i18n_t(m.global.i18n, "loginPage.errorForm.unAuthorized")
-    else if error.code = m.resultCodes.NOT_CONFIRMED then
-      errorAPI = i18n_t(m.global.i18n, "loginPage.errorForm.notConfirmed")
-    else if error.code = m.resultCodes.NOT_ACTIVATED then
-      errorAPI = i18n_t(m.global.i18n, "loginPage.errorForm.notActivated")
-    else if error.code = m.resultCodes.REQUESTTIMEOUT then
-      errorAPI = i18n_t(m.global.i18n, "shared.errorComponent.connection")
-    else 
-      errorAPI = i18n_t(m.global.i18n, "loginPage.errorForm.unhandled")
-    end if
-      
-    m.apiRequestManager = clearApiRequest(m.apiRequestManager)
-    __showDialog(errorAPI)
   end if 
+  m.apiRequestManager = clearApiRequest(m.apiRequestManager)
 end sub
 
 ' Notifica que finalizo las tareas de la pantalla

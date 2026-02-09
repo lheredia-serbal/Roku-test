@@ -83,6 +83,7 @@ end sub
 
 ' API pública (funciones sin prefijo "__").
 sub setConfigUrls(initialConfigUrl as String, secondaryConfigUrl as String)
+    addAndSetFields(m.global, { fakeRequest: true })
     ' Guarda las URLs iniciales de configuración (primary/secondary) en el estado.
     state = __getDomainManagerState()
     state.initialConfigPrimaryUrl = initialConfigUrl
@@ -177,7 +178,7 @@ function __attemptHealthAndRetry(mode as String) as Boolean
     __syncDomainManagerState(state)
 
     if __validateHealthForMode(mode) then
-        return executePendingActions()
+        return true
     end if
 
     return false
@@ -209,7 +210,7 @@ function __validateHealthForMode(mode as String) as Boolean
     return success
 end function
 
-function performHealthCheck(url as String, timeoutMS = 20000 as Integer) as Boolean
+function performHealthCheck(url as String, timeoutMS = 20000 as Integer) as boolean
     if url = invalid or url = "" then return false
     transfer = CreateObject("roUrlTransfer")
     port = CreateObject("roMessagePort")
@@ -222,13 +223,17 @@ function performHealthCheck(url as String, timeoutMS = 20000 as Integer) as Bool
     if lang <> invalid and lang <> "" then
         transfer.AddHeader("Accept-Language", lang)
     end if
-    transfer.SetURL("1" + url)
+    transfer.SetURL(url)
 
     if transfer.AsyncGetToString() then
         event = wait(timeoutMS, port)
         if event <> invalid and type(event) = "roUrlEvent" then
             statusCode = event.GetResponseCode()
-            return validateStatusCode(statusCode)
+            if validateStatusCode(statusCode) then
+                return true
+            else 
+                setCdnErrorCodeFromStatus(9001, ApiType().CLIENTS_API_URL)
+            end if
         end if
     end if
 
@@ -296,6 +301,7 @@ sub enableFetchConfigJson()
     ' Esta función se ejecuta cuando algún DNS dio OK, limpia las banderas.
     state = __getDomainManagerState()
     state._fetchInitialConfig = true
+    addAndSetFields(m.global, { fakeRequest: true })
     __syncDomainManagerState(state)
 end sub
 
@@ -372,6 +378,8 @@ sub __notifyInitialConfigResult(success as Boolean)
         m.top.callFunc(state._initialConfigCallback, { success: success })
         state._initialConfigCallback = invalid
     end if
+
+    retryAll()
     __syncDomainManagerState(state)
 end sub
 

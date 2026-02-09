@@ -178,6 +178,7 @@ end function
 function sendApiRequest(apiRequestManager, url, method, responseMethod, requestId = invalid, body = invalid, token = invalid, publicApi = false, dataAux = invalid)
   apiRequestManager = clearApiRequest(apiRequestManager)
   apiRequestManager = CreateObject("roSGNode", "APIRequestManager")
+    url = maybeCorruptApiUrl(url)
   apiRequestManager.setField("url", url)
   apiRequestManager.setField("method", method)
   if publicApi then apiRequestManager.setField("publicApi", true)
@@ -763,3 +764,35 @@ function diffSeconds(a as object, b as object) as integer
   if a = invalid or b = invalid then return 0
   return a.AsSeconds() - b.AsSeconds()
 end function
+
+function maybeCorruptApiUrl(url as Dynamic) as Dynamic
+  if url = invalid then return url
+  lowerUrl = LCase(url)
+  if Left(lowerUrl, 4) <> "http" then return url
+  if shouldCorruptApiUrl()
+    return getRandomUrlCharacter() + url
+  end if
+  return url
+end function
+
+function shouldCorruptApiUrl() as Boolean
+  ' 20% de probabilidad de alterar la URL
+  ensureRandomSeed()
+  return Rnd(0) < 0.2
+end function
+
+function getRandomUrlCharacter() as String
+  characters = "abcdefghijklmnopqrstuvwxyz0123456789"
+  if Len(characters) = 0 then return ""
+  ensureRandomSeed()
+  index = Int(Rnd(0) * Len(characters))
+  if index >= Len(characters) then index = Len(characters) - 1
+  return Mid(characters, index + 1, 1)
+end function
+
+sub ensureRandomSeed()
+  if m.global = invalid then return
+  if m.global.doesExist("randomSeeded") and m.global.randomSeeded = true then return
+  Rnd(-1)
+  m.global.randomSeeded = true
+end sub
