@@ -353,12 +353,6 @@ end sub
 ' Obtener el beacon token
 sub onActionLogTokenResponse() 
 
-  retryManager = RetryOn9000(m, "onActionLogTokenResponse", m.apiLogRequestManager, ApiType().LOGS_API_URL)
-  if retryManager <> invalid then
-    m.apiLogRequestManager = retryManager
-    return
-  end if
-
   resp = ParseJson(m.apiLogRequestManager.response)
   actionLog = ParseJson(m.apiLogRequestManager.dataAux)
 
@@ -401,11 +395,6 @@ end sub
 
 ' Limpiar la llamada del log
 sub onActionLogResponse() 
-  retryManager = RetryOn9000(m, "onActionLogResponse", m.apiLogRequestManager, ApiType().LOGS_API_URL)
-  if retryManager <> invalid then
-    m.apiLogRequestManager = retryManager
-    return
-  end if
   m.apiLogRequestManager = clearApiRequest(m.apiLogRequestManager)
 end sub
 

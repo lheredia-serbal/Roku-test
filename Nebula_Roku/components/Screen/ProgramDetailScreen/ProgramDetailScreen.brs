@@ -289,23 +289,24 @@ sub onWatchValidateResponse()
       m.apiRequestManager = clearApiRequest(m.apiRequestManager)
     end if
   else 
-    retryManager = RetryOn9000(m, "onWatchValidateResponse", m.apiRequestManager, ApiType().CLIENTS_API_URL)
-    if retryManager <> invalid then
-      m.apiRequestManager = retryManager
-      return
-    end if
-    m.top.loading.visible = false
-    statusCode = m.apiRequestManager.statusCode
-    errorResponse = m.apiRequestManager.errorResponse
-    m.apiRequestManager = clearApiRequest(m.apiRequestManager) 
-    
-    if (statusCode = 408) then
-      m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.global.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogClosedLastFocus", [i18n_t(m.global.i18n, "button.cancel")])
-    else 
-      __validateError(statusCode, 0, errorResponse)
+    if m.apiRequestManager.serverError then
+      changeStatusAction(m.apiRequestManager.requestId, "error")
+      retryAll()
+    else
+      m.top.loading.visible = false
+      statusCode = m.apiRequestManager.statusCode
+      errorResponse = m.apiRequestManager.errorResponse
+      
+      if (statusCode = 408) then
+        m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.global.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogClosedLastFocus", [i18n_t(m.global.i18n, "button.cancel")])
+      else 
+        __validateError(statusCode, 0, errorResponse)
+      end if
+
+      printError("WatchValidate Stastus:", statusCode.toStr() + " " +  errorResponse)
     end if
 
-    printError("WatchValidate Stastus:", statusCode.toStr() + " " +  errorResponse)
+    m.apiRequestManager = clearApiRequest(m.apiRequestManager) 
   end if
 end sub
 
@@ -928,11 +929,6 @@ end sub
 ' Obtener el beacon token
 sub onActionLogTokenResponse() 
 
-  retryManager = RetryOn9000(m, "onActionLogTokenResponse", m.apiLogRequestManager, ApiType().LOGS_API_URL)
-  if retryManager <> invalid then
-    m.apiLogRequestManager = retryManager
-    return
-  end if
   resp = ParseJson(m.apiLogRequestManager.response)
   actionLog = ParseJson(m.apiLogRequestManager.dataAux)
 
@@ -975,11 +971,6 @@ end sub
 
 ' Limpiar la llamada del log
 sub onActionLogResponse() 
-  retryManager = RetryOn9000(m, "onActionLogResponse", m.apiLogRequestManager, ApiType().LOGS_API_URL)
-  if retryManager <> invalid then
-    m.apiLogRequestManager = retryManager
-    return
-  end if
   m.apiLogRequestManager = clearApiRequest(m.apiLogRequestManager)
 end sub
 

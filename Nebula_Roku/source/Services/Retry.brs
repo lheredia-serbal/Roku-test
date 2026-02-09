@@ -17,17 +17,10 @@ end function
 function __getPendingActions(status = "all") as Object
     actions = []
 
-    if m.global <> invalid then
-        if m.global.pendingActions = invalid then
-            addAndSetFields(m.global, { pendingActions: [] })
-        end if
-        actions = m.global.pendingActions
-    else
-        if m.pendingActions = invalid then
-            m.pendingActions = []
-        end if
-        actions = m.pendingActions
+    if m.pendingActions = invalid then
+        m.pendingActions = []
     end if
+    actions = m.pendingActions
 
     errorActions = []
     for each item in actions
@@ -43,11 +36,7 @@ end function
 sub __setPendingActions(actions as Object)
     if actions = invalid then actions = []
 
-    if m.global <> invalid then
-        addAndSetFields(m.global, { pendingActions: actions })
-    else
-        m.pendingActions = actions
-    end if
+    m.pendingActions = actions
 end sub
 
 ' Obtiene el valor de un header de http response
@@ -61,7 +50,7 @@ end function
 
 ' Registra todas las acciones que se vayan ejecutando en un historial
 sub __registerPendingAction(requestId, action as Object)
-    if action = invalid and action.run <> invalid and action.responseMethod = "onProgramSummaryResponse" then return
+    if action = invalid or action.run = invalid then return
     actions = __getPendingActions()
     ' Validar que la misma acción no este registrada
     newActions = []
@@ -202,27 +191,6 @@ sub clear()
     ' Limpia las funciones de la cola.
     __setPendingActions([])
 end sub
-
-function tryRetryFromResponse(requestId, action as Object, apiRequestManager as Object, apiTypeParam as Dynamic, executeFailover = true as Boolean) as Boolean
-
-    if action = invalid then return false
-
-    state = __getRetryServiceState()
-    pendingActions = __getPendingActions("error")
-    wasEmpty = pendingActions = invalid or pendingActions.count() = 0
-    __registerPendingAction(requestId, action)
-
-    if wasEmpty and not state._changeModeInProgress then
-        state._changeModeInProgress = true
-        changeModeResult = changeMode()
-        state = __getRetryServiceState()
-        state._changeModeInProgress = false
-        __syncRetryState(state)
-        return changeModeResult
-    end if
-
-    return true
-end function
 
 ' Intenta todas las funciones que quedaron pendientes con el status error
 sub retryAll()

@@ -385,7 +385,6 @@ end sub
 sub onWatchValidateResponse()
   if validateStatusCode(m.apiRequestManager.statusCode) then
     resp = ParseJson(m.apiRequestManager.response).data
-    m.apiRequestManager = clearApiRequest(m.apiRequestManager)
 
     if resp.resultCode = 200 then
       removePendingAction(m.apiRequestManager.requestId)
@@ -420,6 +419,7 @@ sub onWatchValidateResponse()
       __validateError(0, resp.resultCode, invalid)
       printError("WatchValidate ResultCode:", resp.resultCode)
     end if
+    m.apiRequestManager = clearApiRequest(m.apiRequestManager)
   else 
     m.top.loading.visible = false
     statusCode = m.apiRequestManager.statusCode
@@ -591,13 +591,13 @@ sub getProgramInfo()
       dataAux: invalid
       requestId: requestId
       run: function() as Object
-        m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux)
+        m.apiSummaryRequestManager = sendApiRequest(m.apiSummaryRequestManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux)
         return { success: true, error: invalid }
       end function
     }
     
     runAction(requestId, action, ApiType().CLIENTS_API_URL)
-    m.apiSummaryRequestManager = action.apiRequestManager
+    m.apiSummaryRequestManager = action.apiSummaryRequestManager
    end if 
   catch error
     printError("Error al cargar la programa summary", error)
@@ -606,6 +606,7 @@ end sub
 
 ' Procesa la respuesta de la peticion del Summay del programa
 sub onProgramSummaryResponse()
+  if (m.apiSummaryRequestManager = invalid) return 
   if validateStatusCode(m.apiSummaryRequestManager.statusCode) then
     m.itemfocused = invalid
     resp = ParseJson(m.apiSummaryRequestManager.response)
@@ -650,6 +651,7 @@ end sub
 
 ' Procesa la respuesta de la peticion del menú
 sub onMenuResponse()
+  if (m.apiRequestManager = invalid) return
   if validateStatusCode(m.apiRequestManager.statusCode) then
     removePendingAction(m.apiRequestManager.requestId)
     resp = ParseJson(m.apiRequestManager.response)
@@ -1409,11 +1411,6 @@ end sub
 
 ' Limpiar la llamada del log
 sub onActionLogResponse() 
-  retryManager = RetryOn9000(m, "onActionLogResponse", m.apiLogRequestManager, ApiType().LOGS_API_URL)
-  if retryManager <> invalid then
-    m.apiLogRequestManager = retryManager
-    return
-  end if
   m.apiLogRequestManager = clearApiRequest(m.apiLogRequestManager)
 end sub
 
