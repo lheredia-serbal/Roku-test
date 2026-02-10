@@ -108,56 +108,64 @@ end sub
 
 ' Procesa la respuesta al tratar de loguear al usuario a traves de credenciales
 sub onLoginResponse()
-  if validateStatusCode(m.apiRequestManager.statusCode) then
 
-    removePendingAction(m.apiRequestManager.requestId)
-
-    actionLog = getActionLog({ actionCode: ActionLogCode().LOGIN_BY_CREDENTIALS })
-    __saveActionLog(actionLog)
-
-    resp = ParseJson(m.apiRequestManager.response)
-    
-    addAndSetFields(m.global, {device: resp.device, organization: resp.organization, contact: resp.contact, variables: resp.variables} )
-    
-    saveNextUpdateVariables()
-
-    SetDevice(resp.device)
-    saveTokens(resp)
-    m.apiRequestManager = clearApiRequest(m.apiRequestManager)
-
-    m.keyboard.unobserveField("textEditBox")
-    m.sendLoginPost = false
-    m.top.finished = true
+  if m.apiRequestManager = invalid then
+    user = m.userField.text
+    password = m.passwordField.text
+    __login(user, password)
+    return
   else 
-    if m.apiRequestManager.serverError then
-      changeStatusAction(m.apiRequestManager.requestId, "error")
-      retryAll()
-    else
+    if validateStatusCode(m.apiRequestManager.statusCode) then
+
       removePendingAction(m.apiRequestManager.requestId)
-      if m.resultCodes = invalid then m.resultCodes = getResultCodes()
-      m.top.loading.visible = false
 
-      error = ParseJson(m.apiRequestManager.errorResponse)
+      actionLog = getActionLog({ actionCode: ActionLogCode().LOGIN_BY_CREDENTIALS })
+      __saveActionLog(actionLog)
 
-      errorAPI = ""
+      resp = ParseJson(m.apiRequestManager.response)
+      
+      addAndSetFields(m.global, {device: resp.device, organization: resp.organization, contact: resp.contact, variables: resp.variables} )
+      
+      saveNextUpdateVariables()
 
-      if error.code = m.resultCodes.UNAUTHORIZED then
-        errorAPI = i18n_t(m.global.i18n, "loginPage.errorForm.unAuthorized")
-      else if error.code = m.resultCodes.NOT_CONFIRMED then
-        errorAPI = i18n_t(m.global.i18n, "loginPage.errorForm.notConfirmed")
-      else if error.code = m.resultCodes.NOT_ACTIVATED then
-        errorAPI = i18n_t(m.global.i18n, "loginPage.errorForm.notActivated")
-      else if error.code = m.resultCodes.REQUESTTIMEOUT then
-        errorAPI = i18n_t(m.global.i18n, "shared.errorComponent.connection")
-      else 
-        errorAPI = i18n_t(m.global.i18n, "loginPage.errorForm.unhandled")
-      end if
-        
+      SetDevice(resp.device)
+      saveTokens(resp)
       m.apiRequestManager = clearApiRequest(m.apiRequestManager)
-      __showDialog(errorAPI)
-    end if
-  end if 
-  m.apiRequestManager = clearApiRequest(m.apiRequestManager)
+
+      m.keyboard.unobserveField("textEditBox")
+      m.sendLoginPost = false
+      m.top.finished = true
+    else 
+      if m.apiRequestManager.serverError then
+        changeStatusAction(m.apiRequestManager.requestId, "error")
+        retryAll()
+      else
+        removePendingAction(m.apiRequestManager.requestId)
+        if m.resultCodes = invalid then m.resultCodes = getResultCodes()
+        m.top.loading.visible = false
+
+        error = ParseJson(m.apiRequestManager.errorResponse)
+
+        errorAPI = ""
+
+        if error.code = m.resultCodes.UNAUTHORIZED then
+          errorAPI = i18n_t(m.global.i18n, "loginPage.errorForm.unAuthorized")
+        else if error.code = m.resultCodes.NOT_CONFIRMED then
+          errorAPI = i18n_t(m.global.i18n, "loginPage.errorForm.notConfirmed")
+        else if error.code = m.resultCodes.NOT_ACTIVATED then
+          errorAPI = i18n_t(m.global.i18n, "loginPage.errorForm.notActivated")
+        else if error.code = m.resultCodes.REQUESTTIMEOUT then
+          errorAPI = i18n_t(m.global.i18n, "shared.errorComponent.connection")
+        else 
+          errorAPI = i18n_t(m.global.i18n, "loginPage.errorForm.unhandled")
+        end if
+          
+        m.apiRequestManager = clearApiRequest(m.apiRequestManager)
+        __showDialog(errorAPI)
+      end if
+    end if 
+    m.apiRequestManager = clearApiRequest(m.apiRequestManager)
+  end if
 end sub
 
 ' Notifica que finalizo las tareas de la pantalla

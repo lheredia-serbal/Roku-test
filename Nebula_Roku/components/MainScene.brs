@@ -109,6 +109,7 @@ sub onLogoutEvent()
       m.blockLogoutProcess = true
       m.loading.visible = true
       deleteTokens()
+      clear()
       __resetApp()
       
       ' se limpian las variables y se le da el foco al login

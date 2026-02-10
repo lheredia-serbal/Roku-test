@@ -76,8 +76,6 @@ end sub
 sub onPositionChanged()
   if m.top.position <> invalid then 
     if (m.top.position) = -1 then return
-    print "currentPosition 1"
-    print m.top.position
     m.currentPosition = m.top.position
   end if 
   __updateProgress()
@@ -124,8 +122,6 @@ sub __updateProgress()
   if m.top <> invalid and m.top.isLive = true then
     if m.progress <> invalid then
 
-      print "progress 1"
-      print m.totalWidth
       m.progress.width = m.totalWidth
     end if
     if m.timeLabel <> invalid then
@@ -158,7 +154,6 @@ sub __updateProgress()
 
   ' Si no hay duración
   if m.currentDuration <= 0 and not m.top.isLive then
-    print "progress 2"
     m.progress.width = 0
     if m.thumb <> invalid then m.thumb.translation = [-thumbHalf, thumbY]
     if m.timeLabel <> invalid then m.timeLabel.text = "00:00"
@@ -168,8 +163,6 @@ sub __updateProgress()
   ' Clamp position
   if m.currentPosition < 0 then m.currentPosition = 0
   if m.currentPosition > m.currentDuration then
-    print "currentPosition 2"
-    print m.currentDuration
     m.currentPosition = m.currentDuration
   end if
 
@@ -180,15 +173,7 @@ sub __updateProgress()
     progressWidth = 0
   end if
   
-  print "progress 3"
-  print progressWidth
-  print m.currentPosition
-  print m.currentDuration
-  print m.totalWidth
-
   if progressWidth > 0 then
-    print "progress 3.5"
-  print progressWidth
     m.progress.width = progressWidth
   end if
 
@@ -200,12 +185,8 @@ sub __updateProgress()
   if m.thumb <> invalid then
     
     if (m.top.isLive) then
-      if (m.totalWidth = 0 or m.totalWidth <= 0) then
-        print m.totalWidth
-      end if
       m.thumb.translation = [m.totalWidth - 24, thumbY]
-      print "progress 4"
-      print m.totalWidth
+
       m.progress.width =  m.totalWidth
     else
       if (thumbX <> invalid and thumbX >= 0) then
@@ -429,8 +410,6 @@ end sub
 ' Obtiene dispositivo UTC offset seconds.
 sub __restoreCachedUi()
   if m.cachedProgressWidth <> invalid and m.progress <> invalid then 
-    print "progress 5" 
-    print m.cachedProgressWidth
     m.progress.width = m.cachedProgressWidth
   end if
   if m.cachedThumbTranslation <> invalid and m.thumb <> invalid then m.thumb.translation = m.cachedThumbTranslation

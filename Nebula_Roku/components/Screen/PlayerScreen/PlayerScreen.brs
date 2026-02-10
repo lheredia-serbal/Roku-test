@@ -137,6 +137,10 @@ end sub
 ' Funcion que interpreta los eventos de teclado y retorna true si fue porcesada por este componente. Sino es porcesado por el
 ' entonces sigue con el siguente metodo onKeyEvent del compoente superior
 function onKeyEvent(key as String, press as Boolean) as Boolean
+
+  ' Si esta refrescando el url del stream, bloquear todos los botones
+  if m.isReloadStreaming then return true
+
   if m.top.loading.visible <> false and key <> KeyButtons().BACK then
     return true
   end if
@@ -174,6 +178,7 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
   
   
   if m.inactivityContinueButton.isInFocusChain() then
+
     handled = true
 
     if press and (key = KeyButtons().OK or key = KeyButtons().BACK or KeyButtons().UP or KeyButtons().DOWN or KeyButtons().RIGHT or KeyButtons().LEFT) then
@@ -255,8 +260,6 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
           ' en live-rewind, normalmente "live edge" es duration (ventana) o el final
           dur = m.timelineBar.duration
           if dur <> invalid and dur > 0 then
-            print "m.videoPlayer.seek 6"
-            print dur
             m.videoPlayer.seek = dur
           end if
           m.videoPlayer.control = "play"
@@ -1111,7 +1114,7 @@ sub onSendBeaconResponse()
       watchSessionId = getWatchSessionId()
       if statusCode = 401 then 
         requestId = createRequestId()
-        m.apiBeaconRequestManager = sendApiRequest(requestId,m.apiBeaconRequestManager, urlWatchValidate(m.apiUrl, watchSessionId, m.streaming.redirectKey, m.streaming.redirectId), "GET", "onWatchValidateResponse")
+        m.apiBeaconRequestManager = sendApiRequest(m.apiBeaconRequestManager, urlWatchValidate(m.apiUrl, watchSessionId, m.streaming.redirectKey, m.streaming.redirectId), "GET", "onWatchValidateResponse", requestId)
       end if
 
       printError("onSendBeaconResponse:", errorResponse)
@@ -1167,7 +1170,7 @@ sub onPinDialogLoad()
   if (resp.option = 0 and resp.pin <> invalid and Len(resp.pin) = 4) then 
     if m.lastButtonSelect <> invalid then m.lastButtonSelect.setFocus(true)
     requestId = createRequestId()
-    m.apiRequestManager = sendApiRequest(requestId, m.apiRequestManager, urlParentalControlPin(m.apiUrl, resp.pin), "GET", "onParentalControlResponse")
+    m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlParentalControlPin(m.apiUrl, resp.pin), "GET", "onParentalControlResponse", requestId)
   else 
     m.repositionChannnelList = true
     if m.lastButtonSelect <> invalid then m.lastButtonSelect.setFocus(true)
@@ -1220,9 +1223,9 @@ end sub
 sub onGetNewProgramInfo()
   requestId = createRequestId()
   if m.program <> invalid then
-    m.apiRequestManager = sendApiRequest(requestId, m.apiRequestManager, urlProgramSummary(m.apiUrl, m.program.infoKey, m.program.infoId, getCarouselImagesTypes().NONE, getCarouselImagesTypes().NONE), "GET", "onProgramSummaryResponse")
+    m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlProgramSummary(m.apiUrl, m.program.infoKey, m.program.infoId, getCarouselImagesTypes().NONE, getCarouselImagesTypes().NONE), "GET", "onProgramSummaryResponse", requestId)
   else if m.lastKey <> invalid AND  m.lastId <> invalid then 
-    m.apiRequestManager = sendApiRequest(requestId, m.apiRequestManager, urlProgramSummary(m.apiUrl, m.lastKey, m.lastId, getCarouselImagesTypes().NONE, getCarouselImagesTypes().NONE), "GET", "onProgramSummaryResponse")
+    m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlProgramSummary(m.apiUrl, m.lastKey, m.lastId, getCarouselImagesTypes().NONE, getCarouselImagesTypes().NONE), "GET", "onProgramSummaryResponse", requestId)
   end if
 end sub
 
@@ -1391,13 +1394,9 @@ sub __loadPlayer(streaming, focusPlayer = true)
 
     if not m.isLiveContent then
       if m.lastPosition <> invalid then
-        print "m.videoPlayer.seek 7"
-        print m.lastPosition
         m.videoPlayer.seek = m.lastPosition
         m.lastPosition = invalid
       else
-        print "m.videoPlayer.seek 8"
-        print m.streaming.startAt
         m.videoPlayer.seek = m.streaming.startAt
       end if
     end if
@@ -1406,7 +1405,7 @@ sub __loadPlayer(streaming, focusPlayer = true)
     ' Si estoy cambiando la url del Live por la de Rewind entonces no es necesario dispara la busuqeda del programa de nuevo
     if (m.streaming.streamingType = getStreamingType().DEFAULT) then
       requestId = createRequestId()
-      m.apiRequestManager = sendApiRequest(requestId, m.apiRequestManager, urlProgramSummary(m.apiUrl, streaming.key, streaming.id, getCarouselImagesTypes().NONE, getCarouselImagesTypes().NONE), "GET", "onProgramSummaryResponse")
+      m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlProgramSummary(m.apiUrl, streaming.key, streaming.id, getCarouselImagesTypes().NONE, getCarouselImagesTypes().NONE), "GET", "onProgramSummaryResponse", requestId)
     end if
     
     if m.inactivityPromptTimeInSeconds <> -1 then __extendTimeWatching()
@@ -1460,12 +1459,8 @@ sub __setTimelineFromStreaming()
     elapsed = now.AsSeconds() - m.streamStartSeconds
     if elapsed < 0 then elapsed = 0
     if elapsed > m.liveRewindDuration then elapsed = m.liveRewindDuration
-    print "m.timelineBar.position 1"
-    print elapsed
     m.timelineBar.position = elapsed
   else if m.streaming.startAt <> invalid then
-    print "m.timelineBar.position 2"
-    print m.streaming.startAt
     m.timelineBar.position = m.streaming.startAt
   end if
 
@@ -1516,7 +1511,7 @@ end function
 ' Dispara la busqueda de la lista de canales 
 sub __getChannels(getNewChannels = true)
   requestId = createRequestId()
-  if getNewChannels then m.apiRequestManager = sendApiRequest(requestId,m.apiRequestManager, urlChannels(m.apiUrl), "GET", "onChannelsResponse")
+  if getNewChannels then m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlChannels(m.apiUrl), "GET", "onChannelsResponse", requestId)
 end sub
 
 ' Carga la informacion del programa actual en pantalla
@@ -1600,12 +1595,8 @@ sub __loadProgramInfo(program)
     if durationSeconds > 0 then m.timelineBar.duration = durationSeconds
 
     if m.videoPlayer <> invalid and m.videoPlayer.position >= 0 then
-      print "m.timelineBar.position 3"
-      print m.videoPlayer.position
       m.timelineBar.position = m.videoPlayer.position
     else if m.streaming <> invalid and m.streaming.startAt <> invalid then
-      print "m.timelineBar.position 4"
-      print m.streaming.startAt
       m.timelineBar.position = m.streaming.startAt
     else
       m.timelineBar.position = 0
@@ -1685,15 +1676,11 @@ sub __updateTimeline()
     if dur = invalid or dur <= 0 then dur = m.timelineBar.duration
     if dur <> invalid and dur > 0 then m.timelineBar.duration = dur
 
-    print "m.timelineBar.position 5"
-    print m.pendingSeekPosition
     m.timelineBar.position = m.pendingSeekPosition
     return
   end if
 
   duration = m.videoPlayer.duration
-  print "position 1"
-  print m.videoPlayer.position
   position = m.videoPlayer.position
 
   if m.isLiveRewind and m.liveRewindDuration <> invalid then
@@ -1702,9 +1689,6 @@ sub __updateTimeline()
       if m.streamStartSeconds <> invalid then
         now = CreateObject("roDateTime")
         now.ToLocalTime()
-        print "position 2"
-        print now.AsSeconds()
-        print m.streamStartSeconds
         position = now.AsSeconds() - m.streamStartSeconds
       else
         position = 0
@@ -1717,8 +1701,6 @@ sub __updateTimeline()
   if duration <> invalid and duration > 0 then m.timelineBar.duration = duration
 
   if position <> invalid and position >= 0 then 
-    print "m.timelineBar.position 6"
-    print position
     m.timelineBar.position = position
   end if
 end sub
@@ -1761,14 +1743,10 @@ sub __handleSeek(key as String)
   if position < 0 then position = 0
   if position > duration then position = duration
 
-  print "m.videoPlayer.seek 1"
-  print position
   m.videoPlayer.seek = position
 
   if m.timelineBar <> invalid then
     m.timelineBar.duration = duration
-    print "m.timelineBar.position 7"
-    print position
     m.timelineBar.position = position
   end if
 
@@ -1949,7 +1927,7 @@ sub __loadStreamingURL(key, id, streamingAction, streamingType = getStreamingTyp
   
   ' Falta agregar el update Session
   requestId = createRequestId()
-  m.apiRequestManager = sendApiRequest(requestId, m.apiRequestManager, urlStreaming(m.apiUrl, m.lastKey, m.lastId, streamingAction, streamingType, startpid), "GET", "onStreamingsResponse") 
+  m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlStreaming(m.apiUrl, m.lastKey, m.lastId, streamingAction, streamingType, startpid), "GET", "onStreamingsResponse", requestId) 
 end sub
 
 ' Metodo que procesa el error que puede ocurrir al reproducir en el player y dispara los timers para
@@ -2029,7 +2007,6 @@ end sub
 sub __reconnectStream(saveTime = true)
   if not m.isReloadStreaming then
     m.isReloadStreaming = true
-    print "__reconnectStream"
     m.disableLayoutChannelConnection = true
     if (saveTime and m.streaming <> invalid and m.streaming.liveRewindDuration)
       m.lastPosition = m.streaming.liveRewindDuration - (m.videoPlayer.duration - m.videoPlayer.position) - 30
@@ -2080,8 +2057,6 @@ sub __togglePlayPause()
   if state = "stopped" then
     m.userPaused = false
     if m.pausePosition <> invalid and m.pausePosition > 0 then
-      print "m.videoPlayer.seek 2"
-      print m.pausePosition
       m.videoPlayer.seek = m.pausePosition
     end if
     m.videoPlayer.control = "play"
@@ -2352,8 +2327,6 @@ sub __queueSeek(key as String)
   ' Preview UI inmediato (sin aplicar seek al stream todavía)
   if m.timelineBar <> invalid then
     m.timelineBar.duration = duration
-    print "m.timelineBar.position 8"
-    print position
     m.timelineBar.position = position
   end if
 
@@ -2397,8 +2370,6 @@ sub __commitPendingSeek()
     end if
   end if
 
-  print "m.videoPlayer.seek 3"
-  print m.pendingSeekPosition
   m.videoPlayer.seek = m.pendingSeekPosition
 
   m.pendingSeekActive = false
@@ -2416,8 +2387,6 @@ sub __cancelPendingSeek()
   if m.timelineBar <> invalid then
     m.timelineBar.seeking = false
     if m.videoPlayer <> invalid then 
-      print "m.timelineBar.position 9"
-      print m.videoPlayer.position
       m.timelineBar.position = m.videoPlayer.position
     end if
   end if
@@ -2546,8 +2515,6 @@ sub __queueSeekWithJump(key as String, jumpOverride as Integer)
   ' Preview UI
   if m.timelineBar <> invalid then
     m.timelineBar.duration = duration
-    print "m.timelineBar.position 10"
-    print position
     m.timelineBar.position = position
   end if
 
@@ -2787,15 +2754,11 @@ sub __replayBack(seconds as Integer)
   if dur <> invalid and dur > 0 and newPos > dur then newPos = dur
 
   ' seek real
-  print "m.videoPlayer.seek 4"
-  print newPos
   m.videoPlayer.seek = newPos
 
   ' Mantener TimelineBar sincronizada
   if m.timelineBar <> invalid then
     if dur <> invalid and dur > 0 then m.timelineBar.duration = dur
-    print "m.timelineBar.position 11"
-    print newPos
     m.timelineBar.position = newPos
   end if
 
@@ -3144,8 +3107,6 @@ sub __setPlayerCurrentTime(sec as float)
   if sec < 0 then sec = 0
   if m.videoPlayer = invalid then return
 
-  print "m.videoPlayer.seek 5"
-  print Int(sec)
   m.videoPlayer.seek = Int(sec)
 end sub
 

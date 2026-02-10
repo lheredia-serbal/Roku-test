@@ -229,167 +229,182 @@ end sub
 
 ' Procesa la respuesta de la lista de perfiles del usuario
 sub onGetAllProfileResponse()
-  if validateStatusCode(m.apiRequestManager.statusCode) then
-    removePendingAction(m.apiRequestManager.requestId)
-    resp = ParseJson(m.apiRequestManager.response)
-    m.allowAddingProfiles = (resp.metadata <> invalid and resp.metadata.actions <> invalid and resp.metadata.actions.add <> invalid and resp.metadata.actions.add)
-    if resp.data <> invalid and resp.data.count() > 0 then 
-      profiles = resp.data
+  if m.apiRequestManager = invalid then 
+    __getAllProfile()
+    return
+  else
+    if validateStatusCode(m.apiRequestManager.statusCode) then
+      removePendingAction(m.apiRequestManager.requestId)
+      resp = ParseJson(m.apiRequestManager.response)
+      m.allowAddingProfiles = (resp.metadata <> invalid and resp.metadata.actions <> invalid and resp.metadata.actions.add <> invalid and resp.metadata.actions.add)
+      if resp.data <> invalid and resp.data.count() > 0 then 
+        profiles = resp.data
+        m.apiRequestManager = clearApiRequest(m.apiRequestManager)
+        __loadProfiles(profiles)
+      end if
+    else 
+      statusCode = m.apiRequestManager.statusCode
+      errorResponse = m.apiRequestManager.errorResponse
+      
+      if m.apiRequestManager.serverError then
+        changeStatusAction(m.apiRequestManager.requestId, "error")
+        retryAll()
+      else
+        removePendingAction(m.apiRequestManager.requestId)    
+        printError("GetAll Profile:", errorResponse)
+        
+        if validateLogout(statusCode, m.top) then return 
+        
+        m.top.loading.visible = false
+
+        m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.global.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogReloadProfilesClosed", [i18n_t(m.global.i18n, "button.retry")])
+
+        actionLog = createLogError(generateErrorDescription(errorResponse), generateErrorPageUrl("getAllProfile", "SelectProfileComponent"), getServerErrorStack(errorResponse))
+        __saveActionLog(actionLog)
+      end if 
       m.apiRequestManager = clearApiRequest(m.apiRequestManager)
-      __loadProfiles(profiles)
     end if
-  else 
-    statusCode = m.apiRequestManager.statusCode
-    errorResponse = m.apiRequestManager.errorResponse
-    
-    if m.apiRequestManager.serverError then
-      changeStatusAction(m.apiRequestManager.requestId, "error")
-      retryAll()
-    else
-      removePendingAction(m.apiRequestManager.requestId)    
-      printError("GetAll Profile:", errorResponse)
-      
-      if validateLogout(statusCode, m.top) then return 
-      
-      m.top.loading.visible = false
-
-      m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.global.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogReloadProfilesClosed", [i18n_t(m.global.i18n, "button.retry")])
-
-      actionLog = createLogError(generateErrorDescription(errorResponse), generateErrorPageUrl("getAllProfile", "SelectProfileComponent"), getServerErrorStack(errorResponse))
-      __saveActionLog(actionLog)
-    end if 
-    m.apiRequestManager = clearApiRequest(m.apiRequestManager)
   end if
 end sub 
 
 ' Procesa la respuesta de eleccion de nuevo perfil del usuario.
 sub onSuccessSelectResponse()
-  if validateStatusCode(m.apiRequestManager.statusCode) then
-    removePendingAction(m.apiRequestManager.requestId)
-    resp = ParseJson(m.apiRequestManager.response)
-
-    actionLog =  getActionLog({ actionCode: ActionLogCode().SELECT_PROFILE })
-    __saveActionLog(actionLog)
-    
-    contact = m.global.contact
-    contact.profile = ParseJson(m.auxInfo)
-
-    addAndSetFields(m.global, {contact: contact} )
-
-    saveTokens(resp)
-    m.apiRequestManager = clearApiRequest(m.apiRequestManager)
-
-    m.blockLoading = false
-    m.top.finished = true
-  else
-    statusCode = m.apiRequestManager.statusCode
-    errorResponse = m.apiRequestManager.errorResponse
-
-    if m.apiRequestManager.serverError then
-      changeStatusAction(m.apiRequestManager.requestId, "error")
-      retryAll()
-    else
+  if m.apiRequestManager = invalid then 
+    __selectProfile(m.profilesElements.focusedChild.profileId, m.profilesElements.focusedChild.auxInfo)
+    return
+  else 
+    if validateStatusCode(m.apiRequestManager.statusCode) then
       removePendingAction(m.apiRequestManager.requestId)
+      resp = ParseJson(m.apiRequestManager.response)
 
-      profileId = m.apiRequestManager.dataAux
-
-      printError("Select Profile:", errorResponse)
-
-      if validateLogout(statusCode, m.top) then return 
-
-      m.auxInfo = invalid
-      m.top.loading.visible = false
-      m.blockLoading = false
-
-      m.lastItemFocus = m.focusedChild
-
-      m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.global.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogFocusToLastElementClosed", [i18n_t(m.global.i18n, "button.cancel")])
-
-      actionLog = createLogError(generateErrorDescription(errorResponse), generateErrorPageUrl("updateSessionProfile", "ProfileComponent"), getServerErrorStack(errorResponse), "ProfileId", profileId)
+      actionLog =  getActionLog({ actionCode: ActionLogCode().SELECT_PROFILE })
       __saveActionLog(actionLog)
-    end if 
+      
+      contact = m.global.contact
+      contact.profile = ParseJson(m.auxInfo)
 
-    m.apiRequestManager = clearApiRequest(m.apiRequestManager)
+      addAndSetFields(m.global, {contact: contact} )
+
+      saveTokens(resp)
+      m.apiRequestManager = clearApiRequest(m.apiRequestManager)
+
+      m.blockLoading = false
+      m.top.finished = true
+    else
+      statusCode = m.apiRequestManager.statusCode
+      errorResponse = m.apiRequestManager.errorResponse
+
+      if m.apiRequestManager.serverError then
+        changeStatusAction(m.apiRequestManager.requestId, "error")
+        retryAll()
+      else
+        removePendingAction(m.apiRequestManager.requestId)
+
+        profileId = m.apiRequestManager.dataAux
+
+        printError("Select Profile:", errorResponse)
+
+        if validateLogout(statusCode, m.top) then return 
+
+        m.auxInfo = invalid
+        m.top.loading.visible = false
+        m.blockLoading = false
+
+        m.lastItemFocus = m.focusedChild
+
+        m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.global.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogFocusToLastElementClosed", [i18n_t(m.global.i18n, "button.cancel")])
+
+        actionLog = createLogError(generateErrorDescription(errorResponse), generateErrorPageUrl("updateSessionProfile", "ProfileComponent"), getServerErrorStack(errorResponse), "ProfileId", profileId)
+        __saveActionLog(actionLog)
+      end if 
+
+      m.apiRequestManager = clearApiRequest(m.apiRequestManager)
+    end if
   end if
 end sub
 
 ' Procesa la respuesta que obtiene todos los de avatars disposnibles
 sub onGetAllAvatarsResponse()
-  if validateStatusCode(m.apiRequestManager.statusCode) then
-    removePendingAction(m.apiRequestManager.requestId)
-    avatars = ParseJson(m.apiRequestManager.response).data
-    
-    if avatars.count() > 0 then 
-      yPosition = 0
-      previousCarousel = invalid
+  if m.apiRequestManager = invalid then
+    __editAvatar()
+    return
+  else 
+    if validateStatusCode(m.apiRequestManager.statusCode) then
+      removePendingAction(m.apiRequestManager.requestId)
+      avatars = ParseJson(m.apiRequestManager.response).data
       
-      __clearAvatarsCarousel()
+      if avatars.count() > 0 then 
+        yPosition = 0
+        previousCarousel = invalid
+        
+        __clearAvatarsCarousel()
 
-      m.carouselContainer.translation = scaleSize([50, 20], m.scaleInfo)
-      m.xPosition = m.carouselContainer.translation[0]
-      m.yPosition = m.carouselContainer.translation[1]
+        m.carouselContainer.translation = scaleSize([50, 20], m.scaleInfo)
+        m.xPosition = m.carouselContainer.translation[0]
+        m.yPosition = m.carouselContainer.translation[1]
 
-      id = 0
-      for each carouselData in avatars
-        ' Crea una instancia del componente Carousel
-        newCarousel = m.carouselContainer.createChild("Carousel")
-        
-        ' Asigna los datos e items recibidos del servidor
-        newCarousel.id = id
-        newCarousel.style = -1 'Estilo definido para el Avatar
-        newCarousel.title = carouselData.name
-        newCarousel.items = carouselData.avatars
-        
-        ' Posiciona el carousel verticalmente
-        newCarousel.translation = [0, yPosition]
-        
-        ' Se agrega el evento click
-        newCarousel.ObserveField("selected", "onSelectItem")
-    
-        ' Configura la navegación vertical entre carouseles
-        if previousCarousel <> invalid then
-            previousCarousel.focusDown = newCarousel
-            newCarousel.focusUp = previousCarousel
-        end if
-        previousCarousel = newCarousel
-    
-        ' Usa la propiedad height definida en el componente para calcular la posición
-        yPosition = yPosition + newCarousel.height + scaleValue(20, m.scaleInfo)
-        
-        id++
-      end for
+        id = 0
+        for each carouselData in avatars
+          ' Crea una instancia del componente Carousel
+          newCarousel = m.carouselContainer.createChild("Carousel")
+          
+          ' Asigna los datos e items recibidos del servidor
+          newCarousel.id = id
+          newCarousel.style = -1 'Estilo definido para el Avatar
+          newCarousel.title = carouselData.name
+          newCarousel.items = carouselData.avatars
+          
+          ' Posiciona el carousel verticalmente
+          newCarousel.translation = [0, yPosition]
+          
+          ' Se agrega el evento click
+          newCarousel.ObserveField("selected", "onSelectItem")
+      
+          ' Configura la navegación vertical entre carouseles
+          if previousCarousel <> invalid then
+              previousCarousel.focusDown = newCarousel
+              newCarousel.focusUp = previousCarousel
+          end if
+          previousCarousel = newCarousel
+      
+          ' Usa la propiedad height definida en el componente para calcular la posición
+          yPosition = yPosition + newCarousel.height + scaleValue(20, m.scaleInfo)
+          
+          id++
+        end for
 
-      ' Una vez creados todos los carouseles, establece el foco en el primer item del primer carousel:
-      if m.carouselContainer.getChildCount() > 0 then
-        firstCarousel = m.carouselContainer.getChild(0)
-        firstList = firstCarousel.findNode("carouselList")
-        if firstList <> invalid then
-          firstList.setFocus(true)
-          m.selectedIndicator.size = firstCarousel.size
-          m.selectedIndicator.visible = true
+        ' Una vez creados todos los carouseles, establece el foco en el primer item del primer carousel:
+        if m.carouselContainer.getChildCount() > 0 then
+          firstCarousel = m.carouselContainer.getChild(0)
+          firstList = firstCarousel.findNode("carouselList")
+          if firstList <> invalid then
+            firstList.setFocus(true)
+            m.selectedIndicator.size = firstCarousel.size
+            m.selectedIndicator.visible = true
+          end if
         end if
       end if
-    end if
-    m.top.loading.visible = false
-  else
-    statusCode = m.apiRequestManager.statusCode
-    errorResponse = m.apiRequestManager.errorResponse
-
-    if m.apiRequestManager.serverError then
-      changeStatusAction(m.apiRequestManager.requestId, "error")
-      retryAll()
-    else
-      removePendingAction(m.apiRequestManager.requestId)
-
-      printError("AllAvatar Profile:", errorResponse)
-
-      if validateLogout(statusCode, m.top) then return 
-      
       m.top.loading.visible = false
-      m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.global.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogReturnProfileEditClosed", [i18n_t(m.global.i18n, "button.cancel")])
-    end if 
+    else
+      statusCode = m.apiRequestManager.statusCode
+      errorResponse = m.apiRequestManager.errorResponse
 
-    m.apiRequestManager = clearApiRequest(m.apiRequestManager)
+      if m.apiRequestManager.serverError then
+        changeStatusAction(m.apiRequestManager.requestId, "error")
+        retryAll()
+      else
+        removePendingAction(m.apiRequestManager.requestId)
+
+        printError("AllAvatar Profile:", errorResponse)
+
+        if validateLogout(statusCode, m.top) then return 
+        
+        m.top.loading.visible = false
+        m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.global.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogReturnProfileEditClosed", [i18n_t(m.global.i18n, "button.cancel")])
+      end if 
+
+      m.apiRequestManager = clearApiRequest(m.apiRequestManager)
+    end if
   end if
 end sub
 
@@ -471,120 +486,140 @@ end sub
 
 ' Procesa la respuesta de que se confirmo eliminar el perfil selecioando
 sub onSuccessDeleteResponse()
-  if validateStatusCode(m.apiRequestManager.statusCode) then
-    removePendingAction(m.apiRequestManager.requestId)
-    m.blockLoading = false
-    m.apiRequestManager = clearApiRequest(m.apiRequestManager)
-    __backToSelectProfile(true)
+  if (m.apiRequestManager = invalid) then
+    onDialogDeleteClosed(invalid)
+    return
   else 
-    statusCode = m.apiRequestManager.statusCode
-    errorResponse = m.apiRequestManager.errorResponse
-
-    if m.apiRequestManager.serverError then
-      changeStatusAction(m.apiRequestManager.requestId, "error")
-      retryAll()
-    else
+    if validateStatusCode(m.apiRequestManager.statusCode) then
       removePendingAction(m.apiRequestManager.requestId)
-      printError("Delete Profile:", errorResponse)
-
-      if validateLogout(statusCode, m.top) then return 
-
-      m.top.loading.visible = false
       m.blockLoading = false
-      m.lastItemFocus = m.btnDeleteProfile
+      m.apiRequestManager = clearApiRequest(m.apiRequestManager)
+      __backToSelectProfile(true)
+    else 
+      statusCode = m.apiRequestManager.statusCode
+      errorResponse = m.apiRequestManager.errorResponse
 
-      m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.global.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogFocusToLastElementClosed", [i18n_t(m.global.i18n, "button.cancel")])
-    end if 
+      if m.apiRequestManager.serverError then
+        changeStatusAction(m.apiRequestManager.requestId, "error")
+        retryAll()
+      else
+        removePendingAction(m.apiRequestManager.requestId)
+        printError("Delete Profile:", errorResponse)
 
-    m.apiRequestManager = clearApiRequest(m.apiRequestManager)
+        if validateLogout(statusCode, m.top) then return 
+
+        m.top.loading.visible = false
+        m.blockLoading = false
+        m.lastItemFocus = m.btnDeleteProfile
+
+        m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.global.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogFocusToLastElementClosed", [i18n_t(m.global.i18n, "button.cancel")])
+      end if 
+
+      m.apiRequestManager = clearApiRequest(m.apiRequestManager)
+    end if
   end if
 end sub
 
 ' Procesa la respuesta de que se confirmo el guardado del perfil selecioando
 sub onSuccessSaveResponse()
-  if validateStatusCode(m.apiRequestManager.statusCode) then
-    removePendingAction(m.apiRequestManager.requestId)
-    m.blockLoading = false
-    m.apiRequestManager = clearApiRequest(m.apiRequestManager)
-    __backToSelectProfile(true)
+  if m.apiRequestManager = invalid then
+    __saveProfile()
+    return
   else 
-    statusCode = m.apiRequestManager.statusCode
-    errorResponse = m.apiRequestManager.errorResponse
-
-    if m.apiRequestManager.serverError then
-      changeStatusAction(m.apiRequestManager.requestId, "error")
-      retryAll()
-    else
+    if validateStatusCode(m.apiRequestManager.statusCode) then
       removePendingAction(m.apiRequestManager.requestId)
-
-      printError("Save Profile:", errorResponse)
-      
-      if validateLogout(statusCode, m.top) then return 
-
       m.blockLoading = false
-      m.lastItemFocus = m.btnSave
-      m.top.loading.visible = false
-      
-      m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.global.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogFocusToLastElementClosed", [i18n_t(m.global.i18n, "button.cancel")])
-    end if 
-    m.apiRequestManager = clearApiRequest(m.apiRequestManager)
+      m.apiRequestManager = clearApiRequest(m.apiRequestManager)
+      __backToSelectProfile(true)
+    else 
+      statusCode = m.apiRequestManager.statusCode
+      errorResponse = m.apiRequestManager.errorResponse
+
+      if m.apiRequestManager.serverError then
+        changeStatusAction(m.apiRequestManager.requestId, "error")
+        retryAll()
+      else
+        removePendingAction(m.apiRequestManager.requestId)
+
+        printError("Save Profile:", errorResponse)
+        
+        if validateLogout(statusCode, m.top) then return 
+
+        m.blockLoading = false
+        m.lastItemFocus = m.btnSave
+        m.top.loading.visible = false
+        
+        m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.global.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogFocusToLastElementClosed", [i18n_t(m.global.i18n, "button.cancel")])
+      end if 
+      m.apiRequestManager = clearApiRequest(m.apiRequestManager)
+    end if
   end if
 end sub
 
 ' Procesa la respuesta del avatar por defecto para el nuevo perfil.
 sub onGetDefaultAvatarResponse()
-  if validateStatusCode(m.apiRequestManager.statusCode) then
-    removePendingAction(m.apiRequestManager.requestId)
-    defaultAvatar = ParseJson(m.apiRequestManager.response).data
-    m.apiRequestManager = clearApiRequest(m.apiRequestManager)
-    __loadEditProfile({id: 0, avatar: defaultAvatar, kids: false, name: ""})
+  if m.apiRequestManager = invalid then
+    __addProfile()
+    return
   else 
-    statusCode = m.apiRequestManager.statusCode
-    errorResponse = m.apiRequestManager.errorResponse
+    if validateStatusCode(m.apiRequestManager.statusCode) then
+      removePendingAction(m.apiRequestManager.requestId)
+      defaultAvatar = ParseJson(m.apiRequestManager.response).data
+      m.apiRequestManager = clearApiRequest(m.apiRequestManager)
+      __loadEditProfile({id: 0, avatar: defaultAvatar, kids: false, name: ""})
+    else 
+      statusCode = m.apiRequestManager.statusCode
+      errorResponse = m.apiRequestManager.errorResponse
 
-    if m.apiRequestManager.serverError then
-      changeStatusAction(m.apiRequestManager.requestId, "error")
-      retryAll()
-      else
-        removePendingAction(m.apiRequestManager.requestId)
-      
-      
-      printError("DefaultAvatar Profile:", errorResponse)
-      
-      if validateLogout(statusCode, m.top) then return 
+      if m.apiRequestManager.serverError then
+        changeStatusAction(m.apiRequestManager.requestId, "error")
+        retryAll()
+        else
+          removePendingAction(m.apiRequestManager.requestId)
+        
+        
+        printError("DefaultAvatar Profile:", errorResponse)
+        
+        if validateLogout(statusCode, m.top) then return 
 
-      m.top.loading.visible = false
-      
-      m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.global.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogReturnProfileListClosed", [i18n_t(m.global.i18n, "button.cancel")])
+        m.top.loading.visible = false
+        
+        m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.global.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogReturnProfileListClosed", [i18n_t(m.global.i18n, "button.cancel")])
+      end if
+      m.apiRequestManager = clearApiRequest(m.apiRequestManager)
     end if
-    m.apiRequestManager = clearApiRequest(m.apiRequestManager)
   end if
 end sub
 
 ' Procesa la respuesta al obtener la informacion completa del perfil
 sub onGetByIdResponse()
-  if validateStatusCode(m.apiRequestManager.statusCode) then
-    removePendingAction(m.apiRequestManager.requestId)
-    __loadEditProfile(ParseJson(m.apiRequestManager.response).data)
-    m.apiRequestManager = clearApiRequest(m.apiRequestManager)
+  if m.apiRequestManager = invalid then
+    __editProfile(m.profilesElements.focusedChild.profileId)
+    return
   else 
-    statusCode = m.apiRequestManager.statusCode
-    errorResponse = m.apiRequestManager.errorResponse
-
-    if m.apiRequestManager.serverError then
-      changeStatusAction(m.apiRequestManager.requestId, "error")
-      retryAll()
-    else
+    if validateStatusCode(m.apiRequestManager.statusCode) then
       removePendingAction(m.apiRequestManager.requestId)
-      printError("GetById Profile:", errorResponse)
+      __loadEditProfile(ParseJson(m.apiRequestManager.response).data)
+      m.apiRequestManager = clearApiRequest(m.apiRequestManager)
+    else 
+      statusCode = m.apiRequestManager.statusCode
+      errorResponse = m.apiRequestManager.errorResponse
 
-      if validateLogout(statusCode, m.top) then return 
+      if m.apiRequestManager.serverError then
+        changeStatusAction(m.apiRequestManager.requestId, "error")
+        retryAll()
+      else
+        removePendingAction(m.apiRequestManager.requestId)
+        printError("GetById Profile:", errorResponse)
 
-      m.top.loading.visible = false
+        if validateLogout(statusCode, m.top) then return 
 
-      m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.global.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogReturnProfileListClosed", [i18n_t(m.global.i18n, "button.cancel")])
+        m.top.loading.visible = false
+
+        m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.global.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogReturnProfileListClosed", [i18n_t(m.global.i18n, "button.cancel")])
+      end if
+      m.apiRequestManager = clearApiRequest(m.apiRequestManager)
     end if
-    m.apiRequestManager = clearApiRequest(m.apiRequestManager)
   end if
 end sub
 

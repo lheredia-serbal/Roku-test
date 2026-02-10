@@ -178,7 +178,7 @@ end function
 function sendApiRequest(apiRequestManager, url, method, responseMethod, requestId = invalid, body = invalid, token = invalid, publicApi = false, dataAux = invalid)
   apiRequestManager = clearApiRequest(apiRequestManager)
   apiRequestManager = CreateObject("roSGNode", "APIRequestManager")
-    url = maybeCorruptApiUrl(url)
+    'url = maybeCorruptApiUrl(url)
   apiRequestManager.setField("url", url)
   apiRequestManager.setField("method", method)
   if publicApi then apiRequestManager.setField("publicApi", true)
@@ -264,7 +264,6 @@ sub showCdnErrorDialog(overlayTransparent = false as Boolean)
         if scene <> invalid then dialog = scene.findNode("cdnErrorDialog")
     end if
     if dialog = invalid then return
-    'dialog.errorCode = getErrorCodeDemo()
     'permite overlay transparente cuando se solicita.
     dialog.overlayTransparent = overlayTransparent
     dialog.showSpinner = false

@@ -1,26 +1,3 @@
-' DomainManager service state
-' Mode: "Primary" | "Secondary"
-' IqvResource interface structure:
-' {
-'   name: string
-'   primary: string
-'   secondary?: string
-'   health_check?: {
-'     type: EqvAppConfigType
-'     target: {
-'       primary: string
-'       secondary?: string
-'     }
-'   }
-'   on_failure?: {
-'     actions: [ {
-'       when: EqvAppConfigWhen
-'       action: EqvAppConfigAction
-'     } ]
-'   }
-' }
-'
-
 function __getDomainManagerState() as Object
     ' Inicializa y retorna el estado del DomainManager si aún no existe.
 
@@ -74,14 +51,14 @@ function __getDomainManagerState() as Object
     return m.domainManagerState
 end function
 
+' Sincroniza el estado actual con el global para mantener los valores persistentes.
 sub __syncDomainManagerState(state as Object)
-    ' Sincroniza el estado actual con el global para mantener los valores persistentes.
     if m.global <> invalid then 
         addAndSetFields(m.global, { domainManagerState: state })
     end if
 end sub
 
-' API pública (funciones sin prefijo "__").
+' API pública.
 sub setConfigUrls(initialConfigUrl as String, secondaryConfigUrl as String)
     addAndSetFields(m.global, { fakeRequest: true })
     ' Guarda las URLs iniciales de configuración (primary/secondary) en el estado.
@@ -91,13 +68,128 @@ sub setConfigUrls(initialConfigUrl as String, secondaryConfigUrl as String)
     __syncDomainManagerState(state)
 end sub
 
+' Validar si la api funciona llamando al servicio Health y luego reintentar
+function __attemptHealthAndRetry(mode as String) as Boolean
+    state = __getDomainManagerState()
+    state._mode = mode
+    state._currentConfig = mode
+    __syncDomainManagerState(state)
+
+    if __validateHealthForMode(mode) then
+        return true
+    end if
+
+    return false
+end function
+
+' Obtener la API primaria y secundaria
+function __getApiUrlForMode(mode as String) as String
+    resource = getResourceByName("ClientsApiUrl")
+    if resource = invalid then return ""
+    if mode = "Primary" then return resource.primary
+    if mode = "Secondary" then return resource.secondary
+    return ""
+end function
+
+' Actualizar la API
+sub __updateActiveApiUrl(baseUrl as String)
+    if baseUrl = invalid or baseUrl = "" then return
+    if m.global <> invalid then
+        previousApiUrl = m.global.activeApiUrl
+        addAndSetFields(m.global, { activeApiUrl: baseUrl })
+        updatePendingActionsApiUrl(previousApiUrl, baseUrl)
+    end if
+end sub
+
+' Validar la API contra el servicio Health
+function __validateHealthForMode(mode as String) as Boolean
+    baseUrl = __getApiUrlForMode(mode)
+    if baseUrl = invalid or baseUrl = "" then return false
+    healthUrl = urlClientsHealth(baseUrl)
+    success = performHealthCheck(healthUrl)
+    if success then __updateActiveApiUrl(baseUrl)
+    return success
+end function
+
+' Obtener el archivo de configuración Json
+function __fetchConfigFromUrl(url as String, timeoutMS = 20000 as Integer) as Object
+    response = { success: false, data: invalid }
+    if url = invalid or url = "" then return response
+
+    transfer = CreateObject("roUrlTransfer")
+    port = CreateObject("roMessagePort")
+    if transfer = invalid or port = invalid then return response
+    transfer.SetCertificatesFile("common:/certs/ca-bundle.crt")
+    transfer.SetPort(port)
+    transfer.RetainBodyOnError(true)
+    transfer.AddHeader("Content-Type", "application/json")
+    transfer.SetURL(url)
+
+    if transfer.AsyncGetToString() then
+        event = wait(timeoutMS, port)
+        if event <> invalid and type(event) = "roUrlEvent" then
+            statusCode = event.GetResponseCode()
+            if validateStatusCode(statusCode) then
+                payload = event.GetString()
+                if payload <> invalid then
+                    response.data = ParseJson(payload)
+                    response.success = response.data <> invalid
+                end if
+            end if
+        end if
+    end if
+
+    return response
+end function
+
+' Intenta obtener lo archivos de configuración los 2 cdns
+function __refreshConfigFromCdns() as Boolean
+    state = __getDomainManagerState()
+    primaryResponse = __fetchConfigFromUrl(state.initialConfigPrimaryUrl)
+    if primaryResponse.success then
+        setConfigResponse(primaryResponse.data, "Primary")
+        state = __getDomainManagerState()
+        state._jsonMode = "Primary"
+        state._currentInitialConfig = "Primary"
+        state._fetchInitialConfig = false
+        __syncDomainManagerState(state)
+        return true
+    end if
+
+    secondaryResponse = __fetchConfigFromUrl(state.initialConfigSecondaryUrl)
+    if secondaryResponse.success then
+        setConfigResponse(secondaryResponse.data, "Primary")
+        state = __getDomainManagerState()
+        state._jsonMode = "Secondary"
+        state._currentInitialConfig = "Secondary"
+        state._fetchInitialConfig = false
+        __syncDomainManagerState(state)
+        return true
+    end if
+
+    return false
+end function
+
+' Notifcar la respuesta de cuando fue a obtener los archivos de configuración
+sub __notifyInitialConfigResult(success as Boolean)
+    state = __getDomainManagerState()
+    if state._initialConfigCallback <> invalid then
+        m.top.callFunc(state._initialConfigCallback, { success: success })
+        state._initialConfigCallback = invalid
+    end if
+
+    retryAll()
+    __syncDomainManagerState(state)
+end sub
+
+
+' Llama al servicio para obtener el config desde el servidor (JSON) usando el request manager.
 function getConfig(cdnRequestManager as Object, url as String, responseHandler as String) as Object
-    ' Llama al servicio para obtener el config desde el servidor (JSON) usando el request manager.
     return sendApiRequest(cdnRequestManager, url, "GET", responseHandler, invalid, invalid, invalid, true)
 end function
 
+' Obtiene el JSON inicial desde CDN (Primary/Secondary) y prepara el estado.
 function getInitialConfiguration(mode as String, responseHandler = invalid as Dynamic) as Object
-    ' Obtiene el JSON inicial desde CDN (Primary/Secondary) y prepara el estado.
     state = __getDomainManagerState()
     state._mode = mode
     state._initialConfigStatus = "pending"
@@ -111,8 +203,8 @@ function getInitialConfiguration(mode as String, responseHandler = invalid as Dy
     return state._initialConfigRequestManager
 end function
 
+' Valida si es necesario refrescar el config inicial según el tiempo de refresh.
 sub getNeedRefresh()
-    ' Valida si es necesario refrescar el config inicial según el tiempo de refresh.
     state = __getDomainManagerState()
     now = CreateObject("roDateTime")
     now.Mark()
@@ -171,45 +263,7 @@ function changeMode() as Boolean
     return false
 end function
 
-function __attemptHealthAndRetry(mode as String) as Boolean
-    state = __getDomainManagerState()
-    state._mode = mode
-    state._currentConfig = mode
-    __syncDomainManagerState(state)
-
-    if __validateHealthForMode(mode) then
-        return true
-    end if
-
-    return false
-end function
-
-function __getApiUrlForMode(mode as String) as String
-    resource = getResourceByName("ClientsApiUrl")
-    if resource = invalid then return ""
-    if mode = "Primary" then return resource.primary
-    if mode = "Secondary" then return resource.secondary
-    return ""
-end function
-
-sub __updateActiveApiUrl(baseUrl as String)
-    if baseUrl = invalid or baseUrl = "" then return
-    if m.global <> invalid then
-        previousApiUrl = m.global.activeApiUrl
-        addAndSetFields(m.global, { activeApiUrl: baseUrl })
-        updatePendingActionsApiUrl(previousApiUrl, baseUrl)
-    end if
-end sub
-
-function __validateHealthForMode(mode as String) as Boolean
-    baseUrl = __getApiUrlForMode(mode)
-    if baseUrl = invalid or baseUrl = "" then return false
-    healthUrl = urlClientsHealth(baseUrl)
-    success = performHealthCheck(healthUrl)
-    if success then __updateActiveApiUrl(baseUrl)
-    return success
-end function
-
+' Llamar a la solicitud http Health
 function performHealthCheck(url as String, timeoutMS = 20000 as Integer) as boolean
     if url = invalid or url = "" then return false
     transfer = CreateObject("roUrlTransfer")
@@ -240,63 +294,7 @@ function performHealthCheck(url as String, timeoutMS = 20000 as Integer) as bool
     return false
 end function
 
-function __fetchConfigFromUrl(url as String, timeoutMS = 20000 as Integer) as Object
-    response = { success: false, data: invalid }
-    if url = invalid or url = "" then return response
-
-    transfer = CreateObject("roUrlTransfer")
-    port = CreateObject("roMessagePort")
-    if transfer = invalid or port = invalid then return response
-    transfer.SetCertificatesFile("common:/certs/ca-bundle.crt")
-    transfer.SetPort(port)
-    transfer.RetainBodyOnError(true)
-    transfer.AddHeader("Content-Type", "application/json")
-    transfer.SetURL(url)
-
-    if transfer.AsyncGetToString() then
-        event = wait(timeoutMS, port)
-        if event <> invalid and type(event) = "roUrlEvent" then
-            statusCode = event.GetResponseCode()
-            if validateStatusCode(statusCode) then
-                payload = event.GetString()
-                if payload <> invalid then
-                    response.data = ParseJson(payload)
-                    response.success = response.data <> invalid
-                end if
-            end if
-        end if
-    end if
-
-    return response
-end function
-
-function __refreshConfigFromCdns() as Boolean
-    state = __getDomainManagerState()
-    primaryResponse = __fetchConfigFromUrl(state.initialConfigPrimaryUrl)
-    if primaryResponse.success then
-        setConfigResponse(primaryResponse.data, "Primary")
-        state = __getDomainManagerState()
-        state._jsonMode = "Primary"
-        state._currentInitialConfig = "Primary"
-        state._fetchInitialConfig = false
-        __syncDomainManagerState(state)
-        return true
-    end if
-
-    secondaryResponse = __fetchConfigFromUrl(state.initialConfigSecondaryUrl)
-    if secondaryResponse.success then
-        setConfigResponse(secondaryResponse.data, "Primary")
-        state = __getDomainManagerState()
-        state._jsonMode = "Secondary"
-        state._currentInitialConfig = "Secondary"
-        state._fetchInitialConfig = false
-        __syncDomainManagerState(state)
-        return true
-    end if
-
-    return false
-end function
-
+' Habilita la busqueda de archivos de configuración
 sub enableFetchConfigJson()
     ' Esta función se ejecuta cuando algún DNS dio OK, limpia las banderas.
     state = __getDomainManagerState()
@@ -305,41 +303,36 @@ sub enableFetchConfigJson()
     __syncDomainManagerState(state)
 end sub
 
-sub restartConfiguration()
-    ' Indica que se tiene que volver a buscar el JSON y volver a setear el modo en Primario.
-    state = __getDomainManagerState()
-    state._mode = "Primary"
-    state._fetchInitialConfig = true
-    state._initialConfigStatus = "idle"
-    __syncDomainManagerState(state)
-end sub
-
+' Obtiene si tiene que guardar los logs de beacon
 function getEnableBeaconLogs() as Boolean
     ' Retorna si están habilitados los logs beacon.
     state = __getDomainManagerState()
     return state._enableBeaconLogs
 end function
 
+' Obtiene si tiene que guardar los logs
 function getEnableLogs() as Boolean
     ' Retorna si están habilitados los logs.
     state = __getDomainManagerState()
     return state._enableLogs
 end function
 
+' Obtiene si tiene que buscar los archivos de configuración
 function getFetchInitialConfig() as Dynamic
     ' Devuelve si tiene que refrescar el archivo JSON.
     state = __getDomainManagerState()
     return state._fetchInitialConfig
 end function
 
+' Obtiene si existe
 function existSecondary() as Boolean
     ' Pregunta si alguna variable tiene valor secundario.
     state = __getDomainManagerState()
     return state._existSecondary
 end function
 
+' Obtener las URLs de las APIs a partir de los resources.
 function getVariable(key as String) as String
-    ' Obtener las URLs de las APIs a partir de los resources.
     state = __getDomainManagerState()
     if state._resources <> invalid then
         for each item in state._resources
@@ -356,8 +349,8 @@ function getVariable(key as String) as String
     return ""
 end function
 
+' Obtiene el resource desde el listado usando el nombre.
 function getResourceByName(name as String) as Object
-    ' Obtiene el resource desde el listado usando el nombre.
     state = __getDomainManagerState()
     if state._resources = invalid then return invalid
     for each item in state._resources
@@ -366,39 +359,14 @@ function getResourceByName(name as String) as Object
     return invalid
 end function
 
+' Retorna el estado del último intento de configuración inicial.
 function getInitialConfigStatus() as String
-    ' Retorna el estado del último intento de configuración inicial.
     state = __getDomainManagerState()
     return state._initialConfigStatus
 end function
 
-sub __notifyInitialConfigResult(success as Boolean)
-    state = __getDomainManagerState()
-    if state._initialConfigCallback <> invalid then
-        m.top.callFunc(state._initialConfigCallback, { success: success })
-        state._initialConfigCallback = invalid
-    end if
-
-    retryAll()
-    __syncDomainManagerState(state)
-end sub
-
-function validateErrorDNS(status as Integer, message as String) as Boolean
-    ' Valida si el error corresponde a un problema de DNS comparando el catálogo HTTP.
-    state = __getDomainManagerState()
-    if message = invalid then return false
-    normalized = LCase(message)
-    if state._HTTP_ERRORS = invalid then return false
-    for each item in state._HTTP_ERRORS
-        if item <> invalid and item.status = status then
-            if InStr(1, normalized, LCase(item.message)) > 0 then return true
-        end if
-    end for
-    return false
-end function
-
+' Procesa la respuesta del CDN primario y en caso de error intenta el secundario.
 sub onInitialConfigPrimaryResponse()
-    ' Procesa la respuesta del CDN primario y en caso de error intenta el secundario.
     state = __getDomainManagerState()
     if validateStatusCode(state._initialConfigRequestManager.statusCode) then
         response = ParseJson(state._initialConfigRequestManager.response)
@@ -423,8 +391,8 @@ sub onInitialConfigPrimaryResponse()
     __syncDomainManagerState(state)
 end sub
 
+' Procesa la respuesta del CDN secundario si el primario falla.
 sub onInitialConfigSecondaryResponse()
-    ' Procesa la respuesta del CDN secundario si el primario falla.
     state = __getDomainManagerState()
     if validateStatusCode(state._initialConfigRequestManager.statusCode) then
         response = ParseJson(state._initialConfigRequestManager.response)
@@ -465,8 +433,8 @@ sub onInitialConfigSecondaryResponse()
     __syncDomainManagerState(state)
 end sub
 
+' Setea la respuesta del config en el estado y actualiza el modo actual.
 sub setConfigResponse(response as Object, mode as String)
-    ' Setea la respuesta del config en el estado y actualiza el modo actual.
     state = __getDomainManagerState()
     state._currentConfig = mode
     state._mode = mode
@@ -518,21 +486,16 @@ sub setConfigResponse(response as Object, mode as String)
     __syncDomainManagerState(state)
 end sub
 
-function getErrorCodeDemo() As String
-    ' Retorna un código de error de ejemplo para diálogos/placeholder.
-    return "SR1-U400-5933"
-end function
-
+' Retorna el indicador de configuración actual según el JSON activo.
 function getCurrentInitalConfig() As String
-    ' Retorna el indicador de configuración actual según el JSON activo.
     state = __getDomainManagerState()
     if state._currentInitialConfig = "Primary" then return "P"
     if state._currentInitialConfig = "Secondary" then return "S"
     return ""
 end function
 
+' Retorna el código actual basado en el modo JSON y el modo activo.
 function getCode() As String
-    ' Retorna el código actual basado en el modo JSON y el modo activo.
     state = __getDomainManagerState()
     jsonPrefix = "P"
     if state._jsonMode = "Secondary" then jsonPrefix = "S"

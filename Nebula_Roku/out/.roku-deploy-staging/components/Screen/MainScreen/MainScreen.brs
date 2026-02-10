@@ -383,52 +383,31 @@ end sub
 
 ' Procesa la respuesta de si el ususario puede ver
 sub onWatchValidateResponse()
-  if validateStatusCode(m.apiRequestManager.statusCode) then
-    resp = ParseJson(m.apiRequestManager.response).data
-    m.apiRequestManager = clearApiRequest(m.apiRequestManager)
+  if m.apiRequestManager = invalid then
+    onSelectItem()
+    return
+  else
+    if validateStatusCode(m.apiRequestManager.statusCode) then
+      resp = ParseJson(m.apiRequestManager.response).data
 
-    if resp.resultCode = 200 then
-      removePendingAction(m.apiRequestManager.requestId)
-      setWatchSessionId(resp.watchSessionId)
-      setWatchToken(resp.watchToken)
-      if m.itemSelected <> invalid then
-        requestId = createRequestId()
-
-        action = {
-          apiRequestManager: m.apiRequestManager
-          url: urlStreaming(m.apiUrl, m.itemSelected.redirectKey, m.itemSelected.redirectId)
-          method: "GET"
-          responseMethod: "onStreamingsResponse"
-          body: invalid
-          token: invalid
-          publicApi: false
-          dataAux: invalid
-          requestId: requestId
-          run: function() as Object
-            m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux)
-            return { success: true, error: invalid }
-          end function
-        }
+      if resp.resultCode = 200 then
+        setWatchSessionId(resp.watchSessionId)
+        setWatchToken(resp.watchToken)
+        if m.itemSelected <> invalid then
+          m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlStreaming(m.apiUrl, m.itemSelected.redirectKey, m.itemSelected.redirectId), "GET", "onStreamingsResponse")
+        end if
+      else 
+        m.top.loading.visible = false
+        m.apiRequestManager = clearApiRequest(m.apiRequestManager)
         
-        runAction(requestId, action, ApiType().CLIENTS_API_URL)
-        m.apiRequestManager = action.apiRequestManager
+        __validateError(0, resp.resultCode, invalid)
+        printError("WatchValidate ResultCode:", resp.resultCode)
       end if
     else 
       m.top.loading.visible = false
+      statusCode = m.apiRequestManager.statusCode
+      errorResponse = m.apiRequestManager.errorResponse
       m.apiRequestManager = clearApiRequest(m.apiRequestManager)
-      
-      __validateError(0, resp.resultCode, invalid)
-      printError("WatchValidate ResultCode:", resp.resultCode)
-    end if
-  else 
-    m.top.loading.visible = false
-    statusCode = m.apiRequestManager.statusCode
-    errorResponse = m.apiRequestManager.errorResponse
-    if m.apiRequestManager.serverError then
-      changeStatusAction(m.apiRequestManager.requestId, "error")
-      retryAll()
-    else
-        removePendingAction(m.apiRequestManager.requestId)
       
       if (statusCode = 408) then
         __markLastFocus() 
@@ -444,42 +423,47 @@ end sub
 
 ' Procesa la respuesta al obtener la url de lo que se quiere ver
 sub onStreamingsResponse() 
-  if validateStatusCode(m.apiRequestManager.statusCode) then
-    removePendingAction(m.apiRequestManager.requestId)
-    resp = ParseJson(m.apiRequestManager.response)
-    if resp.data <> invalid then
-      m.apiRequestManager = clearApiRequest(m.apiRequestManager)
-      __markLastFocus()
-      streaming = resp.data
-      streaming.key = m.itemSelected.redirectKey 
-      streaming.id = m.itemSelected.redirectId
-      streaming.streamingType = getStreamingType().DEFAULT
-      m.top.streaming = FormatJson(streaming)
+  if m.apiRequestManager = invalid then
+    onWatchValidateResponse()
+    return
+  else
+    if validateStatusCode(m.apiRequestManager.statusCode) then
+      removePendingAction(m.apiRequestManager.requestId)
+      resp = ParseJson(m.apiRequestManager.response)
+      if resp.data <> invalid then
+        m.apiRequestManager = clearApiRequest(m.apiRequestManager)
+        __markLastFocus()
+        streaming = resp.data
+        streaming.key = m.itemSelected.redirectKey 
+        streaming.id = m.itemSelected.redirectId
+        streaming.streamingType = getStreamingType().DEFAULT
+        m.top.streaming = FormatJson(streaming)
+      else 
+        m.top.loading.visible = false
+        __markLastFocus()
+        printError("Streamings Emty:", m.apiRequestManager.response)
+        m.apiRequestManager = clearApiRequest(m.apiRequestManager)
+        m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.global.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogClosedLastFocus", [i18n_t(m.global.i18n, "button.cancel")])
+      end if
     else 
       m.top.loading.visible = false
-      __markLastFocus()
-      printError("Streamings Emty:", m.apiRequestManager.response)
+      statusCode = m.apiRequestManager.statusCode
+      errorResponse = m.apiRequestManager.errorResponse
+      removePendingAction(m.apiRequestManager.requestId)
       m.apiRequestManager = clearApiRequest(m.apiRequestManager)
-      m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.global.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogClosedLastFocus", [i18n_t(m.global.i18n, "button.cancel")])
-    end if
-  else 
-    m.top.loading.visible = false
-    statusCode = m.apiRequestManager.statusCode
-    errorResponse = m.apiRequestManager.errorResponse
-    removePendingAction(m.apiRequestManager.requestId)
-    m.apiRequestManager = clearApiRequest(m.apiRequestManager)
 
-    if m.apiRequestManager.serverError then
-      changeStatusAction(m.apiRequestManager.requestId, "error")
-      retryAll()
-    else
-      __markLastFocus()
-      if (statusCode = 408) then 
-        m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.global.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogClosedLastFocus", [i18n_t(m.global.i18n, "button.cancel")])
-      else 
-        __validateError(statusCode, 0, errorResponse)
+      if m.apiRequestManager.serverError then
+        changeStatusAction(m.apiRequestManager.requestId, "error")
+        retryAll()
+      else
+        __markLastFocus()
+        if (statusCode = 408) then 
+          m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.global.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogClosedLastFocus", [i18n_t(m.global.i18n, "button.cancel")])
+        else 
+          __validateError(statusCode, 0, errorResponse)
+        end if
+        printError("Streamings:",errorResponse)
       end if
-      printError("Streamings:",errorResponse)
     end if
   end if
 end sub
@@ -581,7 +565,7 @@ sub getProgramInfo()
     requestId = createRequestId()
 
     action = {
-      apiRequestManager: m.apiSummaryRequestManager
+      apiSummaryRequestManager: m.apiSummaryRequestManager
       url: urlProgramSummary(m.apiUrl, m.itemfocused.redirectKey, m.itemfocused.redirectId, mainImageTypeId, getCarouselImagesTypes().SCENIC_LANDSCAPE)
       method: "GET"
       responseMethod: "onProgramSummaryResponse"
@@ -591,13 +575,13 @@ sub getProgramInfo()
       dataAux: invalid
       requestId: requestId
       run: function() as Object
-        m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux)
+        m.apiSummaryRequestManager = sendApiRequest(m.apiSummaryRequestManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux)
         return { success: true, error: invalid }
       end function
     }
     
     runAction(requestId, action, ApiType().CLIENTS_API_URL)
-    m.apiSummaryRequestManager = action.apiRequestManager
+    m.apiSummaryRequestManager = action.apiSummaryRequestManager
    end if 
   catch error
     printError("Error al cargar la programa summary", error)
@@ -606,148 +590,162 @@ end sub
 
 ' Procesa la respuesta de la peticion del Summay del programa
 sub onProgramSummaryResponse()
-  if validateStatusCode(m.apiSummaryRequestManager.statusCode) then
-    m.itemfocused = invalid
-    resp = ParseJson(m.apiSummaryRequestManager.response)
-    if resp.data <> invalid then
-      removePendingAction(m.apiSummaryRequestManager.requestId)
-      m.apiSummaryRequestManager = clearApiRequest(m.apiSummaryRequestManager)
-      m.program = resp.data
+  if (m.apiSummaryRequestManager = invalid) then 
+    getProgramInfo() 
+  else
+    if validateStatusCode(m.apiSummaryRequestManager.statusCode) then
+      m.itemfocused = invalid
+      resp = ParseJson(m.apiSummaryRequestManager.response)
+      if resp.data <> invalid then
+        removePendingAction(m.apiSummaryRequestManager.requestId)
+        m.apiSummaryRequestManager = clearApiRequest(m.apiSummaryRequestManager)
+        m.program = resp.data
 
-      if  m.program.backgroundImage <> invalid then
-        m.programImageBackground.uri = getImageUrl(m.program.backgroundImage)
-      else 
-        m.programImageBackground.uri = ""
+        if  m.program.backgroundImage <> invalid then
+          m.programImageBackground.uri = getImageUrl(m.program.backgroundImage)
+        else 
+          m.programImageBackground.uri = ""
+        end if
+
+        m.programInfo.program = FormatJson(m.program)
+        if m.carouselContainer.focusedChild <> invalid then m.carouselContainer.focusedChild.updateNode = FormatJson(m.program)
+
+        m.programInfo.visible = true
+      else
+        __clearProgramInfo()
+        printError("ProgramSumary Emty:", m.apiSummaryRequestManager.response)
+        m.apiSummaryRequestManager = clearApiRequest(m.apiSummaryRequestManager)
+      end if 
+    else
+      statusCode = m.apiSummaryRequestManager.statusCode
+      errorResponse = m.apiSummaryRequestManager.errorResponse    
+
+      if m.apiSummaryRequestManager.serverError then
+        changeStatusAction(m.apiSummaryRequestManager.requestId, "error")
+        retryAll()
+      else
+        removePendingAction(m.apiSummaryRequestManager.requestId)
+      
+        printError("ProgramSumary:", errorResponse)
+        if validateLogout(statusCode, m.top) then return 
+          __clearProgramInfo()
+          end if
       end if
 
-      m.programInfo.program = FormatJson(m.program)
-      if m.carouselContainer.focusedChild <> invalid then m.carouselContainer.focusedChild.updateNode = FormatJson(m.program)
-
-      m.programInfo.visible = true
-    else
-      __clearProgramInfo()
-      printError("ProgramSumary Emty:", m.apiSummaryRequestManager.response)
       m.apiSummaryRequestManager = clearApiRequest(m.apiSummaryRequestManager)
-    end if 
-  else
-    statusCode = m.apiSummaryRequestManager.statusCode
-    errorResponse = m.apiSummaryRequestManager.errorResponse    
-
-    if m.apiSummaryRequestManager.serverError then
-      changeStatusAction(m.apiSummaryRequestManager.requestId, "error")
-      retryAll()
-    else
-      removePendingAction(m.apiSummaryRequestManager.requestId)
-    
-      printError("ProgramSumary:", errorResponse)
-      if validateLogout(statusCode, m.top) then return 
-        __clearProgramInfo()
-        end if
     end if
-
-    m.apiSummaryRequestManager = clearApiRequest(m.apiSummaryRequestManager)
 end sub
 
 ' Procesa la respuesta de la peticion del menú
 sub onMenuResponse()
-  if validateStatusCode(m.apiRequestManager.statusCode) then
-    removePendingAction(m.apiRequestManager.requestId)
-    resp = ParseJson(m.apiRequestManager.response)
-    m.apiRequestManager = clearApiRequest(m.apiRequestManager)
-    if resp.data <> invalid then
-      m.myMenu.items = resp.data
+  if m.apiRequestManager = invalid then
+    __getMenu()
+    return
+  else  
+    if validateStatusCode(m.apiRequestManager.statusCode) then
+      removePendingAction(m.apiRequestManager.requestId)
+      resp = ParseJson(m.apiRequestManager.response)
+      m.apiRequestManager = clearApiRequest(m.apiRequestManager)
+      if resp.data <> invalid then
+        m.myMenu.items = resp.data
+      else 
+        m.top.loading.visible = false
+        m.myMenu.items = [] 
+        m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.unhandled"), i18n_t(m.global.i18n, "shared.errorComponent.extendedMessage"), "onDialogClosedFocusContainer", [i18n_t(m.global.i18n, "button.cancel")])
+      end if 
     else 
       m.top.loading.visible = false
-      m.myMenu.items = [] 
-      m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.unhandled"), i18n_t(m.global.i18n, "shared.errorComponent.extendedMessage"), "onDialogClosedFocusContainer", [i18n_t(m.global.i18n, "button.cancel")])
-    end if 
-  else 
-    m.top.loading.visible = false
-    error =  m.apiRequestManager.errorResponse
-    statusCode =  m.apiRequestManager.statusCode
+      error =  m.apiRequestManager.errorResponse
+      statusCode =  m.apiRequestManager.statusCode
 
-    if m.apiRequestManager.serverError then
-      changeStatusAction(m.apiRequestManager.requestId, "error")
-      retryAll()
-    else
-      removePendingAction(m.apiRequestManager.requestId)
-    
-      printError("Menu:", error)
+      if m.apiRequestManager.serverError then
+        changeStatusAction(m.apiRequestManager.requestId, "error")
+        retryAll()
+      else
+        removePendingAction(m.apiRequestManager.requestId)
       
-      if validateLogout(statusCode, m.top) then return 
+        printError("Menu:", error)
+        
+        if validateLogout(statusCode, m.top) then return 
 
-      if (statusCode = 408 or statusCode = 400) then  
-        m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.global.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogReloadMenuClosed", [i18n_t(m.global.i18n, "button.retry"), i18n_t(m.global.i18n, "button.exit")])
-      else 
-        __validateError(statusCode, 0, error)
+        if (statusCode = 408 or statusCode = 400) then  
+          m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.global.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogReloadMenuClosed", [i18n_t(m.global.i18n, "button.retry"), i18n_t(m.global.i18n, "button.exit")])
+        else 
+          __validateError(statusCode, 0, error)
+        end if
+
+        actionLog = createLogError(generateErrorDescription(error), generateErrorPageUrl("getAllMenu", "AppComponent"), getServerErrorStack(error))
+        __saveActionLog(actionLog)
       end if
 
-      actionLog = createLogError(generateErrorDescription(error), generateErrorPageUrl("getAllMenu", "AppComponent"), getServerErrorStack(error))
-      __saveActionLog(actionLog)
-    end if
-
-    m.apiRequestManager = clearApiRequest(m.apiRequestManager)
-  end if  
+      m.apiRequestManager = clearApiRequest(m.apiRequestManager)
+    end if  
+  end if
 end sub
 
 ' Procesa la respuesta de la peticion de la vista de contenido
 sub onContentViewResponse()
 
-  menuSelected = ParseJson(m.apiRequestManager.dataAux) 
+  if m.apiRequestManager = invalid then
+    __selectMenuItem(m.menuSelectedItem)
+    return
+  else
+    menuSelected = ParseJson(m.apiRequestManager.dataAux) 
 
-  if validateStatusCode(m.apiRequestManager.statusCode) then
-    resp = ParseJson(m.apiRequestManager.response)
-    removePendingAction(m.apiRequestManager.requestId)
-    m.apiRequestManager = clearApiRequest(m.apiRequestManager)
+    if validateStatusCode(m.apiRequestManager.statusCode) then
+      resp = ParseJson(m.apiRequestManager.response)
+      removePendingAction(m.apiRequestManager.requestId)
+      m.apiRequestManager = clearApiRequest(m.apiRequestManager)
 
-    if resp.metadata.resultCode = 200 then
+      if resp.metadata.resultCode = 200 then
 
-      actionLog = getActionLog({
-        actionCode: ActionLogCode().OPEN_PAGE,
-        objectKey: "ContentViewId",
-        objectId: menuSelected.id,
-        objectDescription: menuSelected.text,
-        pageUrl: menuSelected.code
-      })
+        actionLog = getActionLog({
+          actionCode: ActionLogCode().OPEN_PAGE,
+          objectKey: "ContentViewId",
+          objectId: menuSelected.id,
+          objectDescription: menuSelected.text,
+          pageUrl: menuSelected.code
+        })
 
-      __saveActionLog(actionLog)
+        __saveActionLog(actionLog)
 
-      if resp.data <> invalid and resp.data.items <> invalid and resp.data.items.count() > 0 and not (resp.data.items.count() = 1 and resp.data.items[0].code = "news") then
-        
-        populateCarousels(resp.data)
-        m.top.loading.visible = false
-      else 
+        if resp.data <> invalid and resp.data.items <> invalid and resp.data.items.count() > 0 and not (resp.data.items.count() = 1 and resp.data.items[0].code = "news") then
+          
+          populateCarousels(resp.data)
+          m.top.loading.visible = false
+        else 
+          __showWithoutContent()
+          m.top.loading.visible = false
+        end if
+      else
         __showWithoutContent()
         m.top.loading.visible = false
       end if
-    else
-      __showWithoutContent()
+    else 
       m.top.loading.visible = false
-    end if
-  else 
-    m.top.loading.visible = false
-    error = m.apiRequestManager.errorResponse
-    statusCode = m.apiRequestManager.statusCode
+      error = m.apiRequestManager.errorResponse
+      statusCode = m.apiRequestManager.statusCode
 
-    if m.apiRequestManager.serverError then
-      changeStatusAction(m.apiRequestManager.requestId, "error")
-      retryAll()
-    else
-      removePendingAction(m.apiRequestManager.requestId)
-      m.apiRequestManager = clearApiRequest(m.apiRequestManager)
-      
-      printError("ContentView:", error)
-      
-      if validateLogout(statusCode, m.top) then return 
-      
-      if (statusCode = 408) or (statusCode = 500) then 
-        m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.global.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogReloadContentViewClosed", [i18n_t(m.global.i18n, "button.retry"), i18n_t(m.global.i18n, "button.exit")])
-      else 
-        __validateError(statusCode, 0, error, __showWithoutContent())
+      if m.apiRequestManager.serverError then
+        changeStatusAction(m.apiRequestManager.requestId, "error")
+        retryAll()
+      else
+        removePendingAction(m.apiRequestManager.requestId)
+        m.apiRequestManager = clearApiRequest(m.apiRequestManager)
+        
+        printError("ContentView:", error)
+        
+        if validateLogout(statusCode, m.top) then return 
+        
+        if (statusCode = 408) or (statusCode = 500) then 
+          m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.global.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogReloadContentViewClosed", [i18n_t(m.global.i18n, "button.retry"), i18n_t(m.global.i18n, "button.exit")])
+        else 
+          __validateError(statusCode, 0, error, __showWithoutContent())
+        end if
+
+        actionLog = createLogError(generateErrorDescription(error), generateErrorPageUrl("getCarouselsById", "HomeComponent"), getServerErrorStack(error), menuSelected.key, menuSelected.id)
+        __saveActionLog(actionLog)
       end if
-
-      actionLog = createLogError(generateErrorDescription(error), generateErrorPageUrl("getCarouselsById", "HomeComponent"), getServerErrorStack(error), menuSelected.key, menuSelected.id)
-      __saveActionLog(actionLog)
     end if
   end if
 end sub
@@ -786,78 +784,88 @@ end sub
 
 ' Procesa la respuesta de la validacion del PIN
 sub onParentalControlResponse()
-  if validateStatusCode(m.apiRequestManager.statusCode) then
-    resp = ParseJson(m.apiRequestManager.response)
+  if m.apiRequestManager = invalid then
+    onPinDialogLoad()
+    return
+  else
+    if validateStatusCode(m.apiRequestManager.statusCode) then
+      resp = ParseJson(m.apiRequestManager.response)
 
-    if resp <> invalid and resp.data <> invalid and resp.data then 
-      removePendingAction(m.apiRequestManager.requestId)
-      watchSessionId = getWatchSessionId()
-      requestId = createRequestId()
-      action = {
-        apiRequestManager: m.apiRequestManager
-        url: urlWatchValidate(m.apiUrl, watchSessionId, m.itemSelected.redirectKey, m.itemSelected.redirectId)
-        method: "GET"
-        responseMethod: "onWatchValidateResponse"
-        body: invalid
-        token: invalid
-        publicApi: false
-        dataAux: invalid
-        requestId: requestId
-        run: function() as Object
-            m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux)
-            return { success: true, error: invalid }
-          end function
-        }
-        
-        runAction(requestId, action, ApiType().CLIENTS_API_URL)
-        m.apiRequestManager = action.apiRequestManager
-      else
-        m.top.loading.visible = false
-        __markLastFocus() 
-        m.dialog = createAndShowDialog(m.top, "", i18n_t(m.global.i18n, "shared.parentalControlModal.error.invalid"), "onDialogClosedFocusContainer")
-    end if
-  else     
-    m.top.loading.visible = false
-    statusCode = m.apiRequestManager.statusCode
-    errorResponse = m.apiRequestManager.errorResponse
-    m.apiRequestManager = clearApiRequest(m.apiRequestManager)
-
-    if m.apiRequestManager.serverError then
-      changeStatusAction(m.apiRequestManager.requestId, "error")
-      retryAll()
-    else
-      removePendingAction(m.apiRequestManager.requestId)
-
-      printError("ParentalControl:", statusCode.toStr() + " " +  errorResponse)
-      
-      if validateLogout(statusCode, m.top) then return 
-    
-      if (statusCode = 408) then
-        __markLastFocus() 
-        m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.global.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogClosedLastFocus", [i18n_t(m.global.i18n, "button.cancel")])
-      else 
-        __validateError(statusCode, 0, errorResponse)
+      if resp <> invalid and resp.data <> invalid and resp.data then 
+        removePendingAction(m.apiRequestManager.requestId)
+        watchSessionId = getWatchSessionId()
+        requestId = createRequestId()
+        action = {
+          apiRequestManager: m.apiRequestManager
+          url: urlWatchValidate(m.apiUrl, watchSessionId, m.itemSelected.redirectKey, m.itemSelected.redirectId)
+          method: "GET"
+          responseMethod: "onWatchValidateResponse"
+          body: invalid
+          token: invalid
+          publicApi: false
+          dataAux: invalid
+          requestId: requestId
+          run: function() as Object
+              m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux)
+              return { success: true, error: invalid }
+            end function
+          }
+          
+          runAction(requestId, action, ApiType().CLIENTS_API_URL)
+          m.apiRequestManager = action.apiRequestManager
+        else
+          m.top.loading.visible = false
+          __markLastFocus() 
+          m.dialog = createAndShowDialog(m.top, "", i18n_t(m.global.i18n, "shared.parentalControlModal.error.invalid"), "onDialogClosedFocusContainer")
       end if
-  
-      actionLog = createLogError(generateErrorDescription(errorResponse), generateErrorPageUrl("valdiatePin", "ParentalControlModalComponent"), getServerErrorStack(errorResponse))
-      __saveActionLog(actionLog)
+    else     
+      m.top.loading.visible = false
+      statusCode = m.apiRequestManager.statusCode
+      errorResponse = m.apiRequestManager.errorResponse
+      m.apiRequestManager = clearApiRequest(m.apiRequestManager)
+
+      if m.apiRequestManager.serverError then
+        changeStatusAction(m.apiRequestManager.requestId, "error")
+        retryAll()
+      else
+        removePendingAction(m.apiRequestManager.requestId)
+
+        printError("ParentalControl:", statusCode.toStr() + " " +  errorResponse)
+        
+        if validateLogout(statusCode, m.top) then return 
+      
+        if (statusCode = 408) then
+          __markLastFocus() 
+          m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.global.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogClosedLastFocus", [i18n_t(m.global.i18n, "button.cancel")])
+        else 
+          __validateError(statusCode, 0, errorResponse)
+        end if
+    
+        actionLog = createLogError(generateErrorDescription(errorResponse), generateErrorPageUrl("valdiatePin", "ParentalControlModalComponent"), getServerErrorStack(errorResponse))
+        __saveActionLog(actionLog)
+      end if
     end if
   end if
 end sub
 
 ' Procesa la respuesta de la actualizacion las variables de plataforma 
 sub onPlatformResponse()
-  if validateStatusCode(m.apiVariableRequest.statusCode) then
-    removePendingAction(m.apiRequestManager.requestId)
-    addAndSetFields(m.global, {variables: ParseJson(m.apiVariableRequest.response).data} )
-    m.apiVariableRequest = clearApiRequest(m.apiVariableRequest)
-    saveNextUpdateVariables()
+  if m.apiVariableRequest = invalid then
+    __validateVariables()
+    return
   else
-    if m.apiRequestManager.serverError then
-      changeStatusAction(m.apiRequestManager.requestId, "error")
-      retryAll()
+    if validateStatusCode(m.apiVariableRequest.statusCode) then
+      removePendingAction(m.apiRequestManager.requestId)
+      addAndSetFields(m.global, {variables: ParseJson(m.apiVariableRequest.response).data} )
+      m.apiVariableRequest = clearApiRequest(m.apiVariableRequest)
+      saveNextUpdateVariables()
+    else
+      if m.apiRequestManager.serverError then
+        changeStatusAction(m.apiRequestManager.requestId, "error")
+        retryAll()
+      end if
+      m.apiVariableRequest = clearApiRequest(m.apiVariableRequest)
     end if
-    m.apiVariableRequest = clearApiRequest(m.apiVariableRequest)
   end if
 end sub
 
@@ -1409,11 +1417,6 @@ end sub
 
 ' Limpiar la llamada del log
 sub onActionLogResponse() 
-  retryManager = RetryOn9000(m, "onActionLogResponse", m.apiLogRequestManager, ApiType().LOGS_API_URL)
-  if retryManager <> invalid then
-    m.apiLogRequestManager = retryManager
-    return
-  end if
   m.apiLogRequestManager = clearApiRequest(m.apiLogRequestManager)
 end sub
 

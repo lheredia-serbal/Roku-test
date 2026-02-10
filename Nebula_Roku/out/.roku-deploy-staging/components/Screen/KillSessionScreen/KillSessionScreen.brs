@@ -220,7 +220,7 @@ end sub
 sub onkillSessionResponse()
   if validateStatusCode(m.apiRequestManager.statusCode) then
     watchSessionId = getWatchSessionId()
-    m.apiRequestManager = sendApiRequest("", m.apiRequestManager, urlWatchValidate(m.apiUrl, watchSessionId, m.redirectKey, m.redirectId), "GET", "onWatchValidateResponse")
+    m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlWatchValidate(m.apiUrl, watchSessionId, m.redirectKey, m.redirectId), "GET", "onWatchValidateResponse")
   else 
     m.top.loading.visible = false
     statusCode = m.apiRequestManager.statusCode
@@ -341,12 +341,12 @@ end sub
 
 ' Dispara la busqueda de todas las sesiones activas
 sub __getAllSessions()
-  m.apiRequestManager = sendApiRequest("", m.apiRequestManager, urlWatchAll(m.apiUrl), "GET", "onAllWhoAreWatchingResponse")
+  m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlWatchAll(m.apiUrl), "GET", "onAllWhoAreWatchingResponse")
 end sub
 
 ' Dispara la busqueda de la informacion de quien cerro mi sesion
 sub __getKiller(profileId, deviceId)
-  m.apiRequestManager = sendApiRequest("", m.apiRequestManager, urlWatchKiller(m.apiUrl, profileId, deviceId), "GET", "onKillerResponse")
+  m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlWatchKiller(m.apiUrl, profileId, deviceId), "GET", "onKillerResponse")
 end sub
 
 ' Valdia el error obtenido desde la API

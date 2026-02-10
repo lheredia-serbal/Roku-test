@@ -6,16 +6,11 @@ sub Main(args as Object)
     screen.setMessagePort(m.port)
 
     if args <> invalid
-        print "Received Input -- write code here to check it!"
         if args.reason <> invalid then
-            if args.reason = "ad" then
-                print "Channel launched from ad click"
-            end if
         end if
         
         if args.contentID <> invalid then
             m.contentID = args.contentID
-            print "contentID is: " + args.contentID
         end if
     end if
 
@@ -37,7 +32,6 @@ sub Main(args as Object)
        
         else if msgType = "roInputEvent"
             info = msg.GetInfo()
-            print "Deep link received"; info
 
         else if msgType = "roSGNodeEvent" then
             field = msg.getField()
