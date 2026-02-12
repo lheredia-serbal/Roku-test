@@ -121,8 +121,7 @@ sub __updateProgress()
   ' LIVE: no hay tiempo, mostrar "En vivo" (traducido) y no usar position/duration
   if m.top <> invalid and m.top.isLive = true then
     if m.progress <> invalid then
-
-      m.progress.width = m.totalWidth
+      m.progress.width = m.totalWidth - 1000
     end if
     if m.timeLabel <> invalid then
       txt = m.top.liveText
@@ -186,10 +185,13 @@ sub __updateProgress()
     
     if (m.top.isLive) then
       m.thumb.translation = [m.totalWidth - 24, thumbY]
-
       m.progress.width =  m.totalWidth
+      ' Setear el máximo rango en X que puede alcanzar la esfera de progreso
+      m.maxWidth = m.totalWidth - 24
     else
-      if (thumbX <> invalid and thumbX >= 0) then
+      ' Validar que la esfera de progreso, no se salga fuera del rango máximo
+      if m.maxWidth <> invalid and thumbX > m.maxWidth then thumbX = m.maxWidth
+      if (thumbX <> invalid) then
         m.thumb.translation = [thumbX, thumbY]
       end if
     end if

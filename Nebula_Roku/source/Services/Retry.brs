@@ -1,4 +1,10 @@
 
+
+' Máximo de acciones pendientes en memoria para evitar crecimiento indefinido.
+function __maxPendingActions() as Integer
+    return 15
+end function
+
 ' Obtener todas las actions las peticiones http
 function __getPendingActions(status = "all") as Object
     actions = []
@@ -21,9 +27,33 @@ end function
 ' Setear las actions que fallaron las peticiones http por problemas del servidor
 sub __setPendingActions(actions as Object)
     if actions = invalid then actions = []
-
-    m.pendingActions = actions
+    m.pendingActions = __normalizePendingActions(actions)
 end sub
+
+' Limpia entradas inválidas y limita el tamaño del historial en memoria.
+function __normalizePendingActions(actions as Object) as Object
+    if actions = invalid then return []
+
+    sanitized = []
+    for each item in actions
+        if item <> invalid and item.action <> invalid and item.action.run <> invalid then
+            sanitized.push(item)
+        end if
+    end for
+
+    maxActions = __maxPendingActions()
+    count = sanitized.count()
+    if count <= maxActions then return sanitized
+
+    trimmed = []
+    ' Al exceder el límite, conserva las más recientes y descarta las más viejas.
+    startIndex = count - maxActions
+    for i = startIndex to count - 1
+        trimmed.push(sanitized[i])
+    end for
+
+    return trimmed
+end function
 
 ' Obtiene el valor de un header de http response
 function __getHeaderValue(headers as Object, key as String) as Dynamic
@@ -158,14 +188,23 @@ sub retryAll()
             for each item in actions
                 if item <> invalid and item.action <> invalid then
                     result = __runAction(item.action)
+                    if result.success = true then
+                        item.action.status = "success"
+                    else
+                        item.action.status = "error"
+                    end if
                 end if
             end for
         else 
             showCdnErrorDialog()
         end if
+
+        ' Mantener solo errores pendientes para liberar memoria de acciones resueltas.
+        __setPendingActions(__getPendingActions("error"))
     end if
 end sub
 
+' Ejecuta llamadas HTTP con failover y reconfiguración si es necesario.
 sub runAction(requestId, httpRequest as Object, apiTypeParam as Dynamic, executeFailover = true as Boolean)
     ' Ejecuta llamadas HTTP con failover y reconfiguración si es necesario.
     httpRequest.status = "running"

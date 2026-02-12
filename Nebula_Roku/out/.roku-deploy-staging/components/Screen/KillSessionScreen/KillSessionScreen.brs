@@ -327,7 +327,7 @@ end sub
 ' Dispara la peticion de cerrrar una sesion
 sub __closeSession(watchSessionId)
   m.top.loading.visible = true
-  m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlWatchKill(m.apiUrl), "PUT", "onkillSessionResponse", FormatJson({watchSessionId: watchSessionId}))
+  m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlWatchKill(m.apiUrl), "PUT", "onkillSessionResponse", "", FormatJson({watchSessionId: watchSessionId}))
 end sub
 
 ' Limpia la lista de sesiones activas

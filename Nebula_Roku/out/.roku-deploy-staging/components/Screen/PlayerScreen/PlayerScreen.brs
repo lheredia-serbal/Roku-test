@@ -89,6 +89,13 @@ sub init()
   m.actionPostChageState = invalid
   m.isReloadStreaming = false
 
+  m.reloadInputBlockUntilMs = -1 ' tiempo limite (ms) para bloquear entradas tras recargar stream
+  m.keyEventDebounceMs = 180 ' ventana minima entre eventos de la misma tecla
+  m.lastKeyPressed = invalid ' guarda la ultima tecla presionada para anti-rebote
+  m.lastKeyPressedAtMs = -999999 ' timestamp de la ultima tecla procesada
+  m.keyEventClock = CreateObject("roTimespan") ' reloj monotónico para medir ms
+  m.keyEventClock.Mark() ' inicia el reloj para lectura de tiempos relativos
+
   m.RETRY_INTERVAL = 1000
   m.TIMER_SAVE_LAST_WATCHED = 1000
   m.timelineSeekStep = 15
@@ -138,13 +145,16 @@ end sub
 ' entonces sigue con el siguente metodo onKeyEvent del compoente superior
 function onKeyEvent(key as String, press as Boolean) as Boolean
 
+  nowMs = __getNowMilliseconds() ' timestamp actual en milisegundos para filtros de entrada
+
+  ' Bloquea eventos mientras se esta recargando o por una pequeña ventana posterior
+  if m.reloadInputBlockUntilMs <> invalid and nowMs < m.reloadInputBlockUntilMs then return true ' descarta eventos en la ventana de bloqueo
+
   ' Si esta refrescando el url del stream, bloquear todos los botones
-  if m.isReloadStreaming then return true
+  if m.isReloadStreaming then return true ' corta inmediatamente cualquier accion mientras recarga
 
-  if m.top.loading.visible <> false and key <> KeyButtons().BACK then
-    return true
-  end if
-
+  ' Ignora repeticiones muy seguidas del mismo boton (key repeat del control remoto)
+  if press and __isRepeatedKeyPress(key, nowMs) then return true ' evita key-repeat por spam de remoto
   handled = false
 
   if press and key = KeyButtons().REPLAY then
@@ -201,7 +211,7 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
     end if
   
   else if m.playerControllers.isInFocusChain() and key = KeyButtons().BACK then
-    if not press then onHidenProgramInfo()
+    if press then onHidenProgramInfo()
     handled = true
     
   else if m.playerControllers.isInFocusChain() and key = KeyButtons().UP then
@@ -417,12 +427,11 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
 
   else if m.videoPlayer.isInFocusChain() and __isSeekKey(key) then
     handled = true
+    __showProgramInfo()
 
     if (not m.isReloadStreaming) then
       if m.streaming <> invalid and LCase(m.streaming.type) = getVideoType().LIVE then return true ' si es cotenido vivo no hace nada
       if not press and not m.focusplayerByload then 
-        __showProgramInfo()
-
         m.timelineBar.setFocus(true)
       else 
         m.focusplayerByload = false
@@ -494,6 +503,28 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
 
   return handled
 end function
+
+' Devuelve tiempo monotónico en ms para controlar ventanas de bloqueo/debounce
+function __getNowMilliseconds() as Integer
+  if m.keyEventClock = invalid then
+    m.keyEventClock = CreateObject("roTimespan")
+    m.keyEventClock.Mark()
+  end if
+
+  return m.keyEventClock.TotalMilliseconds() ' ms transcurridos desde Mark()
+end function
+
+' Determina si una pulsacion es repetida dentro de la ventana de debounce
+function __isRepeatedKeyPress(key as String, nowMs as Integer) as Boolean
+  if m.lastKeyPressed = key and (nowMs - m.lastKeyPressedAtMs) < m.keyEventDebounceMs then ' mismo boton en muy poco tiempo
+    return true
+  end if
+
+  m.lastKeyPressed = key ' actualiza la ultima tecla valida
+  m.lastKeyPressedAtMs = nowMs ' actualiza el tiempo de la ultima tecla valida
+  return false
+end function
+
 
 ' Carga los datos de componente, si no recibe datos o los recibe vacios entonces dispara la limpieza del componete
 sub initData()
@@ -653,7 +684,9 @@ sub onChannelsResponse()
       m.channelList.channelId = m.channelSelected.id
       m.channelList.items = resp.data
 
-      if m.showChannelListAfterUpdate then __openChannelList(false)
+      if m.showChannelListAfterUpdate then
+        __openChannelList(false)
+      end if
     else
       if m.showChannelListAfterUpdate then m.showChannelListAfterUpdate = false 
       printError("ChannelsList Emty:", m.apiRequestManager.response)
@@ -820,7 +853,6 @@ end sub
 
 ' Procesa la respuesta al obtener la url de lo que se quiere ver
 sub onStreamingsResponse() 
-  print "onStreamingsResponse()"
   if validateStatusCode(m.apiRequestManager.statusCode) then
     resp = ParseJson(m.apiRequestManager.response)
     if resp.data <> invalid then
@@ -1159,7 +1191,8 @@ end sub
 
 ' procesa el guardado de que se dejo de ver en el player
 sub onEndWatchResponse()
-  ' printLog("End Watch")
+  m.apiRequestManager = clearApiRequest(m.apiRequestManager)
+  printLog("End Watch")
 end sub
 
 ' Se dispara la validacion del PIN cargado en el modal
@@ -1400,6 +1433,7 @@ sub __loadPlayer(streaming, focusPlayer = true)
         m.videoPlayer.seek = m.streaming.startAt
       end if
     end if
+
     __updateTimeline()
 
     ' Si estoy cambiando la url del Live por la de Rewind entonces no es necesario dispara la busuqeda del programa de nuevo
@@ -1410,6 +1444,7 @@ sub __loadPlayer(streaming, focusPlayer = true)
     
     if m.inactivityPromptTimeInSeconds <> -1 then __extendTimeWatching()
     m.isReloadStreaming = false
+    m.reloadInputBlockUntilMs = __getNowMilliseconds() + 350
   end if
 end sub
 
@@ -1908,6 +1943,7 @@ sub __showProgramInfo()
   if m.timelineBar <> invalid and not m.isLiveContent then m.timelineBar.visible = true
   btn = __getFirstVisibleControllerButton()
   if btn <> invalid then btn.setFocus(true)
+  m.videoPlayer.setFocus(false)
 
   m.showInfoTimer.control = "start"
   m.showInfoTimer.ObserveField("fire","onHidenProgramInfo")
@@ -1927,7 +1963,7 @@ sub __loadStreamingURL(key, id, streamingAction, streamingType = getStreamingTyp
   
   ' Falta agregar el update Session
   requestId = createRequestId()
-  m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlStreaming(m.apiUrl, m.lastKey, m.lastId, streamingAction, streamingType, startpid), "GET", "onStreamingsResponse", requestId) 
+  m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlStreaming(m.apiUrl, m.lastKey, m.lastId, streamingAction, streamingType, startpid), "GET", "onStreamingsResponse") 
 end sub
 
 ' Metodo que procesa el error que puede ocurrir al reproducir en el player y dispara los timers para
@@ -2007,12 +2043,15 @@ end sub
 sub __reconnectStream(saveTime = true)
   if not m.isReloadStreaming then
     m.isReloadStreaming = true
+    m.reloadInputBlockUntilMs = __getNowMilliseconds() + 1200
     m.disableLayoutChannelConnection = true
     if (saveTime and m.streaming <> invalid and m.streaming.liveRewindDuration)
       m.lastPosition = m.streaming.liveRewindDuration - (m.videoPlayer.duration - m.videoPlayer.position) - 30
     end if
 
-    __loadStreamingURL(m.lastKey, m.lastId, getStreamingAction().PLAY, m.currentStreamType)
+    m.currentStreamType = m.streaming.streamingType
+
+    __loadStreamingURL(m.lastKey, m.lastId, getStreamingAction().PLAY, m.currentStreamType, m.program.id)
   end if
 end sub
 
