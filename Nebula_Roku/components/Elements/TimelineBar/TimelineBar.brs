@@ -184,10 +184,10 @@ sub __updateProgress()
   if m.thumb <> invalid then
     
     if (m.top.isLive) then
-      m.thumb.translation = [m.totalWidth - 24, thumbY]
+      m.thumb.translation = [m.totalWidth - 20, thumbY]
       m.progress.width =  m.totalWidth
       ' Setear el máximo rango en X que puede alcanzar la esfera de progreso
-      m.maxWidth = m.totalWidth - 24
+      m.maxWidth = m.totalWidth - 20
     else
       ' Validar que la esfera de progreso, no se salga fuera del rango máximo
       if m.maxWidth <> invalid and thumbX > m.maxWidth then thumbX = m.maxWidth

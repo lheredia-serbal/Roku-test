@@ -82,6 +82,8 @@ sub onLauncherFinished()
       m.LoginScreen.unobserveField("finished")
       m.top.signalBeacon("AppLaunchComplete")
       if m.global.contact <> invalid and m.global.contact.profile <> invalid then
+        ' Notifica a Roku que el usuario autenticado abrió la app (Req 4.3).
+        NotifyRokuUserIsLoggedIn()
         __initMain()
       else 
         __initProfile()
@@ -133,6 +135,8 @@ sub onLoginFinished()
     m.LoginScreen.visible = false
     m.LoginScreen.onFocus = false
     if m.global.contact <> invalid and m.global.contact.profile <> invalid then
+      ' Notifica a Roku que el usuario autenticado inició sesión correctamente (Req 4.3).
+      NotifyRokuUserIsLoggedIn()
       __initMain()
     else 
       __initProfile()
@@ -154,6 +158,34 @@ end sub
 ' Cierra la aplicacion.
 sub onExitApp()
   m.top.appExit = true
+end sub
+
+' Notifica a Roku (RED) que existe un usuario autenticado en la sesión actual.
+' Este evento (Roku_Authenticated) ayuda a métricas de autenticación y ranking en Roku Search.
+sub NotifyRokuUserIsLoggedIn(rsgScreen = invalid as Object)
+  globalNode = invalid
+
+  ' Obtiene el nodo global desde la escena actual (o desde el screen recibido, si aplica).
+  if type(m.top) = "roSGNode" then
+    globalNode = m.global
+  else if rsgScreen <> invalid then
+    globalNode = rsgScreen.getGlobalNode()
+  end if
+
+  ' Si no hay contexto global válido, no se puede inicializar/usar RED.
+  if globalNode = invalid then return
+
+  ' Reutiliza el dispatcher global para no recrear el nodo en cada notificación.
+  RAC = globalNode.roku_event_dispatcher
+  if RAC = invalid then
+    ' Inicializa Roku Analytics Node con RED y lo guarda globalmente.
+    RAC = CreateObject("roSGNode", "Roku_Analytics:AnalyticsNode")
+    RAC.init = { RED: {} }
+    globalNode.addFields({ roku_event_dispatcher: RAC })
+  end if
+
+  ' Envía el evento requerido por Roku para aplicaciones con login.
+  RAC.trackEvent = { RED: { eventName: "Roku_Authenticated" } }
 end sub
 
 sub onCdnErrorRetry()
@@ -373,7 +405,7 @@ sub __initProfile()
   m.ProfileScreen.setFocus(true)
 end sub
 
-' Muestra la pantalla de Detalle de programa y esucha sus observable relacionados
+' Muestra la pantalla de Detalle de programa y escucha sus observable relacionados
 sub __showProgramDetail()
   if m.MainScreen.visible then m.MainScreen.visible = false
   m.ProgramDetailScreen.visible = true

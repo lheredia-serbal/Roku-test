@@ -88,6 +88,7 @@ sub init()
   m.lastPosition = invalid
   m.actionPostChageState = invalid
   m.isReloadStreaming = false
+  m.enableGoLive = false
 
   m.reloadInputBlockUntilMs = -1 ' tiempo limite (ms) para bloquear entradas tras recargar stream
   m.keyEventDebounceMs = 180 ' ventana minima entre eventos de la misma tecla
@@ -257,6 +258,7 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
     end if
 
     if m.toLiveImageButton.isInFocusChain() and key = KeyButtons().OK then
+      m.enableGoLive = false
       if m.isLiveRewind and m.videoPlayer <> invalid  and press then
         if LCase(m.streaming.type) = getVideoType().LIVE_REWIND and m.streaming.streamingType = getStreamingType().LIVE_REWIND then
           m.currentStreamType = getStreamingType().LIVE_REWIND
@@ -295,7 +297,9 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
     end if
 
     if (key = KeyButtons().OK) then
+      m.enableGoLive = true
       if m.videoPlayer <> invalid then
+        m.actionPostChageState = "restart"
         if LCase(m.streaming.type) = getVideoType().LIVE then return true
 
         if LCase(m.streaming.type) = getVideoType().LIVE_REWIND then
@@ -319,7 +323,6 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
             __togglePlayPause()
             m.disableLayoutChannelConnection = true
             __loadStreamingURL(m.lastKey, m.lastId, getStreamingAction().PLAY, getStreamingType().LIVE_REWIND, m.program.id)
-            m.actionPostChageState = "restart"
 
           else if reloadWithinWindow then
             m.currentStreamType = getStreamingType().LIVE_REWIND
@@ -327,14 +330,12 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
             __togglePlayPause()
             m.disableLayoutChannelConnection = true
             __loadStreamingURL(m.lastKey, m.lastId, getStreamingAction().PLAY, getStreamingType().LIVE_REWIND)
-            m.actionPostChageState = "restart"
 
           else if m.streaming.streamingType = getStreamingType().DEFAULT then
 
             m.streaming.streamingType = getStreamingType().LIVE_REWIND
             __togglePlayPause()
             __reconnectStream()
-            m.actionPostChageState = "restart"
 
           else if m.streaming.streamingType = getStreamingType().LIVE_REWIND
           __restartVideo()
@@ -692,7 +693,7 @@ sub onChannelsResponse()
       printError("ChannelsList Emty:", m.apiRequestManager.response)
     end if 
   else
-    if not m.apiRequestManager.serverError then
+    if m.apiRequestManager <> invalid and not m.apiRequestManager.serverError then
       error = m.apiRequestManager.errorResponse
       statusCode = m.apiRequestManager.statusCode
       m.apiRequestManager = clearApiRequest(m.apiRequestManager) 
@@ -774,7 +775,7 @@ sub onUpdateWatchSessionResponse()
     printError("WatchSesionToken:", m.apiRequestManager.errorResponse)
     end if
   else
-    if not m.apiRequestManager.serverError then
+    if m.apiRequestManager <> invalid and not m.apiRequestManager.serverError then
       statusCode = m.apiSessionRequestManager.statusCode
       printError("WatchSesionToken:", m.apiRequestManager.errorResponse)
       ' Cambio agregado: mostrar CDN dialog desde Player cuando aplica 9000.
@@ -819,6 +820,7 @@ end sub
 ' Metodo que se dispiara por la seleccion de un item desde la Guia
 sub onSelectItemGuide() 
   if m.guide <> invalid and m.guide.isInFocusChain() then
+    m.enableGoLive = false
     m.disableLayoutChannelConnection = false
     itemSelected = ParseJson(m.guide.selected)
     
@@ -896,14 +898,6 @@ sub onStreamingsResponse()
       
       __setTimelineFromStreaming()
       __rebuildControllerButtons()
-      
-      if m.toLiveImageButton <> invalid and m.toLiveImageButton.visible 
-        if isLiveTimeline then 
-          m.toLiveImageButton.disable = true
-        else
-          m.toLiveImageButton.disable = false
-      end if
-    end if
 
     if m.timelineBar <> invalid then
       if not m.isLiveContent then
@@ -969,7 +963,7 @@ sub onStreamingsResponse()
       printError("Streamings Emty:", response)
     end if
   else 
-    if not m.apiRequestManager.serverError then
+    if m.apiRequestManager <> invalid and not m.apiRequestManager.serverError then
       errorResponse = m.apiRequestManager.errorResponse
       statusCode = m.apiRequestManager.statusCode
       m.apiRequestManager = clearApiRequest(m.apiRequestManager)
@@ -1011,7 +1005,7 @@ sub onProgramSummaryResponse()
       printError("ProgramSumary Empty:", errorResponse)
     end if 
   else
-    if not m.apiRequestManager.serverError then
+    if m.apiRequestManager <> invalid and not m.apiRequestManager.serverError then
       statusCode = m.apiRequestManager.statusCode
       errorResponse = m.apiRequestManager.errorResponse
       m.apiRequestManager = clearApiRequest(m.apiRequestManager)
@@ -1044,7 +1038,7 @@ sub onValdiateConnectionResponse()
     m.lastErrorTime = now.AsSeconds() + 30 
     __loadStreamingURL(m.lastKey, m.lastId, getStreamingType().DEFAULT)
   else
-    if not m.apiRequestManager.serverError then
+    if m.apiRequestManager <> invalid and not m.apiRequestManager.serverError then
       m.lastErrorTime = invalid
       errorResponse = m.apiRequestManager.errorResponse
       clearTimer(m.retryReconnection)
@@ -1083,7 +1077,7 @@ sub onLastWatchedResponse()
   if validateStatusCode(m.apiLastWatchedRequestManager.statusCode) then
     m.apiLastWatchedRequestManager = clearApiRequest(m.apiLastWatchedRequestManager) 
   else 
-    if not m.apiRequestManager.serverError then
+    if m.apiRequestManager <> invalid and not m.apiRequestManager.serverError then
       error = m.apiLastWatchedRequestManager.errorResponse
       statusCode = m.apiLastWatchedRequestManager.statusCode
       m.apiLastWatchedRequestManager = clearApiRequest(m.apiLastWatchedRequestManager) 
@@ -1138,7 +1132,7 @@ sub onSendBeaconResponse()
       __closePlayer(true)
     end if 
   else
-    if not m.apiRequestManager.serverError then
+    if m.apiBeaconRequestManager <> invalid and not m.apiBeaconRequestManager.serverError then
       statusCode = m.apiBeaconRequestManager.statusCode
       errorResponse = m.apiBeaconRequestManager.errorResponse 
       m.apiBeaconRequestManager = clearApiRequest(m.apiBeaconRequestManager)
@@ -1171,7 +1165,7 @@ sub onWatchValidateResponse()
       printError("WatchValidate ResultCode:", resp.resultCode)
     end if
   else 
-    if not m.apiRequestManager.serverError then
+    if m.apiBeaconRequestManager <> invalid and not m.apiBeaconRequestManager.serverError then
       statusCode = m.apiBeaconRequestManager.statusCode
       errorResponse = m.apiBeaconRequestManager.errorResponse
       m.apiBeaconRequestManager = clearApiRequest(m.apiBeaconRequestManager)
@@ -1226,7 +1220,7 @@ sub onParentalControlResponse()
       m.dialog = createAndShowDialog(m.top, "", i18n_t(m.global.i18n, "shared.parentalControlModal.error.invalid"), "onDialogClosedLastFocus")
     end if
   else
-    if not m.apiRequestManager.serverError then
+    if m.apiRequestManager <> invalid and not m.apiRequestManager.serverError then
       m.top.loading.visible = false
       statusCode = m.apiRequestManager.statusCode
       errorResponse = m.apiRequestManager.errorResponse
@@ -1287,7 +1281,7 @@ end sub
 
 ' Obtener el beacon token
 sub onActionLogTokenResponse() 
-  if not m.apiRequestManager.serverError then
+  if m.apiRequestManager <> invalid and not m.apiRequestManager.serverError then
     resp = ParseJson(m.apiLogRequestManager.response)
     actionLog = ParseJson(m.apiLogRequestManager.dataAux)
 
@@ -1304,7 +1298,7 @@ end sub
 
 ' Limpiar la llamada del log
 sub onActionLogResponse() 
-  if not m.apiRequestManager.serverError then
+  if m.apiRequestManager <> invalid and not m.apiRequestManager.serverError then
     m.apiLogRequestManager = clearApiRequest(m.apiLogRequestManager)
   end if
 end sub
@@ -2042,6 +2036,7 @@ end sub
 ' Reconectar el stream automáticamente
 sub __reconnectStream(saveTime = true)
   if not m.isReloadStreaming then
+    m.enableGoLive = true
     m.isReloadStreaming = true
     m.reloadInputBlockUntilMs = __getNowMilliseconds() + 1200
     m.disableLayoutChannelConnection = true
@@ -2049,9 +2044,13 @@ sub __reconnectStream(saveTime = true)
       m.lastPosition = m.streaming.liveRewindDuration - (m.videoPlayer.duration - m.videoPlayer.position) - 30
     end if
 
-    m.currentStreamType = m.streaming.streamingType
+    startpid = 0
+    if m.actionPostChageState = "restart" then
+      m.currentStreamType = m.streaming.streamingType
+      startpid = m.program.id
+    end if
 
-    __loadStreamingURL(m.lastKey, m.lastId, getStreamingAction().PLAY, m.currentStreamType, m.program.id)
+    __loadStreamingURL(m.lastKey, m.lastId, getStreamingAction().PLAY, m.currentStreamType, startpid)
   end if
 end sub
 
@@ -2253,11 +2252,13 @@ sub __rebuildControllerButtons()
 
   if showToLive and m.toLiveImageButton <> invalid then
     m.toLiveImageButton.visible = true
-    m.toLiveImageButton.focusable = (m.streaming <> invalid and m.streaming.streamingType = getStreamingType().LIVE_REWIND)
+    m.toLiveImageButton.focusable = (m.streaming <> invalid and m.streaming.type = "LiveRewind" and m.enableGoLive)
     if m.toLiveImageButton.focusable then
       m.toLiveImageButton.opacity = 1.0
+      m.toLiveImageButton.disable = false
     else
       m.toLiveImageButton.opacity = 0.4
+      m.toLiveImageButton.disable = true
     end if
     m.controlsRow.appendChild(m.toLiveImageButton)
     if m.toLiveImageButton.focusable then m.controllerButtons.push(m.toLiveImageButton)
