@@ -111,6 +111,7 @@ sub __applyHeight(hasFocus as boolean)
 end sub
 
 sub __updateProgress()
+  print "__updateProgress()"
   if (m.currentDuration = invalid or m.currentPosition = invalid) then return
   if m.currentDuration <= 0  and m.currentPosition <= 0 then return 
   if m.suspendUi = true and m.top <> invalid and m.top.isPaused <> true then
@@ -121,7 +122,9 @@ sub __updateProgress()
   ' LIVE: no hay tiempo, mostrar "En vivo" (traducido) y no usar position/duration
   if m.top <> invalid and m.top.isLive = true then
     if m.progress <> invalid then
-      m.progress.width = m.totalWidth - 1000
+      print "1"
+      print m.totalWidth
+      m.progress.width = m.totalWidth
     end if
     if m.timeLabel <> invalid then
       txt = m.top.liveText
@@ -153,6 +156,8 @@ sub __updateProgress()
 
   ' Si no hay duración
   if m.currentDuration <= 0 and not m.top.isLive then
+    print "2"
+    print 0
     m.progress.width = 0
     if m.thumb <> invalid then m.thumb.translation = [-thumbHalf, thumbY]
     if m.timeLabel <> invalid then m.timeLabel.text = "00:00"
@@ -172,7 +177,9 @@ sub __updateProgress()
     progressWidth = 0
   end if
   
-  if progressWidth > 0 then
+  if progressWidth > 1 then
+    print "3"
+    print progressWidth
     m.progress.width = progressWidth
   end if
 
@@ -183,15 +190,17 @@ sub __updateProgress()
 
   if m.thumb <> invalid then
     
-    if (m.top.isLive) then
+    if (m.top.isLive ) then
       m.thumb.translation = [m.totalWidth - 20, thumbY]
+      print "4"
+      print m.totalWidth
       m.progress.width =  m.totalWidth
       ' Setear el máximo rango en X que puede alcanzar la esfera de progreso
       m.maxWidth = m.totalWidth - 20
     else
       ' Validar que la esfera de progreso, no se salga fuera del rango máximo
       if m.maxWidth <> invalid and thumbX > m.maxWidth then thumbX = m.maxWidth
-      if (thumbX <> invalid) then
+      if (thumbX <> invalid and thumbX > -1) then
         m.thumb.translation = [thumbX, thumbY]
       end if
     end if
@@ -412,6 +421,8 @@ end sub
 ' Obtiene dispositivo UTC offset seconds.
 sub __restoreCachedUi()
   if m.cachedProgressWidth <> invalid and m.progress <> invalid then 
+    print "5"
+    print m.cachedProgressWidth
     m.progress.width = m.cachedProgressWidth
   end if
   if m.cachedThumbTranslation <> invalid and m.thumb <> invalid then m.thumb.translation = m.cachedThumbTranslation

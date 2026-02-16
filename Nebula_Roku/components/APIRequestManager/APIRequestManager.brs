@@ -176,7 +176,8 @@ function __apiRequest(url, method, body, token, requestId = invalid)
         end if
     else
         printError("HTTP method not supported:", method)
-        STOP
+        ' Se retorna un error controlado en lugar de interrumpir ejecución en release.
+        return { response: invalid, errorResponse: "HTTP method not supported", statusCode: 400, requestId: requestId }
     end if
 end function
 

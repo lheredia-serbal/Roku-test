@@ -159,7 +159,7 @@ end function
 function clearApiRequest(apiRequestManager)
     if apiRequestManager <> invalid then
         apiRequestManager.unobserveField("statusCode")
-        apiRequestManager.control = "STOP"
+        apiRequestManager.control = "stop"
         apiRequestManager = invalid
     end if
     return apiRequestManager

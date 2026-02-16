@@ -86,12 +86,14 @@ sub onLauncherFinished()
         NotifyRokuUserIsLoggedIn()
         __initMain()
       else 
+        __startAppDialogBeacon()
         __initProfile()
       end if 
     else
       m.top.signalBeacon("AppLaunchComplete")
       m.LauncherScreen.unobserveField("finished")
 
+      __startAppDialogBeacon()
       m.LoginScreen.ObserveField("finished", "onLoginFinished")
       m.LoginScreen.visible = true
       m.LoginScreen.onFocus = true
@@ -137,6 +139,7 @@ sub onLoginFinished()
     if m.global.contact <> invalid and m.global.contact.profile <> invalid then
       ' Notifica a Roku que el usuario autenticado inició sesión correctamente (Req 4.3).
       NotifyRokuUserIsLoggedIn()
+      __completeAppDialogBeacon()
       __initMain()
     else 
       __initProfile()
@@ -151,6 +154,7 @@ sub onProfileFinished()
     ' Esconder Launcher y mostrar MainScreen
     m.ProfileScreen.visible = false
     m.ProfileScreen.onFocus = false
+    __completeAppDialogBeacon()
     __initMain()
   end if 
 end sub
@@ -394,6 +398,28 @@ sub __initMain()
   m.MainScreen.ObserveField("pendingStreamingSession", "onKillSession")
   m.MainScreen.ObserveField("detail", "onProgramDetail")
   m.MainScreen.ObserveField("setting", "onSetting")
+
+  ' Performance Req 3.2: marca que el Home ya quedó visible y navegable.
+  if m.launchCompleteSignaled <> true then
+    m.launchCompleteSignaled = true
+    m.top.signalBeacon("AppLaunchComplete")
+  end if
+end sub
+
+' Performance Req 3.2: marca el inicio de un diálogo interactivo antes del Home.
+sub __startAppDialogBeacon()
+  if m.appDialogInitiated <> true then
+    m.appDialogInitiated = true
+    m.top.signalBeacon("AppDialogInitiate")
+  end if
+end sub
+
+' Performance Req 3.2: marca el cierre del diálogo cuando termina el flujo hacia Home.
+sub __completeAppDialogBeacon()
+  if m.appDialogInitiated = true and m.appDialogCompleted <> true then
+    m.appDialogCompleted = true
+    m.top.signalBeacon("AppDialogComplete")
+  end if
 end sub
 
 ' Define la configuracion del componente Perfil los observable y si seteando sus variables necesarias
