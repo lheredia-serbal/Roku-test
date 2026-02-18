@@ -4,6 +4,8 @@ sub Main(args as Object)
     screen = CreateObject("roSGScreen")
     m.port = CreateObject("roMessagePort")
     screen.setMessagePort(m.port)
+    ' Inicializa el monitoreo de memoria recomendado por Roku
+    InitMemoryMonitoring(m.port)
 
     if args <> invalid
         if args.reason <> invalid then
@@ -29,6 +31,8 @@ sub Main(args as Object)
         if msgType = "roSGScreenEvent"
             if msg.isScreenClosed() then return
         'respond to the appExit field on MainScene
+        else if HandleSystemEvents(msg)
+            ' Evento de sistema/memoria ya gestionado
        
         else if msgType = "roInputEvent"
             info = msg.GetInfo()
@@ -40,3 +44,59 @@ sub Main(args as Object)
         end if
     end while
 end sub
+
+sub InitMemoryMonitoring(port as Object)
+    ' Monitor específico de memoria de la app/canal
+    m.memMon = CreateObject("roAppMemoryMonitor")
+    memMonIf = invalid
+    if m.memMon <> invalid then
+        ' Verifica que la interfaz exista para compatibilidad con distintas versiones de OS
+        memMonIf = GetInterface(m.memMon, "ifAppMemoryMonitor")
+        if memMonIf <> invalid then
+            ' Enlaza el monitor al mismo puerto del loop principal
+            m.memMon.SetMessagePort(port)
+            ' Habilita warnings cuando el canal entra en presión de memoria
+            m.memMon.EnableMemoryWarningEvent(true)
+
+            ' Snapshot inicial de memoria para diagnóstico en logs
+            channelAvailableMemory = m.memMon.GetChannelAvailableMemory()
+            channelMemoryLimit = m.memMon.GetChannelMemoryLimit()
+            memoryLimitPercent = m.memMon.GetMemoryLimitPercent()
+            print "MEMORY MONITORING ENABLED - Available:"; channelAvailableMemory; " Limit:"; channelMemoryLimit; " Percent:"; memoryLimitPercent
+        end if
+    end if
+
+    ' Eventos de memoria general del dispositivo (no solo del canal)
+    m.devInfo = CreateObject("roDeviceInfo")
+    if m.devInfo <> invalid then
+        m.devInfo.SetMessagePort(port)
+        ' Habilita notificación cuando el sistema reporta memoria general baja
+        m.devInfo.EnableLowGeneralMemoryEvent(true)
+    end if
+end sub
+
+function HandleSystemEvents(msg as Object) as Boolean
+    msgType = type(msg)
+    if msgType = "roAppMemoryMonitorEvent" then
+        ' Punto ideal para degradación controlada: limpiar cachés, liberar imágenes pesadas, etc.
+        print "MEM WARNING: consider freeing caches/images"
+
+        if m.memMon <> invalid then
+            ' Snapshot al momento del warning para entender severidad
+            channelAvailableMemory = m.memMon.GetChannelAvailableMemory()
+            channelMemoryLimit = m.memMon.GetChannelMemoryLimit()
+            memoryLimitPercent = m.memMon.GetMemoryLimitPercent()
+            print "MEMORY SNAPSHOT - Available:"; channelAvailableMemory; " Limit:"; channelMemoryLimit; " Percent:"; memoryLimitPercent
+        end if
+        return true
+    else if msgType = "roDeviceInfoEvent" then
+        ' Evento de memoria general del sistema
+        info = msg.GetInfo()
+        if info <> invalid and info.generalMemoryLevel <> invalid then
+            print "GENERAL MEMORY LEVEL:"; info.generalMemoryLevel
+        end if
+        return true
+    end if
+
+    return false
+end function

@@ -5,6 +5,9 @@ function __dtClone(dt as object) as object
   return c
 end function
 
+' Obtiene una fecha agregandole segundos
+' @param dt: Fecha a modificar
+' @param deltaSec: Segundos a agregar
 function dtCloneAddSeconds(dt as object, deltaSec as integer) as object
   if dt = invalid then return invalid
 
@@ -13,6 +16,9 @@ function dtCloneAddSeconds(dt as object, deltaSec as integer) as object
   return c
 end function
 
+' Compara 2 fechas de acuerdo a la diferencia de segundos
+' @param a Primera fecha
+' @param b Segunda fecha
 function dtIsBefore(a as object, b as object) as boolean
   if a = invalid or b = invalid then return false
   return a.AsSeconds() < b.AsSeconds()

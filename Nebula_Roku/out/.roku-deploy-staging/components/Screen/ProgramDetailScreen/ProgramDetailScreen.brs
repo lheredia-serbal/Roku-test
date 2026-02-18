@@ -143,7 +143,7 @@ sub initFocus()
           requestId: requestId
           dataAux: invalid
           run: function() as Object
-            m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.body, m.token, m.publicApi, m.dataAux)
+            m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux)
             return { success: true, error: invalid }
           end function
         }
@@ -160,7 +160,7 @@ end sub
 
 ' Procesa la respuesta al obtener la informacion completa del programa
 sub onGetByIdResponse() 
-  if m.apiRequestManager then
+  if m.apiRequestManager = invalid then
     __getProgramDetail(m.lastKey, m.lastId)
     return
   else

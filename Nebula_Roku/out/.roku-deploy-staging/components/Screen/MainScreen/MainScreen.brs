@@ -1161,7 +1161,7 @@ end sub
 ' Procesa la respuesta del AutoUpgrade
 sub onAutoUpgradeResponse()
   if validateStatusCode(m.autoUpgradeRequestManager.statusCode) then
-    removePendingAction(m.apiRequestManager.requestId)
+    if m.apiRequestManager <> invalid then removePendingAction(m.apiRequestManager.requestId)
     resp = ParseJson(m.autoUpgradeRequestManager.response)
     data = resp
     if resp <> invalid and resp.data <> invalid then data = resp.data

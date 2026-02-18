@@ -159,7 +159,7 @@ end function
 function clearApiRequest(apiRequestManager)
     if apiRequestManager <> invalid then
         apiRequestManager.unobserveField("statusCode")
-        apiRequestManager.control = "STOP"
+        apiRequestManager.control = "stop"
         apiRequestManager = invalid
     end if
     return apiRequestManager
@@ -181,7 +181,7 @@ function sendApiRequest(apiRequestManager, url, method, responseMethod, requestI
     'url = maybeCorruptApiUrl(url)
   apiRequestManager.setField("url", url)
   apiRequestManager.setField("method", method)
-  if publicApi then apiRequestManager.setField("publicApi", true)
+  if publicApi <> invalid and publicApi <> false then apiRequestManager.setField("publicApi", true)
   if body <> invalid and body <> "" then  apiRequestManager.setField("body", body) 
   if token <> invalid and token <> "" then  apiRequestManager.setField("token", token) 
   if dataAux <> invalid and dataAux <> "" then  apiRequestManager.setField("dataAux", dataAux) 

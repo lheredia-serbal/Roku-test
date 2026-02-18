@@ -11,10 +11,10 @@ build_version=0
 
 ##   Channel Assets
 ###  Main Menu Icons / Channel Poster Artwork 
-#### Image sizes are FHD: 540x405px | HD: 290x218px | SD: 214x144px
+#### Image sizes are FHD: 540x405px | HD: 290x218px | SD: 246x140px
 mm_icon_focus_fhd=pkg:/images/client/channel-poster_fhd.png
 mm_icon_focus_hd=pkg:/images/client/channel-poster_hd.png
-mm_icon_focus_sd=pkg:/images/Client/channel-poster_sd.png
+mm_icon_focus_sd=pkg:/images/client/channel-poster_sd.png
 
 
 
@@ -33,3 +33,5 @@ ui_resolutions=HD,FHD,UFD,UHD
 bs_libs=source/Utils/i18nUtils.brs
 
 supports_input_launch=1
+# Requerido para enviar eventos RED como Roku_Authenticated (Req 4.3).
+sg_component_libs_required=roku_analytics

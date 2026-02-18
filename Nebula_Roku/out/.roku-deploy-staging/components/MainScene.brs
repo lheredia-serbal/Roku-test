@@ -82,14 +82,18 @@ sub onLauncherFinished()
       m.LoginScreen.unobserveField("finished")
       m.top.signalBeacon("AppLaunchComplete")
       if m.global.contact <> invalid and m.global.contact.profile <> invalid then
+        ' Notifica a Roku que el usuario autenticado abrió la app (Req 4.3).
+        NotifyRokuUserIsLoggedIn()
         __initMain()
       else 
+        __startAppDialogBeacon()
         __initProfile()
       end if 
     else
       m.top.signalBeacon("AppLaunchComplete")
       m.LauncherScreen.unobserveField("finished")
 
+      __startAppDialogBeacon()
       m.LoginScreen.ObserveField("finished", "onLoginFinished")
       m.LoginScreen.visible = true
       m.LoginScreen.onFocus = true
@@ -133,6 +137,9 @@ sub onLoginFinished()
     m.LoginScreen.visible = false
     m.LoginScreen.onFocus = false
     if m.global.contact <> invalid and m.global.contact.profile <> invalid then
+      ' Notifica a Roku que el usuario autenticado inició sesión correctamente (Req 4.3).
+      NotifyRokuUserIsLoggedIn()
+      __completeAppDialogBeacon()
       __initMain()
     else 
       __initProfile()
@@ -147,6 +154,7 @@ sub onProfileFinished()
     ' Esconder Launcher y mostrar MainScreen
     m.ProfileScreen.visible = false
     m.ProfileScreen.onFocus = false
+    __completeAppDialogBeacon()
     __initMain()
   end if 
 end sub
@@ -154,6 +162,34 @@ end sub
 ' Cierra la aplicacion.
 sub onExitApp()
   m.top.appExit = true
+end sub
+
+' Notifica a Roku (RED) que existe un usuario autenticado en la sesión actual.
+' Este evento (Roku_Authenticated) ayuda a métricas de autenticación y ranking en Roku Search.
+sub NotifyRokuUserIsLoggedIn(rsgScreen = invalid as Object)
+  globalNode = invalid
+
+  ' Obtiene el nodo global desde la escena actual (o desde el screen recibido, si aplica).
+  if type(m.top) = "roSGNode" then
+    globalNode = m.global
+  else if rsgScreen <> invalid then
+    globalNode = rsgScreen.getGlobalNode()
+  end if
+
+  ' Si no hay contexto global válido, no se puede inicializar/usar RED.
+  if globalNode = invalid then return
+
+  ' Reutiliza el dispatcher global para no recrear el nodo en cada notificación.
+  RAC = globalNode.roku_event_dispatcher
+  if RAC = invalid then
+    ' Inicializa Roku Analytics Node con RED y lo guarda globalmente.
+    RAC = CreateObject("roSGNode", "Roku_Analytics:AnalyticsNode")
+    RAC.init = { RED: {} }
+    globalNode.addFields({ roku_event_dispatcher: RAC })
+  end if
+
+  ' Envía el evento requerido por Roku para aplicaciones con login.
+  RAC.trackEvent = { RED: { eventName: "Roku_Authenticated" } }
 end sub
 
 sub onCdnErrorRetry()
@@ -362,6 +398,28 @@ sub __initMain()
   m.MainScreen.ObserveField("pendingStreamingSession", "onKillSession")
   m.MainScreen.ObserveField("detail", "onProgramDetail")
   m.MainScreen.ObserveField("setting", "onSetting")
+
+  ' Performance Req 3.2: marca que el Home ya quedó visible y navegable.
+  if m.launchCompleteSignaled <> true then
+    m.launchCompleteSignaled = true
+    m.top.signalBeacon("AppLaunchComplete")
+  end if
+end sub
+
+' Performance Req 3.2: marca el inicio de un diálogo interactivo antes del Home.
+sub __startAppDialogBeacon()
+  if m.appDialogInitiated <> true then
+    m.appDialogInitiated = true
+    m.top.signalBeacon("AppDialogInitiate")
+  end if
+end sub
+
+' Performance Req 3.2: marca el cierre del diálogo cuando termina el flujo hacia Home.
+sub __completeAppDialogBeacon()
+  if m.appDialogInitiated = true and m.appDialogCompleted <> true then
+    m.appDialogCompleted = true
+    m.top.signalBeacon("AppDialogComplete")
+  end if
 end sub
 
 ' Define la configuracion del componente Perfil los observable y si seteando sus variables necesarias
@@ -373,7 +431,7 @@ sub __initProfile()
   m.ProfileScreen.setFocus(true)
 end sub
 
-' Muestra la pantalla de Detalle de programa y esucha sus observable relacionados
+' Muestra la pantalla de Detalle de programa y escucha sus observable relacionados
 sub __showProgramDetail()
   if m.MainScreen.visible then m.MainScreen.visible = false
   m.ProgramDetailScreen.visible = true

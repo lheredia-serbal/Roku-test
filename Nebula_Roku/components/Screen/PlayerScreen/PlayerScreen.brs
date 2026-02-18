@@ -1,58 +1,101 @@
 ' Inicialización del componente (parte del ciclo de vida de Roku)
 sub init()
+  ' Referencia al nodo de video principal que reproduce el stream y expone estado/controles del playback.
   m.videoPlayer = m.top.findNode("VideoPlayer")
+  ' Contenedor de controles del reproductor (play/pause, reiniciar, ir al vivo y guía).
   m.playerControllers = m.top.findNode("playerControllers")
 
+  ' Fondo visual del bloque de controles para mejorar contraste al mostrar overlays.
   m.backgroundControllers = m.top.findNode("backgroundControllers")
+  ' Panel con metadatos del programa/canal actualmente en reproducción.
   m.programInfo = m.top.findNode("programInfo")
+  ' Resumen corto del programa que se muestra sobre el reproductor.
   m.programSummaryPlayer = m.top.findNode("programSummaryPlayer")
+  ' Barra de progreso custom usada para seek, preview de thumbnails y estado live.
   m.timelineBar = m.top.findNode("timelineBar")
+  ' Timer que auto-oculta la capa de información/controles tras inactividad.
   m.showInfoTimer = m.top.findNode("showInfoTimer")
+  ' Timer para refrescar datos cuando cambia la programación en vivo.
   m.newProgramTimer = m.top.findNode("newProgramTimer")
+  ' Timer de debounce para confirmar el seek acumulado al dejar de navegar la timeline.
   m.seekCommitTimer = m.top.findNode("seekCommitTimer")
+  ' Timer que procesa saltos continuos mientras se mantiene presionado FF/RW.
   m.seekHoldTimer = m.top.findNode("seekHoldTimer")
   
+  ' Botón visual de play/pausa dentro de la fila de controles.
   m.playPauseImageButton = m.top.findNode("playPauseImageButton")
+  ' Botón para reiniciar reproducción o volver al inicio del contenido.
   m.restartImageButton = m.top.findNode("restartImageButton")
+  ' Botón para saltar al punto en vivo cuando el stream permite rewind.
   m.toLiveImageButton = m.top.findNode("toLiveImageButton")
+  ' Botón para abrir la guía de canales desde el reproductor.
   m.guideImageButton = m.top.findNode("guideImageButton")
   
+  ' Componente de lista lateral con canales disponibles para zapping.
   m.channelList = m.top.findNode("channelList")
+  ' Contenedor del listado de canales para mostrar/ocultar y manejar foco.
   m.channelListContainer = m.top.findNode("channelListContainer")
+  ' Indicador visual del canal actualmente seleccionado en la lista.
   m.selectedIndicator = m.top.findNode("selectedIndicator")
   
+  ' Timer periódico para disparar envío de beacons/heartbeat de reproducción.
   m.beaconTimer = m.top.findNode("beaconTimer")
+  ' Timer de reintento cuando falla la validación o conexión del stream.
   m.retryReconnection = m.top.findNode("retryReconnection")
+  ' Timer que agenda el guardado del último canal/programa visto.
   m.saveLastWatched = m.top.findNode("saveLastWatched")
+  ' Timer para auto-cerrar el panel de canales tras un período sin interacción.
   m.channelListTimer = m.top.findNode("channelListTimer")
   
+  ' Bloque visual de error cuando no se puede reproducir o reconectar el canal.
   m.errorChannel = m.top.findNode("errorChannel")
+  ' Imagen/ícono que acompaña el estado de error de reproducción.
   m.errorChannelImage = m.top.findNode("errorChannelImage")
+  ' Texto principal que comunica al usuario el motivo del error.
   m.errorChannelTitle = m.top.findNode("errorChannelTitle")
+  ' Mensaje de estado mostrado durante reconexión o carga del stream.
   m.connectingSignal = m.top.findNode("connectingSignal")
+  ' Grupo visual que reúne mensaje y elementos de estado de conexión.
   m.connectingGroup = m.top.findNode("connectingGroup")
+  ' Grupo del spinner que se muestra mientras se espera respuesta del backend.
   m.spinnerGroup = m.top.findNode("spinnerGroup")
+  ' Contenedor global del layout de conexión/reconexión.
   m.connectingContainer = m.top.findNode("connectingContainer")
+  ' Bloque visual de error cuando no se puede reproducir o reconectar el canal.
   m.errorChannel = m.top.findNode("errorChannel")
+  ' Spinner de carga para feedback durante operaciones bloqueantes.
   m.spinner = m.top.findNode("spinner")
   
+  ' Componente de guía EPG para navegación de canales y programas.
   m.guide = m.top.findNode("Guide")
   
+  ' Fondo del modal de inactividad para atenuar el contenido en reproducción.
   m.inactivityBackground = m.top.findNode("inactivityBackground")
+  ' Contenedor del contenido textual/acciones del modal de inactividad.
   m.inactivityContent = m.top.findNode("inactivityContent")
+  ' Overlay que solicita confirmación del usuario para continuar viendo.
   m.inactivityOverlay = m.top.findNode("inactivityOverlay")
+  ' Texto del aviso de inactividad mostrado al usuario.
   m.inactivityMessage = m.top.findNode("inactivityMessage")
+  ' Logo/imagen usada dentro del modal de inactividad.
   m.inactivityLogo = m.top.findNode("inactivityLogo")
+  ' Botón para confirmar presencia del usuario y mantener la reproducción.
   m.inactivityContinueButton = m.top.findNode("inactivityContinueButton")
+  ' Timer principal para detectar inactividad durante reproducción.
   m.inactivityTimer = m.top.findNode("inactivityTimer")
+  ' Timer que cierra el player si no hay respuesta al modal de inactividad.
   m.inactivityAutoCloseTimer = m.top.findNode("inactivityAutoCloseTimer") 
+  ' Fondo de la tarjeta de preview de timeline para mejorar legibilidad.
   m.timelinePreviewBg = m.top.findNode("timelinePreviewBg") 
+  ' Timer para refrescar periódicamente el tiempo restante mostrado en pantalla.
   m.showTimeTimer = m.top.findNode("showTimeTimer")
 
+  ' Fila contenedora de botones de acción del reproductor.
   m.controlsRow = m.top.findNode("controlsRow")
   
   m.seekCommitTimer.ObserveField("fire", "onSeekCommitTimerFired")
   m.seekHoldTimer.ObserveField("fire", "onSeekHoldTimerFired")
+  ' Subnodo interno de la timeline usado para cálculos/posicionamiento de preview.
   m.timelineBarBarContainer = m.timelineBar.findNode("barContainer")
   m.showTimeTimer.observeField("fire", "onShowTimeTimerFired")
 
@@ -64,8 +107,12 @@ sub init()
     m.timelineBar.observeField("previewUri", "onTimelinePreviewChanged")
   end if
   
+  ' Overlay que renderiza miniatura y metadata al mover la timeline.
   m.timelinePreviewOverlay = m.top.findNode("timelinePreviewOverlay")
+  ' Poster de thumbnail dentro del overlay de preview del seek.
   m.timelinePreviewPoster  = m.top.findNode("timelinePreviewPoster")
+
+  ' Datos globales de escala/resolución para cálculos de layout responsivo.
 
   m.scaleInfo = m.global.scaleInfo
 
@@ -106,11 +153,13 @@ sub init()
 
   ' Todas estas variables es para evitar que el usuario presiona mucha veces el botón atrás cuando el stream es en vivo y evitar llamadas multiples
   m.reloadInputBlockUntilMs = -1 ' tiempo limite (ms) para bloquear entradas tras recargar stream
+  ' Ventana (ms) para filtrar rebotes del control remoto en onKeyEvent.
   m.keyEventDebounceMs = 180 ' ventana minima entre eventos de la misma tecla
+  ' Última tecla procesada, usada junto al timestamp para anti-rebote.
   m.lastKeyPressed = invalid ' guarda la ultima tecla presionada para anti-rebote
+  ' Marca temporal de la última tecla válida para aplicar debounce.
   m.lastKeyPressedAtMs = -999999 ' timestamp de la ultima tecla procesada
-  m.keyEventClock = CreateObject("roTimespan") ' reloj monotónico para medir ms
-  m.keyEventClock.Mark() ' inicia el reloj para lectura de tiempos relativos
+  ' Reloj monotónico para medir intervalos de entrada sin depender de hora del sistema.
 
   ' Variable que indica cuanto tiempo en segundos debe adelantar o retroceder
   m.timelineSeekStep = 15
@@ -192,39 +241,46 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
   if press and __isRepeatedKeyPress(key, nowMs) then return true ' evita key-repeat por spam de remoto
   handled = false
 
+  ' Se presionó el botón de replay
   if press and key = KeyButtons().REPLAY then
     handled = true
 
-    if m.streaming <> invalid and LCase(m.streaming.type) = getVideoType().LIVE then return true ' si es cotenido vivo no hace nada
+    ' Si es cotenido vivo no hace nada
+    if m.streaming <> invalid and LCase(m.streaming.type) = getVideoType().LIVE then return true 
 
+    ' Retroceder 20 segundos
     __replayBack(20)
     __restartShowInfoTimer()
 
-    ' si el program info está visible, mandar foco al timelinebar
+    ' Si el program info está visible, mandar foco al timelinebar
     if m.playerControllers <> invalid and m.playerControllers.visible = true then
       if m.timelineBar <> invalid and m.timelineBar.visible = true then m.timelineBar.setFocus(true)
     end if
   end if
   
-
+  ' Presiono en el botón PLAY
   if key = KeyButtons().PLAY then
     handled = true
 
-    if m.streaming <> invalid and LCase(m.streaming.type) = getVideoType().LIVE then return true ' si es cotenido vivo no hace nada
+    ' Si es cotenido vivo no hace nada
+    if m.streaming <> invalid and LCase(m.streaming.type) = getVideoType().LIVE then return true 
 
+    ' Si el contenido es en vivo y permite live rewind, pausar y cambiar a live rewind
     if m.streaming <> invalid and LCase(m.streaming.type) = getVideoType().LIVE_REWIND and m.streaming.streamingType = getStreamingType().DEFAULT then
       m.actionPostChageState = "pause"
 
+      ' Volver a cargar al stream, pero esta vez como liverewind
       __reconnectStream()
       __showProgramInfo()
     end if
   end if
   
-  
+  ' Se esta mostrando el mensaje de "Todavía estas ahí"
   if m.inactivityContinueButton.isInFocusChain() then
 
     handled = true
 
+    ' Si presionó algún botón, exentender el tiempo
     if press and (key = KeyButtons().OK or key = KeyButtons().BACK or KeyButtons().UP or KeyButtons().DOWN or KeyButtons().RIGHT or KeyButtons().LEFT) then
       __hideInactivityPrompt()
       __extendTimeWatching()
@@ -233,28 +289,38 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
     end if
 
     return handled
+
   else if m.videoPlayer.isInFocusChain() and key = KeyButtons().BACK then
     if press then 
+      ' Si presionó el botón BACK, cerrar el player
       __closePlayer()
       handled = false
 
+      ' Guardar log de que se cerró el player
       actionLog = getActionLog({ actionCode: ActionLogCode().CLOSE_PLAYER, program: m.program })
       __saveActionLog(actionLog)
     else 
       handled = true
     end if
-  
+    
   else if m.playerControllers.isInFocusChain() and key = KeyButtons().BACK then
+    ' Si presionó el botón back sobre el player, ocultar la info del programa
     if press then onHidenProgramInfo()
     handled = true
     
+  ' Presionó el botón arriba sobre el player, mientras se muestra la info del programa
   else if m.playerControllers.isInFocusChain() and key = KeyButtons().UP then
+    ' Reiniciar el timer para cerrar la info del programa
     __restartShowInfoTimer()
+    ' Posicionar el foco sobre el timelinebar
     if not press and m.timelineBar <> invalid and m.timelineBar.visible then m.timelineBar.setFocus(true)
 
+  ' El foco esta sobre el botón de la guía
   else if m.guideImageButton.isInFocusChain() then
+    ' Reiniciar el timer para cerrar la info del programa
     if press then __restartShowInfoTimer()
 
+    ' Se presionó OK, mostrar la guía
     if key = KeyButtons().OK and press then
       if m.showInfoTimer <> invalid then clearTimer(m.showInfoTimer)
       if m.playerControllers.visible then m.playerControllers.visible = false
@@ -266,8 +332,10 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
       __saveActionLog(actionLog)
     end if
 
+    ' Se presionó arriba, posicionar el foco sobre el timelinebar
     if key = KeyButtons().UP and m.timelineBar.visible = true and press then m.timelineBar.setFocus(true)
 
+    ' Se presionó Izquierda, posicionar el foco sobre el botón habilitado a la izquierda
     if key = KeyButtons().LEFT and press then
       if m.guideImageButton.focusLeft <> invalid then 
         if m.guideImageButton.focusLeft.disable then 
@@ -280,48 +348,58 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
 
     handled = true
 
+  ' El foco esta sobre el botón ir al vivo
   else if m.toLiveImageButton <> invalid and m.toLiveImageButton.isInFocusChain() then
+    ' Reiniciar el timer para cerrar la info del programa
     __restartShowInfoTimer()
+
+    ' Se presionó el botón izquierda, posicionar el foco en el botón habilitado a la izquierda
     if key = KeyButtons().LEFT and m.toLiveImageButton.focusLeft <> invalid and press then
       m.toLiveImageButton.focusLeft.setFocus(true)
     end if
 
+    ' Se presionó derecha, , posicionar el foco en el botón habilitado a la derecha
     if key = KeyButtons().RIGHT and m.toLiveImageButton.focusRight <> invalid and press then
       m.toLiveImageButton.focusRight.setFocus(true)
     end if
 
-    if m.toLiveImageButton.isInFocusChain() and key = KeyButtons().OK then
+    ' Se presionó el botón OK, reiniciar el stream a LIVE
+    if key = KeyButtons().OK then
       m.enableGoLive = false
 
       restartVideo(true)
-      'if m.isLiveRewind and m.videoPlayer <> invalid  and press then
-        'if LCase(m.streaming.type) = getVideoType().LIVE_REWIND and m.streaming.streamingType = getStreamingType().LIVE_REWIND then
+      if m.isLiveRewind and m.videoPlayer <> invalid  and press then
+        if LCase(m.streaming.type) = getVideoType().LIVE_REWIND and m.streaming.streamingType = getStreamingType().LIVE_REWIND then
 
-          'm.timelineBar.isLive = true
-          'm.streaming.streamingType = getStreamingType().LIVE_REWIND
-          '__togglePlayPause()
-          '__loadStreamingURL(m.lastKey, m.lastId, getStreamingAction().PLAY, getStreamingType().DEFAULT)
-          'm.videoPlayer.control = "play"
-        'else
+          m.timelineBar.isLive = true
+          m.streaming.streamingType = getStreamingType().LIVE_REWIND
+          __togglePlayPause()
+          __loadStreamingURL(m.lastKey, m.lastId, getStreamingAction().PLAY, getStreamingType().DEFAULT)
+          m.videoPlayer.control = "play"
+        else
           ' en live-rewind, normalmente "live edge" es duration (ventana) o el final
-          'dur = m.timelineBar.duration
-          'if dur <> invalid and dur > 0 then
-            'm.videoPlayer.seek = dur
-          'end if
-          'm.videoPlayer.control = "play"
-        'end if
-      'end if
+          dur = m.timelineBar.duration
+          if dur <> invalid and dur > 0 then
+            m.videoPlayer.seek = dur
+          end if
+          m.videoPlayer.control = "play"
+        end if
+      end if
     end if
 
     handled = true
 
+  ' Presiono sobre el botón restart
   else if m.restartImageButton <> invalid and m.restartImageButton.isInFocusChain() and press then
+    ' Reiniciar el timer para cerrar la info del programa
     if  press then __restartShowInfoTimer()
     
+    ' Presionó sobre el botón izquierda, posicionar el foco en el botón habilitado a la izquierda
     if key = KeyButtons().LEFT and m.restartImageButton.focusLeft <> invalid then
       m.restartImageButton.focusLeft.setFocus(true)
     end if
 
+    ' Presionó sobre el botón derecha, osicionar el foco en el botón habilitado a la derecha
     if key = KeyButtons().RIGHT and m.restartImageButton.focusRight <> invalid then
       if m.restartImageButton.focusRight.disable then
         if m.restartImageButton.focusRight.focusRight <> invalid then m.restartImageButton.focusRight.focusRight.setFocus(true)
@@ -330,21 +408,26 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
       end if
     end if
 
+    ' Presionoó sobre el botón OK
     if (key = KeyButtons().OK) then
       m.enableGoLive = true
       if m.videoPlayer <> invalid then
         m.actionPostChageState = "restart"
+        ' Si el stream es un live, no hacer nada
         if LCase(m.streaming.type) = getVideoType().LIVE then return true
 
+        ' Si el stream permite live rewind, reiniciar el stream
         if LCase(m.streaming.type) = getVideoType().LIVE_REWIND then
           m.useStartPid = false
           reloadWithinWindow = false
 
           if m.program <> invalid and m.program.startTime <> invalid and m.program.id <> invalid and m.program.id <> 0 and m.liveRewindDuration <> invalid then
+            ' Obtiene la fecha de inicio del programa
             programStartDate = toDateTime(m.program.startTime)
             if programStartDate <> invalid then
+              ' Valida si es necesario asignarle un program id, cuando se recarga el stream
               startLimit = dtCloneAddSeconds(getMomentNow(), -Int(m.liveRewindDuration))
-              if dtIsBefore(programStartDate, startLimit) then m.useStartPid = true
+              m.useStartPid = dtIsBefore(programStartDate, startLimit)
             end if
           end if
           if m.liveRewindMinDuration <> invalid and m.liveRewindDuration <> invalid and m.liveRewindMinDuration <> m.liveRewindDuration then
@@ -679,6 +762,7 @@ sub onInactivityAutoCloseTimerFired()
   if m.inactivityOverlay <> invalid and m.inactivityOverlay.visible then __closePlayer(true)
 end sub
 
+' Se ejecuta al disparar showTimeTimer para recalcular y pintar el tiempo restante.
 sub onShowTimeTimerFired()
   __showTimeToEnd()
 end sub
@@ -795,6 +879,7 @@ sub onVideoDurationChanged()
   __updateTimeline()
 end sub
 
+' Procesa la respuesta de actualización de sesión de visualización y decide siguiente acción.
 sub onUpdateWatchSessionResponse()
   if validateStatusCode(m.apiSessionRequestManager.statusCode) then
     resp = ParseJson(m.apiSessionRequestManager.response)
@@ -1927,6 +2012,7 @@ sub __closePlayer(onBack = false, logout = false)
   m.streamStartSeconds = invalid
   m.liveRewindDuration = invalid
   m.initStreeamingType = invalid
+  m.enableGoLive = false
   
   m.errorChannel.visible = false
   m.spinner.visible = false
@@ -2024,8 +2110,8 @@ sub __cancelChannelPosition(logout = false)
   end if 
 end sub
 
-' Muestra la informacion del programa actual sobre el player y dispara un timer para escodnerla 
-' automaticamente si no hay ninguna interaccion. 
+' Muestra la información del programa actual sobre el player y dispara un timer para escondera 
+' automáticamente si no hay ninguna interacción. 
 sub __showProgramInfo()
   m.playerControllers.visible = true
   if m.timelineBar <> invalid and not m.isLiveContent then m.timelineBar.visible = true
@@ -2051,7 +2137,7 @@ sub __loadStreamingURL(key, id, streamingAction, streamingType = getStreamingTyp
   
   ' Falta agregar el update Session
   requestId = createRequestId()
-  m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlStreaming(m.apiUrl, m.lastKey, m.lastId, streamingAction, streamingType, startpid), "GET", "onStreamingsResponse") 
+  m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlStreaming(m.apiUrl, m.lastKey, m.lastId, streamingAction, streamingType, startpid), "GET", "onStreamingsResponse", requestId, invalid, invalid, invalid, FormatJson({ startpid: startpid.toStr()}) ) 
 end sub
 
 ' Metodo que procesa el error que puede ocurrir al reproducir en el player y dispara los timers para
@@ -2139,9 +2225,9 @@ sub __reconnectStream(saveTime = true)
     end if
 
     startpid = 0
-    if not m.useStartPid then
+    'if not m.useStartPid then
       startpid = m.program.id
-    end if
+    'end if
 
     __loadStreamingURL(m.lastKey, m.lastId, getStreamingAction().PLAY, m.streaming.streamingType, startpid)
   end if
@@ -2843,6 +2929,7 @@ function __controlsRowContainsButton(buttonId as String) as Boolean
   return false
 end function
 
+'
 sub __replayBack(seconds as Integer)
   if m.videoPlayer = invalid then return
   if seconds = invalid or seconds <= 0 then seconds = 20
@@ -2903,6 +2990,7 @@ sub __replayBack(seconds as Integer)
   end if
 end sub
 
+' Cuando se mantiene presionado el adelantar o retroceder, multiplicar la velocidad
 function __getTrickTapMultiplier(key as String) as Integer
   if m.trickClock = invalid then
     m.trickClock = CreateObject("roTimespan")
@@ -2961,10 +3049,12 @@ sub __restartVideo()
   end if
 end sub
 
+' Actualizar al watch token
 sub __refreshWatchTokenData(key as string, id as integer)
   m.apiSessionRequestManager = sendApiRequest(m.apiSessionRequestManager, urlUpdateWatchSession(m.apiUrl, key,  id), "GET", "onUpdateWatchSessionResponse", invalid, getWatchToken())
 end sub
 
+' Obtiene le tiempo actual
 function getMomentNow() as object
   nowUtc = CreateObject("roDateTime")
   nowUtc.Mark() ' ahora (UTC)
@@ -3118,6 +3208,7 @@ end sub
 
 ' Metodo encargado de "dibujar" como si estuviera en vivo y solicitar que se cargue la nueva url
 sub __goToLive()
+  ' Pausar
   __pauseVideo()
 
   sType = LCase(m.streaming.type)
@@ -3137,6 +3228,7 @@ sub __goToLive()
     ' goToLiveEvent.emit()
     if m.top <> invalid then m.top.goToLiveRequested = true
 
+  ' El stream es DVR o VOD
   else if sType = getVideoType().DVR or sType = getVideoType().VOD then
     m.isLive = false
 
@@ -3302,6 +3394,7 @@ sub __playVideo(validateLimit = invalid as dynamic)
   end if
 end sub
 
+
 sub __loadTimeToEnd()
   __showTimeToEnd()
 
@@ -3314,6 +3407,7 @@ end sub
 ' Actualiza y muestra el tiempo que lo separa del vivo o del final de la barra
 sub __showTimeToEnd()
   if m.streaming = invalid or m.streaming.type = invalid then return
+  ' Si el stream esta en vivo, terminar
   if LCase(m.streaming.type) = getVideoType().LIVE then return
 
   if m.videoPlayer = invalid then return
@@ -3323,6 +3417,7 @@ sub __showTimeToEnd()
 
   stype = LCase(m.streaming.type)
 
+  ' El stream es live rewind
   if stype = getVideoType().LIVE_REWIND then
     if m._isLive = true then
       m.endTime = "00:00"
@@ -3343,6 +3438,7 @@ sub __showTimeToEnd()
       end if
     end if
 
+  ' El stream es un VOD o DVR
   else if stype = getVideoType().VOD or stype = getVideoType().DVR then
     if not __isPlayerPaused() then
       dur = __getPlayerDuration()
@@ -3354,31 +3450,37 @@ sub __showTimeToEnd()
   end if
 end sub
 
+' Obtiene la posición actual del player
 function __getPlayerCurrentTime() as dynamic
   if m.videoPlayer = invalid then return invalid
   return m.videoPlayer.position ' segundos
 end function
 
+' Obtiene la duración del player
 function __getPlayerDuration() as dynamic
   if m.videoPlayer = invalid then return invalid
   return m.videoPlayer.duration ' segundos (si tu Video lo expone)
 end function
 
+' Validar que el player este pausado
 function __isPlayerPaused() as boolean
   if m.videoPlayer = invalid then return true
   return (m.videoPlayer.state = "paused")
 end function
 
+' Listener encargado de actualizar la url de la API
 sub onActiveApiUrlChanged()
   __syncApiUrlFromGlobal()
 end sub
 
+' Actualiza la API
 sub __syncApiUrlFromGlobal()
   if m.global.activeApiUrl <> invalid and m.global.activeApiUrl <> "" then
     m.apiUrl = m.global.activeApiUrl
   end if
 end sub
 
+' Pausar el video
 sub __playerPause()
   if m.videoPlayer = invalid then return
   m.videoPlayer.control = "pause"
@@ -3399,4 +3501,3 @@ sub __toStart(playing = invalid as dynamic)
 
   if playing then __playVideo()
 end sub
-
