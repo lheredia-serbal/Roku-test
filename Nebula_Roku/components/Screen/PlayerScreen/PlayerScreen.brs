@@ -427,7 +427,7 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
             if programStartDate <> invalid then
               ' Valida si es necesario asignarle un program id, cuando se recarga el stream
               startLimit = dtCloneAddSeconds(getMomentNow(), -Int(m.liveRewindDuration))
-              m.useStartPid = dtIsBefore(programStartDate, startLimit)
+              m.useStartPid = true ' = dtIsBefore(programStartDate, startLimit)
             end if
           end if
           if m.liveRewindMinDuration <> invalid and m.liveRewindDuration <> invalid and m.liveRewindMinDuration <> m.liveRewindDuration then
@@ -684,7 +684,10 @@ sub initData()
       end if
     end if
 
+    ' Setear el timelinebar
     __setTimelineFromStreaming()
+
+    ' Volver a armar los botones del player
     __rebuildControllerButtons()
 
     if not m.isLiveContent then
@@ -1042,38 +1045,46 @@ sub onStreamingsResponse()
     resp = ParseJson(m.apiRequestManager.response)
     if resp.data <> invalid then
 
+      ' Limpiar la respuesta
       m.apiRequestManager = clearApiRequest(m.apiRequestManager)
+      ' Detener el player
       m.videoPlayer.control = "stop" 
       m.videoPlayer.content = invalid
 
+      ' Setear los datos del stream
       streaming = resp.data
       streaming.key = m.lastKey 
       streaming.id = m.lastId
       streaming.streamingType = m.newStreamingType
-
       m.streaming = streaming
       streamType = ""
+
       isLiveTimeline = false
       
       if m.streaming.type <> invalid and m.streaming.type <> "" then
         streamType = LCase(m.streaming.type)
+        ' El stream es un LIVE
         if streamType = getVideoType().LIVE then
+          ' Setear las variables para un live
           m.isLiveContent = true
           m.isLiveRewind = false
           m.isVodContent  = false
           if (m.streaming.streamingType = getStreamingType().DEFAULT) then isLiveTimeline = true
+        ' El stream es un LIVE REWIND
         else if streamType = getVideoType().LIVE_REWIND
           m.isLiveContent = false
           m.isLiveRewind = true
           m.isVodContent  = false
           if (m.streaming.streamingType = getStreamingType().DEFAULT) then isLiveTimeline = true  
         else
+          ' El stream es un VOD o DVR
           m.isLiveContent = false
           m.isLiveRewind = false
           m.isVodContent  = true
         end if
       end if
 
+      ' Setear que la timelinebar sea del tipo LIVE o no
       if m.timelineBar <> invalid then
         m.timelineBar.streamType = m.newStreamingType
         m.timelineBar.isLive = isLiveTimeline  
@@ -1102,7 +1113,7 @@ sub onStreamingsResponse()
     m.spinner.visible = false
 
       if m.streaming <> invalid and m.streaming.streamStartDate <> invalid and m.streaming.streamStartDate <> "" then
-        m.streamStartDate = toDateTime(m.streaming.streamStartDate)
+        m.streamStartDate = toDateTime(__getStreamStart(false))
         if m.streamStartDate = invalid then return
 
         if m.lastId <> 0 then
@@ -1637,6 +1648,9 @@ end sub
 sub __setTimelineFromStreaming()
   if m.timelineBar = invalid then return
 
+  if m.streaming = invalid then return
+
+  ' Reiniciar los estados de la timelinebar
   m.timelineBar.visible = false
   m.timelineBar.baseEpochSeconds = invalid
   m.timelineBar.position = -1
@@ -1644,12 +1658,10 @@ sub __setTimelineFromStreaming()
   m.liveRewindMinDuration = invalid
   m.streamStartSeconds = invalid
 
-  if m.streaming = invalid then return
+  ' Obtener la fecha de inicio del programa o del stream en segundos
+  m.streamStartSeconds = __getStreamStart(true)
 
-  if m.streaming.streamStartDate <> invalid and m.streaming.streamStartDate <> "" then
-    m.streamStartSeconds = __parseIsoToSeconds(m.streaming.streamStartDate)
-  end if
-
+  ' Setear la duración del liverewind
   if m.streaming.liveRewindDuration <> invalid and m.streaming.liveRewindDuration > 0 then
     m.liveRewindDuration = m.streaming.liveRewindDuration
     m.liveRewindMinDuration = m.streaming.liveRewindMinDuration
@@ -1660,6 +1672,7 @@ sub __setTimelineFromStreaming()
     m.timelineBar.duration = -1
   end if
 
+  ' Si el stream es LIVE REWIND, setear la posición de la timelinebar
   if m.isLiveRewind and m.streamStartSeconds <> invalid and m.liveRewindDuration <> invalid then
     now = CreateObject("roDateTime")
     now.ToLocalTime()
@@ -1669,6 +1682,7 @@ sub __setTimelineFromStreaming()
     if elapsed > m.liveRewindDuration then elapsed = m.liveRewindDuration
     m.timelineBar.position = elapsed
   else if m.streaming.startAt <> invalid then
+    ' El stream no es Live Rewind, setear desde el inicio del stream
     m.timelineBar.position = m.streaming.startAt
   end if
 
@@ -3501,3 +3515,38 @@ sub __toStart(playing = invalid as dynamic)
 
   if playing then __playVideo()
 end sub
+
+
+' Obtiene la fecha de inicio efectiva del stream en segundos.
+' Retorna invalid cuando no hay datos suficientes o no se pueden convertir fechas.
+function __getStreamStart(returnInSeconds = true as boolean) as dynamic
+if m.streaming = invalid then return invalid
+
+  ' Valor base: fecha de inicio del stream.
+  if m.streaming.streamStartDate = invalid or m.streaming.streamStartDate = "" then return invalid
+  selectedStartDate = m.streaming.streamStartDate
+
+  ' Si no es reinicio o no es Live Rewind, se conserva el inicio del stream.
+  isRestartAction = (m.actionPostChageState = "restart")
+  isLiveRewindType = (m.streaming.type <> invalid and LCase(m.streaming.type) = getVideoType().LIVE_REWIND)
+
+  if isRestartAction and isLiveRewindType then
+    ' En reinicio de Live Rewind evaluamos startTime del programa.
+    if m.program <> invalid and m.program.startTime <> invalid and m.program.startTime <> "" then
+      streamStartSeconds = __parseIsoToSeconds(m.streaming.streamStartDate)
+      programStartSeconds = __parseIsoToSeconds(m.program.startTime)
+
+      if streamStartSeconds <> invalid and programStartSeconds <> invalid and programStartSeconds > streamStartSeconds then
+        selectedStartDate = m.program.startTime
+      end if
+    end if
+  end if
+
+  ' Si se solicita valor sin procesar, devolvemos el ISO seleccionado.
+  if not returnInSeconds then return selectedStartDate
+
+  ' Si se solicita en segundos, convertimos el valor final seleccionado.
+  selectedStartSeconds = __parseIsoToSeconds(selectedStartDate)
+  if selectedStartSeconds = invalid then return invalid
+  return selectedStartSeconds
+end function
