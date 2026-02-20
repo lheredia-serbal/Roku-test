@@ -439,7 +439,8 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
 
                 ' Si la fecha limite de inicio es menor o igual al comienzo del programa, posicionarse al inicio del programa
                 if dtIsBefore(toDateTime(startLimit), toDateTime(programStartDate)) 
-                    m.videoPlayer.seek = dtDiffSeconds(programStartDate, startLimit)
+                  m.videoPlayer.seek = dtDiffSeconds(programStartDate, startLimit)
+                  __updateTimeline()
                 else 
                   __togglePlayPause()
                   m.disableLayoutChannelConnection = true
@@ -807,19 +808,26 @@ sub onChannelsResponse()
       printError("ChannelsList Emty:", m.apiRequestManager.response)
     end if 
   else
-    if m.apiRequestManager <> invalid and not m.apiRequestManager.serverError then
+    if m.apiRequestManager <> invalid then
+
       error = m.apiRequestManager.errorResponse
       statusCode = m.apiRequestManager.statusCode
-      m.apiRequestManager = clearApiRequest(m.apiRequestManager) 
-
-      printError("ChannelsList:", error)
-      
-      if validateLogout(statusCode, m.top) then return
-      ' Cambio agregado: mostrar CDN dialog desde Player cuando aplica 9000.
-      __showPlayerCdnErrorDialog(statusCode, ApiType().CLIENTS_API_URL)
-      m.showChannelListAfterUpdate = false 
+      if m.apiRequestManager.serverError then
+        setCdnErrorCodeFromStatus(statusCode, ApiType().CLIENTS_API_URL)
+        changeStatusAction(m.apiRequestManager.requestId, "error")
+        retryAll()
+      else      
+        printError("ChannelsList:", error)
+        
+        if validateLogout(statusCode, m.top) then return
+        ' Cambio agregado: mostrar CDN dialog desde Player cuando aplica 9000.
+        __showPlayerCdnErrorDialog(statusCode, ApiType().CLIENTS_API_URL)
+        m.showChannelListAfterUpdate = false 
+      end if
     end if
   end if
+
+  m.apiRequestManager = clearApiRequest(m.apiRequestManager) 
 end sub
 
 ' Metodo que se dispiara por los cambios de estado del player
@@ -1052,9 +1060,6 @@ sub onStreamingsResponse()
   if validateStatusCode(m.apiRequestManager.statusCode) then
     resp = ParseJson(m.apiRequestManager.response)
     if resp.data <> invalid then
-
-      ' Limpiar la respuesta
-      m.apiRequestManager = clearApiRequest(m.apiRequestManager)
       ' Detener el player
       m.videoPlayer.control = "stop" 
       m.videoPlayer.content = invalid
@@ -1170,26 +1175,32 @@ sub onStreamingsResponse()
       printError("Streamings Emty:", response)
     end if
   else 
-    if m.apiRequestManager <> invalid and not m.apiRequestManager.serverError then
+    if m.apiRequestManager <> invalid then
       errorResponse = m.apiRequestManager.errorResponse
       statusCode = m.apiRequestManager.statusCode
-      m.apiRequestManager = clearApiRequest(m.apiRequestManager)
+      if m.apiRequestManager.serverError then
+        setCdnErrorCodeFromStatus(statusCode, ApiType().CLIENTS_API_URL)
+        changeStatusAction(m.apiRequestManager.requestId, "error")
+        retryAll()
+      else
+        printError("Streamings:", errorResponse)
+        
+        if validateLogout(statusCode, m.top) then return
 
-      printError("Streamings:", errorResponse)
-      
-      if validateLogout(statusCode, m.top) then return
+        ' Cambio agregado: mostrar CDN dialog desde Player cuando aplica 9000.
+        __showPlayerCdnErrorDialog(statusCode, ApiType().CLIENTS_API_URL)
 
-      ' Cambio agregado: mostrar CDN dialog desde Player cuando aplica 9000.
-      __showPlayerCdnErrorDialog(statusCode, ApiType().CLIENTS_API_URL)
+        if m.lastErrorTime <> invalid then 
+          clearTimer(m.retryReconnection)
 
-      if m.lastErrorTime <> invalid then 
-        clearTimer(m.retryReconnection)
-
-        m.retryReconnection.ObserveField("fire","onValidateConnectionAndRetry")
-        m.retryReconnection.control = "start"
+          m.retryReconnection.ObserveField("fire","onValidateConnectionAndRetry")
+          m.retryReconnection.control = "start"
+        end if
       end if
     end if
   end if
+
+  m.apiRequestManager = clearApiRequest(m.apiRequestManager)
 end sub
 
 ' Procesa la respuesta al obtener el Summary de un programa
@@ -1213,7 +1224,7 @@ sub onProgramSummaryResponse()
       printError("ProgramSumary Empty:", errorResponse)
     end if 
   else
-    if m.apiRequestManager <> invalid and not m.apiRequestManager.serverError then
+    if m.apiRequestManager <> invalid then
       if m.apiRequestManager.serverError then
         changeStatusAction(m.apiRequestManager.requestId, "error")
         retryAll()
@@ -1461,11 +1472,34 @@ end sub
 
 ' Dispara la obtención de la info del nuevo programa que se está viendo
 sub onGetNewProgramInfo()
-  requestId = createRequestId()
+  url = invalid
+
   if m.program <> invalid then
-    m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlProgramSummary(m.apiUrl, m.program.infoKey, m.program.infoId, getCarouselImagesTypes().NONE, getCarouselImagesTypes().NONE), "GET", "onProgramSummaryResponse", requestId)
+    url = urlProgramSummary(m.apiUrl, m.program.infoKey, m.program.infoId, getCarouselImagesTypes().NONE, getCarouselImagesTypes().NONE)
   else if m.lastKey <> invalid AND  m.lastId <> invalid then 
-    m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlProgramSummary(m.apiUrl, m.lastKey, m.lastId, getCarouselImagesTypes().NONE, getCarouselImagesTypes().NONE), "GET", "onProgramSummaryResponse", requestId)
+    url = urlProgramSummary(m.apiUrl, m.lastKey, m.lastId, getCarouselImagesTypes().NONE, getCarouselImagesTypes().NONE)
+  end if
+
+  if url <> invalid then
+    requestId = createRequestId()
+    action = {
+      apiRequestManager: m.apiRequestManager
+      url: url
+      method: "GET"
+      responseMethod: "onProgramSummaryResponse"
+      body: invalid
+      token: invalid
+      publicApi: false
+      dataAux: invalid
+      requestId: requestId
+      run: function() as Object
+        m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux)
+        return { success: true, error: invalid }
+      end function
+    }
+
+    runAction(requestId, action, ApiType().CLIENTS_API_URL)
+    m.apiRequestManager = action.apiRequestManager
   end if
 end sub
 
@@ -1673,7 +1707,24 @@ sub __loadPlayer(streaming, focusPlayer = true)
     if (m.streaming.streamingType = getStreamingType().DEFAULT) then
       ' Obtener la información del programa
       requestId = createRequestId()
-      m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlProgramSummary(m.apiUrl, streaming.key, streaming.id, getCarouselImagesTypes().NONE, getCarouselImagesTypes().NONE), "GET", "onProgramSummaryResponse", requestId)
+      action = {
+        apiRequestManager: m.apiRequestManager
+        url: urlProgramSummary(m.apiUrl, streaming.key, streaming.id, getCarouselImagesTypes().NONE, getCarouselImagesTypes().NONE)
+        method: "GET"
+        responseMethod: "onProgramSummaryResponse"
+        body: invalid
+        token: invalid
+        publicApi: false
+        dataAux: invalid
+        requestId: requestId
+        run: function() as Object
+          m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux)
+          return { success: true, error: invalid }
+        end function
+      }
+
+      runAction(requestId, action, ApiType().CLIENTS_API_URL)
+      m.apiRequestManager = action.apiRequestManager
     end if
     
     ' Extender el tiempo para mostrar el cartel de inactividad
@@ -1787,7 +1838,26 @@ end function
 ' Dispara la busqueda de la lista de canales 
 sub __getChannels(getNewChannels = true)
   requestId = createRequestId()
-  if getNewChannels then m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlChannels(m.apiUrl), "GET", "onChannelsResponse", requestId)
+  if getNewChannels then
+    action = {
+      apiRequestManager: m.apiRequestManager
+      url: urlChannels(m.apiUrl)
+      method: "GET"
+      responseMethod: "onChannelsResponse"
+      body: invalid
+      token: invalid
+      publicApi: false
+      dataAux: invalid
+      requestId: requestId
+      run: function() as Object
+        m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux)
+        return { success: true, error: invalid }
+      end function
+    }
+
+    runAction(requestId, action, ApiType().CLIENTS_API_URL)
+    m.apiRequestManager = action.apiRequestManager
+  end if
 end sub
 
 ' Carga la informacion del programa actual en pantalla
@@ -2213,7 +2283,24 @@ sub __loadStreamingURL(key, id, streamingAction, streamingType = getStreamingTyp
   
   ' Falta agregar el update Session
   requestId = createRequestId()
-  m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlStreaming(m.apiUrl, m.lastKey, m.lastId, streamingAction, streamingType, startpid), "GET", "onStreamingsResponse", requestId) 
+  action = {
+    apiRequestManager: m.apiRequestManager
+    url: urlStreaming(m.apiUrl, m.lastKey, m.lastId, streamingAction, streamingType, startpid)
+    method: "GET"
+    responseMethod: "onStreamingsResponse"
+    body: invalid
+    token: invalid
+    publicApi: false
+    dataAux: invalid
+    requestId: requestId
+    run: function() as Object
+      m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux)
+      return { success: true, error: invalid }
+    end function
+  }
+
+  runAction(requestId, action, ApiType().CLIENTS_API_URL)
+  m.apiRequestManager = action.apiRequestManager
 end sub
 
 ' Metodo que procesa el error que puede ocurrir al reproducir en el player y dispara los timers para

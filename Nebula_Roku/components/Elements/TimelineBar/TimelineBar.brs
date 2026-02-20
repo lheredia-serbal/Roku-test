@@ -173,7 +173,10 @@ sub __updateProgress()
     progressWidth = 0
   end if
   
-  if progressWidth < 0 then progressWidth = 0
+  if progressWidth < 0 then 
+    progressWidth = 0
+  end if
+
   m.progress.width = progressWidth
 
   ' Thumb X centrado en borde del progreso
