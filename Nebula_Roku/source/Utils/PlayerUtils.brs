@@ -24,6 +24,14 @@ function dtIsBefore(a as object, b as object) as boolean
   return a.AsSeconds() < b.AsSeconds()
 end function
 
+' Compara 2 fechas de acuerdo a la diferencia de segundos
+' @param a Primera fecha
+' @param b Segunda fecha
+function dtIsBeforeOrEqual(a as object, b as object) as boolean
+  if a = invalid or b = invalid then return false
+  return a.AsSeconds() <= b.AsSeconds()
+end function
+
 function dtIsSame(a as object, b as object) as boolean
   if a = invalid or b = invalid then return false
   return a.AsSeconds() = b.AsSeconds()

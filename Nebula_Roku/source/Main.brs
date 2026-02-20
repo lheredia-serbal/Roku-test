@@ -62,7 +62,6 @@ sub InitMemoryMonitoring(port as Object)
             channelAvailableMemory = m.memMon.GetChannelAvailableMemory()
             channelMemoryLimit = m.memMon.GetChannelMemoryLimit()
             memoryLimitPercent = m.memMon.GetMemoryLimitPercent()
-            print "MEMORY MONITORING ENABLED - Available:"; channelAvailableMemory; " Limit:"; channelMemoryLimit; " Percent:"; memoryLimitPercent
         end if
     end if
 
@@ -79,21 +78,18 @@ function HandleSystemEvents(msg as Object) as Boolean
     msgType = type(msg)
     if msgType = "roAppMemoryMonitorEvent" then
         ' Punto ideal para degradación controlada: limpiar cachés, liberar imágenes pesadas, etc.
-        print "MEM WARNING: consider freeing caches/images"
 
         if m.memMon <> invalid then
             ' Snapshot al momento del warning para entender severidad
             channelAvailableMemory = m.memMon.GetChannelAvailableMemory()
             channelMemoryLimit = m.memMon.GetChannelMemoryLimit()
             memoryLimitPercent = m.memMon.GetMemoryLimitPercent()
-            print "MEMORY SNAPSHOT - Available:"; channelAvailableMemory; " Limit:"; channelMemoryLimit; " Percent:"; memoryLimitPercent
         end if
         return true
     else if msgType = "roDeviceInfoEvent" then
         ' Evento de memoria general del sistema
         info = msg.GetInfo()
         if info <> invalid and info.generalMemoryLevel <> invalid then
-            print "GENERAL MEMORY LEVEL:"; info.generalMemoryLevel
         end if
         return true
     end if

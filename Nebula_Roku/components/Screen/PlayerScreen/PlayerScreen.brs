@@ -148,8 +148,6 @@ sub init()
   m.isReloadStreaming = false
   ' Bandera que habilita el botón "Ir al vivo"
   m.enableGoLive = false
-  ' Bandera que indica si se tiene que pasar el Program id cuando se llama al stream
-  m.useStartPid = false
 
   ' Todas estas variables es para evitar que el usuario presiona mucha veces el botón atrás cuando el stream es en vivo y evitar llamadas multiples
   m.reloadInputBlockUntilMs = -1 ' tiempo limite (ms) para bloquear entradas tras recargar stream
@@ -221,6 +219,9 @@ sub init()
 
   ' Base jump para el hold (se recalcula en cada start)
   m.seekHoldBaseJump = 0
+
+  ' Bandera que indica que el player se terminó de cargar
+  m.playerLoaded = false
 
   __ensurePreviewTimeNodes()
 end sub
@@ -381,6 +382,7 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
           dur = m.timelineBar.duration
           if dur <> invalid and dur > 0 then
             m.videoPlayer.seek = dur
+
           end if
           m.videoPlayer.control = "play"
         end if
@@ -418,44 +420,38 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
 
         ' Si el stream permite live rewind, reiniciar el stream
         if LCase(m.streaming.type) = getVideoType().LIVE_REWIND then
-          m.useStartPid = false
-          reloadWithinWindow = false
 
-          if m.program <> invalid and m.program.startTime <> invalid and m.program.id <> invalid and m.program.id <> 0 and m.liveRewindDuration <> invalid then
-            ' Obtiene la fecha de inicio del programa
-            programStartDate = toDateTime(m.program.startTime)
-            if programStartDate <> invalid then
-              ' Valida si es necesario asignarle un program id, cuando se recarga el stream
-              startLimit = dtCloneAddSeconds(getMomentNow(), -Int(m.liveRewindDuration))
-              m.useStartPid = true ' = dtIsBefore(programStartDate, startLimit)
+          ' Si esta en vivo, cambiar al LIVE Rewind, pasandole siempre el program id como parámetro de startpid
+          if LCase(m.streaming.streamingType) = getStreamingType().DEFAULT then
+            m.streaming.streamingType = getStreamingType().LIVE_REWIND
+            __togglePlayPause()
+            m.disableLayoutChannelConnection = true
+            if m.program <> invalid and m.program.id <> invalid and m.program.id <> 0 then
+              __loadStreamingURL(m.lastKey, m.lastId, getStreamingAction().PLAY, getStreamingType().LIVE_REWIND, m.program.id)
+            end if
+          else
+            if m.program <> invalid and m.program.startTime <> invalid and m.program.id <> invalid and m.program.id <> 0 and m.liveRewindDuration <> invalid then
+              ' Obtiene la fecha de inicio del programa
+              programStartDate = toDateTime(m.program.startTime)
+              if programStartDate <> invalid then
+                ' Valida si es necesario asignarle un program id, cuando se recarga el stream
+                startLimit = dtCloneAddSeconds(getMomentNow(), -Int(m.liveRewindDuration))
+
+                ' Si la fecha limite de inicio es menor o igual al comienzo del programa, posicionarse al inicio del programa
+                if dtIsBefore(toDateTime(startLimit), toDateTime(programStartDate)) 
+                    m.videoPlayer.seek = dtDiffSeconds(programStartDate, startLimit)
+                else 
+                  __togglePlayPause()
+                  m.disableLayoutChannelConnection = true
+                  if m.program <> invalid and m.program.id <> invalid and m.program.id <> 0 then
+                    __loadStreamingURL(m.lastKey, m.lastId, getStreamingAction().PLAY, getStreamingType().LIVE_REWIND, m.program.id)
+                  end if
+                end if
+              end if
             end if
           end if
-          if m.liveRewindMinDuration <> invalid and m.liveRewindDuration <> invalid and m.liveRewindMinDuration <> m.liveRewindDuration then
-            reloadWithinWindow = true
-          end if
-
-          if m.useStartPid then
-            m.streaming.streamingType = getStreamingType().LIVE_REWIND
-            __togglePlayPause()
-            m.disableLayoutChannelConnection = true
-            __loadStreamingURL(m.lastKey, m.lastId, getStreamingAction().PLAY, getStreamingType().LIVE_REWIND, m.program.id)
-
-          else if reloadWithinWindow then
-            m.streaming.streamingType = getStreamingType().LIVE_REWIND
-            __togglePlayPause()
-            m.disableLayoutChannelConnection = true
-            __loadStreamingURL(m.lastKey, m.lastId, getStreamingAction().PLAY, getStreamingType().LIVE_REWIND)
-
-          else if m.streaming.streamingType = getStreamingType().DEFAULT then
-
-            m.streaming.streamingType = getStreamingType().LIVE_REWIND
-            __togglePlayPause()
-            __reconnectStream()
-
-          else if m.streaming.streamingType = getStreamingType().LIVE_REWIND
-          __restartVideo()
-          end if
         else
+          ' Solo en casos de VOD y DVR, solo posicionarse al comienzo del stream
           m.videoPlayer.control = "pause" ' opcional, evita saltos visuales
           m.videoPlayer.seek = 0
           m.videoPlayer.control = "play"
@@ -473,7 +469,7 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
         else if (key = KeyButtons().OK) and not LCase(m.streaming.type) = getVideoType().LIVE then
           if LCase(m.streaming.type) = getVideoType().LIVE_REWIND and m.streaming.streamingType = getStreamingType().DEFAULT then
             m.actionPostChageState = "pause"
-            __reconnectStream()
+            __reconnectStream(true, getStreamingType().LIVE_REWIND)
           else
             __togglePlayPause()
           end if
@@ -528,7 +524,7 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
 
     if LCase(m.streaming.type) = getVideoType().LIVE_REWIND and m.streaming.streamingType = getStreamingType().DEFAULT then
       m.actionPostChageState = "pause"
-      __reconnectStream()
+      __reconnectStream(true, getStreamingType().LIVE_REWIND)
     else
       if (not m.isReloadStreaming)
         if press then
@@ -684,6 +680,12 @@ sub initData()
       end if
     end if
 
+    if m.timelineBar <> invalid then
+      isLiveTimeline = (LCase(m.streaming.type) = getVideoType().LIVE) or (LCase(m.streaming.type) = getVideoType().LIVE_REWIND and m.streaming.streamingType = getStreamingType().DEFAULT)
+      print isLiveTimeline.toStr()
+      m.timelineBar.isLive = isLiveTimeline
+    end if
+
     ' Setear el timelinebar
     __setTimelineFromStreaming()
 
@@ -737,11 +739,6 @@ sub initData()
       else
         m.timelineBar.thumbnailsUrl = ""
       end if
-    end if
-
-    if m.timelineBar <> invalid then
-      isLiveTimeline = (LCase(m.streaming.type) = getVideoType().LIVE) or (LCase(m.streaming.type) = getVideoType().LIVE_REWIND and m.streaming.streamingType = getStreamingType().DEFAULT)
-      m.timelineBar.isLive = isLiveTimeline
     end if
   end if
 end sub
@@ -869,17 +866,29 @@ End Sub
 
 ' Metodo que actualiza la linea de tiempo cuando cambia la posicion del video
 sub onVideoPositionChanged()
-  if (m.videoPlayer.position = 0) then return 
+  if (m.videoPlayer.position = 0 or not m.playerLoaded) then return 
   __updateTimeline()
+
+  ' Si el contenido del stream no es en vivo o Live Rewind, setear los observables para poder ajustar el timelinebar
+  if (m.isLiveRewind and m.playerLoaded) or m.isReloadStreaming then
+    m.videoPlayer.unobserveField("position")
+    m.videoPlayer.unobserveField("duration")
+  end if
 end sub
 
 ' Metodo que actualiza la linea de tiempo cuando cambia la duracion del video
 sub onVideoDurationChanged()
-  if (m.videoPlayer.duration = 0) then return 
+  if (m.videoPlayer.duration = 0 or not m.playerLoaded) then return 
   if (m.streaming = invalid) then return 
   if (LCase(m.streaming.type) = getVideoType().LIVE) then return 
   if (LCase(m.streaming.type) = getVideoType().LIVE_REWIND and m.streaming.streamingType = getStreamingType().DEFAULT) then return 
   __updateTimeline()
+
+  ' Si el contenido del stream no es en vivo o Live Rewind, setear los observables para poder ajustar el timelinebar
+  if (m.isLiveRewind and m.playerLoaded) or m.isReloadStreaming then
+    m.videoPlayer.unobserveField("position")
+    m.videoPlayer.unobserveField("duration")
+  end if
 end sub
 
 ' Procesa la respuesta de actualización de sesión de visualización y decide siguiente acción.
@@ -980,7 +989,6 @@ sub restartVideo(validateLimitRewindDuration as boolean)
   'Si es LiveRewind valido la barra y su pocicion
   if LCase(m.streaming.type) = getVideoType().LIVE_REWIND then
     __pauseVideo()
-
     'Si no esta cargado cargo el rewind
     if m.streaming.realStreamingType = getStreamingType().DEFAULT then
 
@@ -1090,55 +1098,62 @@ sub onStreamingsResponse()
         m.timelineBar.isLive = isLiveTimeline  
       end if
       
+      ' Setear los tiempos en el timelinebar
       __setTimelineFromStreaming()
+	  
+      ' Volver a dibuar los botones de
       __rebuildControllerButtons()
 
-    if m.timelineBar <> invalid then
-      if not m.isLiveContent then
-        m.timelineBar.visible = true
-      else
-        m.timelineBar.visible = false
-        m.timelineBar.position = 0
-        m.timelineBar.duration = 0
+      if m.timelineBar <> invalid then
+        if not m.isLiveContent then
+          m.timelineBar.visible = true
+        else
+          m.timelineBar.visible = false
+          m.timelineBar.position = 0
+          m.timelineBar.duration = 0
+        end if
+
+        if m.streaming.thumbnailsUrl <> invalid then
+          m.timelineBar.thumbnailsUrl = m.streaming.thumbnailsUrl
+        else
+          m.timelineBar.thumbnailsUrl = ""
+        end if
       end if
+		  
+      m.errorChannel.visible = false
+      m.spinner.visible = false
 
-      if m.streaming.thumbnailsUrl <> invalid then
-        m.timelineBar.thumbnailsUrl = m.streaming.thumbnailsUrl
-      else
-        m.timelineBar.thumbnailsUrl = ""
-      end if
-    end if
-
-    m.errorChannel.visible = false
-    m.spinner.visible = false
-
-      if m.streaming <> invalid and m.streaming.streamStartDate <> invalid and m.streaming.streamStartDate <> "" then
+      ' Obtener el inicio del stream, el programa inicia despues del inicio del stream, usar el incio del programa
+      if m.streaming.streamStartDate <> invalid and m.streaming.streamStartDate <> "" then
         m.streamStartDate = toDateTime(__getStreamStart(false))
+        m.streamStartDate = toDateTime(m.streaming.streamStartDate)
         if m.streamStartDate = invalid then return
-
+										
         if m.lastId <> 0 then
           if streamType = getVideoType().LIVE_REWIND then
             m.endPlayerFrozen = getMomentNow()
             m.startPlayerFrozen = dtCloneAddSeconds(m.endPlayerFrozen, -Int(m.liveRewindDuration))
-           m.diffDuration = __getDiffStartPlay()
+            m.diffDuration = __getDiffStartPlay()
           end if 
         end if
       end if
 
-     __loadPlayer(streaming, false)
+      ' Inicializar el player
+      __loadPlayer(streaming, false)
 
       ' Si estoy cambiando la url del Live por la de Rewind entonces no es necesario reposicionar la guia y la lista de canales
-     if (m.streaming.streamingType = getStreamingType().DEFAULT) then
+      if (m.streaming.streamingType = getStreamingType().DEFAULT) then
         if (m.guide <> invalid and m.channelSelected <> invalid and m.guide.channelId = m.channelSelected.id) then
           m.guide.channelIdIndexOf = -1
           m.guide.searchChannelPosition = true
         end if 
         
+        ' Guardar el último programa visto
         __saveLastWatched()
       end if 
       
+      ' Si el usuario presiono el botón Inicio, reiniciar el stream y el timelinebar
       if m.actionPostChageState = "restart" then
-        __restartVideo()
         m.actionPostChageState = invalid
       end if
     else 
@@ -1193,30 +1208,36 @@ sub onProgramSummaryResponse()
       m.newProgramTimer.duration = 120
       m.newProgramTimer.ObserveField("fire","onGetNewProgramInfo")
       m.newProgramTimer.control = "start"
+      errorResponse = m.apiRequestManager.errorResponse
 
       printError("ProgramSumary Empty:", errorResponse)
     end if 
   else
     if m.apiRequestManager <> invalid and not m.apiRequestManager.serverError then
-      statusCode = m.apiRequestManager.statusCode
-      errorResponse = m.apiRequestManager.errorResponse
-      m.apiRequestManager = clearApiRequest(m.apiRequestManager)
+      if m.apiRequestManager.serverError then
+        changeStatusAction(m.apiRequestManager.requestId, "error")
+        retryAll()
+      else
+        statusCode = m.apiRequestManager.statusCode
+        errorResponse = m.apiRequestManager.errorResponse
+        printError("ProgramSumary:", errorResponse)
+        
+        if validateLogout(statusCode, m.top) then return
 
-      printError("ProgramSumary:", errorResponse)
-      
-      if validateLogout(statusCode, m.top) then return
+        ' Cambio agregado: mostrar CDN dialog desde Player cuando aplica 9000.
+        __showPlayerCdnErrorDialog(statusCode, ApiType().CLIENTS_API_URL)
 
-      ' Cambio agregado: mostrar CDN dialog desde Player cuando aplica 9000.
-      __showPlayerCdnErrorDialog(statusCode, ApiType().CLIENTS_API_URL)
-
-      if statusCode >= 400 and statusCode <= 599 then  
-        clearTimer(m.newProgramTimer)
-        m.newProgramTimer.duration = 120
-        m.newProgramTimer.ObserveField("fire","onGetNewProgramInfo")
-        m.newProgramTimer.control = "start"
+        if statusCode >= 400 and statusCode <= 599 then  
+          clearTimer(m.newProgramTimer)
+          m.newProgramTimer.duration = 120
+          m.newProgramTimer.ObserveField("fire","onGetNewProgramInfo")
+          m.newProgramTimer.control = "start"
+        end if
       end if
     end if 
   end if
+
+  m.apiRequestManager = clearApiRequest(m.apiRequestManager)
 end sub
 
 ' Procesa la respuesta al validar la conexion contra las APIs
@@ -1438,7 +1459,7 @@ sub onDialogClosedLastFocus()
   end if
 end sub
 
-' Dispara la opctencion de la info del nuevo programa que se esta viendo
+' Dispara la obtención de la info del nuevo programa que se está viendo
 sub onGetNewProgramInfo()
   requestId = createRequestId()
   if m.program <> invalid then
@@ -1580,8 +1601,10 @@ end sub
 
 ' Carga el streaming que se reproducira en el player.
 sub __loadPlayer(streaming, focusPlayer = true)
+  m.playerLoaded = true
   videoContent = createObject("RoSGNode", "ContentNode")
 
+  ' Validar que el stream sea valido
   if streaming <> invalid then
     videoContent.url = streaming.playUrl 
     videoContent.title = ""
@@ -1593,41 +1616,72 @@ sub __loadPlayer(streaming, focusPlayer = true)
       videoContent.streamformat = getVideoContentStreamformat().DASH
     end if
     
-    m.videoPlayer.content = videoContent ' set node with children to video node content
+    m.videoPlayer.content = videoContent
     
     m.videoPlayer.visible = true
 
     m.videoPlayer.unobserveField("position")
     m.videoPlayer.unobserveField("duration")
 
-    if not m.isLiveContent and not m.isLiveRewind then
+    ' Si el contenido del stream no es en vivo o Live Rewind, setear los observables para poder ajustar el timelinebar
+    if not m.isLiveContent then
       m.videoPlayer.ObserveField("position", "onVideoPositionChanged")
       m.videoPlayer.ObserveField("duration", "onVideoDurationChanged")
     end if
 
+    ' Setear el foco en el player si es necesario
     if focusPlayer then m.videoPlayer.setFocus(true)
 
-    m.videoPlayer.control = "play" ' start playback
+    m.videoPlayer.control = "play"
 
+    ' Si el contenido no es en vivo
     if not m.isLiveContent then
+      ' Verificar si ya existe una última posición
       if m.lastPosition <> invalid then
-        m.videoPlayer.seek = m.lastPosition
+        ' Si ya existe, setear la posición del player con esa posición
+        m.videoPlayer.seek = m.lastPosition 
         m.lastPosition = invalid
       else
-        m.videoPlayer.seek = m.streaming.startAt
+        if m.streaming.streamingType = getStreamingType().LIVE_REWIND and m.actionPostChageState = "restart" then
+          if m.program <> invalid and m.program.startTime <> invalid and m.liveRewindDuration <> invalid then
+            ' Obtiene la fecha de inicio del programa
+            programStartDate = toDateTime(m.program.startTime)
+            if programStartDate <> invalid then
+              ' Valida si es necesario asignarle un program id, cuando se recarga el stream
+              startLimit = dtCloneAddSeconds(getMomentNow(), -Int(m.liveRewindDuration))
+
+              ' Si la fecha limite de inicio es menor o igual al comienzo del programa, posicionarse al inicio del programa
+              if dtIsBeforeOrEqual(toDateTime(startLimit), toDateTime(programStartDate)) 
+                m.videoPlayer.seek = dtDiffSeconds(programStartDate, startLimit)
+              else
+                m.videoPlayer.seek = 0
+              end if 
+            end if
+          end if
+        else 
+          ' Si no existe, setear el player al comienzo del stream
+          m.videoPlayer.seek = m.streaming.startAt
+        end if 
+
       end if
     end if
 
+    ' Actualizar el timelinebar
     __updateTimeline()
 
     ' Si estoy cambiando la url del Live por la de Rewind entonces no es necesario dispara la busuqeda del programa de nuevo
     if (m.streaming.streamingType = getStreamingType().DEFAULT) then
+      ' Obtener la información del programa
       requestId = createRequestId()
       m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlProgramSummary(m.apiUrl, streaming.key, streaming.id, getCarouselImagesTypes().NONE, getCarouselImagesTypes().NONE), "GET", "onProgramSummaryResponse", requestId)
     end if
     
+    ' Extender el tiempo para mostrar el cartel de inactividad
     if m.inactivityPromptTimeInSeconds <> -1 then __extendTimeWatching()
+    ' Indicar que se terminó de cargar el streaming
     m.isReloadStreaming = false
+
+    ' Agrega tiempo para que el usuario pueda tocar los botones más rápido cuando termine de cargar el stream
     m.reloadInputBlockUntilMs = __getNowMilliseconds() + 350
   end if
 end sub
@@ -1650,16 +1704,16 @@ sub __setTimelineFromStreaming()
 
   if m.streaming = invalid then return
 
+  if m.streaming.streamStartDate <> invalid and m.streaming.streamStartDate <> "" then
+    m.streamStartSeconds = __parseIsoToSeconds(m.streaming.streamStartDate)
+  end if
+
   ' Reiniciar los estados de la timelinebar
   m.timelineBar.visible = false
   m.timelineBar.baseEpochSeconds = invalid
   m.timelineBar.position = -1
   m.liveRewindDuration = invalid
   m.liveRewindMinDuration = invalid
-  m.streamStartSeconds = invalid
-
-  ' Obtener la fecha de inicio del programa o del stream en segundos
-  m.streamStartSeconds = __getStreamStart(true)
 
   ' Setear la duración del liverewind
   if m.streaming.liveRewindDuration <> invalid and m.streaming.liveRewindDuration > 0 then
@@ -1886,12 +1940,15 @@ end sub
 
 ' Actualiza la barra de tiempo con la informacion del player
 sub __updateTimeline()
+  if m.isReloadStreaming then return
+  ' Validar timelinebar invalid
+  if m.timelineBar = invalid or m.isLiveContent or m.videoPlayer = invalid then return
+  ' Si el stream es un Live, n o hacer nada
   if m.streaming = invalid or (m.streaming <> invalid and LCase(m.streaming.type) = getVideoType().LIVE) then return
   if m.streaming <> invalid and LCase(m.streaming.type) = getVideoType().LIVE_REWIND and m.streaming.streamingType = getStreamingType().DEFAULT then return
 
-  if m.timelineBar = invalid or m.isLiveContent or m.videoPlayer = invalid then return
-
-  ' si hay seek pendiente, mantenemos el preview y no pisamos con position real
+																					  
+  ' Si hay seek pendiente, mantenemos el preview y no pisamos con position real
   if m.pendingSeekActive and m.pendingSeekPosition <> invalid then
     dur = m.videoPlayer.duration
     if m.isLiveRewind and m.liveRewindDuration <> invalid then dur = m.liveRewindDuration
@@ -1902,9 +1959,11 @@ sub __updateTimeline()
     return
   end if
 
+  ' Obtener la posición actual del player
   duration = m.videoPlayer.duration
   position = m.videoPlayer.position
 
+  ' Si el contenido es un Live Rewind, setear la posición
   if m.isLiveRewind and m.liveRewindDuration <> invalid then
     duration = m.liveRewindDuration
     if position = invalid or position < 0 then
@@ -1922,6 +1981,7 @@ sub __updateTimeline()
 
   if duration <> invalid and duration > 0 then m.timelineBar.duration = duration
 
+  ' Setear la posición del timelinebar
   if position <> invalid and position >= 0 then 
     m.timelineBar.position = position
    end if
@@ -2148,10 +2208,12 @@ sub __loadStreamingURL(key, id, streamingAction, streamingType = getStreamingTyp
   m.lastKey = key
   m.lastId = id
   m.newStreamingType = streamingType
+
+  m.playerLoaded = false
   
   ' Falta agregar el update Session
   requestId = createRequestId()
-  m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlStreaming(m.apiUrl, m.lastKey, m.lastId, streamingAction, streamingType, startpid), "GET", "onStreamingsResponse", requestId, invalid, invalid, invalid, FormatJson({ startpid: startpid.toStr()}) ) 
+  m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlStreaming(m.apiUrl, m.lastKey, m.lastId, streamingAction, streamingType, startpid), "GET", "onStreamingsResponse", requestId) 
 end sub
 
 ' Metodo que procesa el error que puede ocurrir al reproducir en el player y dispara los timers para
@@ -2228,7 +2290,7 @@ sub __extendTimeWatching()
 end sub
 
 ' Reconectar el stream automáticamente
-sub __reconnectStream(saveTime = true)
+sub __reconnectStream(saveTime = true, streamingType = invalid)
   if not m.isReloadStreaming then
     m.enableGoLive = true
     m.isReloadStreaming = true
@@ -2239,11 +2301,10 @@ sub __reconnectStream(saveTime = true)
     end if
 
     startpid = 0
-    'if not m.useStartPid then
-      startpid = m.program.id
-    'end if
 
-    __loadStreamingURL(m.lastKey, m.lastId, getStreamingAction().PLAY, m.streaming.streamingType, startpid)
+    if streamingType = invalid then streamingType = m.streaming.streamingType
+
+    __loadStreamingURL(m.lastKey, m.lastId, getStreamingAction().PLAY, streamingType, startpid)
   end if
 end sub
 
@@ -3042,10 +3103,13 @@ sub __applyTranslations()
   m.timelineBar.liveText = i18n_t(m.global.i18n, "time.live")
 end sub
 
+' Reiniciar el stream
 sub __restartVideo()
+  ' Pausar el stream
   m.videoPlayer.control = "pause"
   m.timelineBar.isLive = false
 
+  ' Obtener el inicio del stream
   if m.program <> invalid and m.program.startTime <> invalid then
     programStartDate = toDateTime(m.program.startTime)
 
@@ -3089,6 +3153,7 @@ sub __selectTime(playing = invalid as dynamic)
 
   streamingType = m.streaming.streamingType
 
+  ' Validar si el stream es LIVE REWIND
   if streamingType = getStreamingType().LIVE_REWIND then
     realType = invalid
     if m.streaming <> invalid then realType = m.streaming.streamingType
@@ -3526,19 +3591,13 @@ if m.streaming = invalid then return invalid
   if m.streaming.streamStartDate = invalid or m.streaming.streamStartDate = "" then return invalid
   selectedStartDate = m.streaming.streamStartDate
 
-  ' Si no es reinicio o no es Live Rewind, se conserva el inicio del stream.
-  isRestartAction = (m.actionPostChageState = "restart")
-  isLiveRewindType = (m.streaming.type <> invalid and LCase(m.streaming.type) = getVideoType().LIVE_REWIND)
+  ' En reinicio de Live Rewind evaluamos startTime del programa.
+  if m.program <> invalid and m.program.startTime <> invalid and m.program.startTime <> "" then
+    streamStartSeconds = __parseIsoToSeconds(m.streaming.streamStartDate)
+    programStartSeconds = __parseIsoToSeconds(m.program.startTime)
 
-  if isRestartAction and isLiveRewindType then
-    ' En reinicio de Live Rewind evaluamos startTime del programa.
-    if m.program <> invalid and m.program.startTime <> invalid and m.program.startTime <> "" then
-      streamStartSeconds = __parseIsoToSeconds(m.streaming.streamStartDate)
-      programStartSeconds = __parseIsoToSeconds(m.program.startTime)
-
-      if streamStartSeconds <> invalid and programStartSeconds <> invalid and programStartSeconds > streamStartSeconds then
-        selectedStartDate = m.program.startTime
-      end if
+    if streamStartSeconds <> invalid and programStartSeconds <> invalid and programStartSeconds > streamStartSeconds then
+      selectedStartDate = m.program.startTime
     end if
   end if
 

@@ -896,6 +896,7 @@ end sub
 ' Procesa el item seleccionado en el menú cerrandolo y disparando la accion pertinente (Redirigir a otra pantalla, recargar una vista, etc)
 sub __selectMenuItem(menuSelectedItem)
 
+  getNeedRefresh()
   if menuSelectedItem.key = "MenuId" and menuSelectedItem.id = -1 and menuSelectedItem.code <> invalid and menuSelectedItem.code = "setting" then
     m.myMenu.action = "collapse"
     m.selectedIndicator.visible = true
