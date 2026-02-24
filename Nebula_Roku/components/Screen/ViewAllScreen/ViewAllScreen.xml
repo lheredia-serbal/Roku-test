@@ -5,46 +5,68 @@
   extends="Group"
   xsi:noNamespaceSchemaLocation="https://devtools.web.roku.com/schema/RokuSceneGraph.xsd">
 
-  <!-- Script principal del nuevo componente ViewAllScreen. -->
+  <!-- Script principal de ViewAllScreen. -->
   <script type="text/brightscript" uri="ViewAllScreen.brs" />
+  <!-- Script de utilidades base reutilizadas por el flujo de ViewAll. -->
   <script type="text/brightscript" uri="pkg:/source/Utils.brs" />
+  <!-- Script de utilidades de reintentos para manejo de acciones pendientes. -->
   <script type="text/brightscript" uri="pkg:/source/Utils/RetryUtils.brs" />
+  <!-- Script de constantes de carouseles para tipos de imagen del summary. -->
+  <script type="text/brightscript" uri="pkg:/source/CarouselConstants.brs" />
+  <!-- Script del servicio de reintentos. -->
   <script type="text/brightscript" uri="pkg:/source/Services/Retry.brs" />
+  <!-- Script del servicio de vistas de contenido para obtener carrusel ViewAll. -->
   <script type="text/brightscript" uri="pkg:/source/Services/ContentViews.brs" />
+  <!-- Script del servicio de programas para pedir Program Summary. -->
+  <script type="text/brightscript" uri="pkg:/source/Services/Programs.brs" />
+  <!-- Script de enums usados para runAction. -->
   <script type="text/brightscript" uri="pkg:/source/Enums.brs" />
-
-    <script type="text/brightscript" uri="pkg:/source/Services/DomainManager.brs" />
-  <script type="text/brightscript" uri="pkg:/source/Services/Retry.brs" />
+  <!-- Script de dominio activo. -->
+  <script type="text/brightscript" uri="pkg:/source/Services/DomainManager.brs" />
+  <!-- Script de administración de errores. -->
   <script type="text/brightscript" uri="pkg:/source/Services/ErrorManager.brs" />
+  <!-- Script de códigos de error. -->
   <script type="text/brightscript" uri="pkg:/source/Services/ErrorCode.brs" />
 
   <interface>
     <!-- Nodo loading compartido que llega desde MainScene. -->
     <field id="loading" type="node" />
-
     <!-- Campo para recibir un título configurable desde el padre. -->
     <field id="title" type="string" value="Ver todo" onChange="onTitleChange" />
-
     <!-- Campo para recibir el payload de navegación desde MainScreen. -->
     <field id="data" type="string" onChange="onDataChange" />
-
     <!-- Campo para habilitar/deshabilitar el foco del componente. -->
     <field id="onFocus" type="boolean" value="false" onChange="initFocus" />
   </interface>
 
   <children>
-    <!-- Label principal para mostrar el encabezado de la pantalla. -->
-    <Label
-      id="titleLabel"
-      translation="[80, 80]"
-      font="font:LargeBoldSystemFont"
-      color="0xFFFFFFFF" />
+    <!-- Fondo principal para mostrar imagen de programa igual que MainScreen. -->
+    <Poster
+      id="programImageBackground"
+      loadDisplayMode="scaleToZoom"
+      uri="pkg:/images/client/info_gradient.png" />
 
-    <!-- Label secundario para mostrar el contexto del carrusel seleccionado. -->
-    <Label
-      id="descriptionLabel"
-      translation="[80, 140]"
-      font="font:SmallSystemFont"
-      color="0xCCCCCCFF" />
+    <!-- Gradiente frontal sobre el fondo como en MainScreen. -->
+    <Poster
+      id="infoGradient"
+      loadDisplayMode="scaleToFit"
+      uri="pkg:/images/client/info_gradient.png" />
+
+    <!-- Componente de resumen de programa mostrado en la zona superior. -->
+    <ProgramSummary
+      id="programInfo"
+      visible="false"
+      translation="[118,50]"/>
+
+    <!-- Contenedor de carrusel inferior para el listado de programas de ViewAll. -->
+    <Group id="carousels" translation="[0, 135]">
+      <!-- Contenedor interno que aloja el carrusel dinámico único. -->
+      <Group id="carouselContainer" translation="[50, 20]"/>
+      <!-- Indicador de selección reutilizado para el carrusel. -->
+      <SelectionBox id="selectedIndicator" visible="false"/>
+    </Group>
+
+    <!-- Timer para diferir la llamada de Program Summary al cambiar el foco. -->
+    <Timer id="programTimer" repeat="false" duration="0.5"/>
   </children>
 </component>
