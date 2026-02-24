@@ -137,6 +137,8 @@ sub onLoginResponse()
       m.top.finished = true
     else 
       if m.apiRequestManager.serverError then
+        statusCode = m.apiRequestManager.statusCode
+        setCdnErrorCodeFromStatus(statusCode, ApiType().CLIENTS_API_URL)
         changeStatusAction(m.apiRequestManager.requestId, "error")
         retryAll()
       else

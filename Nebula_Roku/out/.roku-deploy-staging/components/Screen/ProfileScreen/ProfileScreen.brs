@@ -247,6 +247,7 @@ sub onGetAllProfileResponse()
       errorResponse = m.apiRequestManager.errorResponse
       
       if m.apiRequestManager.serverError then
+        setCdnErrorCodeFromStatus(statusCode, ApiType().CLIENTS_API_URL)
         changeStatusAction(m.apiRequestManager.requestId, "error")
         retryAll()
       else
@@ -295,6 +296,7 @@ sub onSuccessSelectResponse()
       errorResponse = m.apiRequestManager.errorResponse
 
       if m.apiRequestManager.serverError then
+        setCdnErrorCodeFromStatus(statusCode, ApiType().CLIENTS_API_URL)
         changeStatusAction(m.apiRequestManager.requestId, "error")
         retryAll()
       else
@@ -390,6 +392,7 @@ sub onGetAllAvatarsResponse()
       errorResponse = m.apiRequestManager.errorResponse
 
       if m.apiRequestManager.serverError then
+        setCdnErrorCodeFromStatus(statusCode, ApiType().CLIENTS_API_URL)
         changeStatusAction(m.apiRequestManager.requestId, "error")
         retryAll()
       else
@@ -500,6 +503,7 @@ sub onSuccessDeleteResponse()
       errorResponse = m.apiRequestManager.errorResponse
 
       if m.apiRequestManager.serverError then
+        setCdnErrorCodeFromStatus(statusCode, ApiType().CLIENTS_API_URL)
         changeStatusAction(m.apiRequestManager.requestId, "error")
         retryAll()
       else
@@ -536,6 +540,7 @@ sub onSuccessSaveResponse()
       errorResponse = m.apiRequestManager.errorResponse
 
       if m.apiRequestManager.serverError then
+        setCdnErrorCodeFromStatus(statusCode, ApiType().CLIENTS_API_URL)
         changeStatusAction(m.apiRequestManager.requestId, "error")
         retryAll()
       else
@@ -572,6 +577,7 @@ sub onGetDefaultAvatarResponse()
       errorResponse = m.apiRequestManager.errorResponse
 
       if m.apiRequestManager.serverError then
+        setCdnErrorCodeFromStatus(statusCode, ApiType().CLIENTS_API_URL)
         changeStatusAction(m.apiRequestManager.requestId, "error")
         retryAll()
         else
@@ -606,6 +612,7 @@ sub onGetByIdResponse()
       errorResponse = m.apiRequestManager.errorResponse
 
       if m.apiRequestManager.serverError then
+        setCdnErrorCodeFromStatus(statusCode, ApiType().CLIENTS_API_URL)
         changeStatusAction(m.apiRequestManager.requestId, "error")
         retryAll()
       else

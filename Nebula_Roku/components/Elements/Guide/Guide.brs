@@ -891,7 +891,8 @@ sub __processAndLoadCarousel(programs)
 end sub
 
 ' Actualiza la informacion del canal en pantalla 
-sub __updateChannelInfo(channel, roElementNumber, roElementImage)    
+sub __updateChannelInfo(channel, roElementNumber, roElementImage)
+    if channel = invalid then return
     if channel.number <> invalid then 
         roElementNumber.text = channel.number.ToStr()
     else

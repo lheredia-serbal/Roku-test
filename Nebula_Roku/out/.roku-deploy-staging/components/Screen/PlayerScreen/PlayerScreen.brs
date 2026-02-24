@@ -21,6 +21,8 @@ sub init()
   m.seekCommitTimer = m.top.findNode("seekCommitTimer")
   ' Timer que procesa saltos continuos mientras se mantiene presionado FF/RW.
   m.seekHoldTimer = m.top.findNode("seekHoldTimer")
+   ' Timer dedicado para sincronizar TimelineBar luego de un seek asíncrono.
+  m.seekTimelineSyncTimer = m.top.findNode("seekTimelineSyncTimer")
   
   ' Botón visual de play/pausa dentro de la fila de controles.
   m.playPauseImageButton = m.top.findNode("playPauseImageButton")
@@ -98,6 +100,8 @@ sub init()
   ' Subnodo interno de la timeline usado para cálculos/posicionamiento de preview.
   m.timelineBarBarContainer = m.timelineBar.findNode("barContainer")
   m.showTimeTimer.observeField("fire", "onShowTimeTimerFired")
+  ' Escucha el vencimiento del timer que re-sincroniza la timeline tras restart/seek.
+  if m.seekTimelineSyncTimer <> invalid then m.seekTimelineSyncTimer.ObserveField("fire", "onSeekTimelineSyncTimerFired")
 
   if m.timelineBar <> invalid then
     m.timelineBar.observeField("seeking", "onTimelineSeekingChanged")
@@ -148,8 +152,6 @@ sub init()
   m.isReloadStreaming = false
   ' Bandera que habilita el botón "Ir al vivo"
   m.enableGoLive = false
-  ' Bandera que indica si se tiene que pasar el Program id cuando se llama al stream
-  m.useStartPid = false
 
   ' Todas estas variables es para evitar que el usuario presiona mucha veces el botón atrás cuando el stream es en vivo y evitar llamadas multiples
   m.reloadInputBlockUntilMs = -1 ' tiempo limite (ms) para bloquear entradas tras recargar stream
@@ -186,6 +188,8 @@ sub init()
   m.pendingSeekActive = false
   ' Guarda la cantidad de segundos pendientes para el salto en el tiempo
   m.pendingSeekPosition = invalid
+  ' Guarda temporalmente la posición objetivo para aplicar la sincronización diferida.
+  m.seekTimelineSyncPosition = invalid
 
   ' Bandera que impide que se abran más de un program info al mismo tiempo
   m.saveOpenPlayer = true
@@ -221,6 +225,9 @@ sub init()
 
   ' Base jump para el hold (se recalcula en cada start)
   m.seekHoldBaseJump = 0
+
+  ' Bandera que indica que el player se terminó de cargar
+  m.playerLoaded = false
 
   __ensurePreviewTimeNodes()
 end sub
@@ -381,6 +388,7 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
           dur = m.timelineBar.duration
           if dur <> invalid and dur > 0 then
             m.videoPlayer.seek = dur
+
           end if
           m.videoPlayer.control = "play"
         end if
@@ -418,44 +426,42 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
 
         ' Si el stream permite live rewind, reiniciar el stream
         if LCase(m.streaming.type) = getVideoType().LIVE_REWIND then
-          m.useStartPid = false
-          reloadWithinWindow = false
 
-          if m.program <> invalid and m.program.startTime <> invalid and m.program.id <> invalid and m.program.id <> 0 and m.liveRewindDuration <> invalid then
-            ' Obtiene la fecha de inicio del programa
-            programStartDate = toDateTime(m.program.startTime)
-            if programStartDate <> invalid then
-              ' Valida si es necesario asignarle un program id, cuando se recarga el stream
-              startLimit = dtCloneAddSeconds(getMomentNow(), -Int(m.liveRewindDuration))
-              m.useStartPid = dtIsBefore(programStartDate, startLimit)
+          ' Si esta en vivo, cambiar al LIVE Rewind, pasandole siempre el program id como parámetro de startpid
+          if LCase(m.streaming.streamingType) = getStreamingType().DEFAULT then
+            m.streaming.streamingType = getStreamingType().LIVE_REWIND
+            __togglePlayPause()
+            m.disableLayoutChannelConnection = true
+            if m.program <> invalid and m.program.id <> invalid and m.program.id <> 0 then
+              __loadStreamingURL(m.lastKey, m.lastId, getStreamingAction().PLAY, getStreamingType().LIVE_REWIND, m.program.id)
+            end if
+          else
+            if m.program <> invalid and m.program.startTime <> invalid and m.program.id <> invalid and m.program.id <> 0 and m.liveRewindDuration <> invalid then
+              ' Obtiene la fecha de inicio del programa
+              programStartDate = toDateTime(m.program.startTime)
+              if programStartDate <> invalid then
+                ' Valida si es necesario asignarle un program id, cuando se recarga el stream
+                startLimit = dtCloneAddSeconds(getMomentNow(), -Int(m.liveRewindDuration))
+
+                ' Si la fecha limite de inicio es menor o igual al comienzo del programa, posicionarse al inicio del programa
+                if dtIsBefore(toDateTime(startLimit), toDateTime(programStartDate)) 
+                  ' Posición objetivo para reiniciar al inicio lógico del programa actual.
+                  restartPosition = dtDiffSeconds(programStartDate, startLimit)
+                  m.videoPlayer.seek = restartPosition
+                  ' Sincroniza TimelineBar inmediato + diferido (500ms) sin bloquear SceneGraph.
+                  __scheduleTimelineSync(restartPosition)
+                else 
+                  __togglePlayPause()
+                  m.disableLayoutChannelConnection = true
+                  if m.program <> invalid and m.program.id <> invalid and m.program.id <> 0 then
+                    __loadStreamingURL(m.lastKey, m.lastId, getStreamingAction().PLAY, getStreamingType().LIVE_REWIND, m.program.id)
+                  end if
+                end if
+              end if
             end if
           end if
-          if m.liveRewindMinDuration <> invalid and m.liveRewindDuration <> invalid and m.liveRewindMinDuration <> m.liveRewindDuration then
-            reloadWithinWindow = true
-          end if
-
-          if m.useStartPid then
-            m.streaming.streamingType = getStreamingType().LIVE_REWIND
-            __togglePlayPause()
-            m.disableLayoutChannelConnection = true
-            __loadStreamingURL(m.lastKey, m.lastId, getStreamingAction().PLAY, getStreamingType().LIVE_REWIND, m.program.id)
-
-          else if reloadWithinWindow then
-            m.streaming.streamingType = getStreamingType().LIVE_REWIND
-            __togglePlayPause()
-            m.disableLayoutChannelConnection = true
-            __loadStreamingURL(m.lastKey, m.lastId, getStreamingAction().PLAY, getStreamingType().LIVE_REWIND)
-
-          else if m.streaming.streamingType = getStreamingType().DEFAULT then
-
-            m.streaming.streamingType = getStreamingType().LIVE_REWIND
-            __togglePlayPause()
-            __reconnectStream()
-
-          else if m.streaming.streamingType = getStreamingType().LIVE_REWIND
-          __restartVideo()
-          end if
         else
+          ' Solo en casos de VOD y DVR, solo posicionarse al comienzo del stream
           m.videoPlayer.control = "pause" ' opcional, evita saltos visuales
           m.videoPlayer.seek = 0
           m.videoPlayer.control = "play"
@@ -473,7 +479,7 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
         else if (key = KeyButtons().OK) and not LCase(m.streaming.type) = getVideoType().LIVE then
           if LCase(m.streaming.type) = getVideoType().LIVE_REWIND and m.streaming.streamingType = getStreamingType().DEFAULT then
             m.actionPostChageState = "pause"
-            __reconnectStream()
+            __reconnectStream(true, getStreamingType().LIVE_REWIND)
           else
             __togglePlayPause()
           end if
@@ -528,7 +534,7 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
 
     if LCase(m.streaming.type) = getVideoType().LIVE_REWIND and m.streaming.streamingType = getStreamingType().DEFAULT then
       m.actionPostChageState = "pause"
-      __reconnectStream()
+      __reconnectStream(true, getStreamingType().LIVE_REWIND)
     else
       if (not m.isReloadStreaming)
         if press then
@@ -684,7 +690,16 @@ sub initData()
       end if
     end if
 
+    if m.timelineBar <> invalid then
+      isLiveTimeline = (LCase(m.streaming.type) = getVideoType().LIVE) or (LCase(m.streaming.type) = getVideoType().LIVE_REWIND and m.streaming.streamingType = getStreamingType().DEFAULT)
+      print isLiveTimeline.toStr()
+      m.timelineBar.isLive = isLiveTimeline
+    end if
+
+    ' Setear el timelinebar
     __setTimelineFromStreaming()
+
+    ' Volver a armar los botones del player
     __rebuildControllerButtons()
 
     if not m.isLiveContent then
@@ -734,11 +749,6 @@ sub initData()
       else
         m.timelineBar.thumbnailsUrl = ""
       end if
-    end if
-
-    if m.timelineBar <> invalid then
-      isLiveTimeline = (LCase(m.streaming.type) = getVideoType().LIVE) or (LCase(m.streaming.type) = getVideoType().LIVE_REWIND and m.streaming.streamingType = getStreamingType().DEFAULT)
-      m.timelineBar.isLive = isLiveTimeline
     end if
   end if
 end sub
@@ -807,19 +817,26 @@ sub onChannelsResponse()
       printError("ChannelsList Emty:", m.apiRequestManager.response)
     end if 
   else
-    if m.apiRequestManager <> invalid and not m.apiRequestManager.serverError then
+    if m.apiRequestManager <> invalid then
+
       error = m.apiRequestManager.errorResponse
       statusCode = m.apiRequestManager.statusCode
-      m.apiRequestManager = clearApiRequest(m.apiRequestManager) 
-
-      printError("ChannelsList:", error)
-      
-      if validateLogout(statusCode, m.top) then return
-      ' Cambio agregado: mostrar CDN dialog desde Player cuando aplica 9000.
-      __showPlayerCdnErrorDialog(statusCode, ApiType().CLIENTS_API_URL)
-      m.showChannelListAfterUpdate = false 
+      if m.apiRequestManager.serverError then
+        setCdnErrorCodeFromStatus(statusCode, ApiType().CLIENTS_API_URL)
+        changeStatusAction(m.apiRequestManager.requestId, "error")
+        retryAll()
+      else      
+        printError("ChannelsList:", error)
+        
+        if validateLogout(statusCode, m.top) then return
+        ' Cambio agregado: mostrar CDN dialog desde Player cuando aplica 9000.
+        __showPlayerCdnErrorDialog(statusCode, ApiType().CLIENTS_API_URL)
+        m.showChannelListAfterUpdate = false 
+      end if
     end if
   end if
+
+  m.apiRequestManager = clearApiRequest(m.apiRequestManager) 
 end sub
 
 ' Metodo que se dispiara por los cambios de estado del player
@@ -866,17 +883,29 @@ End Sub
 
 ' Metodo que actualiza la linea de tiempo cuando cambia la posicion del video
 sub onVideoPositionChanged()
-  if (m.videoPlayer.position = 0) then return 
+  if (m.videoPlayer.position = 0 or not m.playerLoaded) then return 
   __updateTimeline()
+
+  ' Si el contenido del stream no es en vivo o Live Rewind, setear los observables para poder ajustar el timelinebar
+  if (m.isLiveRewind and m.playerLoaded) or m.isReloadStreaming then
+    m.videoPlayer.unobserveField("position")
+    m.videoPlayer.unobserveField("duration")
+  end if
 end sub
 
 ' Metodo que actualiza la linea de tiempo cuando cambia la duracion del video
 sub onVideoDurationChanged()
-  if (m.videoPlayer.duration = 0) then return 
+  if (m.videoPlayer.duration = 0 or not m.playerLoaded) then return 
   if (m.streaming = invalid) then return 
   if (LCase(m.streaming.type) = getVideoType().LIVE) then return 
   if (LCase(m.streaming.type) = getVideoType().LIVE_REWIND and m.streaming.streamingType = getStreamingType().DEFAULT) then return 
   __updateTimeline()
+
+  ' Si el contenido del stream no es en vivo o Live Rewind, setear los observables para poder ajustar el timelinebar
+  if (m.isLiveRewind and m.playerLoaded) or m.isReloadStreaming then
+    m.videoPlayer.unobserveField("position")
+    m.videoPlayer.unobserveField("duration")
+  end if
 end sub
 
 ' Procesa la respuesta de actualización de sesión de visualización y decide siguiente acción.
@@ -977,7 +1006,6 @@ sub restartVideo(validateLimitRewindDuration as boolean)
   'Si es LiveRewind valido la barra y su pocicion
   if LCase(m.streaming.type) = getVideoType().LIVE_REWIND then
     __pauseVideo()
-
     'Si no esta cargado cargo el rewind
     if m.streaming.realStreamingType = getStreamingType().DEFAULT then
 
@@ -1041,93 +1069,105 @@ sub onStreamingsResponse()
   if validateStatusCode(m.apiRequestManager.statusCode) then
     resp = ParseJson(m.apiRequestManager.response)
     if resp.data <> invalid then
-
-      m.apiRequestManager = clearApiRequest(m.apiRequestManager)
+      ' Detener el player
       m.videoPlayer.control = "stop" 
       m.videoPlayer.content = invalid
 
+      ' Setear los datos del stream
       streaming = resp.data
       streaming.key = m.lastKey 
       streaming.id = m.lastId
       streaming.streamingType = m.newStreamingType
-
       m.streaming = streaming
       streamType = ""
+
       isLiveTimeline = false
       
       if m.streaming.type <> invalid and m.streaming.type <> "" then
         streamType = LCase(m.streaming.type)
+        ' El stream es un LIVE
         if streamType = getVideoType().LIVE then
+          ' Setear las variables para un live
           m.isLiveContent = true
           m.isLiveRewind = false
           m.isVodContent  = false
           if (m.streaming.streamingType = getStreamingType().DEFAULT) then isLiveTimeline = true
+        ' El stream es un LIVE REWIND
         else if streamType = getVideoType().LIVE_REWIND
           m.isLiveContent = false
           m.isLiveRewind = true
           m.isVodContent  = false
           if (m.streaming.streamingType = getStreamingType().DEFAULT) then isLiveTimeline = true  
         else
+          ' El stream es un VOD o DVR
           m.isLiveContent = false
           m.isLiveRewind = false
           m.isVodContent  = true
         end if
       end if
 
+      ' Setear que la timelinebar sea del tipo LIVE o no
       if m.timelineBar <> invalid then
         m.timelineBar.streamType = m.newStreamingType
         m.timelineBar.isLive = isLiveTimeline  
       end if
       
+      ' Setear los tiempos en el timelinebar
       __setTimelineFromStreaming()
+	  
+      ' Volver a dibuar los botones de
       __rebuildControllerButtons()
 
-    if m.timelineBar <> invalid then
-      if not m.isLiveContent then
-        m.timelineBar.visible = true
-      else
-        m.timelineBar.visible = false
-        m.timelineBar.position = 0
-        m.timelineBar.duration = 0
+      if m.timelineBar <> invalid then
+        if not m.isLiveContent then
+          m.timelineBar.visible = true
+        else
+          m.timelineBar.visible = false
+          m.timelineBar.position = 0
+          m.timelineBar.duration = 0
+        end if
+
+        if m.streaming.thumbnailsUrl <> invalid then
+          m.timelineBar.thumbnailsUrl = m.streaming.thumbnailsUrl
+        else
+          m.timelineBar.thumbnailsUrl = ""
+        end if
       end if
+		  
+      m.errorChannel.visible = false
+      m.spinner.visible = false
 
-      if m.streaming.thumbnailsUrl <> invalid then
-        m.timelineBar.thumbnailsUrl = m.streaming.thumbnailsUrl
-      else
-        m.timelineBar.thumbnailsUrl = ""
-      end if
-    end if
-
-    m.errorChannel.visible = false
-    m.spinner.visible = false
-
-      if m.streaming <> invalid and m.streaming.streamStartDate <> invalid and m.streaming.streamStartDate <> "" then
+      ' Obtener el inicio del stream, el programa inicia despues del inicio del stream, usar el incio del programa
+      if m.streaming.streamStartDate <> invalid and m.streaming.streamStartDate <> "" then
+        m.streamStartDate = toDateTime(__getStreamStart(false))
         m.streamStartDate = toDateTime(m.streaming.streamStartDate)
         if m.streamStartDate = invalid then return
-
+										
         if m.lastId <> 0 then
           if streamType = getVideoType().LIVE_REWIND then
             m.endPlayerFrozen = getMomentNow()
             m.startPlayerFrozen = dtCloneAddSeconds(m.endPlayerFrozen, -Int(m.liveRewindDuration))
-           m.diffDuration = __getDiffStartPlay()
+            m.diffDuration = __getDiffStartPlay()
           end if 
         end if
       end if
 
-     __loadPlayer(streaming, false)
+      ' Inicializar el player
+      __loadPlayer(streaming, false)
 
       ' Si estoy cambiando la url del Live por la de Rewind entonces no es necesario reposicionar la guia y la lista de canales
-     if (m.streaming.streamingType = getStreamingType().DEFAULT) then
+      if (m.streaming.streamingType = getStreamingType().DEFAULT) then
         if (m.guide <> invalid and m.channelSelected <> invalid and m.guide.channelId = m.channelSelected.id) then
           m.guide.channelIdIndexOf = -1
           m.guide.searchChannelPosition = true
         end if 
         
+        ' Guardar el último programa visto
         __saveLastWatched()
       end if 
       
+      ' Si el usuario presiono el botón Inicio, reiniciar el stream y el timelinebar
       if m.actionPostChageState = "restart" then
-        __restartVideo()
         m.actionPostChageState = invalid
       end if
     else 
@@ -1144,34 +1184,40 @@ sub onStreamingsResponse()
       printError("Streamings Emty:", response)
     end if
   else 
-    if m.apiRequestManager <> invalid and not m.apiRequestManager.serverError then
+    if m.apiRequestManager <> invalid then
       errorResponse = m.apiRequestManager.errorResponse
       statusCode = m.apiRequestManager.statusCode
-      m.apiRequestManager = clearApiRequest(m.apiRequestManager)
+      if m.apiRequestManager.serverError then
+        setCdnErrorCodeFromStatus(statusCode, ApiType().CLIENTS_API_URL)
+        changeStatusAction(m.apiRequestManager.requestId, "error")
+        retryAll()
+      else
+        printError("Streamings:", errorResponse)
+        
+        if validateLogout(statusCode, m.top) then return
 
-      printError("Streamings:", errorResponse)
-      
-      if validateLogout(statusCode, m.top) then return
+        ' Cambio agregado: mostrar CDN dialog desde Player cuando aplica 9000.
+        __showPlayerCdnErrorDialog(statusCode, ApiType().CLIENTS_API_URL)
 
-      ' Cambio agregado: mostrar CDN dialog desde Player cuando aplica 9000.
-      __showPlayerCdnErrorDialog(statusCode, ApiType().CLIENTS_API_URL)
+        if m.lastErrorTime <> invalid then 
+          clearTimer(m.retryReconnection)
 
-      if m.lastErrorTime <> invalid then 
-        clearTimer(m.retryReconnection)
-
-        m.retryReconnection.ObserveField("fire","onValidateConnectionAndRetry")
-        m.retryReconnection.control = "start"
+          m.retryReconnection.ObserveField("fire","onValidateConnectionAndRetry")
+          m.retryReconnection.control = "start"
+        end if
       end if
     end if
   end if
+
+  m.apiRequestManager = clearApiRequest(m.apiRequestManager)
 end sub
 
 ' Procesa la respuesta al obtener el Summary de un programa
 sub onProgramSummaryResponse()
   m.blockTuShowControls = false
 
-  if validateStatusCode(m.apiRequestManager.statusCode) then
-    resp = ParseJson(m.apiRequestManager.response)
+  if validateStatusCode(m.apiProgramManager.statusCode) then
+    resp = ParseJson(m.apiProgramManager.response)
     if resp.data <> invalid then
       fistLoad = false
       if m.program = invalid then fistLoad = true
@@ -1182,30 +1228,36 @@ sub onProgramSummaryResponse()
       m.newProgramTimer.duration = 120
       m.newProgramTimer.ObserveField("fire","onGetNewProgramInfo")
       m.newProgramTimer.control = "start"
+      errorResponse = m.apiProgramManager.errorResponse
 
       printError("ProgramSumary Empty:", errorResponse)
     end if 
   else
-    if m.apiRequestManager <> invalid and not m.apiRequestManager.serverError then
-      statusCode = m.apiRequestManager.statusCode
-      errorResponse = m.apiRequestManager.errorResponse
-      m.apiRequestManager = clearApiRequest(m.apiRequestManager)
+    if m.apiProgramManager <> invalid then
+      if m.apiProgramManager.serverError then
+        changeStatusAction(m.apiProgramManager.requestId, "error")
+        retryAll()
+      else
+        statusCode = m.apiProgramManager.statusCode
+        errorResponse = m.apiProgramManager.errorResponse
+        printError("ProgramSumary:", errorResponse)
+        
+        if validateLogout(statusCode, m.top) then return
 
-      printError("ProgramSumary:", errorResponse)
-      
-      if validateLogout(statusCode, m.top) then return
+        ' Cambio agregado: mostrar CDN dialog desde Player cuando aplica 9000.
+        __showPlayerCdnErrorDialog(statusCode, ApiType().CLIENTS_API_URL)
 
-      ' Cambio agregado: mostrar CDN dialog desde Player cuando aplica 9000.
-      __showPlayerCdnErrorDialog(statusCode, ApiType().CLIENTS_API_URL)
-
-      if statusCode >= 400 and statusCode <= 599 then  
-        clearTimer(m.newProgramTimer)
-        m.newProgramTimer.duration = 120
-        m.newProgramTimer.ObserveField("fire","onGetNewProgramInfo")
-        m.newProgramTimer.control = "start"
+        if statusCode >= 400 and statusCode <= 599 then  
+          clearTimer(m.newProgramTimer)
+          m.newProgramTimer.duration = 120
+          m.newProgramTimer.ObserveField("fire","onGetNewProgramInfo")
+          m.newProgramTimer.control = "start"
+        end if
       end if
     end if 
   end if
+
+  m.apiProgramManager = clearApiRequest(m.apiProgramManager)
 end sub
 
 ' Procesa la respuesta al validar la conexion contra las APIs
@@ -1427,13 +1479,36 @@ sub onDialogClosedLastFocus()
   end if
 end sub
 
-' Dispara la opctencion de la info del nuevo programa que se esta viendo
+' Dispara la obtención de la info del nuevo programa que se está viendo
 sub onGetNewProgramInfo()
-  requestId = createRequestId()
+  url = invalid
+
   if m.program <> invalid then
-    m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlProgramSummary(m.apiUrl, m.program.infoKey, m.program.infoId, getCarouselImagesTypes().NONE, getCarouselImagesTypes().NONE), "GET", "onProgramSummaryResponse", requestId)
+    url = urlProgramSummary(m.apiUrl, m.program.infoKey, m.program.infoId, getCarouselImagesTypes().NONE, getCarouselImagesTypes().NONE)
   else if m.lastKey <> invalid AND  m.lastId <> invalid then 
-    m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlProgramSummary(m.apiUrl, m.lastKey, m.lastId, getCarouselImagesTypes().NONE, getCarouselImagesTypes().NONE), "GET", "onProgramSummaryResponse", requestId)
+    url = urlProgramSummary(m.apiUrl, m.lastKey, m.lastId, getCarouselImagesTypes().NONE, getCarouselImagesTypes().NONE)
+  end if
+
+  if url <> invalid then
+    requestId = createRequestId()
+    action = {
+      apiProgramManager: m.apiProgramManager
+      url: url
+      method: "GET"
+      responseMethod: "onProgramSummaryResponse"
+      body: invalid
+      token: invalid
+      publicApi: false
+      dataAux: invalid
+      requestId: requestId
+      run: function() as Object
+        m.apiProgramManager = sendApiRequest(m.apiProgramManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux)
+        return { success: true, error: invalid }
+      end function
+    }
+
+    runAction(requestId, action, ApiType().CLIENTS_API_URL)
+    m.apiProgramManager = action.apiProgramManager
   end if
 end sub
 
@@ -1569,8 +1644,10 @@ end sub
 
 ' Carga el streaming que se reproducira en el player.
 sub __loadPlayer(streaming, focusPlayer = true)
+  m.playerLoaded = true
   videoContent = createObject("RoSGNode", "ContentNode")
 
+  ' Validar que el stream sea valido
   if streaming <> invalid then
     videoContent.url = streaming.playUrl 
     videoContent.title = ""
@@ -1582,41 +1659,89 @@ sub __loadPlayer(streaming, focusPlayer = true)
       videoContent.streamformat = getVideoContentStreamformat().DASH
     end if
     
-    m.videoPlayer.content = videoContent ' set node with children to video node content
+    m.videoPlayer.content = videoContent
     
     m.videoPlayer.visible = true
 
     m.videoPlayer.unobserveField("position")
     m.videoPlayer.unobserveField("duration")
 
-    if not m.isLiveContent and not m.isLiveRewind then
+    ' Si el contenido del stream no es en vivo o Live Rewind, setear los observables para poder ajustar el timelinebar
+    if not m.isLiveContent then
       m.videoPlayer.ObserveField("position", "onVideoPositionChanged")
       m.videoPlayer.ObserveField("duration", "onVideoDurationChanged")
     end if
 
+    ' Setear el foco en el player si es necesario
     if focusPlayer then m.videoPlayer.setFocus(true)
 
-    m.videoPlayer.control = "play" ' start playback
+    m.videoPlayer.control = "play"
 
+    ' Si el contenido no es en vivo
     if not m.isLiveContent then
+      ' Verificar si ya existe una última posición
       if m.lastPosition <> invalid then
-        m.videoPlayer.seek = m.lastPosition
+        ' Si ya existe, setear la posición del player con esa posición
+        m.videoPlayer.seek = m.lastPosition 
         m.lastPosition = invalid
       else
-        m.videoPlayer.seek = m.streaming.startAt
+        if m.streaming.streamingType = getStreamingType().LIVE_REWIND and m.actionPostChageState = "restart" then
+          if m.program <> invalid and m.program.startTime <> invalid and m.liveRewindDuration <> invalid then
+            ' Obtiene la fecha de inicio del programa
+            programStartDate = toDateTime(m.program.startTime)
+            if programStartDate <> invalid then
+              ' Valida si es necesario asignarle un program id, cuando se recarga el stream
+              startLimit = dtCloneAddSeconds(getMomentNow(), -Int(m.liveRewindDuration))
+
+              ' Si la fecha limite de inicio es menor o igual al comienzo del programa, posicionarse al inicio del programa
+              if dtIsBeforeOrEqual(toDateTime(startLimit), toDateTime(programStartDate)) 
+                m.videoPlayer.seek = dtDiffSeconds(programStartDate, startLimit)
+              else
+                m.videoPlayer.seek = 0
+              end if 
+            end if
+          end if
+        else 
+          ' Si no existe, setear el player al comienzo del stream
+          m.videoPlayer.seek = m.streaming.startAt
+        end if 
+
       end if
     end if
 
+    ' Actualizar el timelinebar
     __updateTimeline()
 
     ' Si estoy cambiando la url del Live por la de Rewind entonces no es necesario dispara la busuqeda del programa de nuevo
     if (m.streaming.streamingType = getStreamingType().DEFAULT) then
+      ' Obtener la información del programa
       requestId = createRequestId()
-      m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlProgramSummary(m.apiUrl, streaming.key, streaming.id, getCarouselImagesTypes().NONE, getCarouselImagesTypes().NONE), "GET", "onProgramSummaryResponse", requestId)
+      action = {
+        apiProgramManager: m.apiProgramManager
+        url: urlProgramSummary(m.apiUrl, streaming.key, streaming.id, getCarouselImagesTypes().NONE, getCarouselImagesTypes().NONE)
+        method: "GET"
+        responseMethod: "onProgramSummaryResponse"
+        body: invalid
+        token: invalid
+        publicApi: false
+        dataAux: invalid
+        requestId: requestId
+        run: function() as Object
+          m.apiProgramManager = sendApiRequest(m.apiProgramManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux)
+          return { success: true, error: invalid }
+        end function
+      }
+
+      runAction(requestId, action, ApiType().CLIENTS_API_URL)
+      m.apiProgramManager = action.apiProgramManager
     end if
     
+    ' Extender el tiempo para mostrar el cartel de inactividad
     if m.inactivityPromptTimeInSeconds <> -1 then __extendTimeWatching()
+    ' Indicar que se terminó de cargar el streaming
     m.isReloadStreaming = false
+
+    ' Agrega tiempo para que el usuario pueda tocar los botones más rápido cuando termine de cargar el stream
     m.reloadInputBlockUntilMs = __getNowMilliseconds() + 350
   end if
 end sub
@@ -1637,19 +1762,20 @@ end sub
 sub __setTimelineFromStreaming()
   if m.timelineBar = invalid then return
 
-  m.timelineBar.visible = false
-  m.timelineBar.baseEpochSeconds = invalid
-  m.timelineBar.position = -1
-  m.liveRewindDuration = invalid
-  m.liveRewindMinDuration = invalid
-  m.streamStartSeconds = invalid
-
   if m.streaming = invalid then return
 
   if m.streaming.streamStartDate <> invalid and m.streaming.streamStartDate <> "" then
     m.streamStartSeconds = __parseIsoToSeconds(m.streaming.streamStartDate)
   end if
 
+  ' Reiniciar los estados de la timelinebar
+  m.timelineBar.visible = false
+  m.timelineBar.baseEpochSeconds = invalid
+  m.timelineBar.position = -1
+  m.liveRewindDuration = invalid
+  m.liveRewindMinDuration = invalid
+
+  ' Setear la duración del liverewind
   if m.streaming.liveRewindDuration <> invalid and m.streaming.liveRewindDuration > 0 then
     m.liveRewindDuration = m.streaming.liveRewindDuration
     m.liveRewindMinDuration = m.streaming.liveRewindMinDuration
@@ -1660,6 +1786,7 @@ sub __setTimelineFromStreaming()
     m.timelineBar.duration = -1
   end if
 
+  ' Si el stream es LIVE REWIND, setear la posición de la timelinebar
   if m.isLiveRewind and m.streamStartSeconds <> invalid and m.liveRewindDuration <> invalid then
     now = CreateObject("roDateTime")
     now.ToLocalTime()
@@ -1669,6 +1796,7 @@ sub __setTimelineFromStreaming()
     if elapsed > m.liveRewindDuration then elapsed = m.liveRewindDuration
     m.timelineBar.position = elapsed
   else if m.streaming.startAt <> invalid then
+    ' El stream no es Live Rewind, setear desde el inicio del stream
     m.timelineBar.position = m.streaming.startAt
   end if
 
@@ -1719,7 +1847,26 @@ end function
 ' Dispara la busqueda de la lista de canales 
 sub __getChannels(getNewChannels = true)
   requestId = createRequestId()
-  if getNewChannels then m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlChannels(m.apiUrl), "GET", "onChannelsResponse", requestId)
+  if getNewChannels then
+    action = {
+      apiRequestManager: m.apiRequestManager
+      url: urlChannels(m.apiUrl)
+      method: "GET"
+      responseMethod: "onChannelsResponse"
+      body: invalid
+      token: invalid
+      publicApi: false
+      dataAux: invalid
+      requestId: requestId
+      run: function() as Object
+        m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux)
+        return { success: true, error: invalid }
+      end function
+    }
+
+    runAction(requestId, action, ApiType().CLIENTS_API_URL)
+    m.apiRequestManager = action.apiRequestManager
+  end if
 end sub
 
 ' Carga la informacion del programa actual en pantalla
@@ -1872,12 +2019,15 @@ end sub
 
 ' Actualiza la barra de tiempo con la informacion del player
 sub __updateTimeline()
+  if m.isReloadStreaming then return
+  ' Validar timelinebar invalid
+  if m.timelineBar = invalid or m.isLiveContent or m.videoPlayer = invalid then return
+  ' Si el stream es un Live, n o hacer nada
   if m.streaming = invalid or (m.streaming <> invalid and LCase(m.streaming.type) = getVideoType().LIVE) then return
   if m.streaming <> invalid and LCase(m.streaming.type) = getVideoType().LIVE_REWIND and m.streaming.streamingType = getStreamingType().DEFAULT then return
 
-  if m.timelineBar = invalid or m.isLiveContent or m.videoPlayer = invalid then return
-
-  ' si hay seek pendiente, mantenemos el preview y no pisamos con position real
+																					  
+  ' Si hay seek pendiente, mantenemos el preview y no pisamos con position real
   if m.pendingSeekActive and m.pendingSeekPosition <> invalid then
     dur = m.videoPlayer.duration
     if m.isLiveRewind and m.liveRewindDuration <> invalid then dur = m.liveRewindDuration
@@ -1888,9 +2038,11 @@ sub __updateTimeline()
     return
   end if
 
+  ' Obtener la posición actual del player
   duration = m.videoPlayer.duration
   position = m.videoPlayer.position
 
+  ' Si el contenido es un Live Rewind, setear la posición
   if m.isLiveRewind and m.liveRewindDuration <> invalid then
     duration = m.liveRewindDuration
     if position = invalid or position < 0 then
@@ -1908,6 +2060,7 @@ sub __updateTimeline()
 
   if duration <> invalid and duration > 0 then m.timelineBar.duration = duration
 
+  ' Setear la posición del timelinebar
   if position <> invalid and position >= 0 then 
     m.timelineBar.position = position
    end if
@@ -1927,6 +2080,34 @@ function __isSeekKey(key as String) as Boolean
 
   return key = KeyButtons().LEFT or key = KeyButtons().RIGHT or key = KeyButtons().FAST_FORWARD or key = KeyButtons().REWIND
 end function
+
+' Agenda la sincronización de TimelineBar para reflejar seeks asíncronos con reintento diferido.
+sub __scheduleTimelineSync(position = invalid as dynamic)
+  if m.timelineBar <> invalid and position <> invalid and position >= 0 then
+    m.timelineBar.position = position
+  end if
+
+  ' Persistir posición objetivo para reutilizarla cuando dispare el timer.
+  m.seekTimelineSyncPosition = position
+
+  if m.seekTimelineSyncTimer <> invalid then
+    m.seekTimelineSyncTimer.control = "stop"
+    m.seekTimelineSyncTimer.control = "start"
+  else
+    __updateTimeline()
+  end if
+end sub
+
+' Ejecuta la segunda pasada de sincronización del timeline al cumplirse los 500ms.
+sub onSeekTimelineSyncTimerFired()
+  if m.timelineBar <> invalid and m.seekTimelineSyncPosition <> invalid and m.seekTimelineSyncPosition >= 0 then
+    m.timelineBar.position = m.seekTimelineSyncPosition
+  end if
+
+  __updateTimeline()
+  ' Limpiar estado para evitar reutilizar una posición vieja en futuros seeks.
+  m.seekTimelineSyncPosition = invalid
+end sub
 
 ' Maneja el avance/retroceso con flechas en contenido grabado
 sub __handleSeek(key as String)
@@ -2134,10 +2315,29 @@ sub __loadStreamingURL(key, id, streamingAction, streamingType = getStreamingTyp
   m.lastKey = key
   m.lastId = id
   m.newStreamingType = streamingType
+
+  m.playerLoaded = false
   
   ' Falta agregar el update Session
   requestId = createRequestId()
-  m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlStreaming(m.apiUrl, m.lastKey, m.lastId, streamingAction, streamingType, startpid), "GET", "onStreamingsResponse", requestId, invalid, invalid, invalid, FormatJson({ startpid: startpid.toStr()}) ) 
+  action = {
+    apiRequestManager: m.apiRequestManager
+    url: urlStreaming(m.apiUrl, m.lastKey, m.lastId, streamingAction, streamingType, startpid)
+    method: "GET"
+    responseMethod: "onStreamingsResponse"
+    body: invalid
+    token: invalid
+    publicApi: false
+    dataAux: invalid
+    requestId: requestId
+    run: function() as Object
+      m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux)
+      return { success: true, error: invalid }
+    end function
+  }
+
+  runAction(requestId, action, ApiType().CLIENTS_API_URL)
+  m.apiRequestManager = action.apiRequestManager
 end sub
 
 ' Metodo que procesa el error que puede ocurrir al reproducir en el player y dispara los timers para
@@ -2214,7 +2414,7 @@ sub __extendTimeWatching()
 end sub
 
 ' Reconectar el stream automáticamente
-sub __reconnectStream(saveTime = true)
+sub __reconnectStream(saveTime = true, streamingType = invalid)
   if not m.isReloadStreaming then
     m.enableGoLive = true
     m.isReloadStreaming = true
@@ -2225,11 +2425,10 @@ sub __reconnectStream(saveTime = true)
     end if
 
     startpid = 0
-    'if not m.useStartPid then
-      startpid = m.program.id
-    'end if
 
-    __loadStreamingURL(m.lastKey, m.lastId, getStreamingAction().PLAY, m.streaming.streamingType, startpid)
+    if streamingType = invalid then streamingType = m.streaming.streamingType
+
+    __loadStreamingURL(m.lastKey, m.lastId, getStreamingAction().PLAY, streamingType, startpid)
   end if
 end sub
 
@@ -3028,10 +3227,13 @@ sub __applyTranslations()
   m.timelineBar.liveText = i18n_t(m.global.i18n, "time.live")
 end sub
 
+' Reiniciar el stream
 sub __restartVideo()
+  ' Pausar el stream
   m.videoPlayer.control = "pause"
   m.timelineBar.isLive = false
 
+  ' Obtener el inicio del stream
   if m.program <> invalid and m.program.startTime <> invalid then
     programStartDate = toDateTime(m.program.startTime)
 
@@ -3075,6 +3277,7 @@ sub __selectTime(playing = invalid as dynamic)
 
   streamingType = m.streaming.streamingType
 
+  ' Validar si el stream es LIVE REWIND
   if streamingType = getStreamingType().LIVE_REWIND then
     realType = invalid
     if m.streaming <> invalid then realType = m.streaming.streamingType
@@ -3502,3 +3705,31 @@ sub __toStart(playing = invalid as dynamic)
   if playing then __playVideo()
 end sub
 
+
+' Obtiene la fecha de inicio efectiva del stream en segundos.
+' Retorna invalid cuando no hay datos suficientes o no se pueden convertir fechas.
+function __getStreamStart(returnInSeconds = true as boolean) as dynamic
+if m.streaming = invalid then return invalid
+
+  ' Valor base: fecha de inicio del stream.
+  if m.streaming.streamStartDate = invalid or m.streaming.streamStartDate = "" then return invalid
+  selectedStartDate = m.streaming.streamStartDate
+
+  ' En reinicio de Live Rewind evaluamos startTime del programa.
+  if m.program <> invalid and m.program.startTime <> invalid and m.program.startTime <> "" then
+    streamStartSeconds = __parseIsoToSeconds(m.streaming.streamStartDate)
+    programStartSeconds = __parseIsoToSeconds(m.program.startTime)
+
+    if streamStartSeconds <> invalid and programStartSeconds <> invalid and programStartSeconds > streamStartSeconds then
+      selectedStartDate = m.program.startTime
+    end if
+  end if
+
+  ' Si se solicita valor sin procesar, devolvemos el ISO seleccionado.
+  if not returnInSeconds then return selectedStartDate
+
+  ' Si se solicita en segundos, convertimos el valor final seleccionado.
+  selectedStartSeconds = __parseIsoToSeconds(selectedStartDate)
+  if selectedStartSeconds = invalid then return invalid
+  return selectedStartSeconds
+end function

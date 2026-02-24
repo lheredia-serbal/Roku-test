@@ -111,7 +111,7 @@ sub __applyHeight(hasFocus as boolean)
 end sub
 
 sub __updateProgress()
-  print "__updateProgress()"
+  if (m.currentDuration = m.currentPosition) then return
   if (m.currentDuration = invalid or m.currentPosition = invalid) then return
   if m.currentDuration <= 0  and m.currentPosition <= 0 then return 
   if m.suspendUi = true and m.top <> invalid and m.top.isPaused <> true then
@@ -122,8 +122,6 @@ sub __updateProgress()
   ' LIVE: no hay tiempo, mostrar "En vivo" (traducido) y no usar position/duration
   if m.top <> invalid and m.top.isLive = true then
     if m.progress <> invalid then
-      print "1"
-      print m.totalWidth
       m.progress.width = m.totalWidth
     end if
     if m.timeLabel <> invalid then
@@ -156,8 +154,6 @@ sub __updateProgress()
 
   ' Si no hay duración
   if m.currentDuration <= 0 and not m.top.isLive then
-    print "2"
-    print 0
     m.progress.width = 0
     if m.thumb <> invalid then m.thumb.translation = [-thumbHalf, thumbY]
     if m.timeLabel <> invalid then m.timeLabel.text = "00:00"
@@ -177,11 +173,11 @@ sub __updateProgress()
     progressWidth = 0
   end if
   
-  if progressWidth > 1 then
-    print "3"
-    print progressWidth
-    m.progress.width = progressWidth
+  if progressWidth < 0 then 
+    progressWidth = 0
   end if
+
+  m.progress.width = progressWidth
 
   ' Thumb X centrado en borde del progreso
   thumbX = progressWidth - thumbHalf
@@ -192,15 +188,14 @@ sub __updateProgress()
     
     if (m.top.isLive ) then
       m.thumb.translation = [m.totalWidth - 20, thumbY]
-      print "4"
-      print m.totalWidth
       m.progress.width =  m.totalWidth
       ' Setear el máximo rango en X que puede alcanzar la esfera de progreso
       m.maxWidth = m.totalWidth - 20
     else
       ' Validar que la esfera de progreso, no se salga fuera del rango máximo
       if m.maxWidth <> invalid and thumbX > m.maxWidth then thumbX = m.maxWidth
-      if (thumbX <> invalid and thumbX > -1) then
+      if (thumbX <> invalid) then
+        if thumbX < 0 then thumbX = 0
         m.thumb.translation = [thumbX, thumbY]
       end if
     end if
@@ -233,6 +228,7 @@ sub __updateProgress()
         remaining = m.committedRemaining
       end if
       if remaining < 0 then remaining = 0
+      
       m.timeLabel.text = __formatTime(remaining)
     end if
   end if
@@ -249,7 +245,11 @@ sub __updateProgress()
       liveText = "-"
       remaining = m.currentDuration - m.currentPosition
       if remaining < 0 then remaining = 0
-      m.top.previewTimeText = liveText + __formatTime(remaining) ' tiempo transcurrido
+      if (m.top.isPaused = true) then
+        elapsedPaused = __getEpochSeconds() - m.pauseStartEpochSeconds
+        if elapsedPaused > 0 then remaining = remaining + elapsedPaused
+      end if
+      m.top.previewTimeText = __formatTime(remaining) ' tiempo transcurrido
     else 
       m.top.previewTimeText = __formatTime(m.currentPosition) ' tiempo transcurrido
     end if
@@ -392,7 +392,7 @@ sub onIsPausedChanged()
 end sub
 
 sub onPauseTick()
-  if m.top <> invalid and m.top.isPaused = true then
+  if m.top <> invalid and m.top.isPaused = true and m.top.streamType <> getStreamingType().LIVE_REWIND then
     __updateProgress()
   end if
 end sub
@@ -421,8 +421,6 @@ end sub
 ' Obtiene dispositivo UTC offset seconds.
 sub __restoreCachedUi()
   if m.cachedProgressWidth <> invalid and m.progress <> invalid then 
-    print "5"
-    print m.cachedProgressWidth
     m.progress.width = m.cachedProgressWidth
   end if
   if m.cachedThumbTranslation <> invalid and m.thumb <> invalid then m.thumb.translation = m.cachedThumbTranslation

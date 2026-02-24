@@ -190,6 +190,7 @@
     <Timer id="inactivityAutoCloseTimer" repeat="false" duration="30" />
     <Timer id="seekCommitTimer" repeat="false" duration="1" />
     <Timer id="seekHoldTimer" repeat="true" duration="0.2" />
+    <Timer id="seekTimelineSyncTimer" repeat="false" duration="0.5" />
     <Timer id="showTimeTimer" repeat="true" duration="1" control="stop" />
   </children>
 

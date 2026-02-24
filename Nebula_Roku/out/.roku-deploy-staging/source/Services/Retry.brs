@@ -151,6 +151,8 @@ sub setCdnErrorCodeFromStatus(statusCode as Integer, apiTypeParam as Dynamic, ca
         else if category = "CL"
             m.global.cdnErrorDialog.errorCode = uiError.CL_NOT_FOUND(apiTypeParam)
         end if
+    else 
+        m.global.cdnErrorDialog.errorCode = uiError.NW_NOT_FOUND(apiTypeParam)
     end if
 end sub
 

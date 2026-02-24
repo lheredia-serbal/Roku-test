@@ -139,6 +139,7 @@ sub initFocus()
   if m.top.onFocus then 
     __applyTranslations()
     __validateAutoUpgradeTime()
+    m.carouselContainer.setFocus(true)
   end if 
   if m.dialog <> invalid and m.dialog.visible then return
   if m.top.onFocus and m.lastFocus <> invalid then

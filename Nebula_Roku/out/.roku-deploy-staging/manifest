@@ -35,3 +35,4 @@ bs_libs=source/Utils/i18nUtils.brs
 supports_input_launch=1
 # Requerido para enviar eventos RED como Roku_Authenticated (Req 4.3).
 sg_component_libs_required=roku_analytics
+rsg_version=1.3

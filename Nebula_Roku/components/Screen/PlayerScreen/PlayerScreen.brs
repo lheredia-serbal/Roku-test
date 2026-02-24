@@ -21,6 +21,8 @@ sub init()
   m.seekCommitTimer = m.top.findNode("seekCommitTimer")
   ' Timer que procesa saltos continuos mientras se mantiene presionado FF/RW.
   m.seekHoldTimer = m.top.findNode("seekHoldTimer")
+   ' Timer dedicado para sincronizar TimelineBar luego de un seek asíncrono.
+  m.seekTimelineSyncTimer = m.top.findNode("seekTimelineSyncTimer")
   
   ' Botón visual de play/pausa dentro de la fila de controles.
   m.playPauseImageButton = m.top.findNode("playPauseImageButton")
@@ -98,6 +100,8 @@ sub init()
   ' Subnodo interno de la timeline usado para cálculos/posicionamiento de preview.
   m.timelineBarBarContainer = m.timelineBar.findNode("barContainer")
   m.showTimeTimer.observeField("fire", "onShowTimeTimerFired")
+  ' Escucha el vencimiento del timer que re-sincroniza la timeline tras restart/seek.
+  if m.seekTimelineSyncTimer <> invalid then m.seekTimelineSyncTimer.ObserveField("fire", "onSeekTimelineSyncTimerFired")
 
   if m.timelineBar <> invalid then
     m.timelineBar.observeField("seeking", "onTimelineSeekingChanged")
@@ -184,6 +188,8 @@ sub init()
   m.pendingSeekActive = false
   ' Guarda la cantidad de segundos pendientes para el salto en el tiempo
   m.pendingSeekPosition = invalid
+  ' Guarda temporalmente la posición objetivo para aplicar la sincronización diferida.
+  m.seekTimelineSyncPosition = invalid
 
   ' Bandera que impide que se abran más de un program info al mismo tiempo
   m.saveOpenPlayer = true
@@ -439,8 +445,11 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
 
                 ' Si la fecha limite de inicio es menor o igual al comienzo del programa, posicionarse al inicio del programa
                 if dtIsBefore(toDateTime(startLimit), toDateTime(programStartDate)) 
-                  m.videoPlayer.seek = dtDiffSeconds(programStartDate, startLimit)
-                  __updateTimeline()
+                  ' Posición objetivo para reiniciar al inicio lógico del programa actual.
+                  restartPosition = dtDiffSeconds(programStartDate, startLimit)
+                  m.videoPlayer.seek = restartPosition
+                  ' Sincroniza TimelineBar inmediato + diferido (500ms) sin bloquear SceneGraph.
+                  __scheduleTimelineSync(restartPosition)
                 else 
                   __togglePlayPause()
                   m.disableLayoutChannelConnection = true
@@ -1207,8 +1216,8 @@ end sub
 sub onProgramSummaryResponse()
   m.blockTuShowControls = false
 
-  if validateStatusCode(m.apiRequestManager.statusCode) then
-    resp = ParseJson(m.apiRequestManager.response)
+  if validateStatusCode(m.apiProgramManager.statusCode) then
+    resp = ParseJson(m.apiProgramManager.response)
     if resp.data <> invalid then
       fistLoad = false
       if m.program = invalid then fistLoad = true
@@ -1219,18 +1228,18 @@ sub onProgramSummaryResponse()
       m.newProgramTimer.duration = 120
       m.newProgramTimer.ObserveField("fire","onGetNewProgramInfo")
       m.newProgramTimer.control = "start"
-      errorResponse = m.apiRequestManager.errorResponse
+      errorResponse = m.apiProgramManager.errorResponse
 
       printError("ProgramSumary Empty:", errorResponse)
     end if 
   else
-    if m.apiRequestManager <> invalid then
-      if m.apiRequestManager.serverError then
-        changeStatusAction(m.apiRequestManager.requestId, "error")
+    if m.apiProgramManager <> invalid then
+      if m.apiProgramManager.serverError then
+        changeStatusAction(m.apiProgramManager.requestId, "error")
         retryAll()
       else
-        statusCode = m.apiRequestManager.statusCode
-        errorResponse = m.apiRequestManager.errorResponse
+        statusCode = m.apiProgramManager.statusCode
+        errorResponse = m.apiProgramManager.errorResponse
         printError("ProgramSumary:", errorResponse)
         
         if validateLogout(statusCode, m.top) then return
@@ -1248,7 +1257,7 @@ sub onProgramSummaryResponse()
     end if 
   end if
 
-  m.apiRequestManager = clearApiRequest(m.apiRequestManager)
+  m.apiProgramManager = clearApiRequest(m.apiProgramManager)
 end sub
 
 ' Procesa la respuesta al validar la conexion contra las APIs
@@ -1483,7 +1492,7 @@ sub onGetNewProgramInfo()
   if url <> invalid then
     requestId = createRequestId()
     action = {
-      apiRequestManager: m.apiRequestManager
+      apiProgramManager: m.apiProgramManager
       url: url
       method: "GET"
       responseMethod: "onProgramSummaryResponse"
@@ -1493,13 +1502,13 @@ sub onGetNewProgramInfo()
       dataAux: invalid
       requestId: requestId
       run: function() as Object
-        m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux)
+        m.apiProgramManager = sendApiRequest(m.apiProgramManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux)
         return { success: true, error: invalid }
       end function
     }
 
     runAction(requestId, action, ApiType().CLIENTS_API_URL)
-    m.apiRequestManager = action.apiRequestManager
+    m.apiProgramManager = action.apiProgramManager
   end if
 end sub
 
@@ -1708,7 +1717,7 @@ sub __loadPlayer(streaming, focusPlayer = true)
       ' Obtener la información del programa
       requestId = createRequestId()
       action = {
-        apiRequestManager: m.apiRequestManager
+        apiProgramManager: m.apiProgramManager
         url: urlProgramSummary(m.apiUrl, streaming.key, streaming.id, getCarouselImagesTypes().NONE, getCarouselImagesTypes().NONE)
         method: "GET"
         responseMethod: "onProgramSummaryResponse"
@@ -1718,13 +1727,13 @@ sub __loadPlayer(streaming, focusPlayer = true)
         dataAux: invalid
         requestId: requestId
         run: function() as Object
-          m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux)
+          m.apiProgramManager = sendApiRequest(m.apiProgramManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux)
           return { success: true, error: invalid }
         end function
       }
 
       runAction(requestId, action, ApiType().CLIENTS_API_URL)
-      m.apiRequestManager = action.apiRequestManager
+      m.apiProgramManager = action.apiProgramManager
     end if
     
     ' Extender el tiempo para mostrar el cartel de inactividad
@@ -2071,6 +2080,34 @@ function __isSeekKey(key as String) as Boolean
 
   return key = KeyButtons().LEFT or key = KeyButtons().RIGHT or key = KeyButtons().FAST_FORWARD or key = KeyButtons().REWIND
 end function
+
+' Agenda la sincronización de TimelineBar para reflejar seeks asíncronos con reintento diferido.
+sub __scheduleTimelineSync(position = invalid as dynamic)
+  if m.timelineBar <> invalid and position <> invalid and position >= 0 then
+    m.timelineBar.position = position
+  end if
+
+  ' Persistir posición objetivo para reutilizarla cuando dispare el timer.
+  m.seekTimelineSyncPosition = position
+
+  if m.seekTimelineSyncTimer <> invalid then
+    m.seekTimelineSyncTimer.control = "stop"
+    m.seekTimelineSyncTimer.control = "start"
+  else
+    __updateTimeline()
+  end if
+end sub
+
+' Ejecuta la segunda pasada de sincronización del timeline al cumplirse los 500ms.
+sub onSeekTimelineSyncTimerFired()
+  if m.timelineBar <> invalid and m.seekTimelineSyncPosition <> invalid and m.seekTimelineSyncPosition >= 0 then
+    m.timelineBar.position = m.seekTimelineSyncPosition
+  end if
+
+  __updateTimeline()
+  ' Limpiar estado para evitar reutilizar una posición vieja en futuros seeks.
+  m.seekTimelineSyncPosition = invalid
+end sub
 
 ' Maneja el avance/retroceso con flechas en contenido grabado
 sub __handleSeek(key as String)
