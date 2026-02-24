@@ -11,6 +11,7 @@ sub init()
   m.LauncherScreen = m.top.FindNode("LauncherScreen")
   m.SettingScreen = m.top.FindNode("SettingScreen")
   m.LoginScreen = m.top.FindNode("LoginScreen")
+  m.ViewAllScreen = m.top.FindNode("ViewAllScreen")
   m.ProfileScreen = m.top.FindNode("ProfileScreen")
   m.MainScreen = m.top.FindNode("MainScreen")
   m.ProgramDetailScreen = m.top.FindNode("ProgramDetailScreen")
@@ -57,6 +58,12 @@ function onKeyEvent(key as string, press as boolean) as boolean
         m.StackOfScreens.Pop()
 
         __hideSetting()
+        __backManager(m.StackOfScreens.Peek())
+
+      else if m.StackOfScreens.Peek() = "ViewAllScreen" then 
+        m.StackOfScreens.Pop()
+
+        __hideViewAll()
         __backManager(m.StackOfScreens.Peek())
       
       else if m.StackOfScreens.Peek() = "KillSessionScreen" then 
@@ -229,6 +236,17 @@ sub onProgramDetail()
   m.ProgramDetailScreen.data = programDetail
 end sub
 
+' Metodo que redirige a la pantalla de Ver todos.
+sub onViewAll()
+  viewAllData = m.MainScreen.viewAll
+  if viewAllData <> invalid then
+    m.MainScreen.viewAll = invalid
+    __hideMain()
+    m.StackOfScreens.Push("ViewAllScreen")
+    __showViewAll(viewAllData)
+  end if
+end sub
+
 ' Metodo que redirige a la pantalla de configuracion
 sub onSetting()
   if m.MainScreen.setting then 
@@ -397,6 +415,7 @@ sub __initMain()
   m.MainScreen.ObserveField("streaming", "onStreamingPlayer")
   m.MainScreen.ObserveField("pendingStreamingSession", "onKillSession")
   m.MainScreen.ObserveField("detail", "onProgramDetail")
+  m.MainScreen.ObserveField("viewAll", "onViewAll")
   m.MainScreen.ObserveField("setting", "onSetting")
 
   ' Performance Req 3.2: marca que el Home ya quedó visible y navegable.
@@ -440,6 +459,17 @@ sub __showProgramDetail()
   m.ProgramDetailScreen.ObserveField("onBack", "onBackDetail")
   m.ProgramDetailScreen.ObserveField("streaming", "onStreamingPlayer")
   m.ProgramDetailScreen.ObserveField("pendingStreamingSession", "onKillSession")
+end sub
+
+' Muestra la pantalla de Ver todos
+sub __showViewAll(viewAllData as string)
+  if m.MainScreen.visible then m.MainScreen.visible = false
+  m.ViewAllScreen.visible = true
+  m.ViewAllScreen.data = viewAllData
+  m.ViewAllScreen.onFocus = true
+  m.ViewAllScreen.setFocus(true)
+  ' Ocultamos el loading general una vez mostrada la pantalla de destino.
+  if m.loading <> invalid then m.loading.visible = false
 end sub
 
 ' Muestra la pantalla de configuracion
@@ -493,6 +523,13 @@ sub __hideProgramDetail()
   m.ProgramDetailScreen.pendingStreamingSession = invalid
 end sub
 
+' Esconde la pantalla Ver todos
+sub __hideViewAll()
+  m.ViewAllScreen.visible = false
+  m.ViewAllScreen.onFocus = false
+  m.ViewAllScreen.data = invalid
+end sub
+
 ' Esconde la Configuracion
 sub __hideSetting()
   m.SettingScreen.visible = false
@@ -520,10 +557,12 @@ sub __hideMain()
   m.MainScreen.unobserveField("streaming")
   m.MainScreen.unobserveField("pendingStreamingSession")
   m.MainScreen.unobserveField("detail")
+  m.MainScreen.unobserveField("viewAll")
   m.MainScreen.unobserveField("setting")
   m.MainScreen.streaming = invalid
   m.MainScreen.pendingStreamingSession = invalid
   m.MainScreen.detail = invalid
+  m.MainScreen.viewAll = invalid
   m.MainScreen.setting = false
 end sub
 
@@ -572,6 +611,7 @@ sub __resetApp()
 
   __hideMain()
   __hideSetting()
+  __hideViewAll()
   __hideProgramDetail()
   __hideKillSessionScreen()
   

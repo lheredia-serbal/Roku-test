@@ -672,16 +672,12 @@ end function
 
 ' Función para generar el array de targetRects dinámicamente para desplazamiento en X
 function __createTargetRectsInX(numItems as integer, xInicial as integer, spacing as integer, width as integer, height as integer) as Object
-    rects = []
+  rects = []
 
-    for i = 0 to numItems
-        rect = { x: xInicial + i * spacing, y: 0, width: width, height: height }
-        rects.push(rect)
-    end for
-
-    rect = { x: xInicial + numItems * spacing, y: 0, width: width, height: height }
+  for i = 0 to numItems
+    rect = { x: xInicial + i * spacing, y: 0, width: width, height: height }
     rects.push(rect)
-
+  end for
   return rects
 end function
 

@@ -269,7 +269,18 @@ sub __populateList()
     
     child.imageURL = ""
 
-    m.items.push(invalid)
+    ' Guardamos un nodo lógico equivalente en m.items para poder detectar la selección de "Ver todos".
+    m.items.push({
+      title: child.title
+      key: child.key
+      id: child.id
+      redirectKey: child.redirectKey
+      redirectId: child.redirectId
+      showSeeMore: true
+      carouselId: m.top.id
+      carouselCode: m.top.code
+      carouselTitle: m.top.title
+    })
   end if
 
   ' Configura carouselList  utilizando la función de setup (ajusta los valores según diseño)

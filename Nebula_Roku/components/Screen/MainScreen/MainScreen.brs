@@ -178,6 +178,9 @@ sub populateCarousels(data as Object)
   yPosition = 0
   previousCarousel = invalid
 
+  ' Cache local de carouseles visibles para mapear carouselIndex -> carouselData.id al abrir ViewAll.
+  m.carouselData = []
+
   __clearContentView()
   __clearProgramInfo()
 
@@ -201,6 +204,9 @@ sub populateCarousels(data as Object)
       newCarousel.imageType = carouselData.imageType
       newCarousel.redirectType = carouselData.redirectType
       newCarousel.items = carouselData.items
+
+      ' Guardamos la referencia lógica para luego resolver carouselData[carouselIndex].id.
+      m.carouselData.push(carouselData)
       
       ' Posiciona el carousel verticalmente
       newCarousel.translation = [0, yPosition]
@@ -245,6 +251,48 @@ sub onSelectItem()
     m.itemSelected = ParseJson(m.carouselContainer.focusedChild.selected)
     
     m.carouselContainer.focusedChild.selected = invalid
+
+        ' Si se selecciona la tarjeta "Ver todos", notificamos a MainScene para abrir ViewAllScreen.
+    if m.itemSelected <> invalid and m.itemSelected.showSeeMore = true then
+      __markLastFocus()
+      m.top.loading.visible = true
+
+      ' Obtenemos carouselId desde carouselData[carouselIndex].id como pide el flujo de Home -> ViewAll.
+      carouselIndex = __getFocusedCarouselIndex()
+      carouselId = invalid
+      if carouselIndex <> invalid and m.carouselData <> invalid and carouselIndex >= 0 and carouselIndex < m.carouselData.count() and m.carouselData[carouselIndex] <> invalid then
+        carouselId = m.carouselData[carouselIndex].id
+      else if m.itemSelected.carouselId <> invalid then
+        ' Fallback defensivo por si cambia la estructura del contenedor.
+        carouselId = m.itemSelected.carouselId
+      end if
+
+      menuSelectedItemId = invalid
+      if m.menuSelectedItem <> invalid and m.menuSelectedItem.id <> invalid then
+        menuSelectedItemId = m.menuSelectedItem.id
+      end if
+
+      m.top.viewAll = FormatJson({
+        menuSelectedItemId: menuSelectedItemId
+        carouselId: carouselId
+        carouselCode: m.itemSelected.carouselCode
+        title: m.itemSelected.carouselTitle
+      })
+      return
+    end if
+
+    ' Si se selecciona la tarjeta "Ver todos", notificamos a MainScene para abrir ViewAllScreen.
+    if m.itemSelected <> invalid and m.itemSelected.showSeeMore = true then
+      __markLastFocus()
+      m.top.loading.visible = true
+      m.top.viewAll = FormatJson({
+        carouselId: m.itemSelected.carouselId
+        carouselCode: m.itemSelected.carouselCode
+        title: m.itemSelected.carouselTitle
+      })
+      return
+    end if
+
     if m.itemSelected.redirectKey = "ChannelId" then
 
       if m.itemSelected.parentalControl <> invalid and m.itemSelected.parentalControl then
@@ -284,6 +332,19 @@ sub onSelectItem()
     end if
   end if
 end sub
+
+' Busca el índice del carrusel que actualmente tiene foco para alinear con carouselData[carouselIndex].
+function __getFocusedCarouselIndex() as dynamic
+  if m.carouselContainer = invalid or m.carouselContainer.focusedChild = invalid then return invalid
+
+  for index = 0 to m.carouselContainer.getChildCount() - 1
+    if m.carouselContainer.getChild(index).id = m.carouselContainer.focusedChild.id then
+      return index
+    end if
+  end for
+
+  return invalid
+end function
 
 ' Dispara la apertura del menu al llegar al limite izquierdo del carousel
 sub onOpenMenuCarousel() 
@@ -952,7 +1013,7 @@ sub __selectMenuItem(menuSelectedItem)
 
     action = {
       apiRequestManager: m.apiRequestManager
-      url: urlContentViewsCrousels(m.apiUrl, menuSelectedItem.id)
+      url: urlContentViewsCarousels(m.apiUrl, menuSelectedItem.id)
       method: "GET"
       responseMethod: "onContentViewResponse"
       body: invalid

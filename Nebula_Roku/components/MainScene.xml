@@ -60,6 +60,12 @@
       visible="false"
       translation="[0,0]" />
 
+      <!-- View all -->
+    <ViewAllScreen
+      id="ViewAllScreen"
+      visible="false"
+      translation="[0,0]"/>
+
     <!-- Player -->
     <PlayerScreen
       id="PlayerScreen"
