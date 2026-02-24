@@ -108,10 +108,12 @@ end sub
 ' devuelve el nodo que esta teniendo el foco.
 sub onItemFocusedChanged()
   focusTo = m.items[m.carouselList.itemFocused]
-  focusTo.itempPosition = m.carouselList.itemFocused
-  focusTo.imageType = m.top.imageType
-  focusTo.carouselCode = m.top.code
-  m.top.focused = FormatJson(focusTo)
+  if focusTo <> invalid then
+    focusTo.itempPosition = m.carouselList.itemFocused
+    focusTo.imageType = m.top.imageType
+    focusTo.carouselCode = m.top.code
+    m.top.focused = FormatJson(focusTo)
+  end if
 end sub
 
 ' Procesa el evento flecha izquierda al llegar al final del carousel.
@@ -131,6 +133,8 @@ sub onUpdateNode()
     m.top.updateNode = invalid
 
     oldInfo = m.items[indexFocused]
+
+    if oldInfo = invalid then return
     child = m.carouselList.content.getChild(indexFocused)
 
     if oldInfo.redirectKey = newInfo.infoKey and oldInfo.redirectId = newInfo.infoId then
@@ -248,6 +252,25 @@ sub __populateList()
     
     child.imageURL = getImageUrl(item.image)
   end for
+
+  if (m.top.redirectType = 4) then
+    child = contentRoot.createChild("CarouselItemContentNode")
+    child.title = i18n_t(m.global.i18n, "content.contentPage.seeMore")
+    child.key = 0
+    child.id = 0
+    child.redirectKey = 0
+    child.redirectId = 0
+    child.percentageElapsed = 0
+    child.category = 0
+    child.contentType = 0
+    child.size = m.top.size
+    child.style = m.top.style
+    child.showSeeMore = true
+    
+    child.imageURL = ""
+
+    m.items.push(invalid)
+  end if
 
   ' Configura carouselList  utilizando la función de setup (ajusta los valores según diseño)
   focusedTargetSet = createObject("roSGNode", "TargetSet")

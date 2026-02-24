@@ -16,5 +16,6 @@
     <field id="percentageElapsed" type="integer" />
     <field id="size" type="array" />
     <field id="style" type="integer" />
+    <field id="showSeeMore" type="boolean" />
   </interface>
 </component>

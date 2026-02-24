@@ -71,6 +71,19 @@
                 </LayoutGroup>
             </Group>
 
+            <!-- Grupo alternativo para tarjetas tipo "Ver más" -->
+            <Group id="seeMoreGroup" translation="[0, 0]" visible="false">
+                <!-- Etiqueta para el título, centrada y con 2 líneas máximo -->
+                <Label 
+                    id="itemTitle" 
+                    wrap="true" 
+                    maxLines="2" 
+                    horizAlign="center" 
+                    vertAlign="center"
+                    ellipsizeOnBoundary="true"
+                    font="font:TinySystemFont"/>
+            </Group>
+
             <Poster 
                 id="imageItem" 
                 loadDisplayMode="scaleToZoom"/>

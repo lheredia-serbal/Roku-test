@@ -42,9 +42,9 @@
       />
 
       <QvTargetList 
-          id="carouselList"
-          advanceKey="right" 
-          reverseKey="left" 
-          focusable="true"/>
+        id="carouselList"
+        advanceKey="right" 
+        reverseKey="left" 
+        focusable="true"/>
   </children>
 </component>

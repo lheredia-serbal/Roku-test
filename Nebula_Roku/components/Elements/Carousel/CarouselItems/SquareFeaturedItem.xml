@@ -71,6 +71,18 @@
                     <Rectangle id="progressRight" height="3"/>
                 </LayoutGroup>
             </Group>
+            
+            <Group id="seeMoreGroup" translation="[0, 0]" visible="false">
+                <!-- Etiqueta para el título, centrada y con 2 líneas máximo -->
+                <Label 
+                    id="itemTitle" 
+                    wrap="true" 
+                    maxLines="2" 
+                    horizAlign="center" 
+                    vertAlign="center"
+                    ellipsizeOnBoundary="true"
+                    font="font:TinySystemFont"/>
+            </Group>
         </Rectangle>
         <Rectangle id="opacityLayout" color="#000000" opacity="0.33" />
     </children>

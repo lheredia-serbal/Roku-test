@@ -3,6 +3,9 @@ sub init()
     m.theRect  = m.top.findNode("theRect")
     m.contentGroup = m.top.findNode("contentGroup")
     m.progressGroup = m.top.findNode("progressGroup")
+    ' Referencias para la tarjeta especial de 'Ver más'
+    m.seeMoreGroup = m.top.findNode("seeMoreGroup")
+    m.itemTitle = m.top.findNode("itemTitle")
     m.title = m.top.findNode("title")
     m.category = m.top.findNode("category")
     m.dateTime = m.top.findNode("dateTime")
@@ -22,6 +25,35 @@ end sub
 
 ' Carga los datos de Node en el compoente
 sub itemContentChanged()
+    ' Detecta cuando el item es de tipo "see more"
+    if m.top.itemContent.showSeeMore <> invalid and m.top.itemContent.showSeeMore = true then
+        ' Oculta el contenido estándar (imagen, metadata y progreso)
+        if m.contentGroup <> invalid then
+            m.contentGroup.visible = false
+        end if
+
+        ' Muestra el contenedor de 'Ver más'
+        if m.seeMoreGroup <> invalid then
+            m.seeMoreGroup.visible = true
+        end if
+
+        ' Asigna el título centrado de la tarjeta 'Ver más'
+        if m.itemTitle <> invalid and m.top.itemContent.title <> invalid then
+            m.itemTitle.text = m.top.itemContent.title
+        end if
+
+        ' Sale para evitar procesar la lógica normal del item destacado
+        return
+    else
+        ' Para items normales, restaura la visibilidad por defecto
+        if m.contentGroup <> invalid then
+            m.contentGroup.visible = true
+        end if
+
+        if m.seeMoreGroup <> invalid then
+            m.seeMoreGroup.visible = false
+        end if
+    end if
     if (m.top.itemContent.contentType = getCarouselContentType().PROGRAMS) then 
         m.totalProgress = scaleValue(300 - (m.padding * 2) - 70, m.scaleInfo)
 
@@ -78,6 +110,17 @@ sub currRectChanged()
 
     if (m.contentGroup <> invalid) then
         m.contentGroup.translation = [paddingX, paddingY]
+    end if
+    ' Hace que el contenedor de 'Ver más' cubra toda la tarjeta
+    if (m.seeMoreGroup <> invalid) then
+        m.seeMoreGroup.width = m.theRect.width
+        m.seeMoreGroup.height = m.theRect.height
+    end if
+
+    ' Permite centrar el label en todo el rectángulo del item
+    if (m.itemTitle <> invalid) then
+        m.itemTitle.width = m.theRect.width
+        m.itemTitle.height = m.theRect.height
     end if
     m.title.width = labelWidth
     m.category.width = labelWidth
