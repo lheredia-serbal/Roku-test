@@ -253,9 +253,9 @@ sub __populateList()
     child.imageURL = getImageUrl(item.image)
   end for
 
-  if (m.top.redirectType = 4) then
+  ' Mostrar una tarjeta adicional que pueder ser "Ver todos" o "Ir a la guía"
+  if (m.top.redirectType = 4 or m.top.redirectType = 2 or m.top.redirectType = 3) then
     child = contentRoot.createChild("CarouselItemContentNode")
-    child.title = i18n_t(m.global.i18n, "content.contentPage.seeMore")
     child.key = 0
     child.id = 0
     child.redirectKey = 0
@@ -265,9 +265,19 @@ sub __populateList()
     child.contentType = 0
     child.size = m.top.size
     child.style = m.top.style
-    child.showSeeMore = true
-    
     child.imageURL = ""
+
+    ' La tarjeta es de "Ver todos"
+    if m.top.redirectType = 4 then
+      child.title = i18n_t(m.global.i18n, "content.contentPage.seeMore")
+      child.showSeeMore = true
+    end if
+
+    ' La tarjeta es "Ir a la guía"
+    if (m.top.redirectType = 2 or m.top.redirectType = 3) then
+      child.title = i18n_t(m.global.i18n, "content.contentPage.goToGuide")
+      child.goToGuide = true
+    end if
 
     ' Guardamos un nodo lógico equivalente en m.items para poder detectar la selección de "Ver todos".
     m.items.push({

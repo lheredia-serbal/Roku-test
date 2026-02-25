@@ -10,6 +10,12 @@ end sub
 
 ' Carga los datos de Node en el compoente
 sub itemContentChanged()
+    if (m.top.itemContent.showSeeMore <> invalid and m.top.itemContent.showSeeMore = true) or (m.top.itemContent.goToGuide <> invalid and m.top.itemContent.goToGuide = true) then
+        m.itemTitle.text = m.top.itemContent.title
+        m.itemImage.uri = ""
+        return
+    end if
+
     m.itemTitle.text = m.top.itemContent.title
     if m.top.itemContent.imageURL <> invalid then m.itemImage.uri = m.top.itemContent.imageURL
 end sub

@@ -63,7 +63,8 @@
     "contentPage": {
       "notDisplayTitle": "Nothing here...",
       "notDisplayContect": "There is currently no content to display in this section. This may be because you do not have an active subscription or there is no content available, please contact us.",
-      "seeMore": "See more"
+      "seeMore": "See more",
+      "goToGuide": "Go to guide"
     }
   },
   "loginPage": {

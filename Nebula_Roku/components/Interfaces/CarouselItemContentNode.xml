@@ -17,5 +17,6 @@
     <field id="size" type="array" />
     <field id="style" type="integer" />
     <field id="showSeeMore" type="boolean" />
+    <field id="goToGuide" type="boolean" />
   </interface>
 </component>

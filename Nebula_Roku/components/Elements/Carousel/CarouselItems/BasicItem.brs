@@ -19,6 +19,18 @@ end sub
 
 ' Carga los datos de Node en el compoente
 sub itemContentChanged()
+    if (m.top.itemContent.showSeeMore <> invalid and m.top.itemContent.showSeeMore = true) or (m.top.itemContent.goToGuide <> invalid and m.top.itemContent.goToGuide = true) then
+        m.programTitle.text = m.top.itemContent.title
+        m.programTitle.font = "font:MediumSystemFont"
+        m.programTitleByError.visible = true
+
+        m.showBackgroundImage = false
+        m.imageItem.uri = ""
+
+        m.progressLeft.width = 0
+        m.progressRight.width = 0
+        return
+    end if
     if m.top.itemContent.title <> invalid and m.top.itemContent.title <> "" then 
         m.programTitle.text = m.top.itemContent.title
         if m.top.itemContent.style = getCarouselStyles().PORTRAIT_FEATURED then 

@@ -63,7 +63,8 @@
     "contentPage": {
       "notDisplayTitle": "Nada por aquí...",
       "notDisplayContect": "En este momento no hay contenido para mostrar en esta sección. Esto puede deberse a que no tengas una suscripción activa o no hay contenido disponible, por favor comunícate con nosotros.",
-      "seeMore": "Ver todos"
+      "seeMore": "Ver todos",
+      "goToGuide": "Ir a la Guía"
     }
   },
   "loginPage": {

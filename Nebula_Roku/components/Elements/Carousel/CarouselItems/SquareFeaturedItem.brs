@@ -3,7 +3,7 @@ sub init()
     m.theRect  = m.top.findNode("theRect")
     m.contentGroup = m.top.findNode("contentGroup")
     m.progressGroup = m.top.findNode("progressGroup")
-    ' Referencias para la tarjeta especial de 'Ver más'
+    ' Referencias para la tarjeta especial de 'Ver todos'
     m.seeMoreGroup = m.top.findNode("seeMoreGroup")
     m.itemTitle = m.top.findNode("itemTitle")
     m.title = m.top.findNode("title")
@@ -23,10 +23,10 @@ sub init()
     __initColors()
 end sub
 
-' Carga los datos de Node en el compoente
+' Carga los datos de Node en el componente
 sub itemContentChanged()
     ' Detecta cuando el item es de tipo "see more"
-    if m.top.itemContent.showSeeMore <> invalid and m.top.itemContent.showSeeMore = true then
+    if (m.top.itemContent.showSeeMore <> invalid and m.top.itemContent.showSeeMore = true) or (m.top.itemContent.goToGuide <> invalid and m.top.itemContent.goToGuide = true) then
         ' Oculta el contenido estándar (imagen, metadata y progreso)
         if m.contentGroup <> invalid then
             m.contentGroup.visible = false
@@ -40,6 +40,19 @@ sub itemContentChanged()
         ' Asigna el título centrado de la tarjeta 'Ver más'
         if m.itemTitle <> invalid and m.top.itemContent.title <> invalid then
             m.itemTitle.text = m.top.itemContent.title
+        end if
+
+        ' Limpia imagen/progreso para asegurar fondo negro en todos los variantes SquareFeatured.
+        if m.imageItem <> invalid then
+            m.imageItem.uri = ""
+        end if
+
+        if m.progressLeft <> invalid then
+            m.progressLeft.width = 0
+        end if
+
+        if m.progressRight <> invalid then
+            m.progressRight.width = 0
         end if
 
         ' Sale para evitar procesar la lógica normal del item destacado
