@@ -7,6 +7,10 @@
 
   <!-- Script principal de ViewAllScreen. -->
   <script type="text/brightscript" uri="ViewAllScreen.brs" />
+  <script type="text/brightscript" uri="pkg:/source/StreamingConstants.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Storage.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Services/Watch.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Services/Streamings.brs" />
   <script type="text/brightscript" uri="pkg:/source/Utils/i18nUtils.brs" />
   <!-- Script de utilidades base reutilizadas por el flujo de ViewAll. -->
   <script type="text/brightscript" uri="pkg:/source/Utils.brs" />
@@ -37,6 +41,10 @@
     <field id="data" type="string" onChange="onDataChange" />
     <!-- Campo para habilitar/deshabilitar el foco del componente. -->
     <field id="onFocus" type="boolean" value="false" onChange="initFocus" />
+    <!-- Salida hacia MainScene para abrir Player cuando el item seleccionado es reproducible. -->
+    <field id="streaming" type="string" />
+    <!-- Salida hacia MainScene para abrir detalle cuando el item seleccionado no es canal directo. -->
+    <field id="detail" type="string" />
   </interface>
 
   <children>

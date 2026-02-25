@@ -229,8 +229,18 @@ end function
 
 ' Metodo que redirige a la pantalla de detalle
 sub onProgramDetail()
-  programDetail = m.MainScreen.detail
-  __hideMain()
+  programDetail = invalid ' Inicializamos payload para resolver si el detalle viene desde MainScreen o ViewAllScreen.
+  if m.StackOfScreens.Peek() = "MainScreen" then ' Cuando venimos de Home, tomamos detail desde MainScreen.
+    programDetail = m.MainScreen.detail
+    __hideMain()
+  else if m.StackOfScreens.Peek() = "ViewAllScreen" then ' Cuando venimos de ViewAll, tomamos detail desde ViewAllScreen.
+    programDetail = m.ViewAllScreen.detail
+    __hideViewAll(false) ' Ocultamos temporalmente ViewAll sin limpiar data para poder volver desde detalle.
+  end if
+
+  if programDetail = invalid then return ' Cortamos si no hay detalle para abrir.
+
+  if programDetail = invalid then return ' Cortamos si no hay detalle para abrir.
   m.StackOfScreens.Push("ProgramDetailScreen")
   __showProgramDetail()
   m.ProgramDetailScreen.data = programDetail
@@ -268,6 +278,9 @@ sub onStreamingPlayer()
     openGuide = m.MainScreen.openGuide
     m.MainScreen.openGuide = false 
     __hideMain()
+  else if m.StackOfScreens.Peek() = "ViewAllScreen" then ' Si el streaming se originó en ViewAll, lo tomamos desde ese componente.
+    streaming = m.ViewAllScreen.streaming
+    __hideViewAll(false) ' Ocultamos temporalmente ViewAll sin limpiar data para poder volver desde Player.
   else if m.StackOfScreens.Peek() = "ProgramDetailScreen" then
     streaming = m.ProgramDetailScreen.streaming
     __hideProgramDetail()
@@ -469,6 +482,8 @@ sub __showViewAll(viewAllData as string)
   m.ViewAllScreen.data = viewAllData
   m.ViewAllScreen.onFocus = true
   m.ViewAllScreen.setFocus(true)
+  m.ViewAllScreen.ObserveField("streaming", "onStreamingPlayer") ' Escuchamos streaming para abrir Player desde ViewAll.
+  m.ViewAllScreen.ObserveField("detail", "onProgramDetail") ' Escuchamos detail para abrir ProgramDetail desde ViewAll.
   ' Ocultamos el loading general una vez mostrada la pantalla de destino.
   if m.loading <> invalid then m.loading.visible = false
 end sub
@@ -525,10 +540,14 @@ sub __hideProgramDetail()
 end sub
 
 ' Esconde la pantalla Ver todos
-sub __hideViewAll()
+sub __hideViewAll(clearData = true)
   m.ViewAllScreen.visible = false
   m.ViewAllScreen.onFocus = false
-  m.ViewAllScreen.data = invalid
+  m.ViewAllScreen.unobserveField("streaming") ' Dejamos de escuchar streaming al salir de ViewAll.
+  m.ViewAllScreen.unobserveField("detail") ' Dejamos de escuchar detail al salir de ViewAll.
+  m.ViewAllScreen.streaming = invalid ' Limpiamos salida de streaming para evitar eventos residuales.
+  m.ViewAllScreen.detail = invalid ' Limpiamos salida de detalle para evitar eventos residuales.
+  if clearData then m.ViewAllScreen.data = invalid ' Solo limpiamos data al cerrar ViewAll definitivamente (no en navegación temporal).
 end sub
 
 ' Esconde la Configuracion
@@ -651,6 +670,13 @@ end sub
 sub __backManager(ScreenFocus)
   if ScreenFocus = "ProgramDetailScreen" then 
     __showProgramDetail()
+  else if ScreenFocus = "ViewAllScreen" then
+    if not m.ViewAllScreen.visible then m.ViewAllScreen.visible = true ' Restauramos ViewAll al volver desde Player/Detalle cuando quedó en el stack.
+    m.ViewAllScreen.onFocus = true ' Rehabilitamos foco para retomar navegación en ViewAll.
+    m.ViewAllScreen.setFocus(true) ' Devolvemos foco al componente para que su lista interna recupere control.
+    m.ViewAllScreen.ObserveField("streaming", "onStreamingPlayer") ' Reenganchamos salida de reproducción al regresar.
+    m.ViewAllScreen.ObserveField("detail", "onProgramDetail") ' Reenganchamos salida de detalle al regresar.
+    if m.loading <> invalid then m.loading.visible = false ' Evitamos spinner colgado al volver desde Player.
   else if ScreenFocus = "MainScreen" then 
     if not m.MainScreen.visible then m.MainScreen.visible = true
     m.MainScreen.onFocus = true

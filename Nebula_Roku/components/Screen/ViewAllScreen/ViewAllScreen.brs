@@ -14,6 +14,8 @@ sub init()
   m.carouselContainer = m.top.findNode("carouselContainer")
   ' Referencia al indicador de selección del carrusel.
   m.selectedIndicator = m.top.findNode("selectedIndicator")
+  ' Cacheamos último foco para restaurarlo tras errores de red/validación.
+  m.lastFocusedProgram = invalid
 end sub
 
 ' Procesa el payload enviado desde MainScreen para cargar el carrusel completo.
@@ -31,8 +33,28 @@ end sub
 
 ' Maneja la lógica de foco para la pantalla.
 sub initFocus()
-  ' Delegamos foco al contenedor del carrusel inferior.
-  if m.top.onFocus and m.carouselContainer <> invalid then m.carouselContainer.setFocus(true) 
+  ' Delegamos restauración de foco al helper para recuperar último carrusel activo.
+  if m.top.onFocus then restoreFocus()
+end sub
+
+' Restaura foco al último carrusel activo (o al primero disponible) al volver a ViewAll.
+sub restoreFocus()
+  if m.carouselContainer = invalid then return ' Evitamos operar si el contenedor todavía no está listo.
+
+  targetCarousel = invalid ' Inicializamos carrusel destino para restaurar foco.
+  if m.lastFocusedProgram <> invalid then targetCarousel = m.lastFocusedProgram ' Priorizamos el último carrusel usado antes de salir.
+  if targetCarousel = invalid and m.carouselContainer.focusedChild <> invalid then targetCarousel = m.carouselContainer.focusedChild ' Fallback al carrusel que conserve foco interno.
+  if targetCarousel = invalid and m.carouselContainer.getChildCount() > 0 then targetCarousel = m.carouselContainer.getChild(0) ' Último fallback: primer carrusel renderizado.
+  if targetCarousel = invalid then return ' Salimos si no hay carrusel válido para enfocar.
+
+  focusItem = targetCarousel.findNode("carouselList") ' Buscamos la lista interna que realmente recibe eventos de control remoto.
+  if focusItem = invalid then return ' Cortamos si no existe lista para enfocar.
+
+  targetCarousel.opacity = "1.0" ' Garantizamos que la fila objetivo quede visible al restaurar foco.
+  focusItem.setFocus(true) ' Aplicamos foco real sobre la lista del carrusel.
+  m.selectedIndicator.size = targetCarousel.size ' Sincronizamos indicador con el carrusel recuperado.
+  m.selectedIndicator.visible = true ' Mostramos indicador porque hay foco activo.
+  m.carouselContainer.translation = [0, -(targetCarousel.translation[1] - m.yPosition)] ' Reposicionamos contenedor para dejar visible la fila recuperada.
 end sub
 
 ' Carga la configuracion inicial de la ViewAll.
@@ -201,6 +223,7 @@ sub __populateViewAllCarousel(data as Object)
       newCarousel.items = rowItems ' Cargamos sólo items que caben en esta fila.
       newCarousel.translation = [0, yPosition] ' Posicionamos carrusel en eje Y acumulado.
       newCarousel.ObserveField("focused", "onFocusItem") ' Observamos foco para disparar Program Summary.
+      newCarousel.ObserveField("selected", "onSelectItem") ' Observamos selección para abrir Player/Detalle al presionar OK.
       if previousCarousel <> invalid then previousCarousel.focusDown = newCarousel ' Enlazamos foco hacia abajo desde carrusel anterior.
       if previousCarousel <> invalid then newCarousel.focusUp = previousCarousel ' Enlazamos foco hacia arriba hacia carrusel anterior.
       previousCarousel = newCarousel ' Actualizamos referencia para la próxima iteración.
@@ -238,6 +261,7 @@ sub __clearViewAllCarousel()
   while m.carouselContainer.getChildCount() > 0 
     child = m.carouselContainer.getChild(0)
     child.unobserveField("focused")
+    child.unobserveField("selected") ' Dejamos de observar selección al destruir el carrusel.
     m.carouselContainer.removeChild(child)
   end while
   ' Ocultamos indicador al no existir carrusel renderizado.
@@ -349,4 +373,126 @@ sub onProgramSummaryResponse()
     end if
     m.apiSummaryRequestManager = clearApiRequest(m.apiSummaryRequestManager) ' Cerramos ciclo limpiando manager.
   end if
+end sub
+
+' Toma la selección del item enfocado y decide si abre Player o Detalle, igual que MainScreen.
+sub onSelectItem()
+  if m.carouselContainer = invalid or not m.carouselContainer.isInFocusChain() or m.carouselContainer.focusedChild = invalid then return ' Validamos que exista un carrusel activo con foco.
+  m.itemSelected = ParseJson(m.carouselContainer.focusedChild.selected) ' Leemos payload del item seleccionado desde Carousel.
+  m.carouselContainer.focusedChild.selected = invalid ' Limpiamos el campo selected para evitar reprocesar la misma selección.
+  if m.itemSelected = invalid then return ' Cortamos si el payload no pudo parsearse.
+
+  __markLastFocus() ' Guardamos referencia del foco para restauración en caso de error.
+  if m.top.loading <> invalid then m.top.loading.visible = true ' Mostramos loading global mientras resolvemos la acción.
+
+  if m.itemSelected.redirectKey = "ChannelId" then ' Si el item es canal, replicamos flujo WatchValidate + Streaming de MainScreen.
+    watchSessionId = getWatchSessionId() ' Recuperamos la sesión de visualización activa.
+    requestId = createRequestId() ' Creamos requestId para retries del servicio.
+    action = {
+      apiRequestManager: m.apiRequestManager ' Conservamos manager para helper de reintentos.
+      url: urlWatchValidate(m.apiUrl, watchSessionId, m.itemSelected.redirectKey, m.itemSelected.redirectId) ' Armamos validación previa de permisos de reproducción.
+      method: "GET" ' Ejecutamos validación por GET.
+      responseMethod: "onWatchValidateResponse" ' Enlazamos callback de validación para continuar con streaming.
+      body: invalid ' No enviamos body en GET.
+      token: invalid ' El token se inyecta por sesión activa.
+      publicApi: false ' Endpoint privado autenticado.
+      dataAux: invalid ' Sin metadata auxiliar para este request.
+      requestId: requestId ' Adjuntamos id de request para manejo de acciones.
+      run: function() as Object
+        m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux) ' Disparamos WatchValidate.
+        return { success: true, error: invalid } ' Reportamos ejecución local satisfactoria.
+      end function
+    }
+    runAction(requestId, action, ApiType().CLIENTS_API_URL) ' Ejecutamos acción con retries centralizados.
+    m.apiRequestManager = action.apiRequestManager ' Persistimos manager actualizado.
+  else
+    m.apiRequestManager = clearApiRequest(m.apiRequestManager) ' Limpiamos cualquier request pendiente antes de navegar a detalle.
+    m.top.detail = FormatJson(m.itemSelected) ' Emitimos detalle para que MainScene abra ProgramDetailScreen.
+    if m.top.loading <> invalid then m.top.loading.visible = false ' Ocultamos loading porque la navegación ya fue emitida.
+  end if
+end sub
+
+' Procesa la respuesta de WatchValidate para decidir si continúa a streaming, igual que MainScreen.
+sub onWatchValidateResponse()
+  if m.apiRequestManager = invalid then ' Si el manager se limpió por retry, reintentamos selección actual.
+    onSelectItem() ' Reintentamos flujo desde el item seleccionado.
+    return
+  else
+    if validateStatusCode(m.apiRequestManager.statusCode) then ' Solo continuamos con respuestas HTTP exitosas.
+      resp = ParseJson(m.apiRequestManager.response).data ' Parseamos payload de validación.
+
+      if resp.resultCode = 200 then ' Si está autorizado, pedimos URL de streaming.
+        setWatchSessionId(resp.watchSessionId) ' Actualizamos watchSessionId vigente.
+        setWatchToken(resp.watchToken) ' Actualizamos watchToken vigente.
+        if m.itemSelected <> invalid then
+          m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlStreaming(m.apiUrl, m.itemSelected.redirectKey, m.itemSelected.redirectId), "GET", "onStreamingsResponse") ' Solicitamos streaming del item canal seleccionado.
+        end if
+      else
+        if m.top.loading <> invalid then m.top.loading.visible = false ' Ocultamos loading porque no se podrá reproducir.
+        m.apiRequestManager = clearApiRequest(m.apiRequestManager) ' Limpiamos request manager al cortar el flujo.
+        __validateError(0, resp.resultCode, invalid) ' Reutilizamos manejo de errores funcionales de MainScreen.
+        printError("WatchValidate ResultCode ViewAll:", resp.resultCode) ' Logueamos resultCode no exitoso.
+      end if
+    else
+      if m.top.loading <> invalid then m.top.loading.visible = false ' Ocultamos loading por error HTTP.
+      statusCode = m.apiRequestManager.statusCode ' Capturamos status code de error.
+      errorResponse = m.apiRequestManager.errorResponse ' Capturamos body de error del backend.
+      m.apiRequestManager = clearApiRequest(m.apiRequestManager) ' Limpiamos manager tras error.
+      __validateError(statusCode, 0, errorResponse) ' Delegamos el handling de error común.
+      printError("WatchValidate Status ViewAll:", statusCode.toStr() + " " + errorResponse) ' Registramos error para diagnóstico.
+    end if
+  end if
+end sub
+
+' Procesa la respuesta del servicio de streaming y emite salida hacia MainScene para abrir Player.
+sub onStreamingsResponse()
+  if m.apiRequestManager = invalid then ' Si no hay manager activo, reintentamos validación.
+    onWatchValidateResponse() ' Reingresamos al flujo de validación previo.
+    return
+  else
+    if validateStatusCode(m.apiRequestManager.statusCode) then ' Validamos respuesta exitosa del servicio de streaming.
+      removePendingAction(m.apiRequestManager.requestId) ' Quitamos request del pool de acciones pendientes.
+      resp = ParseJson(m.apiRequestManager.response) ' Parseamos respuesta JSON de streaming.
+      if resp.data <> invalid then
+        m.apiRequestManager = clearApiRequest(m.apiRequestManager) ' Limpiamos request manager al obtener data válida.
+        streaming = resp.data ' Tomamos payload base de streaming.
+        streaming.key = m.itemSelected.redirectKey ' Adjuntamos clave del item para consumo del player.
+        streaming.id = m.itemSelected.redirectId ' Adjuntamos id del item para consumo del player.
+        streaming.streamingType = getStreamingType().DEFAULT ' Indicamos tipo por defecto como en MainScreen.
+         ' Emitimos salida para que MainScene abra PlayerScreen.
+        m.top.streaming = FormatJson(streaming)
+      else
+         ' Ocultamos loading al no recibir data reproducible.
+        if m.top.loading <> invalid then m.top.loading.visible = false
+         ' Devolvemos foco al elemento previo para continuidad de UX.
+        __restoreLastFocus()
+        printError("Streamings Empty ViewAll:", m.apiRequestManager.response)
+        m.apiRequestManager = clearApiRequest(m.apiRequestManager)
+      end if
+    else
+      if m.top.loading <> invalid then m.top.loading.visible = false
+      statusCode = m.apiRequestManager.statusCode 
+      errorResponse = m.apiRequestManager.errorResponse 
+      removePendingAction(m.apiRequestManager.requestId)
+      m.apiRequestManager = clearApiRequest(m.apiRequestManager)
+      __restoreLastFocus() ' Recuperamos foco para mantener navegabilidad.
+      __validateError(statusCode, 0, errorResponse)
+      printError("Streamings ViewAll:", errorResponse)
+    end if
+  end if
+end sub
+
+' Guarda referencia del último carrusel enfocado para restaurar foco tras errores.
+sub __markLastFocus()
+  if m.carouselContainer <> invalid then m.lastFocusedProgram = m.carouselContainer.focusedChild ' Persistimos nodo enfocado actual.
+end sub
+
+' Restaura foco del carrusel previamente guardado cuando una acción falla.
+sub __restoreLastFocus()
+  if m.lastFocusedProgram <> invalid then m.lastFocusedProgram.setFocus(true) ' Devolvemos foco al último carrusel recordado.
+end sub
+
+' Reutiliza validación de errores estándar para resolver logout cuando aplica.
+sub __validateError(statusCode as integer, resultCode as integer, errorResponse)
+  if validateLogout(statusCode, m.top) then return ' Si el error implica logout, delegamos y detenemos el flujo local.
 end sub
