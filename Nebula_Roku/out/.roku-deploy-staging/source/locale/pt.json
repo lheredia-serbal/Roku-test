@@ -1,0 +1,168 @@
+{
+  "button": {
+    "back": "Voltar",
+    "backToHome": "Voltar ao início",
+    "ok": "OK",
+    "cancel": "Cancelar",
+    "close": "Fechar",
+    "next": "Próximo",
+    "no": "NÃO",
+    "previous": "Anterior",
+    "ready": "Aceitar",
+    "retry": "Tentar novamente",
+    "tryAgain": "Tentar novamente",
+    "save": "Aceitar",
+    "yes": "SIM",
+    "continueSee": "Continuar assistindo",
+    "exit": "Sair"
+  },
+  "time": {
+    "endsInHoursMin": "Termina em {{hours}}h {{minutes}}m",
+    "endsInMin": "ermina em {{minutes}} min",
+    "endsIn": "Termina em {{time}}",
+    "live": "Vivo",
+    "today": "Hoje",
+    "yesterday": "Ontem",
+    "tomorrow": "Amanhã",
+    "january": "Janeiro",
+    "february": "Fevereiro",
+    "march": "Março",
+    "april": "Abril",
+    "may": "Maio",
+    "june": "Junho",
+    "july": "Julho",
+    "august": "Agosto",
+    "september": "Setembro",
+    "october": "Outubro",
+    "november": "Novembro",
+    "december": "Dezembro",
+    "formatHours": "HH:mm",
+    "formatDate": "dd/MM/yyyy",
+    "formatDateAndHours": "dd/MM/yy HH:mm",
+    "formatDateAndTimeSpacing": "dd MMMM yyyy hh:mm"
+  },
+  "launcherScreen": {
+    "copyright": "@copyright {{year}} - Qvix Solutions"
+  },
+  "configPage": {
+    "title": "Informação de dispositivo",
+    "titleEmail": "E-mail: ",
+    "titleName": "Nome do usuário: ",
+    "titleDiveId": "ID do dispositivo: ",
+    "titleSerialNumber": "Número de série: ",
+    "titleVersion": "Versão: ",
+    "orgName": "Qvix Solutions"
+  },
+  "content": {
+    "menuComponent": {
+      "changeProfile": "Mudar perfil",
+      "Setting": "Configurações",
+      "exit": "Sair",
+      "logout": "Fechar sessão"
+    },
+    "contentPage": {
+      "notDisplayTitle": "Nada aqui...",
+      "notDisplayContect": "No momento, não há conteúdo para exibir nesta seção. Isso pode ocorrer porque você não possui uma assinatura ativa ou não há conteúdo disponível, entre em contato conosco.",
+      "seeMore": "Ver mais",
+      "goToGuide": "Ir para o guia"
+    }
+  },
+  "loginPage": {
+    "titleUser": "Usuário: ",
+    "enterYourUser": "Insira seu usuário",
+    "password": "Senha: ",
+    "enterYourPassword": "Coloque sua senha",
+    "errorForm": {
+      "unAuthorized": "Usuário ou senha incorretos",
+      "notConfirmed": "Conta não confirmada",
+      "notActivated": "Conta não ativada pelo administrador",
+      "unhandled": "Erro ao processar a solicitação",
+      "passwordRequired": "Senha é obrigatória!",
+      "userRequired": "Usuário é obrigatório!",
+      "invalidAccount": "Usuário ou senha inválidos"
+    }
+  },
+  "errorPlanSession": {
+    "killer": "Esta sessão foi encerrada em {{date}} por este dispositivo:",
+    "manyPeople": "Existem muitas pessoas usando sua conta, para continuar visualizando, você deve fechar uma conta e tentar novamente."
+  },
+  "player": {
+    "guide": {
+      "availableToView": "Disponível para assistir",
+      "now": "AGORA"
+    },
+    "video": {
+      "pause": "Pausa",
+      "play": "Jogar",
+      "restart": "Reiniciar",
+      "goLive": "Entrar ao vivo",
+      "guide": "Guia"
+    },
+    "playerPage": {
+      "connecting": "Sinal de conexão...",
+      "askHere": "Você ainda está aí?"
+    }
+  },
+  "profiles": {
+    "confirmDeleteModal": {
+      "title": "Excluir perfil",
+      "askDelete": "Tem certeza de que deseja excluir o perfil?"
+    },
+    "profilePage": {
+      "askTitle": "Quem está assistindo?",
+      "titleButton": "Gerenciar perfis",
+      "addProfile": "Adicionar perfil",
+      "EditProfile": "Editar Perfil",
+      "deleteProfile": "Excluir perfil",
+      "name": "Nome",
+      "chooseAvatar": "Escolha um avatar",
+      "error": {
+        "nameRequired": "O nome é obrigatório",
+        "avatarRequired": "Você deve escolher um avatar"
+      }
+    }
+  },
+  "programDetail": {
+    "button": {
+      "watch": "Ver",
+      "continue": "Continuar",
+      "restart": "Reiniciar"
+    }
+  },
+  "autoUpgrade":  {
+    "title": "Atualização disponível",
+    "message": "Há uma nova versão disponível.",
+    "mandatoryMessage": "Você deve atualizar a versão para continuar.",
+    "remindLater": "Lembrar mais tarde"
+  },
+  "shared": {
+    "errorComponent": {
+      "notFound": "A informação não está disponível",
+      "unhandled": "Opa! Ocorreu um erro.",
+      "connection": "Erro de conexão do servidor",
+      "extendedMessage": "Se o erro persistir entre em contato conosco.",
+      "anErrorOcurred": "Ocorreu um erro.",
+      "weAreSorry": "Pedimos desculpas...",
+      "youCurrentlyDoNotHavePlan": "Atualmente, você não possui um plano que permita a visualização neste tipo de dispositivo. Entre em contato com a equipe do [ProductName].",
+      "youCurrentlyDoNotHaveAnyActiveSubscriptions": "Atualmente você não possui nenhuma assinatura ativa. Entre em contato com a equipe do [ProductName].",
+      "youCurrentlyDoNotHaveSufficientBalance": "Você não possui saldo suficiente para continuar assistindo ao conteúdo.",
+      "serverConnectionProblems": "Problemas de conexão com o servidor...",
+        "cdnError": {
+        "title": "Não foi possível estabelecer a conexão",
+        "message": "Encontramos um problema ao tentar conectar. Recomendamos verificar sua conexão com a internet e tentar novamente em alguns instantes.",
+        "code": "Código de erro: [Code]"
+      }
+    },
+    "exitModal": {
+      "title": "Sair",
+      "askExit": "Tem certeza de que deseja sair?",
+      "askLogout": "Tem certeza de que deseja sair desta sessão neste dispositivo?"
+    },
+    "parentalControlModal": {
+      "title": "Insira seu PIN",
+      "error": {
+        "invalid": "PIN inválido"
+      }
+    }
+  }
+}

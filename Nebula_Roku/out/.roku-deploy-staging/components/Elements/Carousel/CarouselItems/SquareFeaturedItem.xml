@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<component 
+    name="SquareFeaturedItem" 
+    extends="Group" 
+    xsi:noNamespaceSchemaLocation="https://devtools.web.roku.com/schema/RokuSceneGraph.xsd">
+    
+    <script type="text/brightscript" uri="SquareFeaturedItem.brs"/>
+    <script type="text/brightscript" uri="pkg:/source/Utils.brs" />
+    <script type="text/brightscript" uri="pkg:/source/CarouselConstants.brs" />
+
+    <interface>
+        <!-- Paramentros de Entrada -->
+        <field id="itemContent" type="node"   onChange="itemContentChanged" />
+        <field id="currRect"    type="rect2d" onChange="currRectChanged" />
+        <field id="groupHasFocus" type="boolean" onChange="focusPercentChanged" />
+        <field id="focusPercent" type="float" onChange="focusPercentChanged" />
+    </interface>
+
+    <children>
+        <!-- Fondo negro -->
+        <Rectangle id="theRect" color="#000000">
+            <Group
+                id="contentGroup">
+                <LayoutGroup
+                    layoutDirection="horiz"
+                    horizAlignment="left"
+                    vertAlignment="top"
+                    itemSpacings="[2]">
+
+                    <LayoutGroup
+                        layoutDirection="vert"
+                        horizAlignment="left"
+                        vertAlignment="center"
+                        itemSpacings="[1]">
+                        <Label 
+                            id="title"
+                            wrap="true" 
+                            maxLines="2" 
+                            visible="false"
+                            lineSpacing="2"
+                            font="font:TinySystemFont"/>
+                            
+                        <Label 
+                            id="category" 
+                            wrap="false" 
+                            maxLines="1" 
+                            visible="false"
+                            font="font:TinySystemFont"/>
+
+                        <Label 
+                            id="dateTime" 
+                            wrap="false" 
+                            maxLines="1" 
+                            visible="false"
+                            font="font:TinySystemFont"/>
+                    </LayoutGroup> 
+                    
+                    <Poster 
+                        id="imageItem" />
+                </LayoutGroup>
+                
+                <!-- BARRA FIJA ABAJO -->
+                <LayoutGroup
+                    id="progressGroup"
+                    layoutDirection="horiz"
+                    horizAlignment="left"
+                    vertAlignment="bottom">
+
+                    <Rectangle id="progressLeft" height="3"/>
+                    <Rectangle id="progressRight" height="3"/>
+                </LayoutGroup>
+            </Group>
+            
+            <Group id="seeMoreGroup" translation="[0, 0]" visible="false">
+                <!-- Etiqueta para el título, centrada y con 2 líneas máximo -->
+                <Label 
+                    id="itemTitle" 
+                    wrap="true" 
+                    maxLines="2" 
+                    horizAlign="center" 
+                    vertAlign="center"
+                    ellipsizeOnBoundary="true"
+                    font="font:TinySystemFont"/>
+            </Group>
+        </Rectangle>
+        <Rectangle id="opacityLayout" color="#000000" opacity="0.33" />
+    </children>
+</component>

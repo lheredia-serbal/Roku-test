@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<component 
+  name="ProfileScreen" 
+  extends="Group"
+  xsi:noNamespaceSchemaLocation="https://devtools.web.roku.com/schema/RokuSceneGraph.xsd">
+
+  <script type="text/brightscript" uri="ProfileScreen.brs"/>
+  <script type="text/brightscript" uri="pkg:/source/Utils/i18nUtils.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Utils.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Utils/RetryUtils.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Enums.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Storage.brs" />
+  <script type="text/brightscript" uri="pkg:/source/ResultCodes.brs" />
+  
+  <script type="text/brightscript" uri="pkg:/source/Services/Avatars.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Services/Profiles.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Services/Auth.brs" />
+
+  <script type="text/brightscript" uri="pkg:/source/Services/ActionLogs.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Services/DomainManager.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Services/Retry.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Services/ErrorManager.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Services/ErrorCode.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Services/Health.brs" />
+
+  <interface>
+    <!-- Paramentros de Entrada -->
+    <field id="loading" type="node" />
+    <field id="onFocus" type="boolean" value="false" onChange="initFocus"/>
+    
+    <!-- Paramentros de entrada/Salida -->
+    <field id="logout" alwaysnotify="true" type="boolean" value="false" onChange="onLogoutChange" />
+    
+    <!-- Paramentros de Salida -->
+    <field id="finished" alwaysnotify="true" type="boolean" value="false" />
+  </interface>
+  
+  <children>
+    <!-- Pantalla de seleccion de perfil -->
+    <LayoutGroup
+      id="screenProfileSelected"
+      layoutDirection="vert"
+      horizAlignment="center"
+      vertAlignment="center"
+      addItemSpacingAfterChild="false"
+      itemSpacings="[70, 40, 80]">
+      <Label 
+        id="titleSelected"
+        wrap="false" 
+        maxLines="1"
+        horizAlign="center"
+        font="font:MediumBoldSystemFont"/>
+
+      <LayoutGroup 
+        id="profilesElements"
+        layoutDirection="horiz"
+        horizAlignment="center"
+        vertAlignment="center"
+        itemSpacings="[0, 20]" >
+        
+        <!-- Se usa para que no se haya un efecto de movimiento del texto y el boton -->
+        <Rectangle  
+          id="buttonRectangle"
+          width="0"
+          opacity="0.0"/> 
+      </LayoutGroup> 
+        
+      <QvButton 
+        id="manageProfile"
+        focusable="true"/>
+    </LayoutGroup>
+
+
+    <!-- Pantalla de edicion/creacion de un perfil -->
+    <LayoutGroup
+      id="screenProfileEdit"
+      layoutDirection="vert"
+      horizAlignment="center"
+      vertAlignment="top"
+      visible="false"
+      itemSpacings="[20]">
+      
+      <Label 
+        id="titleEdit"
+        wrap="false" 
+        maxLines="1"
+        horizAlign="center"
+        font="font:MediumBoldSystemFont"/>
+
+      <LayoutGroup
+        layoutDirection="horiz"
+        horizAlignment="center"
+        vertAlignment="center"
+        itemSpacings="[0, 20]"> 
+        <!-- Se usa para que no se haya un efecto de movimiento -->
+        <Rectangle  
+          id="buttonRectangleEdit"
+          width="0"
+          opacity="0.0"/> 
+
+        <ProfileItem 
+          id="profileImageEdit"
+          showManageProfile="true"
+          focusable="true"/>
+
+        <LayoutGroup
+          layoutDirection="vert"
+          horizAlignment="center"
+          vertAlignment="center"
+          itemSpacings="[40]" >
+          <TextEditBox
+            id="profileName"/>
+
+          <LayoutGroup
+            id="buttonEditContainer"
+            layoutDirection="horiz"
+            horizAlignment="center"
+            vertAlignment="top"
+            itemSpacings="[0, 20]">
+            <!-- Se usa para que no se haya un efecto de movimiento -->
+            <Rectangle  
+              width="0"
+              height="50" 
+              opacity="0.0"/> 
+            </LayoutGroup>
+        </LayoutGroup>
+      </LayoutGroup>  
+
+      <Keyboard id="keyboard" translation="[-15,0]" />
+    </LayoutGroup>
+
+    <!-- Pantalla de seleccion de un avatar -->
+    <Group
+      id="screenAvatarEdit"
+      visible="false"
+      translation="[0, 20]">
+      
+      <Label 
+        id="avatar"
+        wrap="false" 
+        maxLines="1"
+        horizAlign="left"
+        font="font:MediumBoldSystemFont"/>
+
+      <LayoutGroup
+        id="profileImageAndNameContainer"
+        layoutDirection="vert"
+        horizAlignment="center"
+        vertAlignment="top"> 
+
+        <Label
+          id="profileNameInAvatars"
+          wrap="false"
+          maxLines="1"
+          horizAlign="center"
+          vertAlign="bottom"
+          font="font:SmallestSystemFont"/>
+
+        <Poster 
+          id="profileImageInAvatars"
+          loadDisplayMode="scaleToZoom" />
+
+      </LayoutGroup>
+
+      <!-- Contenedor para múltiples carouseles y foco -->
+      <Group id="carousels" >
+        <Group id="carouselContainer"/>
+
+        <SelectionBox id="selectedIndicator"  visible="false"/>
+      </Group>
+    </Group>
+  </children>
+</component>

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<component 
+  name="SessionItemContentNode"
+  extends="ContentNode"
+  xsi:noNamespaceSchemaLocation="https://devtools.web.roku.com/schema/RokuSceneGraph.xsd">
+  <interface>
+    <field id="watchSessionId" type="integer" />
+    <field id="deviceTypeDescription" type="string" />
+    <field id="deviceDescription" type="string" />
+    <field id="programDescription" type="string" />
+    <field id="profileName" type="string" />
+  </interface>
+</component>

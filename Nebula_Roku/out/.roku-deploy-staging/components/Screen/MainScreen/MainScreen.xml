@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<component 
+  name="MainScreen" 
+  extends="Group" 
+  xsi:noNamespaceSchemaLocation="https://devtools.web.roku.com/schema/RokuSceneGraph.xsd">
+
+  <script type="text/brightscript" uri="MainScreen.brs" />
+  <script type="text/brightscript" uri="pkg:/source/StreamingConstants.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Storage.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Utils/i18nUtils.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Utils.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Utils/DateFunctions.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Utils/RetryUtils.brs" />
+  <script type="text/brightscript" uri="pkg:/source/CarouselConstants.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Enums.brs" />
+
+  <script type="text/brightscript" uri="pkg:/source/Services/Channels.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Services/ContentViews.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Services/Menu.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Services/ParentalControl.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Services/Platforms.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Services/AutoUpgrade.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Services/Streamings.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Services/Programs.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Services/Watch.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Services/ActionLogs.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Services/DomainManager.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Services/Retry.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Services/ErrorManager.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Services/ErrorCode.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Services/Health.brs" />
+  
+  <interface>
+    <!-- Paramentros de Entrada -->
+    <field id="loading" type="node" />
+    <field id="onFocus" type="boolean" value="false" onChange="initFocus" />
+    <field id="loadData" type="boolean" value="false" onChange="initData" />
+    
+    <!-- Paramentros de entrada/Salida -->
+    <field id="logout" alwaysnotify="true" type="boolean" value="false" onChange="onLogoutChange" />
+    
+    <!-- Paramentros de Salida -->
+    <field id="streaming" type="string" />
+    <field id="detail" type="string" />
+    <!-- Salida para abrir la pantalla de Ver todos con el contexto del carrusel seleccionado. -->
+    <field id="viewAll" type="string" />
+    <field id="setting" type="boolean" value="false"/>
+    <field id="pendingStreamingSession" type="string" />
+    <field id="onChangeProfile" type="boolean" value="false" />
+    <field id="openGuide" type="boolean" value="false"/>
+    <field id="onExit" type="boolean" value="false"/>
+    <field id="forceExit" type="boolean" value="false" />
+  </interface>
+
+  <children>
+    <Poster 
+      id="programImageBackground" 
+      loadDisplayMode="scaleToZoom"
+      uri="pkg:/images/client/info_gradient.png" />
+
+    <Poster 
+      id="infoGradient" 
+      loadDisplayMode="scaleToFit"
+      uri="pkg:/images/client/info_gradient.png" />
+
+    <!-- Program Container -->
+    <ProgramSummary 
+      id="programInfo" 
+      visible="false"
+      translation="[118,50]"/>
+
+    <!-- Contenedor para múltiples carouseles y foco -->
+    <Group id="carousels" translation="[0, 135]">
+      <Group id="carouselContainer" translation="[50, 20]"/>
+
+      <SelectionBox id="selectedIndicator" visible="false"/>
+    </Group>
+
+    
+    <!-- Contenedor para Error que no hay contenido -->
+    <LayoutGroup 
+      id="withoutContentLayoutGroup"
+      visible="false"
+      layoutDirection="vert"
+      horizAlignment="center"
+      vertAlignment="center"
+      itemSpacings="[40]">
+      <Label
+        id="withoutContentTitle"
+        visible="true"
+        wrap="false" 
+        maxLines="1" 
+        horizAlign="center"
+        font="font:MediumSystemFont" />
+
+      <Label
+        id="withoutContentMessage"
+        visible="true"
+        wrap="true" 
+        maxLines="3" 
+        horizAlign="center"
+        font="font:SmallSystemFont" />
+    </LayoutGroup>
+
+    <!--  Menu background -->
+    <Group
+      id="groupOpacityForMenu"
+      translation="[0, 0]">
+      <Poster
+        id="opacityForMenu"
+        opacity="0.7"
+        translation="[0,0]"
+        uri="pkg:/images/client/info_gradient.png" />
+    </Group>
+
+    <!--  Menu contairner -->
+    <Menu id="myMenu" />
+
+    <!-- Logo -->
+    <Poster
+      id="mainLogo"
+      width="200" 
+      height="100"
+      loadWidth="200"
+      loadHeight="100"
+      translation="[0, 0]"
+      loadDisplayMode="scaleToFit"/>
+    
+    <Label
+        id="nameOrganization"
+        visible="false"
+        wrap="false" 
+        maxLines="3" 
+        horizAlign="center"
+        font="font:SmallSystemFont" />
+    
+    <!-- Timers -->
+    <Timer id="programTimer" repeat="false" duration="0.5"/>
+    
+  </children>
+</component>
+
