@@ -111,12 +111,6 @@ sub currRectChanged()
     if (m.contentGroup <> invalid) then
         m.contentGroup.translation = [paddingX, paddingY]
     end if
-    ' Hace que el contenedor de 'Ver más' cubra toda la tarjeta
-    if (m.seeMoreGroup <> invalid) then
-        m.seeMoreGroup.width = m.theRect.width
-        m.seeMoreGroup.height = m.theRect.height
-    end if
-
     ' Permite centrar el label en todo el rectángulo del item
     if (m.itemTitle <> invalid) then
         m.itemTitle.width = m.theRect.width

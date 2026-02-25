@@ -31,8 +31,6 @@
   <interface>
     <!-- Nodo loading compartido que llega desde MainScene. -->
     <field id="loading" type="node" />
-    <!-- Campo para recibir un título configurable desde el padre. -->
-    <field id="title" type="string" value="Ver todo" onChange="onTitleChange" />
     <!-- Campo para recibir el payload de navegación desde MainScreen. -->
     <field id="data" type="string" onChange="onDataChange" />
     <!-- Campo para habilitar/deshabilitar el foco del componente. -->
@@ -56,7 +54,7 @@
     <ProgramSummary
       id="programInfo"
       visible="false"
-      translation="[118,50]"/>
+      translation="[50,50]"/>
 
     <!-- Contenedor de carrusel inferior para el listado de programas de ViewAll. -->
     <Group id="carousels" translation="[0, 135]">

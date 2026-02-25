@@ -1,142 +1,183 @@
 ' Inicializa referencias internas del componente ViewAllScreen.
 sub init()
-  m.scaleInfo = m.global.scaleInfo ' Guardamos información de escala para posicionamiento responsive.
-  m.programTimer = m.top.findNode("programTimer") ' Referencia al timer que difiere el summary al mover foco.
-  m.programInfo = m.top.findNode("programInfo") ' Referencia al componente visual de Program Summary.
-  m.infoGradient = m.top.findNode("infoGradient") ' Referencia al gradiente superior como en MainScreen.
-  m.programImageBackground = m.top.findNode("programImageBackground") ' Referencia al poster de fondo dinámico.
-  m.carouselContainer = m.top.findNode("carouselContainer") ' Referencia al contenedor donde vive el carrusel de ViewAll.
-  m.selectedIndicator = m.top.findNode("selectedIndicator") ' Referencia al indicador de selección del carrusel.
-  onTitleChange() ' Aplicamos el valor inicial del field title.
-end sub
-
-' Actualiza el label lógico cuando cambia el field title.
-sub onTitleChange()
-  if m.top.title = invalid or m.top.title = "" then m.top.title = "Ver todo" ' Garantizamos un fallback para el título de pantalla.
+  ' Guardamos información de escala para posicionamiento responsive.
+  m.scaleInfo = m.global.scaleInfo
+  ' Referencia al timer que difiere el summary al mover foco.
+  m.programTimer = m.top.findNode("programTimer")
+  ' Referencia al componente visual de Program Summary. 
+  m.programInfo = m.top.findNode("programInfo") 
+  ' Referencia al gradiente superior como en MainScreen.
+  m.infoGradient = m.top.findNode("infoGradient") 
+  ' Referencia al poster de fondo dinámico.
+  m.programImageBackground = m.top.findNode("programImageBackground") 
+  ' Referencia al contenedor donde vive el carrusel de ViewAll.
+  m.carouselContainer = m.top.findNode("carouselContainer")
+  ' Referencia al indicador de selección del carrusel.
+  m.selectedIndicator = m.top.findNode("selectedIndicator")
 end sub
 
 ' Procesa el payload enviado desde MainScreen para cargar el carrusel completo.
 sub onDataChange()
-  if m.top.data = invalid or m.top.data = "" then return ' Evitamos procesar payload vacío.
-  payload = ParseJson(m.top.data) ' Parseamos el contexto serializado enviado por MainScreen.
-  if payload = invalid then return ' Cortamos si el payload no es JSON válido.
-  m.viewAllPayload = payload ' Persistimos el payload para reintentos y consumo del servicio.
-  if payload.title <> invalid and payload.title <> "" then m.top.title = payload.title ' Usamos el título del carrusel de origen.
-  __applyLayout() ' Aplicamos layout visual estilo MainScreen en esta pantalla.
-  __getViewAllCarousel() ' Disparamos el consumo del servicio de ViewAll.
+  __configMain()
+  if m.top.data = invalid or m.top.data = "" then return
+  payload = ParseJson(m.top.data)
+  if payload = invalid then return
+  m.viewAllPayload = payload
+   ' Aplicamos layout visual
+  __applyLayout()
+  ' Disparamos el consumo del servicio de ViewAll.
+  __getViewAllCarousel() 
 end sub
 
 ' Maneja la lógica de foco para la pantalla.
 sub initFocus()
-  if m.top.onFocus and m.carouselContainer <> invalid then m.carouselContainer.setFocus(true) ' Delegamos foco al contenedor del carrusel inferior.
+  ' Delegamos foco al contenedor del carrusel inferior.
+  if m.top.onFocus and m.carouselContainer <> invalid then m.carouselContainer.setFocus(true) 
+end sub
+
+' Carga la configuracion inicial de la ViewAll.
+sub __configMain()
+  m.programInfo.width = (m.scaleInfo.width - scaleValue(300, m.scaleInfo))
+  m.programInfo.initConfig = true
 end sub
 
 ' Configura posiciones y tamaños principales igual que MainScreen.
 sub __applyLayout()
-  if m.scaleInfo = invalid then return ' Evitamos operar sin datos de resolución.
-  safeX = m.scaleInfo.safeZone.x ' Capturamos safe zone horizontal.
-  safeY = m.scaleInfo.safeZone.y ' Capturamos safe zone vertical.
-  width = m.scaleInfo.width ' Capturamos ancho de pantalla.
-  height = m.scaleInfo.height ' Capturamos alto de pantalla.
-  m.infoGradient.width = width ' Ajustamos gradiente al ancho total.
-  m.infoGradient.height = height ' Ajustamos gradiente al alto total.
-  m.programImageBackground.width = width ' Ajustamos fondo al ancho total.
-  m.programImageBackground.height = height ' Ajustamos fondo al alto total.
-  m.programInfo.translation = [safeX + scaleValue(60, m.scaleInfo), safeY + scaleValue(20, m.scaleInfo)] ' Posicionamos summary superior como en Home.
-  m.carouselContainer.translation = [scaleValue(55, m.scaleInfo), safeY + scaleValue(20, m.scaleInfo)] ' Posicionamos carrusel debajo del summary.
-  m.selectedIndicator.translation = [scaleValue(124, m.scaleInfo), safeY + scaleValue(148, m.scaleInfo)] ' Ajustamos indicador de foco para items del carrusel.
+  if m.scaleInfo = invalid then return
+  safeX = m.scaleInfo.safeZone.x 
+  safeY = m.scaleInfo.safeZone.y 
+  width = m.scaleInfo.width
+  height = m.scaleInfo.height
+  m.infoGradient.width = width
+  m.infoGradient.height = height
+  m.programImageBackground.width = width
+  m.programImageBackground.height = height
+  m.programInfo.translation = [safeX + scaleValue(0, m.scaleInfo), safeY + scaleValue(20, m.scaleInfo)]
+  m.carouselContainer.translation = [safeX + scaleValue(0, m.scaleInfo), safeY + scaleValue(20, m.scaleInfo)]
+  m.selectedIndicator.translation = [scaleValue(124, m.scaleInfo), safeY + scaleValue(148, m.scaleInfo)]
 end sub
 
 ' Solicita el detalle del carrusel seleccionado en la vista "Ver todos".
 sub __getViewAllCarousel()
-  if m.viewAllPayload = invalid then return ' Validamos que exista contexto para solicitar datos.
-  if m.viewAllPayload.menuSelectedItemId = invalid or m.viewAllPayload.carouselId = invalid then return ' Validamos ids requeridos por endpoint.
-  if m.apiUrl = invalid then m.apiUrl = getConfigVariable(m.global.configVariablesKeys.API_URL) ' Obtenemos API base si aún no está cacheada.
-  if m.apiUrl = invalid then return ' Abortamos si no hay URL de API disponible.
-  if m.top.loading <> invalid and not m.top.loading.visible then m.top.loading.visible = true ' Mostramos loading durante la llamada.
-  requestId = createRequestId() ' Creamos id único para registrar acción pendiente.
-  action = { ' Construimos objeto de acción estándar usado por runAction.
-    apiRequestManager: m.apiRequestManager ' Pasamos referencia del request manager principal.
-    url: urlViewAllCarousels(m.apiUrl, m.viewAllPayload.menuSelectedItemId, m.viewAllPayload.carouselId) ' Armamos URL de carrusel ViewAll.
-    method: "GET" ' Definimos método HTTP de consulta.
-    responseMethod: "onViewAllCarouselResponse" ' Definimos callback de respuesta.
-    body: invalid ' Sin body para GET.
-    token: invalid ' Token no explícito porque usa sesión actual.
-    publicApi: false ' Consumimos API privada autenticada.
-    requestId: requestId ' Adjuntamos id de request para retry tracking.
-    dataAux: FormatJson(m.viewAllPayload) ' Guardamos contexto para posible reintento.
-    run: function() as Object ' Ejecutamos la petición mediante helper común.
-      m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux) ' Disparamos request en manager.
-      return { success: true, error: invalid } ' Reportamos estado de ejecución local.
-    end function ' Cerramos función de ejecución de acción.
-  } ' Cerramos objeto action.
-  runAction(requestId, action, ApiType().CLIENTS_API_URL) ' Registramos y ejecutamos acción con mecanismo de retry.
-  m.apiRequestManager = action.apiRequestManager ' Persistimos manager actualizado.
+  if m.viewAllPayload = invalid then return
+  if m.viewAllPayload.menuSelectedItemId = invalid or m.viewAllPayload.carouselId = invalid then return
+  ' Obtenemos API base si aún no está cacheada.
+  if m.apiUrl = invalid then m.apiUrl = getConfigVariable(m.global.configVariablesKeys.API_URL) 
+  ' Abortamos si no hay URL de API disponible.
+  if m.apiUrl = invalid then return 
+  ' Mostramos loading durante la llamada.
+  if m.top.loading <> invalid and not m.top.loading.visible then m.top.loading.visible = true 
+  ' Creamos id único para registrar acción pendiente.
+  requestId = createRequestId() 
+  action = {
+    apiRequestManager: m.apiRequestManager
+    url: urlViewAllCarousels(m.apiUrl, m.viewAllPayload.menuSelectedItemId, m.viewAllPayload.carouselId)
+    method: "GET"
+    responseMethod: "onViewAllCarouselResponse"
+    body: invalid
+    token: invalid
+    publicApi: false
+    requestId: requestId
+    dataAux: FormatJson(m.viewAllPayload)
+    run: function() as Object
+      m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux)
+      return { success: true, error: invalid }
+    end function
+  }
+  ' Registramos y ejecutamos acción con mecanismo de retry.
+  runAction(requestId, action, ApiType().CLIENTS_API_URL) 
+  m.apiRequestManager = action.apiRequestManager
 end sub
 
 ' Procesa la respuesta del servicio de ViewAll.
 sub onViewAllCarouselResponse()
-  if m.apiRequestManager = invalid then ' Reintenta si el manager fue limpiado por flujo externo.
-    __getViewAllCarousel() ' Re-disparamos la obtención del carrusel.
-    return ' Cortamos ejecución actual tras solicitar reintento.
+  if m.apiRequestManager = invalid then
+    ' Re-disparamos la obtención del carrusel.
+    __getViewAllCarousel() 
+    return
   end if
-  if validateStatusCode(m.apiRequestManager.statusCode) then ' Evaluamos si la respuesta HTTP es correcta.
-    removePendingAction(m.apiRequestManager.requestId) ' Quitamos la acción del pool pendiente.
-    resp = ParseJson(m.apiRequestManager.response) ' Parseamos payload de respuesta.
-    if resp <> invalid then m.viewAllResponse = resp ' Persistimos respuesta cruda para depuración/uso futuro.
-    if resp <> invalid and resp.data <> invalid and resp.data.items <> invalid and resp.data.items.count() > 0 then ' Validamos que existan items para pintar.
+  ' Evaluamos si la respuesta HTTP es correcta.
+  if validateStatusCode(m.apiRequestManager.statusCode) then 
+    ' Quitamos la acción del pool pendiente.
+    removePendingAction(m.apiRequestManager.requestId) 
+    resp = ParseJson(m.apiRequestManager.response)
+    ' Validamos que existan items para pintar.
+    if resp <> invalid and resp.data <> invalid and resp.data.items <> invalid and resp.data.items.count() > 0 then 
       m.carousel = resp.data
-      __populateViewAllCarousel(resp.data) ' Renderizamos carrusel con datos de ViewAll.
+      ' Renderizamos carrusel con datos de ViewAll.
+      __populateViewAllCarousel(resp.data) 
     else
-      __clearViewAllCarousel() ' Limpiamos UI cuando la API no trae items.
+      ' Limpiamos UI cuando la API no trae items.
+      __clearViewAllCarousel() 
     end if
   else
-    error = m.apiRequestManager.errorResponse ' Tomamos payload de error del manager.
-    statusCode = m.apiRequestManager.statusCode ' Tomamos código HTTP para validaciones.
-    if m.apiRequestManager.serverError then ' Si es error de servidor, aplicamos retry automático.
-      changeStatusAction(m.apiRequestManager.requestId, "error") ' Marcamos acción en error para retryAll.
-      retryAll() ' Reintentamos según política global.
+    error = m.apiRequestManager.errorResponse
+    statusCode = m.apiRequestManager.statusCode
+    if m.apiRequestManager.serverError then
+      changeStatusAction(m.apiRequestManager.requestId, "error")
+      retryAll()
     else
-      removePendingAction(m.apiRequestManager.requestId) ' Limpiamos acción pendiente no reintentable.
-      printError("ViewAllCarousel:", error) ' Logueamos error funcional de ViewAll.
-      if validateLogout(statusCode, m.top) then ' Validamos si el error requiere forzar logout.
-        m.apiRequestManager = clearApiRequest(m.apiRequestManager) ' Limpiamos estado de request manager.
-        if m.top.loading <> invalid then m.top.loading.visible = false ' Ocultamos loading antes de salir.
-        return ' Cortamos ejecución al delegar en flujo logout.
+      ' Limpiamos acción pendiente no reintentable.
+      removePendingAction(m.apiRequestManager.requestId) 
+      printError("ViewAllCarousel:", error)
+      ' Validamos si el error requiere forzar logout.
+      if validateLogout(statusCode, m.top) then 
+        m.apiRequestManager = clearApiRequest(m.apiRequestManager)
+        if m.top.loading <> invalid then m.top.loading.visible = false
+        return
       end if
     end if
   end if
-  m.apiRequestManager = clearApiRequest(m.apiRequestManager) ' Limpiamos manager principal al finalizar ciclo.
-  if m.top.loading <> invalid then m.top.loading.visible = false ' Ocultamos loading al cerrar procesamiento.
+  m.apiRequestManager = clearApiRequest(m.apiRequestManager)
+  if m.top.loading <> invalid then m.top.loading.visible = false
 end sub
 
 ' Crea y configura el listado de carruseles inferior usando un flujo equivalente a populateCarousels de MainScreen.
 sub __populateViewAllCarousel(data as Object)
-  yPosition = 0 ' Inicializamos posición vertical acumulada de cada carrusel.
-  previousCarousel = invalid ' Inicializamos referencia del carrusel anterior para enlazar foco vertical.
-  __clearViewAllCarousel() ' Limpiamos carruseles previos antes de repintar contenido.
-  if m.carouselContainer = invalid then return ' Protegemos ejecución si no existe contenedor de carruseles.
-  sourceItems = [] ' Preparamos colección normalizada de carruseles para iteración.
-  if data <> invalid and data.items <> invalid and data.items.count() > 0 and data.items[0].style <> invalid then sourceItems = data.items[0].items ' Usamos directamente data.items cuando ya es una lista de carruseles.
-  if sourceItems.count() = 0 and data <> invalid and data.items <> invalid and data.items.count() > 0 then sourceItems = [data] ' Envolvemos data como único carrusel cuando items representa programas.
-  for each carouselData in sourceItems ' Recorremos cada carrusel para crearlo igual que MainScreen.
-    if carouselData.style <> getCarouselStyles().NEWS then ' Omitimos carruseles de noticias para mantener comportamiento de Home.
+  if m.carouselContainer = invalid then return
+  yPosition = 0
+  previousCarousel = invalid
+  ' Limpiamos carruseles previos antes de repintar contenido.
+  __clearViewAllCarousel() 
+  sourceItems = []
+  ' Usamos directamente data.items cuando ya es una lista de carruseles.
+  if data <> invalid and data.items <> invalid and data.items.count() > 0 and data.items[0].style <> invalid then sourceItems = data.items 
+  if sourceItems.count() = 0 and data <> invalid and data.items <> invalid and data.items.count() > 0 then sourceItems = [data]
+  ' Recorremos cada carrusel para crearlo igual que MainScreen.
+  for each carouselData in sourceItems 
+    ' Calculamos cuántos ítems entran en pantalla sin scroll horizontal.
+    itemsPerRow = __getMaxItemsPerRow(carouselData.style) 
+    rowIndex = 0 ' Inicializamos índice de fila para distribuir items de izquierda a derecha y luego hacia abajo.
+    startIndex = 0 ' Inicializamos cursor para particionar items del carrusel en filas.
+    while carouselData.items <> invalid and startIndex < carouselData.items.count() ' Particionamos items del carrusel para evitar scroll lateral.
+      rowItems = [] ' Armamos subconjunto de items para la fila actual.
+      endExclusive = startIndex + itemsPerRow ' Definimos límite superior de la fila actual.
+      if endExclusive > carouselData.items.count() then endExclusive = carouselData.items.count() ' Ajustamos límite al total disponible.
+      for i = startIndex to endExclusive - 1 ' Copiamos items de esta fila.
+        rowItems.push(carouselData.items[i])
+      end for
+
       newCarousel = m.carouselContainer.createChild("Carousel") ' Creamos una instancia del componente Carousel.
-      newCarousel.id = carouselData.id ' Asignamos id del carrusel recibido por API.
+      carouselRowId = 0 ' Inicializamos id base para evitar colisiones entre filas generadas.
+      if carouselData.id <> invalid then carouselRowId = carouselData.id * 1000 ' Reservamos bloque de ids por carrusel para cada fila.
+      newCarousel.id = carouselRowId + rowIndex ' Asignamos id único por fila derivado del carrusel original.
       newCarousel.contentType = carouselData.contentType ' Asignamos tipo de contenido del carrusel.
       newCarousel.style = carouselData.style ' Asignamos estilo visual del carrusel.
-      newCarousel.title = carouselData.title ' Asignamos título visible del carrusel.
+      if rowIndex = 0 then newCarousel.title = carouselData.title else newCarousel.title = "" ' Mostramos título sólo en la primera fila.
       newCarousel.code = carouselData.code ' Asignamos código de negocio del carrusel.
       newCarousel.imageType = carouselData.imageType ' Asignamos tipo de imagen para summary.
       newCarousel.redirectType = carouselData.redirectType ' Asignamos redirectType del carrusel.
-      newCarousel.items = carouselData.items ' Cargamos programas asociados al carrusel.
+      newCarousel.items = rowItems ' Cargamos sólo items que caben en esta fila.
       newCarousel.translation = [0, yPosition] ' Posicionamos carrusel en eje Y acumulado.
       newCarousel.ObserveField("focused", "onFocusItem") ' Observamos foco para disparar Program Summary.
       if previousCarousel <> invalid then previousCarousel.focusDown = newCarousel ' Enlazamos foco hacia abajo desde carrusel anterior.
       if previousCarousel <> invalid then newCarousel.focusUp = previousCarousel ' Enlazamos foco hacia arriba hacia carrusel anterior.
       previousCarousel = newCarousel ' Actualizamos referencia para la próxima iteración.
       yPosition = yPosition + newCarousel.height + scaleValue(20, m.scaleInfo) ' Avanzamos separación vertical como en MainScreen.
-    end if
+
+      rowIndex = rowIndex + 1 ' Avanzamos a la siguiente fila visual.
+      startIndex = endExclusive ' Continuamos con los siguientes items del carrusel.
+    end while
   end for
   if m.carouselContainer.getChildCount() > 0 then ' Validamos que exista al menos un carrusel renderizado.
     firstCarousel = m.carouselContainer.getChild(0) ' Obtenemos primer carrusel para asignar foco inicial.
@@ -149,33 +190,53 @@ sub __populateViewAllCarousel(data as Object)
   end if
 end sub
 
+' Devuelve la cantidad máxima de ítems por fila según el estilo del carrusel.
+function __getMaxItemsPerRow(style as integer) as integer
+  if style = getCarouselStyles().PORTRAIT_FEATURED then return 6
+  if style = getCarouselStyles().LANDSCAPE_STANDARD then return 5
+  if style = getCarouselStyles().LANDSCAPE_FEATURED then return 4
+  if style = getCarouselStyles().SQUARE_STANDARD then return 10
+  if style = getCarouselStyles().SQUARE_FEATURED then return 3
+  if style = -1 then return 12 
+  return 8
+end function
+
 ' Limpia el carrusel actual de ViewAll y resetea estado visual asociado.
 sub __clearViewAllCarousel()
-  if m.carouselContainer = invalid then return ' Evitamos errores si el contenedor aún no fue inicializado.
-  while m.carouselContainer.getChildCount() > 0 ' Removemos todos los carouseles existentes.
-    child = m.carouselContainer.getChild(0) ' Tomamos el primer hijo para borrado iterativo.
-    child.unobserveField("focused") ' Quitamos observer de foco para evitar fugas.
-    m.carouselContainer.removeChild(child) ' Eliminamos nodo del árbol de SceneGraph.
+  if m.carouselContainer = invalid then return
+  while m.carouselContainer.getChildCount() > 0 
+    child = m.carouselContainer.getChild(0)
+    child.unobserveField("focused")
+    m.carouselContainer.removeChild(child)
   end while
-  m.selectedIndicator.visible = false ' Ocultamos indicador al no existir carrusel renderizado.
-  m.programInfo.visible = false ' Ocultamos summary al limpiar contenido.
-  m.programImageBackground.uri = "" ' Limpiamos imagen de fondo del programa previo.
+  ' Ocultamos indicador al no existir carrusel renderizado.
+  m.selectedIndicator.visible = false 
+   ' Ocultamos summary al limpiar contenido.
+  m.programInfo.visible = false
+  ' Limpiamos imagen de fondo del programa previo.
+  m.programImageBackground.uri = "" 
 end sub
 
 ' Reacciona al foco de un item del carrusel y prepara solicitud de Program Summary.
 sub onFocusItem()
-  if m.carouselContainer = invalid or not m.carouselContainer.isInFocusChain() then return ' Validamos que el foco pertenezca al carrusel activo.
-  if m.carouselContainer.focusedChild = invalid then return ' Validamos que exista carrusel enfocado.
-  newFocus = m.carousel.items[0].items[0] ' Parseamos item actualmente enfocado.
-  if newFocus = invalid then return ' Ignoramos eventos de foco inválidos.
-  if m.itemfocused = invalid or (newFocus.key <> m.itemfocused.key or newFocus.id <> m.itemfocused.id or newFocus.redirectKey <> m.itemfocused.redirectKey or newFocus.redirectId <> m.itemfocused.redirectId) then ' Evitamos llamadas duplicadas para el mismo item.
-    m.programInfo.visible = false ' Ocultamos summary mientras se carga el nuevo programa.
-    m.programImageBackground.uri = "" ' Limpiamos fondo para evitar mostrar data vieja.
-    m.itemfocused = newFocus ' Guardamos item enfocado que se usará en la consulta.
-    m.carouselContainer.focusedChild.focused = invalid ' Limpiamos field focused para próximos cambios.
-    clearTimer(m.programTimer) ' Reiniciamos debounce del timer.
-    m.programTimer.ObserveField("fire", "getProgramInfo") ' Asociamos callback del timer con request summary.
-    m.programTimer.control = "start" ' Iniciamos timer para pedir summary tras breve pausa.
+  ' Validamos que el foco pertenezca al carrusel activo.
+  if m.carouselContainer = invalid or not m.carouselContainer.isInFocusChain() then return 
+  ' Validamos que exista carrusel enfocado.
+  if m.carouselContainer.focusedChild = invalid then return 
+  newFocus = ParseJson(m.carouselContainer.focusedChild.focused)
+  if newFocus = invalid then return
+  ' Evitamos llamadas duplicadas para el mismo item.
+  if m.itemfocused = invalid or (newFocus.key <> m.itemfocused.key or newFocus.id <> m.itemfocused.id or newFocus.redirectKey <> m.itemfocused.redirectKey or newFocus.redirectId <> m.itemfocused.redirectId) then 
+    ' Ocultamos summary mientras se carga el nuevo programa.
+    m.programInfo.visible = false 
+    ' Limpiamos fondo para evitar mostrar data vieja.
+    m.programImageBackground.uri = "" 
+    ' Guardamos item enfocado que se usará en la consulta.
+    m.itemfocused = newFocus 
+    m.carouselContainer.focusedChild.focused = invalid
+    clearTimer(m.programTimer)
+    m.programTimer.ObserveField("fire", "getProgramInfo")
+    m.programTimer.control = "start"
   end if
 end sub
 

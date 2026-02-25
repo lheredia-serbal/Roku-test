@@ -281,18 +281,6 @@ sub onSelectItem()
       return
     end if
 
-    ' Si se selecciona la tarjeta "Ver todos", notificamos a MainScene para abrir ViewAllScreen.
-    if m.itemSelected <> invalid and m.itemSelected.showSeeMore = true then
-      __markLastFocus()
-      m.top.loading.visible = true
-      m.top.viewAll = FormatJson({
-        carouselId: m.itemSelected.carouselId
-        carouselCode: m.itemSelected.carouselCode
-        title: m.itemSelected.carouselTitle
-      })
-      return
-    end if
-
     if m.itemSelected.redirectKey = "ChannelId" then
 
       if m.itemSelected.parentalControl <> invalid and m.itemSelected.parentalControl then
@@ -599,7 +587,7 @@ end sub
 sub getProgramInfo()
   try 
   clearTimer(m.programTimer)
-  if m.itemfocused <> invalid then
+  if m.itemfocused <> invalid and (m.itemfocused.showSeeMore = invalid or not m.itemfocused.showSeeMore) then
     if m.program <> invalid and m.program.infoKey = m.itemfocused.redirectKey and m.program.infoId = m.itemfocused.redirectId then 
       endTime = CreateObject("roDateTime")
       nowDate = CreateObject("roDateTime")

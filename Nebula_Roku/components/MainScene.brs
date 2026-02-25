@@ -238,6 +238,7 @@ end sub
 
 ' Metodo que redirige a la pantalla de Ver todos.
 sub onViewAll()
+  if m.MainScreen.viewAll = invalid then return
   viewAllData = m.MainScreen.viewAll
   if viewAllData <> invalid then
     m.MainScreen.viewAll = invalid
@@ -657,6 +658,7 @@ sub __backManager(ScreenFocus)
     m.MainScreen.ObserveField("streaming", "onStreamingPlayer")
     m.MainScreen.ObserveField("pendingStreamingSession", "onKillSession")
     m.MainScreen.ObserveField("detail", "onProgramDetail")
+    m.MainScreen.ObserveField("viewAll", "onViewAll") 
     m.MainScreen.ObserveField("setting", "onSetting")
   end if
 end sub
