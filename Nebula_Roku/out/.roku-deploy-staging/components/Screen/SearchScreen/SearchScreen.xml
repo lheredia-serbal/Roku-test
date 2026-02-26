@@ -28,11 +28,19 @@
       id="searchKeyboard"
       visible="false" />
 
+    <Timer id="searchDebounceTimer" repeat="false" duration="2" />
 
     <Group id="relatedContainer" visible="false">
       <Carousel id="related"/>
       <SelectionBox id="selectedIndicator" visible="false"/>
     </Group>
+
+    <Label
+      id="noResultsLabel"
+      visible="false"
+      horizAlign="center"
+      font="font:MediumSystemFont" />
+
 
     <!-- Animaciones del teclado: entra desde abajo y sale hacia abajo -->
     <Animation

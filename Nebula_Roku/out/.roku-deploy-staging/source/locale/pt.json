@@ -166,6 +166,7 @@
     }
   },
   "search": {
-    "noResultsDefaultSearch": "Pesquise por título, atores e canais de TV."
+    "noResultsDefaultSearch": "Pesquise por título, atores e canais de TV.",
+    "noResultsRecomendations": "A sua pesquisa não retornou resultados."
   }
 }

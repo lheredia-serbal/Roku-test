@@ -5,12 +5,17 @@ sub init()
   ' Referencio el nodo del teclado en pantalla.
   m.searchKeyboard = m.top.findNode("searchKeyboard")
 
+  ' Referencio el timer para debounce de búsqueda.
+  m.searchDebounceTimer = m.top.findNode("searchDebounceTimer")
   ' Referencio el contenedor del carrusel de programas de ErrorPage.
   m.relatedContainer = m.top.findNode("relatedContainer")
   ' Referencio el carrusel reutilizado desde la lógica de ProgramDetail.
   m.related = m.top.findNode("related")
   ' Referencio el indicador visual de selección del carrusel.
   m.selectedIndicator = m.top.findNode("selectedIndicator")
+
+  ' Referencio el label de estado sin resultados de búsqueda.
+  m.noResultsLabel = m.top.findNode("noResultsLabel")
 
   ' Referencio la animación que muestra el teclado.
   m.keyboardShowAnimation = m.top.findNode("keyboardShowAnimation")
@@ -32,6 +37,14 @@ sub init()
   m.searchInput.maxTextLength = 255
   ' Defino el color del texto de ayuda del input.
   m.searchInput.hintTextColor = m.global.colors.LIGHT_GRAY
+
+  ' Configuro label de no resultados centrado y debajo del input.
+  if m.noResultsLabel <> invalid then
+    m.noResultsLabel.width = m.scaleInfo.width
+    m.noResultsLabel.translation = scaleSize([0, 150], m.scaleInfo)
+    m.noResultsLabel.color = m.global.colors.WHITE
+    m.noResultsLabel.visible = false
+  end if
 
   ' Defino un ancho por defecto para el teclado si no hay medidas reales aún.
   m.keyboardDefaultWidth = scaleValue(1120, m.scaleInfo)
@@ -55,6 +68,9 @@ sub init()
   m.searchKeyboard.observeField("textEditBox", "onKeyboardTextChanged")
   ' Observo el estado de animación de ocultar teclado para limpiar estado final.
   m.keyboardHideAnimation.observeField("state", "onKeyboardHideAnimationStateChanged")
+
+  ' Observo cuando vence el debounce para disparar el servicio de búsqueda.
+  if m.searchDebounceTimer <> invalid then m.searchDebounceTimer.observeField("fire", "onSearchDebounceTimerFire")
 
   ' Indico que la primera vez que el input tome foco no debe abrir teclado automáticamente.
   m.skipKeyboardOnFirstFocus = true
@@ -112,6 +128,19 @@ sub onSearchInputFocusChanged()
   end if
 end sub
 
+' Vincula observers directos al TextEditBox interno del teclado para detectar tipeo.
+sub __observeKeyboardTextEditBox()
+  ' Si falta teclado o textEditBox interno, no puedo observar cambios.
+  if m.searchKeyboard = invalid or m.searchKeyboard.textEditBox = invalid then return
+
+  ' Evito observers duplicados antes de volver a observar.
+  m.searchKeyboard.textEditBox.unobserveField("text")
+  m.searchKeyboard.textEditBox.observeField("text", "onKeyboardTextChanged")
+
+  m.searchKeyboard.textEditBox.unobserveField("cursorPosition")
+  m.searchKeyboard.textEditBox.observeField("cursorPosition", "onKeyboardTextChanged")
+end sub
+
 ' Sincroniza el texto y cursor del teclado con el input visible.
 sub onKeyboardTextChanged()
   ' Si falta teclado o input, salgo.
@@ -123,6 +152,116 @@ sub onKeyboardTextChanged()
   m.searchInput.text = m.searchKeyboard.textEditBox.text
   ' Copio el estado activo del TextEditBox interno del teclado.
   m.searchInput.active = m.searchKeyboard.textEditBox.active
+
+  ' Programo llamada al servicio cuando dejan de escribir por 3 segundos.
+  __scheduleSearchRequest()
+end sub
+
+' Reinicia el debounce de búsqueda para disparar consulta al dejar de tipear.
+sub __scheduleSearchRequest()
+  ' Si no existe el timer, no se puede debouncear.
+  if m.searchDebounceTimer = invalid then return
+
+  ' Reinicio el timer en cada tecla para contar 3 segundos desde la última edición.
+  m.searchDebounceTimer.control = "stop"
+  m.searchDebounceTimer.control = "start"
+end sub
+
+' Se ejecuta cuando pasan 3 segundos sin cambios en el input.
+sub onSearchDebounceTimerFire()
+  ' Si no hay input disponible, no realizo consulta.
+  if m.searchInput = invalid then return
+
+  ' Tomo y limpio el texto para evitar consultas con espacios.
+  query = m.searchInput.text.trim()
+  ' Si no hay término de búsqueda, recargo carrusel de ErrorPage.
+  if query = "" then
+    m.hasLoadedErrorPage = false
+    __getErrorPage()
+    return
+  end if
+
+  ' Disparo request al endpoint de búsqueda.
+  __getSearchPrograms(query)
+end sub
+
+' Ejecuta la consulta de programas para el texto ingresado.
+sub __getSearchPrograms(query as String)
+  ' Si no hay API URL cacheada, la obtengo de la configuración global.
+  if m.apiUrl = invalid then m.apiUrl = getConfigVariable(m.global.configVariablesKeys.API_URL)
+
+  ' Genero requestId para trazabilidad/retry.
+  requestId = createRequestId()
+  ' Construyo la acción HTTP de búsqueda.
+  action = {
+    ' Reutilizo request manager del componente.
+    apiRequestManager: m.apiRequestManager
+    ' URL del endpoint Search.
+    url: urlSearch(m.apiUrl)
+    ' Método HTTP de consulta.
+    method: "POST"
+    ' Callback al resolver la respuesta.
+    responseMethod: "onGetSearchProgramsResponse"
+    ' GET sin body.
+    body: FormatJson({ "searchText": query.trim() })
+    ' Token no explícito (flujo interno existente).
+    token: invalid
+    ' Se consume API privada de clientes.
+    publicApi: false
+    ' Sin datos auxiliares.
+    dataAux: invalid
+    ' Asocio el requestId de la acción.
+    requestId: requestId
+    ' Función ejecutora del envío HTTP.
+    run: function() as Object
+      ' Disparo request con helper estándar del proyecto.
+      m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux)
+      ' Retorno resultado esperado por runAction.
+      return { success: true, error: invalid }
+    end function
+  }
+
+  ' Registro acción para retry/failover centralizado.
+  runAction(requestId, action, ApiType().CLIENTS_API_URL)
+  ' Persisto el manager actualizado luego del runAction.
+  m.apiRequestManager = action.apiRequestManager
+end sub
+
+' Procesa la respuesta de búsqueda.
+sub onGetSearchProgramsResponse()
+  ' Si no hay manager disponible, no puedo procesar respuesta.
+  if m.apiRequestManager = invalid then return
+
+  ' Si el status HTTP es válido, proceso resultado de búsqueda.
+  if validateStatusCode(m.apiRequestManager.statusCode) then
+    removePendingAction(m.apiRequestManager.requestId)
+    resp = ParseJson(m.apiRequestManager.response)
+    m.apiRequestManager = clearApiRequest(m.apiRequestManager)
+
+    if resp <> invalid and resp.data <> invalid and resp.data.items <> invalid and resp.data.items.count() > 0 then
+      __loadRelatedCarousel(resp.data)
+      __showSearchNoResults(false)
+    else
+      __loadRelatedCarousel(invalid)
+      __showSearchNoResults(true)
+    end if
+  else
+    ' Obtengo status para flujo de error/reintento.
+    statusCode = m.apiRequestManager.statusCode
+
+    ' Si es error de servidor, sigo la misma estrategia de retry global.
+    if m.apiRequestManager.serverError then
+      setCdnErrorCodeFromStatus(statusCode, ApiType().CLIENTS_API_URL)
+      changeStatusAction(m.apiRequestManager.requestId, "error")
+      retryAll()
+    else
+      removePendingAction(m.apiRequestManager.requestId)
+      if validateLogout(statusCode, m.top) then return
+    end if
+
+    ' Limpio manager tras error.
+    m.apiRequestManager = clearApiRequest(m.apiRequestManager)
+  end if
 end sub
 
 ' Maneja eventos de control remoto para navegación/foco.
@@ -245,6 +384,9 @@ sub __showKeyboard()
 
   ' Ubico teclado en posición oculta inicial para animar entrada.
   m.searchKeyboard.translation = m.keyboardHiddenTranslation
+
+' Refuerzo observers del TextEditBox al abrir teclado.
+  __observeKeyboardTextEditBox()
   ' Inicio teclado transparente para fade in.
   m.searchKeyboard.opacity = 0.0
 
@@ -309,6 +451,15 @@ sub __applyTranslations()
 
   ' Aplico hint text usando la clave solicitada por negocio.
   m.searchInput.hintText = i18n_t(m.global.i18n, "search.noResultsDefaultSearch")
+
+    ' Aplico traducción del mensaje cuando la búsqueda no devuelve resultados.
+  if m.noResultsLabel <> invalid then m.noResultsLabel.text = i18n_t(m.global.i18n, "search.noResultsRecomendations")
+end sub
+
+' Muestra u oculta el mensaje de búsqueda sin resultados.
+sub __showSearchNoResults(show as Boolean)
+  if m.noResultsLabel = invalid then return
+  m.noResultsLabel.visible = show
 end sub
 
 sub onActiveApiUrlChanged()
@@ -336,6 +487,9 @@ sub onGetErrorPageResponse()
       m.apiRequestManager = clearApiRequest(m.apiRequestManager)
       ' Marco que la carga de ErrorPage ya se realizó.
       m.hasLoadedErrorPage = true
+
+      ' Al refrescar carrusel base, oculto mensaje de no resultados de búsqueda.
+      __showSearchNoResults(false)
 
       ' Si la API devuelve data, cargo el carrusel.
       if resp.data <> invalid then
@@ -392,6 +546,9 @@ sub __getErrorPage()
 
   ' Si no hay API URL cacheada, la obtengo de la configuración global.
   if m.apiUrl = invalid then m.apiUrl = getConfigVariable(m.global.configVariablesKeys.API_URL)
+
+    ' Oculto mensaje previo de no resultados mientras se procesa una nueva búsqueda.
+  __showSearchNoResults(false)
 
   ' Genero requestId para trazabilidad/retry.
   requestId = createRequestId()

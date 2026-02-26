@@ -17,3 +17,7 @@ end function
 function urlErrorPage(apiUrl)
     return apiUrl + "/"+ m.global.apiVersions.V3 +"/Programs/ErrorPage"
 end function
+
+function urlSearch(apiUrl)
+    return apiUrl + "/"+ m.global.apiVersions.V3 +"/Programs/Search"
+end function
