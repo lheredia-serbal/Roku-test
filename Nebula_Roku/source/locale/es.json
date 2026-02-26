@@ -164,5 +164,8 @@
         "invalid": "PIN inválido"
       }
     }
+  },
+  "search": {
+    "noResultsDefaultSearch": "Buscá por título, actores y canales de TV."
   }
 }
