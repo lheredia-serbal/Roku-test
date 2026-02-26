@@ -25,9 +25,9 @@ sub init()
   m.scaleInfo = m.global.scaleInfo
 
   ' Seteo el ancho del input para ocupar todo el ancho de pantalla.
-  m.searchInput.width = m.scaleInfo.width
+  m.searchInput.width = m.scaleInfo.width - 150
   ' Seteo la posición del input en la esquina superior izquierda.
-  m.searchInput.translation = [0, 0]
+  m.searchInput.translation = scaleSize([50, 50], m.scaleInfo)
   ' Defino el largo máximo de texto permitido en el input.
   m.searchInput.maxTextLength = 255
   ' Defino el color del texto de ayuda del input.
@@ -37,6 +37,8 @@ sub init()
   m.keyboardDefaultWidth = scaleValue(1120, m.scaleInfo)
   ' Defino una altura por defecto para el teclado si no hay medidas reales aún.
   m.keyboardDefaultHeight = scaleValue(320, m.scaleInfo)
+
+   m.relatedContainer.translation = scaleSize([0, 30], m.scaleInfo)
 
   ' Posiciono inicialmente el teclado fuera de pantalla (debajo).
   m.searchKeyboard.translation = [0, m.scaleInfo.height]
@@ -53,6 +55,9 @@ sub init()
   m.searchKeyboard.observeField("textEditBox", "onKeyboardTextChanged")
   ' Observo el estado de animación de ocultar teclado para limpiar estado final.
   m.keyboardHideAnimation.observeField("state", "onKeyboardHideAnimationStateChanged")
+
+  ' Indico que la primera vez que el input tome foco no debe abrir teclado automáticamente.
+  m.skipKeyboardOnFirstFocus = true
 
   ' Inicializo bandera para evitar recargar ErrorPage múltiples veces innecesariamente.
   m.hasLoadedErrorPage = false
@@ -90,8 +95,15 @@ sub onSearchInputFocusChanged()
   ' Si el input no existe, no hago nada.
   if m.searchInput = invalid then return
 
-  ' Si el input tiene foco, muestro teclado.
+ ' Si el input tiene foco, muestro teclado (excepto en el primer ingreso).
   if m.searchInput.hasFocus() then
+    ' En el primer foco inicial solo dejo foco en input sin desplegar teclado.
+    if m.skipKeyboardOnFirstFocus then
+      ' Consumo esta excepción para que aplique solo una vez por ciclo de vida del componente.
+      m.skipKeyboardOnFirstFocus = false
+      ' Salgo sin mostrar teclado en el primer ingreso.
+      return
+    end if
     ' Muestro teclado animado.
     __showKeyboard()
   else
@@ -115,11 +127,9 @@ end sub
 
 ' Maneja eventos de control remoto para navegación/foco.
 function onKeyEvent(key as String, press as Boolean) as Boolean
-  ' Ignoro evento de key down y manejo solo key up.
-  if press then return false
 
   ' Si presionan BACK con teclado visible, cierro teclado y retorno foco al input.
-  if key = KeyButtons().BACK and m.searchKeyboard <> invalid and m.searchKeyboard.visible then
+  if key = KeyButtons().BACK and m.searchKeyboard <> invalid and m.searchKeyboard.visible and press then
     ' Oculto teclado con animación.
     __hideKeyboard(true)
     ' Retorno foco al input.
@@ -131,7 +141,7 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
   end if
 
   ' Si el input está en foco y presionan OK, muestro teclado.
-  if m.searchInput <> invalid and m.searchInput.isInFocusChain() and key = KeyButtons().OK then
+  if m.searchInput <> invalid and m.searchInput.isInFocusChain() and key = KeyButtons().OK and press then
     ' Muestro teclado animado.
     __showKeyboard()
     ' Indico que el evento fue manejado.
@@ -457,10 +467,8 @@ sub __loadRelatedCarousel(carouselData)
 end sub
 
 sub __configSearchScreen()
-  ' Posiciono el contenedor del carrusel debajo del input de búsqueda.
-  m.relatedContainer.translation = scaleSize([0, 120], m.scaleInfo)
   ' Posiciono el carrusel en origen relativo del contenedor.
   m.related.translation = scaleSize([0, 0], m.scaleInfo)
   ' Alineo indicador de selección con la geometría del carrusel.
-  m.selectedIndicator.translation = scaleSize([68, 30], m.scaleInfo)
+  m.selectedIndicator.translation = scaleSize([68, 130], m.scaleInfo)
 end sub
