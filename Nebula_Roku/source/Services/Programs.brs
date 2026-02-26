@@ -13,3 +13,7 @@ end function
 function urlProgramRelated(apiUrl, key, id)
     return apiUrl + "/"+ m.global.apiVersions.V2 +"/Programs/" + key + "/" + id.toStr() + "/Related"
 end function
+
+function urlErrorPage(apiUrl)
+    return apiUrl + "/"+ m.global.apiVersions.V3 +"/Programs/ErrorPage"
+end function

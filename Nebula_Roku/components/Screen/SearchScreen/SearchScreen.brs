@@ -5,6 +5,13 @@ sub init()
   ' Referencio el nodo del teclado en pantalla.
   m.searchKeyboard = m.top.findNode("searchKeyboard")
 
+  ' Referencio el contenedor del carrusel de programas de ErrorPage.
+  m.relatedContainer = m.top.findNode("relatedContainer")
+  ' Referencio el carrusel reutilizado desde la lógica de ProgramDetail.
+  m.related = m.top.findNode("related")
+  ' Referencio el indicador visual de selección del carrusel.
+  m.selectedIndicator = m.top.findNode("selectedIndicator")
+
   ' Referencio la animación que muestra el teclado.
   m.keyboardShowAnimation = m.top.findNode("keyboardShowAnimation")
   ' Referencio la animación que oculta el teclado.
@@ -46,6 +53,18 @@ sub init()
   m.searchKeyboard.observeField("textEditBox", "onKeyboardTextChanged")
   ' Observo el estado de animación de ocultar teclado para limpiar estado final.
   m.keyboardHideAnimation.observeField("state", "onKeyboardHideAnimationStateChanged")
+
+  ' Inicializo bandera para evitar recargar ErrorPage múltiples veces innecesariamente.
+  m.hasLoadedErrorPage = false
+
+  ' Si existe el nodo global, observo cambio de API activa para reiniciar caché.
+  if m.global <> invalid then
+    ' Reacciono a cambios de host API para volver a consultar ErrorPage.
+    m.global.observeField("activeApiUrl", "onActiveApiUrlChanged")
+  end if
+
+  ' Configuro posiciones del carrusel para que quede debajo del input de búsqueda.
+  __configSearchScreen()
 end sub
 
 ' Inicializa foco cuando la pantalla se vuelve activa.
@@ -58,6 +77,8 @@ sub initFocus()
     m.top.setFocus(true)
     ' Enfoco el input para disparar la lógica de teclado.
     m.searchInput.setFocus(true)
+    ' Disparo la carga del endpoint ErrorPage al entrar en la pantalla.
+    __getErrorPage()
   else
     ' Si pierde foco, oculto teclado sin animación.
     __hideKeyboard(false)
@@ -103,6 +124,8 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
     __hideKeyboard(true)
     ' Retorno foco al input.
     m.searchInput.setFocus(true)
+    ' Al volver al input, aseguro que el carrusel de ErrorPage esté cargado.
+    __getErrorPage()
     ' Indico que el evento fue manejado.
     return true
   end if
@@ -112,6 +135,34 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
     ' Muestro teclado animado.
     __showKeyboard()
     ' Indico que el evento fue manejado.
+    return true
+  end if
+
+  ' Si se presiona DOWN desde el input y hay carrusel visible, bajo el foco al carrusel.
+  if key = KeyButtons().DOWN and m.searchInput <> invalid and m.searchInput.isInFocusChain() and m.relatedContainer <> invalid and m.relatedContainer.visible then
+    ' Tomo foco de la lista interna del carrusel para navegar items.
+    m.related.findNode("carouselList").setFocus(true)
+    ' Sincronizo tamaño del indicador con el tamaño del carrusel.
+    m.selectedIndicator.size = m.related.size
+    ' Muestro el indicador de selección cuando el carrusel tiene foco.
+    m.selectedIndicator.visible = true
+    ' Marco el evento como manejado.
+    return true
+  end if
+
+  ' Si se presiona UP desde el carrusel, regreso foco al input de búsqueda.
+  if key = KeyButtons().UP and m.related <> invalid and m.related.isInFocusChain() then
+    ' Restituyo foco al input.
+    m.searchInput.setFocus(true)
+    ' Oculto el indicador cuando salgo del carrusel.
+    m.selectedIndicator.visible = false
+    ' Marco el evento como manejado.
+    return true
+  end if
+
+  ' Bloqueo DOWN dentro del carrusel para mantener el foco en la misma sección.
+  if key = KeyButtons().DOWN and m.related <> invalid and m.related.isInFocusChain() then
+    ' Marco el evento como manejado para evitar bubbling no deseado.
     return true
   end if
 
@@ -248,4 +299,168 @@ sub __applyTranslations()
 
   ' Aplico hint text usando la clave solicitada por negocio.
   m.searchInput.hintText = i18n_t(m.global.i18n, "search.noResultsDefaultSearch")
+end sub
+
+sub onActiveApiUrlChanged()
+  ' Limpio API actual para que se recalcule desde configuración cuando cambie el dominio.
+  m.apiUrl = invalid
+  ' Reinicio bandera de carga para permitir nueva consulta con la nueva API.
+  m.hasLoadedErrorPage = false
+  ' Si la pantalla está activa, disparo nuevamente la carga de ErrorPage.
+  if m.top.onFocus then __getErrorPage()
+end sub
+
+sub onGetErrorPageResponse()
+  ' Si no hay manager disponible, no puedo procesar respuesta.
+  if m.apiRequestManager = invalid then
+    ' Salgo sin hacer cambios.
+    return
+  else
+    ' Si el status HTTP es válido, proceso respuesta normal.
+    if validateStatusCode(m.apiRequestManager.statusCode) then
+      ' Quito la acción de la cola de pendientes.
+      removePendingAction(m.apiRequestManager.requestId)
+      ' Parseo el payload JSON recibido.
+      resp = ParseJson(m.apiRequestManager.response)
+      ' Limpio el request manager para próximas operaciones.
+      m.apiRequestManager = clearApiRequest(m.apiRequestManager)
+      ' Marco que la carga de ErrorPage ya se realizó.
+      m.hasLoadedErrorPage = true
+
+      ' Si la API devuelve data, cargo el carrusel.
+      if resp.data <> invalid then
+        ' Pinto items en el carrusel de relacionados.
+        __loadRelatedCarousel(resp.data)
+      else
+        ' Si no hay data, oculto limpiamente el carrusel.
+        __loadRelatedCarousel(invalid)
+      end if
+    else
+      ' Obtengo status para flujo de error/reintento.
+      statusCode = m.apiRequestManager.statusCode
+      ' Obtengo cuerpo de error para logging.
+      errorResponse = m.apiRequestManager.errorResponse
+
+      ' Si es error de servidor, sigo la misma estrategia de retry global.
+      if m.apiRequestManager.serverError then
+        ' Guardo código CDN según status para telemetría/failover.
+        setCdnErrorCodeFromStatus(statusCode, ApiType().CLIENTS_API_URL)
+        ' Marco la acción como error para reintentos centralizados.
+        changeStatusAction(m.apiRequestManager.requestId, "error")
+        ' Disparo reintentos pendientes.
+        retryAll()
+      else
+        ' Remuevo la acción pendiente si no es serverError.
+        removePendingAction(m.apiRequestManager.requestId)
+
+        ' Si el status implica logout, corto el flujo aquí.
+        if validateLogout(statusCode, m.top) then return
+
+        ' Registro error para diagnóstico.
+        printError("ErrorPage:", errorResponse)
+      end if
+
+      ' Limpio manager tras error.
+      m.apiRequestManager = clearApiRequest(m.apiRequestManager)
+      ' Ante error, oculto carrusel para no mostrar estado inconsistente.
+      __loadRelatedCarousel(invalid)
+    end if
+  end if
+end sub
+
+sub onSelectItem()
+  ' Si hay foco en carrusel, limpio valor de selected luego de la selección.
+  if m.related <> invalid and m.related.isInFocusChain() then
+    ' Evito retriggers dejando selected en invalid.
+    m.related.selected = invalid
+  end if
+end sub
+
+sub __getErrorPage()
+  ' Evito pedir nuevamente el endpoint si ya fue cargado en la sesión de pantalla.
+  if m.hasLoadedErrorPage then return
+
+  ' Si no hay API URL cacheada, la obtengo de la configuración global.
+  if m.apiUrl = invalid then m.apiUrl = getConfigVariable(m.global.configVariablesKeys.API_URL)
+
+  ' Genero requestId para trazabilidad/retry.
+  requestId = createRequestId()
+  ' Construyo la acción HTTP con el mismo patrón de ProgramDetail.
+  action = {
+    ' Reutilizo request manager del componente.
+    apiRequestManager: m.apiRequestManager
+    ' URL del endpoint ErrorPage.
+    url: urlErrorPage(m.apiUrl)
+    ' Método HTTP de consulta.
+    method: "GET"
+    ' Callback al resolver la respuesta.
+    responseMethod: "onGetErrorPageResponse"
+    ' GET sin body.
+    body: invalid
+    ' Token no explícito (flujo interno existente).
+    token: invalid
+    ' Se consume API privada de clientes.
+    publicApi: false
+    ' Sin datos auxiliares.
+    dataAux: invalid
+    ' Asocio el requestId de la acción.
+    requestId: requestId
+    ' Función ejecutora del envío HTTP.
+    run: function() as Object
+      ' Disparo request con helper estándar del proyecto.
+      m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux)
+      ' Retorno resultado esperado por runAction.
+      return { success: true, error: invalid }
+    end function
+  }
+
+  ' Registro acción para retry/failover centralizado.
+  runAction(requestId, action, ApiType().CLIENTS_API_URL)
+  ' Persisto el manager actualizado luego del runAction.
+  m.apiRequestManager = action.apiRequestManager
+end sub
+
+sub __loadRelatedCarousel(carouselData)
+  ' Si hay items válidos, configuro y muestro el carrusel.
+  if carouselData <> invalid and carouselData.items <> invalid and carouselData.items.count() > 0 then
+    ' Seteo id lógico del carrusel.
+    m.related.id = carouselData.id
+    ' Seteo estilo visual del carrusel.
+    m.related.style = carouselData.style
+    ' Seteo título del carrusel.
+    m.related.title = carouselData.title
+    ' Seteo código de negocio asociado.
+    m.related.code = carouselData.code
+    ' Seteo tipo de contenido para renderizado.
+    m.related.contentType = carouselData.contentType
+    ' Seteo tipo de imagen para las tarjetas.
+    m.related.imageType = carouselData.imageType
+    ' Seteo tipo de redirección de las tarjetas.
+    m.related.redirectType = carouselData.redirectType
+    ' Inyecto items recibidos desde API.
+    m.related.items = carouselData.items
+
+    ' Observo selección de item para limpiar selected tras click.
+    m.related.ObserveField("selected", "onSelectItem")
+    ' Muestro el contenedor una vez cargado.
+    m.relatedContainer.visible = true
+  else
+    ' Si no hay datos, oculto el contenedor del carrusel.
+    m.relatedContainer.visible = false
+    ' Oculto indicador de selección asociado.
+    m.selectedIndicator.visible = false
+    ' Limpio items previamente cargados.
+    m.related.items = invalid
+    ' Quito observer de selección para evitar callbacks innecesarios.
+    m.related.unobserveField("selected")
+  end if
+end sub
+
+sub __configSearchScreen()
+  ' Posiciono el contenedor del carrusel debajo del input de búsqueda.
+  m.relatedContainer.translation = scaleSize([0, 120], m.scaleInfo)
+  ' Posiciono el carrusel en origen relativo del contenedor.
+  m.related.translation = scaleSize([0, 0], m.scaleInfo)
+  ' Alineo indicador de selección con la geometría del carrusel.
+  m.selectedIndicator.translation = scaleSize([68, 30], m.scaleInfo)
 end sub

@@ -6,39 +6,65 @@
   xsi:noNamespaceSchemaLocation="https://devtools.web.roku.com/schema/RokuSceneGraph.xsd">
 
   <script type="text/brightscript" uri="SearchScreen.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Utils/i18nUtils.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Enums.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Utils.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Utils/RetryUtils.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Services/Programs.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Services/Retry.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Services/DomainManager.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Services/ErrorCode.brs" />
 
-  <interface>
+   <interface>
     <!-- Paramentros de Entrada -->
     <field id="onFocus" type="boolean" value="false" onChange="initFocus" />
   </interface>
 
-  <children>
-    <!-- Contenedor principal con información básica de la pantalla de búsqueda. -->
-    <LayoutGroup
-      id="searchLayoutGroup"
-      layoutDirection="vert"
-      horizAlignment="left"
-      vertAlignment="top"
-      translation="[80, 120]"
-      itemSpacings="[16]">
+   <children>
+    <TextEditBox
+      id="searchInput" />
 
-      <!-- Título principal de la SearchScreen. -->
-      <Label
-        id="searchTitle"
-        text="Buscar"
-        font="font:MediumBoldSystemFont" />
+    <Keyboard
+      id="searchKeyboard"
+      visible="false" />
 
-      <!-- Mensaje descriptivo básico sin llamadas a servicios. -->
-      <Label
-        id="searchDescription"
-        text="Esta es una pantalla de búsqueda básica."
-        font="font:SmallSystemFont" />
 
-      <!-- Ayuda de navegación para volver con Back. -->
-      <Label
-        id="searchHelp"
-        text="Presiona BACK para volver al inicio."
-        font="font:SmallestSystemFont" />
-    </LayoutGroup>
+    <Group id="relatedContainer" visible="false">
+      <Carousel id="related"/>
+      <SelectionBox id="selectedIndicator" visible="false"/>
+    </Group>
+
+    <!-- Animaciones del teclado: entra desde abajo y sale hacia abajo -->
+    <Animation
+      id="keyboardShowAnimation"
+      duration="0.25"
+      repeat="false"
+      easeFunction="linear"
+      optional="true">
+      <Vector2DFieldInterpolator
+        id="keyboardShowTranslationInterpolator"
+        fieldToInterp="searchKeyboard.translation"
+        key="[0.0, 1.0]" />
+      <FloatFieldInterpolator
+        fieldToInterp="searchKeyboard.opacity"
+        key="[0.0, 1.0]"
+        keyValue="[0.0, 1.0]" />
+    </Animation>
+
+    <Animation
+      id="keyboardHideAnimation"
+      duration="0.2"
+      repeat="false"
+      easeFunction="linear"
+      optional="true">
+      <Vector2DFieldInterpolator
+        id="keyboardHideTranslationInterpolator"
+        fieldToInterp="searchKeyboard.translation"
+        key="[0.0, 1.0]" />
+      <FloatFieldInterpolator
+        fieldToInterp="searchKeyboard.opacity"
+        key="[0.0, 1.0]"
+        keyValue="[1.0, 0.0]" />
+    </Animation>
   </children>
 </component>

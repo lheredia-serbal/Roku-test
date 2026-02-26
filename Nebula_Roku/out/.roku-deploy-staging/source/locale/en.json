@@ -164,5 +164,8 @@
         "invalid": "Invalid PIN"
       }
     }
+  },
+  "search": {
+    "noResultsDefaultSearch": "Search by title, actors, and TV channels."
   }
 }
