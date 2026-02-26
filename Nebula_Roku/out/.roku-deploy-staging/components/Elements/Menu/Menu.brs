@@ -30,6 +30,19 @@ sub init()
   m.logoutItem = {key: "MenuId", Id: -1, code: "logout", behavior: "logout"}
   m.settingItem = {key: "MenuId", Id: -1, code: "setting", behavior: "setting"}
   m.changeProfilesItem = {key: "MenuId", Id: -1, code: "profiles", behavior: "profiles"}
+  m.searchItem = {
+    key: "MenuId",
+    id: -1,
+    code: "search",
+    behavior: "search",
+    mainMenu: true,
+    text: "Buscar",
+    icon: {
+      image: {
+        relativePath: "pkg:/images/shared/search_icon.png"
+      }
+    }
+  }
   m.homeItem = invalid
 
   m.orderSecondaryMenu = [m.settingLabel, m.exitLabel, m.logoutLabel]
@@ -246,7 +259,13 @@ sub itemData()
   if m.top.items <> invalid and m.top.items.count() >= 0 then
     selectedItem = invalid
 
-    for each item in m.top.items
+    menuItems = [m.searchItem]
+
+    for each menuItem in m.top.items
+      menuItems.push(menuItem)
+    next
+
+    for each item in menuItems
       if item.mainMenu then 
         if item.icon <> invalid and item.icon.image <> invalid then
           newMenuItemNode = createObject("roSGNode", "MenuItem")

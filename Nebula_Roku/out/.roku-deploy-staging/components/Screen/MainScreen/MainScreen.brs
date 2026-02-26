@@ -1015,6 +1015,14 @@ sub __selectMenuItem(menuSelectedItem)
   else if menuSelectedItem.key = "MenuId" and menuSelectedItem.id = -1 and menuSelectedItem.code <> invalid and menuSelectedItem.code = "profiles" then
     __redirectToProfilesScreen()
 
+    else if menuSelectedItem.key = "MenuId" and menuSelectedItem.id = -1 and menuSelectedItem.code <> invalid and menuSelectedItem.code = "search" then
+    ' Colapso el menu antes de navegar a la pantalla de búsqueda.
+    m.myMenu.action = "collapse"
+    ' Mantengo el indicador de selección visible para consistencia visual.
+    m.selectedIndicator.visible = true
+    ' Disparo la navegación a SearchScreen en MainScene.
+    m.top.search = true
+
   else if menuSelectedItem.key = "ContentViewId" then
     if m.myMenu.action <> invalid and m.myMenu.action <> "" and m.myMenu.action <> "collapse" then m.myMenu.action = "collapse"
     if not m.top.loading.visible then m.top.loading.visible = true

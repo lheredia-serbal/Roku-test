@@ -46,6 +46,7 @@
     <!-- Salida para abrir la pantalla de Ver todos con el contexto del carrusel seleccionado. -->
     <field id="viewAll" type="string" />
     <field id="setting" type="boolean" value="false"/>
+    <field id="search" type="boolean" value="false"/>
     <field id="pendingStreamingSession" type="string" />
     <field id="onChangeProfile" type="boolean" value="false" />
     <field id="openGuide" type="boolean" value="false"/>

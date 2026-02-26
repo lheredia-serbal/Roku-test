@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<component 
+  name="SearchScreen" 
+  extends="Group" 
+  xsi:noNamespaceSchemaLocation="https://devtools.web.roku.com/schema/RokuSceneGraph.xsd">
+
+  <script type="text/brightscript" uri="SearchScreen.brs" />
+
+  <interface>
+    <!-- Paramentros de Entrada -->
+    <field id="onFocus" type="boolean" value="false" onChange="initFocus" />
+  </interface>
+
+  <children>
+    <!-- Contenedor principal con información básica de la pantalla de búsqueda. -->
+    <LayoutGroup
+      id="searchLayoutGroup"
+      layoutDirection="vert"
+      horizAlignment="left"
+      vertAlignment="top"
+      translation="[80, 120]"
+      itemSpacings="[16]">
+
+      <!-- Título principal de la SearchScreen. -->
+      <Label
+        id="searchTitle"
+        text="Buscar"
+        font="font:MediumBoldSystemFont" />
+
+      <!-- Mensaje descriptivo básico sin llamadas a servicios. -->
+      <Label
+        id="searchDescription"
+        text="Esta es una pantalla de búsqueda básica."
+        font="font:SmallSystemFont" />
+
+      <!-- Ayuda de navegación para volver con Back. -->
+      <Label
+        id="searchHelp"
+        text="Presiona BACK para volver al inicio."
+        font="font:SmallestSystemFont" />
+    </LayoutGroup>
+  </children>
+</component>

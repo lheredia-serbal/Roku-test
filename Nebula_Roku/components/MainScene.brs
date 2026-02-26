@@ -17,6 +17,7 @@ sub init()
   m.ProgramDetailScreen = m.top.FindNode("ProgramDetailScreen")
   m.KillSessionScreen = m.top.FindNode("KillSessionScreen")
   m.PlayerScreen = m.top.FindNode("PlayerScreen")
+  m.SearchScreen = m.top.FindNode("SearchScreen")
 
   m.cdnErrorDialog = m.top.FindNode("cdnErrorDialog")
   if m.cdnErrorDialog <> invalid then
@@ -58,6 +59,15 @@ function onKeyEvent(key as string, press as boolean) as boolean
         m.StackOfScreens.Pop()
 
         __hideSetting()
+        __backManager(m.StackOfScreens.Peek())
+
+      else if m.StackOfScreens.Peek() = "SearchScreen" then
+        ' Quito SearchScreen del stack al volver con BACK.
+        m.StackOfScreens.Pop()
+
+        ' Oculto SearchScreen para volver a la pantalla anterior.
+        __hideSearch()
+        ' Restaura foco en la pantalla que queda en el tope del stack.
         __backManager(m.StackOfScreens.Peek())
 
       else if m.StackOfScreens.Peek() = "ViewAllScreen" then 
@@ -270,6 +280,21 @@ sub onSetting()
   end if
 end sub
 
+' Metodo que redirige a la pantalla de búsqueda.
+sub onSearch()
+  ' Si MainScreen solicita búsqueda, navegamos a SearchScreen.
+  if m.MainScreen.search then
+    ' Reseteo la señal para evitar disparos repetidos.
+    m.MainScreen.search = false
+    ' Oculto MainScreen antes de mostrar SearchScreen.
+    __hideMain()
+    ' Agrego SearchScreen al stack de navegación.
+    m.StackOfScreens.Push("SearchScreen")
+    ' Muestro SearchScreen y asigno foco.
+    __showSearch()
+  end if
+end sub
+
 ' Metodo que redirige a la pantalla del player
 sub onStreamingPlayer()
   streaming = invalid
@@ -346,6 +371,7 @@ sub onChangeProfileEvent()
     m.MainScreen.unobserveField("pendingStreamingSession")
     m.MainScreen.unobserveField("detail")
     m.MainScreen.unobserveField("setting")
+    m.MainScreen.unobserveField("search")
 
     __initProfile()
     m.StackOfScreens = []
@@ -435,6 +461,7 @@ sub __initMain()
   m.MainScreen.ObserveField("detail", "onProgramDetail")
   m.MainScreen.ObserveField("viewAll", "onViewAll")
   m.MainScreen.ObserveField("setting", "onSetting")
+  m.MainScreen.ObserveField("search", "onSearch")
 
   ' Performance Req 3.2: marca que el Home ya quedó visible y navegable.
   if m.launchCompleteSignaled <> true then
@@ -499,6 +526,14 @@ sub __showSetting()
   m.SettingScreen.setFocus(true)
 end sub
 
+' Muestra la pantalla de búsqueda con contenido básico.
+sub __showSearch()
+  if m.MainScreen.visible then m.MainScreen.visible = false
+  m.SearchScreen.visible = true
+  m.SearchScreen.onFocus = true
+  m.SearchScreen.setFocus(true)
+end sub
+
 ' Muestra la pantalla del player y esucha sus observable relacionados
 sub __showPlayer(streaming, openGuide = false)
   m.StackOfScreens.Push("PlayerScreen")
@@ -559,6 +594,12 @@ sub __hideSetting()
   m.SettingScreen.onFocus = false
 end sub
 
+' Esconde la pantalla de búsqueda.
+sub __hideSearch()
+  m.SearchScreen.visible = false
+  m.SearchScreen.onFocus = false
+end sub
+
 ' Esconde la eliminar sesiones concurrentes y no escucha los eventos de esta pantalla ya que ahora abra otra 
 ' siendo la pantalla princripal
 sub __hideKillSessionScreen()
@@ -582,11 +623,13 @@ sub __hideMain()
   m.MainScreen.unobserveField("detail")
   m.MainScreen.unobserveField("viewAll")
   m.MainScreen.unobserveField("setting")
+  m.MainScreen.unobserveField("search")
   m.MainScreen.streaming = invalid
   m.MainScreen.pendingStreamingSession = invalid
   m.MainScreen.detail = invalid
   m.MainScreen.viewAll = invalid
   m.MainScreen.setting = false
+  m.MainScreen.search = false
 end sub
 
 ' Procesa el back del player limpiando las variables necesarias
@@ -637,6 +680,7 @@ sub __resetApp()
   __hideViewAll()
   __hideProgramDetail()
   __hideKillSessionScreen()
+  __hideSearch()
   
   ' se limpia las variables del detalle
   m.ProgramDetailScreen.data = invalid
@@ -693,5 +737,6 @@ sub __backManager(ScreenFocus)
     m.MainScreen.ObserveField("detail", "onProgramDetail")
     m.MainScreen.ObserveField("viewAll", "onViewAll") 
     m.MainScreen.ObserveField("setting", "onSetting")
+    m.MainScreen.ObserveField("search", "onSearch")
   end if
 end sub

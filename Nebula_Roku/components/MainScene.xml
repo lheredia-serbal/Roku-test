@@ -66,6 +66,12 @@
       visible="false"
       translation="[0,0]"/>
 
+    <!-- Search -->
+    <SearchScreen
+      id="SearchScreen"
+      visible="false"
+      translation="[0,0]" />
+
     <!-- Player -->
     <PlayerScreen
       id="PlayerScreen"
