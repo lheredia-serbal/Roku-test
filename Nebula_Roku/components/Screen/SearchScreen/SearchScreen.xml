@@ -14,6 +14,7 @@
   <script type="text/brightscript" uri="pkg:/source/Services/Retry.brs" />
   <script type="text/brightscript" uri="pkg:/source/Services/DomainManager.brs" />
   <script type="text/brightscript" uri="pkg:/source/Services/ErrorCode.brs" />
+  <script type="text/brightscript" uri="pkg:/source/CarouselConstants.brs" />
 
    <interface>
     <!-- Paramentros de Entrada -->
@@ -34,6 +35,15 @@
       <Carousel id="related"/>
       <SelectionBox id="selectedIndicator" visible="false"/>
     </Group>
+
+    <Group id="searchCarousels" visible="false" translation="[0, 135]">
+      <Group id="carouselContainer" translation="[50, 20]"/>
+      <SelectionBox id="searchSelectedIndicator" visible="false"/>
+    </Group>
+
+    <Keyboard
+      id="searchKeyboard"
+      visible="false" />
 
     <Label
       id="noResultsLabel"

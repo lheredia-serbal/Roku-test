@@ -14,6 +14,13 @@ sub init()
   ' Referencio el indicador visual de selección del carrusel.
   m.selectedIndicator = m.top.findNode("selectedIndicator")
 
+  ' Referencio el contenedor de múltiples carruseles para resultados de búsqueda.
+  m.searchCarousels = m.top.findNode("searchCarousels")
+  ' Referencio el contenedor donde se crearán dinámicamente los carruseles de búsqueda.
+  m.carouselContainer = m.top.findNode("carouselContainer")
+  ' Referencio indicador de selección de la sección de carruseles de búsqueda.
+  m.searchSelectedIndicator = m.top.findNode("searchSelectedIndicator")
+
   ' Referencio el label de estado sin resultados de búsqueda.
   m.noResultsLabel = m.top.findNode("noResultsLabel")
 
@@ -101,6 +108,8 @@ sub initFocus()
     ' Disparo la carga del endpoint ErrorPage al entrar en la pantalla.
     __getErrorPage()
   else
+    ' Si pierde foco, detengo debounce pendiente para evitar búsquedas fuera de pantalla.
+    if m.searchDebounceTimer <> invalid then m.searchDebounceTimer.control = "stop"
     ' Si pierde foco, oculto teclado sin animación.
     __hideKeyboard(false)
   end if
@@ -159,6 +168,8 @@ end sub
 
 ' Reinicia el debounce de búsqueda para disparar consulta al dejar de tipear.
 sub __scheduleSearchRequest()
+    ' Si la pantalla no está activa, no programo búsquedas.
+  if not m.top.onFocus then return
   ' Si no existe el timer, no se puede debouncear.
   if m.searchDebounceTimer = invalid then return
 
@@ -169,6 +180,8 @@ end sub
 
 ' Se ejecuta cuando pasan 3 segundos sin cambios en el input.
 sub onSearchDebounceTimerFire()
+    ' Solo proceso debounce si la pantalla Search está activa/en foco.
+  if not m.top.onFocus then return
   ' Si no hay input disponible, no realizo consulta.
   if m.searchInput = invalid then return
 
@@ -238,11 +251,17 @@ sub onGetSearchProgramsResponse()
     resp = ParseJson(m.apiRequestManager.response)
     m.apiRequestManager = clearApiRequest(m.apiRequestManager)
 
-    if resp <> invalid and resp.data <> invalid and resp.data.items <> invalid and resp.data.items.count() > 0 then
-      __loadRelatedCarousel(resp.data)
+    if resp <> invalid and resp.data <> invalid and resp.data.carousels <> invalid and resp.data.carousels.count() > 0 then
+      ' Pinto carruseles dinámicos de resultados de búsqueda.
+      __loadSearchCarousels(resp.data.carousels)
+      ' Oculto mensaje de no resultados porque hay contenido para mostrar.
+      __loadRelatedCarousel(invalid)
       __showSearchNoResults(false)
     else
+      ' Limpio carruseles de búsqueda cuando no hay resultados.
+      __loadSearchCarousels(invalid)
       __loadRelatedCarousel(invalid)
+      ' Muestro feedback de no resultados al usuario.
       __showSearchNoResults(true)
     end if
   else
@@ -279,43 +298,73 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
     return true
   end if
 
-  ' Si el input está en foco y presionan OK, muestro teclado.
+  ' Si el usuario baja desde el input, intento enviar foco a resultados visibles.
+  if key = KeyButtons().DOWN and press and m.searchInput <> invalid and m.searchInput.isInFocusChain() then
+    ' Prioridad 1: carruseles de búsqueda (cuando hay resultados de search).
+    if m.searchCarousels <> invalid and m.searchCarousels.visible and m.carouselContainer <> invalid and m.carouselContainer.getChildCount() > 0 then
+      firstCarousel = m.carouselContainer.getChild(0)
+      firstList = firstCarousel.findNode("carouselList")
+      if firstList <> invalid then
+        firstList.setFocus(true)
+        m.searchSelectedIndicator.size = firstCarousel.size
+        m.searchSelectedIndicator.visible = true
+        return true
+      end if
+    else if m.relatedContainer <> invalid and m.relatedContainer.visible and m.related <> invalid then
+      ' Prioridad 2: bloque recomendado (fallback cuando no hay carousels de search).
+      m.related.findNode("carouselList").setFocus(true)
+      m.selectedIndicator.size = m.related.size
+      m.selectedIndicator.visible = true
+      return true
+    end if
+  end if
+
+  ' Navegación hacia arriba: entre carruseles o regreso al input según contexto.
+  if key = KeyButtons().UP and press then
+    if m.carouselContainer <> invalid and m.carouselContainer.isInFocusChain() and m.carouselContainer.focusedChild <> invalid then
+      if m.carouselContainer.focusedChild.focusUp <> invalid then
+        focusItem = m.carouselContainer.focusedChild.focusUp.findNode("carouselList")
+        if focusItem <> invalid then
+          m.carouselContainer.focusedChild.focusUp.opacity = "1.0"
+          focusItem.setFocus(true)
+          m.carouselContainer.translation = [m.carouselXPosition, -(m.carouselContainer.focusedChild.translation[1] - m.carouselYPosition)]
+          m.searchSelectedIndicator.size = m.carouselContainer.focusedChild.size
+        end if
+      else
+        m.searchInput.setFocus(true)
+        m.searchSelectedIndicator.visible = false
+      end if
+      return true
+    else if m.related <> invalid and m.related.isInFocusChain() then
+      m.searchInput.setFocus(true)
+      m.selectedIndicator.visible = false
+      return true
+    end if
+  end if
+
+  ' Navegación hacia abajo entre carruseles de búsqueda enlazados con focusDown.
+  if key = KeyButtons().DOWN and press and m.carouselContainer <> invalid and m.carouselContainer.isInFocusChain() and m.carouselContainer.focusedChild <> invalid then
+    if m.carouselContainer.focusedChild.focusDown <> invalid then
+      focusItem = m.carouselContainer.focusedChild.focusDown.findNode("carouselList")
+      if focusItem <> invalid then
+        m.carouselContainer.focusedChild.opacity = "0.0"
+        focusItem.setFocus(true)
+        m.carouselContainer.translation = [m.carouselXPosition, -(m.carouselContainer.focusedChild.translation[1] - m.carouselYPosition)]
+        m.searchSelectedIndicator.size = m.carouselContainer.focusedChild.size
+      end if
+    end if
+    return true
+  end if
+
   if m.searchInput <> invalid and m.searchInput.isInFocusChain() and key = KeyButtons().OK and press then
-    ' Muestro teclado animado.
     __showKeyboard()
-    ' Indico que el evento fue manejado.
     return true
   end if
 
-  ' Si se presiona DOWN desde el input y hay carrusel visible, bajo el foco al carrusel.
-  if key = KeyButtons().DOWN and m.searchInput <> invalid and m.searchInput.isInFocusChain() and m.relatedContainer <> invalid and m.relatedContainer.visible then
-    ' Tomo foco de la lista interna del carrusel para navegar items.
-    m.related.findNode("carouselList").setFocus(true)
-    ' Sincronizo tamaño del indicador con el tamaño del carrusel.
-    m.selectedIndicator.size = m.related.size
-    ' Muestro el indicador de selección cuando el carrusel tiene foco.
-    m.selectedIndicator.visible = true
-    ' Marco el evento como manejado.
-    return true
-  end if
-
-  ' Si se presiona UP desde el carrusel, regreso foco al input de búsqueda.
-  if key = KeyButtons().UP and m.related <> invalid and m.related.isInFocusChain() then
-    ' Restituyo foco al input.
-    m.searchInput.setFocus(true)
-    ' Oculto el indicador cuando salgo del carrusel.
-    m.selectedIndicator.visible = false
-    ' Marco el evento como manejado.
-    return true
-  end if
-
-  ' Bloqueo DOWN dentro del carrusel para mantener el foco en la misma sección.
   if key = KeyButtons().DOWN and m.related <> invalid and m.related.isInFocusChain() then
-    ' Marco el evento como manejado para evitar bubbling no deseado.
     return true
   end if
 
-  ' Si no coincide ningún caso, no manejo el evento.
   return false
 end function
 
@@ -585,6 +634,79 @@ sub __getErrorPage()
   runAction(requestId, action, ApiType().CLIENTS_API_URL)
   ' Persisto el manager actualizado luego del runAction.
   m.apiRequestManager = action.apiRequestManager
+end sub
+
+' Crea y muestra carruseles de búsqueda usando la misma estrategia base de MainScreen.
+sub __loadSearchCarousels(carousels)
+  ' Si falta estructura visual, no hay nada que renderizar.
+  if m.carouselContainer = invalid or m.searchCarousels = invalid then return
+
+  ' Limpio carruseles previos para evitar duplicados tras nuevas búsquedas.
+  if m.carouselContainer.getChildCount() > 0 then m.carouselContainer.removeChildrenIndex(m.carouselContainer.getChildCount(), 0)
+  ' Posición base del contenedor para el cálculo de desplazamiento vertical al navegar.
+  m.carouselContainer.translation = [scaleValue(55, m.scaleInfo), scaleValue(20, m.scaleInfo)]
+  m.carouselXPosition = m.carouselContainer.translation[0]
+  m.carouselYPosition = m.carouselContainer.translation[1]
+
+  ' Variables auxiliares para posicionamiento y encadenamiento vertical de foco.
+  yPosition = 0
+  previousCarousel = invalid
+
+  if carousels <> invalid and carousels.count() > 0 then
+    for each carouselData in carousels
+      ' Reutilizo solo carruseles válidos y omito NEWS (como en MainScreen).
+      if carouselData <> invalid and carouselData.items <> invalid and carouselData.items.count() > 0 and carouselData.style <> getCarouselStyles().NEWS then
+        ' Creo instancia de Carousel y copio metadata necesaria para render.
+        newCarousel = m.carouselContainer.createChild("Carousel")
+        newCarousel.id = carouselData.id
+        newCarousel.contentType = carouselData.contentType
+        newCarousel.style = carouselData.style
+        newCarousel.title = carouselData.title
+        newCarousel.code = carouselData.code
+        newCarousel.imageType = carouselData.imageType
+        newCarousel.redirectType = carouselData.redirectType
+        newCarousel.items = carouselData.items
+
+        ' Ubico verticalmente este carrusel dentro del stack.
+        newCarousel.translation = [0, yPosition]
+        ' Observo selección para limpiar estado selected y evitar retriggers.
+        newCarousel.ObserveField("selected", "onSearchCarouselSelectItem")
+
+        ' Enlazo foco vertical entre carruseles (arriba/abajo).
+        if previousCarousel <> invalid then
+          previousCarousel.focusDown = newCarousel
+          newCarousel.focusUp = previousCarousel
+        end if
+        previousCarousel = newCarousel
+
+        ' Avanzo Y según altura real del carrusel + separación visual.
+        yPosition = yPosition + newCarousel.height + scaleValue(20, m.scaleInfo)
+      end if
+    end for
+  end if
+
+  ' Determino si finalmente hay carruseles visibles para alternar bloques UI.
+  hasSearchCarousels = m.carouselContainer.getChildCount() > 0
+  m.searchCarousels.visible = hasSearchCarousels
+
+  if hasSearchCarousels then
+    ' Si hay carruseles de búsqueda, oculto recomendados y su indicador.
+    m.relatedContainer.visible = false
+    m.selectedIndicator.visible = false
+    firstCarousel = m.carouselContainer.getChild(0)
+    m.searchSelectedIndicator.size = firstCarousel.size
+    m.searchSelectedIndicator.visible = false
+  else
+    ' Si no hay carruseles, dejo indicador oculto.
+    m.searchSelectedIndicator.visible = false
+  end if
+end sub
+
+' Limpia selected del carrusel enfocado para evitar reaperturas por notificaciones repetidas.
+sub onSearchCarouselSelectItem()
+  if m.carouselContainer <> invalid and m.carouselContainer.isInFocusChain() and m.carouselContainer.focusedChild <> invalid then
+    m.carouselContainer.focusedChild.selected = invalid
+  end if
 end sub
 
 sub __loadRelatedCarousel(carouselData)
