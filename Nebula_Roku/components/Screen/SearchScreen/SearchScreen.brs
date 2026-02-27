@@ -182,7 +182,7 @@ sub onKeyboardTextChanged()
   ' Copio el estado activo del TextEditBox interno del teclado.
   m.searchInput.active = m.searchKeyboard.textEditBox.active
 
-  ' Programo llamada al servicio cuando dejan de escribir por 3 segundos.
+  ' Programo llamada al servicio cuando dejan de escribir por 2 segundos.
   __scheduleSearchRequest()
 end sub
 
@@ -193,12 +193,12 @@ sub __scheduleSearchRequest()
   ' Si no existe el timer, no se puede debouncear.
   if m.searchDebounceTimer = invalid then return
 
-  ' Reinicio el timer en cada tecla para contar 3 segundos desde la última edición.
+  ' Reinicio el timer en cada tecla para contar 2 segundos desde la última edición.
   m.searchDebounceTimer.control = "stop"
   m.searchDebounceTimer.control = "start"
 end sub
 
-' Se ejecuta cuando pasan 3 segundos sin cambios en el input.
+' Se ejecuta cuando pasan 2 segundos sin cambios en el input.
 sub onSearchDebounceTimerFire()
     ' Solo proceso debounce si la pantalla Search está activa/en foco.
   if not m.top.onFocus then return
