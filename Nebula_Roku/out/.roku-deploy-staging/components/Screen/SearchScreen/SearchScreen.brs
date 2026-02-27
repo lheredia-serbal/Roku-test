@@ -5,6 +5,8 @@ sub init()
   ' Referencio el nodo del teclado en pantalla.
   m.searchKeyboard = m.top.findNode("searchKeyboard")
 
+  ' Referencio el fondo opaco que acompaña al teclado.
+  m.searchKeyboardBackground = m.top.findNode("searchKeyboardBackground")
   ' Referencio el timer para debounce de búsqueda.
   m.searchDebounceTimer = m.top.findNode("searchDebounceTimer")
   ' Referencio el contenedor del carrusel de programas de ErrorPage.
@@ -33,6 +35,10 @@ sub init()
   ' Referencio el interpolador de traducción para ocultar teclado.
   m.keyboardHideTranslationInterpolator = m.top.findNode("keyboardHideTranslationInterpolator")
 
+  ' Referencio interpoladores de traducción del fondo del teclado.
+  m.keyboardBackgroundShowTranslationInterpolator = m.top.findNode("keyboardBackgroundShowTranslationInterpolator")
+  m.keyboardBackgroundHideTranslationInterpolator = m.top.findNode("keyboardBackgroundHideTranslationInterpolator")
+
   ' Obtengo la información de escala global de la app.
   m.scaleInfo = m.global.scaleInfo
 
@@ -58,7 +64,7 @@ sub init()
   ' Defino una altura por defecto para el teclado si no hay medidas reales aún.
   m.keyboardDefaultHeight = scaleValue(320, m.scaleInfo)
 
-   m.relatedContainer.translation = scaleSize([0, 30], m.scaleInfo)
+   m.relatedContainer.translation = scaleSize([0, 25], m.scaleInfo)
 
   ' Posiciono inicialmente el teclado fuera de pantalla (debajo).
   m.searchKeyboard.translation = [0, m.scaleInfo.height]
@@ -68,6 +74,14 @@ sub init()
   m.searchKeyboard.visible = false
   ' Evito que el teclado dibuje su propio TextEditBox interno.
   m.searchKeyboard.showTextEditBox = false
+
+' Configuro fondo opaco para que el teclado no se vea transparente sobre carruseles.
+  if m.searchKeyboardBackground <> invalid then
+    m.searchKeyboardBackground.width = m.scaleInfo.width
+    m.searchKeyboardBackground.height = m.keyboardDefaultHeight
+    m.searchKeyboardBackground.translation = [0, m.scaleInfo.height]
+    m.searchKeyboardBackground.opacity = 0.0
+  end if
 
   ' Observo cambios de foco del input para mostrar/ocultar teclado.
   m.searchInput.observeField("hasFocus", "onSearchInputFocusChanged")
@@ -154,10 +168,16 @@ end sub
 sub onKeyboardTextChanged()
   ' Si falta teclado o input, salgo.
   if m.searchKeyboard = invalid or m.searchInput = invalid then return
+    ' Si aún no existe el TextEditBox interno, no hay nada para sincronizar.
+  if m.searchKeyboard.textEditBox = invalid then return
+  ' Solo sincronizo cambios cuando el foco está realmente dentro del teclado.
+  if not m.searchKeyboard.isInFocusChain() then return
+
 
   ' Copio la posición de cursor desde el TextEditBox interno del teclado.
   m.searchInput.cursorPosition = m.searchKeyboard.textEditBox.cursorPosition
   ' Copio el texto desde el TextEditBox interno del teclado.
+  print "Keyboard text " ; m.searchKeyboard.textEditBox.text
   m.searchInput.text = m.searchKeyboard.textEditBox.text
   ' Copio el estado activo del TextEditBox interno del teclado.
   m.searchInput.active = m.searchKeyboard.textEditBox.active
@@ -292,14 +312,12 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
     __hideKeyboard(true)
     ' Retorno foco al input.
     m.searchInput.setFocus(true)
-    ' Al volver al input, aseguro que el carrusel de ErrorPage esté cargado.
-    __getErrorPage()
     ' Indico que el evento fue manejado.
     return true
   end if
 
   ' Si el usuario baja desde el input, intento enviar foco a resultados visibles.
-  if key = KeyButtons().DOWN and press and m.searchInput <> invalid and m.searchInput.isInFocusChain() then
+  if key = KeyButtons().DOWN and m.searchInput <> invalid and m.searchInput.isInFocusChain() then
     ' Prioridad 1: carruseles de búsqueda (cuando hay resultados de search).
     if m.searchCarousels <> invalid and m.searchCarousels.visible and m.carouselContainer <> invalid and m.carouselContainer.getChildCount() > 0 then
       firstCarousel = m.carouselContainer.getChild(0)
@@ -400,6 +418,13 @@ sub __updateKeyboardTranslations()
   ' Defino posición oculta del teclado fuera de pantalla hacia abajo.
   m.keyboardHiddenTranslation = [keyboardX, m.scaleInfo.height]
 
+  ' Defino posiciones del fondo opaco del teclado (siempre ancho completo).
+  m.keyboardBackgroundVisibleTranslation = [0, keyboardY]
+  m.keyboardBackgroundHiddenTranslation = [0, m.scaleInfo.height]
+
+  ' Si existe fondo, ajusto su alto al alto real del teclado.
+  if m.searchKeyboardBackground <> invalid then m.searchKeyboardBackground.height = keyboardHeight
+
   ' Aplico estas posiciones a los keyframes de animación.
   __configureKeyboardAnimations()
 end sub
@@ -417,6 +442,16 @@ sub __configureKeyboardAnimations()
     ' Seteo keyframes para bajar teclado desde visible hasta oculto.
     m.keyboardHideTranslationInterpolator.keyValue = [m.keyboardVisibleTranslation, m.keyboardHiddenTranslation]
   end if
+
+    ' Si existe interpolador de mostrar del fondo del teclado.
+  if m.keyboardBackgroundShowTranslationInterpolator <> invalid then
+    m.keyboardBackgroundShowTranslationInterpolator.keyValue = [m.keyboardBackgroundHiddenTranslation, m.keyboardBackgroundVisibleTranslation]
+  end if
+
+  ' Si existe interpolador de ocultar del fondo del teclado.
+  if m.keyboardBackgroundHideTranslationInterpolator <> invalid then
+    m.keyboardBackgroundHideTranslationInterpolator.keyValue = [m.keyboardBackgroundVisibleTranslation, m.keyboardBackgroundHiddenTranslation]
+  end if
 end sub
 
 ' Muestra el teclado con animación ascendente.
@@ -433,6 +468,12 @@ sub __showKeyboard()
 
   ' Ubico teclado en posición oculta inicial para animar entrada.
   m.searchKeyboard.translation = m.keyboardHiddenTranslation
+
+    ' Ubico fondo en posición oculta inicial para animar junto al teclado.
+  if m.searchKeyboardBackground <> invalid then
+    m.searchKeyboardBackground.translation = m.keyboardBackgroundHiddenTranslation
+    m.searchKeyboardBackground.opacity = 0.0
+  end if
 
 ' Refuerzo observers del TextEditBox al abrir teclado.
   __observeKeyboardTextEditBox()
@@ -474,7 +515,14 @@ sub __hideKeyboard(withAnimation as Boolean)
     m.searchKeyboard.translation = [0, m.scaleInfo.height]
     ' Dejo teclado transparente.
     m.searchKeyboard.opacity = 0.0
+
+    ' Oculto fondo opaco del teclado sin animación.
+    if m.searchKeyboardBackground <> invalid then
+      m.searchKeyboardBackground.translation = [0, m.scaleInfo.height]
+      m.searchKeyboardBackground.opacity = 0.0
+    end if
   end if
+  
 end sub
 
 ' Al finalizar la animación de ocultar, deja el teclado invisible.
@@ -490,6 +538,11 @@ sub onKeyboardHideAnimationStateChanged()
     m.searchKeyboard.translation = [0, m.scaleInfo.height]
     ' Lo dejo transparente.
     m.searchKeyboard.opacity = 0.0
+    ' Al terminar, también oculto el fondo opaco del teclado.
+    if m.searchKeyboardBackground <> invalid then
+      m.searchKeyboardBackground.translation = [0, m.scaleInfo.height]
+      m.searchKeyboardBackground.opacity = 0.0
+    end if
   end if
 end sub
 
@@ -540,6 +593,7 @@ sub onGetErrorPageResponse()
       ' Al refrescar carrusel base, oculto mensaje de no resultados de búsqueda.
       __showSearchNoResults(false)
 
+      __loadSearchCarousels(invalid)
       ' Si la API devuelve data, cargo el carrusel.
       if resp.data <> invalid then
         ' Pinto items en el carrusel de relacionados.
@@ -644,7 +698,8 @@ sub __loadSearchCarousels(carousels)
   ' Limpio carruseles previos para evitar duplicados tras nuevas búsquedas.
   if m.carouselContainer.getChildCount() > 0 then m.carouselContainer.removeChildrenIndex(m.carouselContainer.getChildCount(), 0)
   ' Posición base del contenedor para el cálculo de desplazamiento vertical al navegar.
-  m.carouselContainer.translation = [scaleValue(55, m.scaleInfo), scaleValue(20, m.scaleInfo)]
+  m.carouselContainer.translation = scaleSize([0, -63], m.scaleInfo)
+  m.searchSelectedIndicator.translation = scaleSize([68, 65], m.scaleInfo)
   m.carouselXPosition = m.carouselContainer.translation[0]
   m.carouselYPosition = m.carouselContainer.translation[1]
 

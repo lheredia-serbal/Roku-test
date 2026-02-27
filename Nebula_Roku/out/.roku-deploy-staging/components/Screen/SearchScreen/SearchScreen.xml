@@ -25,10 +25,6 @@
     <TextEditBox
       id="searchInput" />
 
-    <Keyboard
-      id="searchKeyboard"
-      visible="false" />
-
     <Timer id="searchDebounceTimer" repeat="false" duration="2" />
 
     <Group id="relatedContainer" visible="false">
@@ -41,18 +37,23 @@
       <SelectionBox id="searchSelectedIndicator" visible="false"/>
     </Group>
 
-    <Keyboard
-      id="searchKeyboard"
-      visible="false" />
-
     <Label
       id="noResultsLabel"
       visible="false"
       horizAlign="center"
       font="font:MediumSystemFont" />
 
+    <Rectangle
+      id="searchKeyboardBackground"
+      color="0x000000FF"
+      opacity="0.0"
+      visible="true" />
 
-    <!-- Animaciones del teclado: entra desde abajo y sale hacia abajo -->
+    <Keyboard
+      id="searchKeyboard"
+      visible="false" />
+
+        <!-- Animaciones del teclado: entra desde abajo y sale hacia abajo -->
     <Animation
       id="keyboardShowAnimation"
       duration="0.25"
@@ -63,6 +64,14 @@
         id="keyboardShowTranslationInterpolator"
         fieldToInterp="searchKeyboard.translation"
         key="[0.0, 1.0]" />
+      <Vector2DFieldInterpolator
+        id="keyboardBackgroundShowTranslationInterpolator"
+        fieldToInterp="searchKeyboardBackground.translation"
+        key="[0.0, 1.0]" />
+      <FloatFieldInterpolator
+        fieldToInterp="searchKeyboardBackground.opacity"
+        key="[0.0, 1.0]"
+        keyValue="[0.0, 1.0]" />
       <FloatFieldInterpolator
         fieldToInterp="searchKeyboard.opacity"
         key="[0.0, 1.0]"
@@ -79,6 +88,14 @@
         id="keyboardHideTranslationInterpolator"
         fieldToInterp="searchKeyboard.translation"
         key="[0.0, 1.0]" />
+      <Vector2DFieldInterpolator
+        id="keyboardBackgroundHideTranslationInterpolator"
+        fieldToInterp="searchKeyboardBackground.translation"
+        key="[0.0, 1.0]" />
+      <FloatFieldInterpolator
+        fieldToInterp="searchKeyboardBackground.opacity"
+        key="[0.0, 1.0]"
+        keyValue="[1.0, 0.0]" />
       <FloatFieldInterpolator
         fieldToInterp="searchKeyboard.opacity"
         key="[0.0, 1.0]"

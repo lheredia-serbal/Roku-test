@@ -168,10 +168,16 @@ end sub
 sub onKeyboardTextChanged()
   ' Si falta teclado o input, salgo.
   if m.searchKeyboard = invalid or m.searchInput = invalid then return
+    ' Si aún no existe el TextEditBox interno, no hay nada para sincronizar.
+  if m.searchKeyboard.textEditBox = invalid then return
+  ' Solo sincronizo cambios cuando el foco está realmente dentro del teclado.
+  if not m.searchKeyboard.isInFocusChain() then return
+
 
   ' Copio la posición de cursor desde el TextEditBox interno del teclado.
   m.searchInput.cursorPosition = m.searchKeyboard.textEditBox.cursorPosition
   ' Copio el texto desde el TextEditBox interno del teclado.
+  print "Keyboard text " ; m.searchKeyboard.textEditBox.text
   m.searchInput.text = m.searchKeyboard.textEditBox.text
   ' Copio el estado activo del TextEditBox interno del teclado.
   m.searchInput.active = m.searchKeyboard.textEditBox.active
@@ -306,14 +312,12 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
     __hideKeyboard(true)
     ' Retorno foco al input.
     m.searchInput.setFocus(true)
-    ' Al volver al input, aseguro que el carrusel de ErrorPage esté cargado.
-    __getErrorPage()
     ' Indico que el evento fue manejado.
     return true
   end if
 
   ' Si el usuario baja desde el input, intento enviar foco a resultados visibles.
-  if key = KeyButtons().DOWN and press and m.searchInput <> invalid and m.searchInput.isInFocusChain() then
+  if key = KeyButtons().DOWN and m.searchInput <> invalid and m.searchInput.isInFocusChain() then
     ' Prioridad 1: carruseles de búsqueda (cuando hay resultados de search).
     if m.searchCarousels <> invalid and m.searchCarousels.visible and m.carouselContainer <> invalid and m.carouselContainer.getChildCount() > 0 then
       firstCarousel = m.carouselContainer.getChild(0)
@@ -694,7 +698,8 @@ sub __loadSearchCarousels(carousels)
   ' Limpio carruseles previos para evitar duplicados tras nuevas búsquedas.
   if m.carouselContainer.getChildCount() > 0 then m.carouselContainer.removeChildrenIndex(m.carouselContainer.getChildCount(), 0)
   ' Posición base del contenedor para el cálculo de desplazamiento vertical al navegar.
-  m.carouselContainer.translation = [0, -100]
+  m.carouselContainer.translation = scaleSize([0, -63], m.scaleInfo)
+  m.searchSelectedIndicator.translation = scaleSize([68, 65], m.scaleInfo)
   m.carouselXPosition = m.carouselContainer.translation[0]
   m.carouselYPosition = m.carouselContainer.translation[1]
 
