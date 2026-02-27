@@ -85,8 +85,6 @@ sub init()
 
   ' Observo cambios de foco del input para mostrar/ocultar teclado.
   m.searchInput.observeField("hasFocus", "onSearchInputFocusChanged")
-  ' Observo cambios del TextEditBox interno del teclado para sincronizar texto.
-  m.searchKeyboard.observeField("textEditBox", "onKeyboardTextChanged")
   ' Observo el estado de animación de ocultar teclado para limpiar estado final.
   m.keyboardHideAnimation.observeField("state", "onKeyboardHideAnimationStateChanged")
 
@@ -98,6 +96,8 @@ sub init()
 
   ' Inicializo bandera para evitar recargar ErrorPage múltiples veces innecesariamente.
   m.hasLoadedErrorPage = false
+  ' Mantengo una copia del texto de búsqueda para evitar que se limpie al perder foco.
+  m.currentSearchText = m.searchInput.text
 
   ' Si existe el nodo global, observo cambio de API activa para reiniciar caché.
   if m.global <> invalid then
@@ -124,7 +124,8 @@ sub initFocus()
   else
     ' Si pierde foco, detengo debounce pendiente para evitar búsquedas fuera de pantalla.
     if m.searchDebounceTimer <> invalid then m.searchDebounceTimer.control = "stop"
-    ' Si pierde foco, oculto teclado sin animación.
+    ' Si pierde foco, recompongo el texto persistido en el input.
+    __restoreSearchInputText()
     __hideKeyboard(false)
   end if
 end sub
@@ -146,7 +147,8 @@ sub onSearchInputFocusChanged()
     ' Muestro teclado animado.
     __showKeyboard()
   else
-    ' Si el input pierde foco, oculto teclado animado.
+    ' Si el input pierde foco, restauro texto persistido y oculto teclado animado.
+    __restoreSearchInputText()
     __hideKeyboard(true)
   end if
 end sub
@@ -159,9 +161,6 @@ sub __observeKeyboardTextEditBox()
   ' Evito observers duplicados antes de volver a observar.
   m.searchKeyboard.textEditBox.unobserveField("text")
   m.searchKeyboard.textEditBox.observeField("text", "onKeyboardTextChanged")
-
-  m.searchKeyboard.textEditBox.unobserveField("cursorPosition")
-  m.searchKeyboard.textEditBox.observeField("cursorPosition", "onKeyboardTextChanged")
 end sub
 
 ' Sincroniza el texto y cursor del teclado con el input visible.
@@ -178,7 +177,8 @@ sub onKeyboardTextChanged()
   m.searchInput.cursorPosition = m.searchKeyboard.textEditBox.cursorPosition
   ' Copio el texto desde el TextEditBox interno del teclado.
   print "Keyboard text " ; m.searchKeyboard.textEditBox.text
-  m.searchInput.text = m.searchKeyboard.textEditBox.text
+  m.currentSearchText = m.searchKeyboard.textEditBox.text
+  m.searchInput.text = m.currentSearchText
   ' Copio el estado activo del TextEditBox interno del teclado.
   m.searchInput.active = m.searchKeyboard.textEditBox.active
 
@@ -206,7 +206,7 @@ sub onSearchDebounceTimerFire()
   if m.searchInput = invalid then return
 
   ' Tomo y limpio el texto para evitar consultas con espacios.
-  query = m.searchInput.text.trim()
+  query = m.currentSearchText.trim()
   ' Si no hay término de búsqueda, recargo carrusel de ErrorPage.
   if query = "" then
     m.hasLoadedErrorPage = false
@@ -318,6 +318,9 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
 
   ' Si el usuario baja desde el input, intento enviar foco a resultados visibles.
   if key = KeyButtons().DOWN and m.searchInput <> invalid and m.searchInput.isInFocusChain() then
+
+    __restoreSearchInputText()
+    
     ' Prioridad 1: carruseles de búsqueda (cuando hay resultados de search).
     if m.searchCarousels <> invalid and m.searchCarousels.visible and m.carouselContainer <> invalid and m.carouselContainer.getChildCount() > 0 then
       firstCarousel = m.carouselContainer.getChild(0)
@@ -480,8 +483,8 @@ sub __showKeyboard()
   ' Inicio teclado transparente para fade in.
   m.searchKeyboard.opacity = 0.0
 
-  ' Sincronizo texto actual del input al teclado.
-  m.searchKeyboard.textEditBox.text = m.searchInput.text
+  ' Sincronizo texto persistido al teclado para recuperar valor aunque el input haya perdido foco.
+  m.searchKeyboard.textEditBox.text = m.currentSearchText
   ' Sincronizo cursor actual del input al teclado.
   m.searchKeyboard.textEditBox.cursorPosition = m.searchInput.cursorPosition
 
@@ -499,6 +502,8 @@ sub __hideKeyboard(withAnimation as Boolean)
   ' Detengo animación de mostrar por seguridad.
   m.keyboardShowAnimation.control = "stop"
 
+  m.searchKeyboard.textEditBox.unobserveField("text")
+
   ' Si hay que ocultar animado.
   if withAnimation then
     ' Solo arranco animación si teclado está visible.
@@ -511,6 +516,8 @@ sub __hideKeyboard(withAnimation as Boolean)
     m.keyboardHideAnimation.control = "stop"
     ' Marco teclado invisible.
     m.searchKeyboard.visible = false
+
+    __restoreSearchInputText()
     ' Reubico teclado debajo de pantalla.
     m.searchKeyboard.translation = [0, m.scaleInfo.height]
     ' Dejo teclado transparente.
@@ -529,6 +536,7 @@ end sub
 sub onKeyboardHideAnimationStateChanged()
   ' Si faltan nodos necesarios, salgo.
   if m.keyboardHideAnimation = invalid or m.searchKeyboard = invalid then return
+  __restoreSearchInputText()
 
   ' Cuando la animación termina.
   if m.keyboardHideAnimation.state = "stopped" then
@@ -554,8 +562,17 @@ sub __applyTranslations()
   ' Aplico hint text usando la clave solicitada por negocio.
   m.searchInput.hintText = i18n_t(m.global.i18n, "search.noResultsDefaultSearch")
 
-    ' Aplico traducción del mensaje cuando la búsqueda no devuelve resultados.
+  ' Aplico traducción del mensaje cuando la búsqueda no devuelve resultados.
   if m.noResultsLabel <> invalid then m.noResultsLabel.text = i18n_t(m.global.i18n, "search.noResultsRecomendations")
+end sub
+
+' Recompone el texto visible del input ante pérdidas de foco que vacían el valor.
+sub __restoreSearchInputText()
+  if m.searchInput = invalid then return
+  if m.currentSearchText = invalid then m.currentSearchText = ""
+
+  m.searchInput.text = m.currentSearchText
+  m.searchInput.cursorPosition = m.currentSearchText.len()
 end sub
 
 ' Muestra u oculta el mensaje de búsqueda sin resultados.
