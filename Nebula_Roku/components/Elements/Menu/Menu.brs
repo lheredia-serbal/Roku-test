@@ -438,7 +438,7 @@ end sub
 sub __selectItemInPrincipal(menuItem)
   m.top.selectedItem = FormatJson({key: menuItem.menuKey, id: menuItem.menuId, code: menuItem.code, behavior: menuItem.behavior})
   ' Si es la guia no lo guardo como ultimo nodo selecionado
-  if m.nodeSelected.menuKey <> invalid and m.nodeSelected.menuKey <> "MenuId" and menuItem.code <> invalid and menuItem.code <> "epg" then 
+  if m.nodeSelected.menuKey <> invalid and m.nodeSelected.menuKey <> "MenuId" and menuItem.code <> invalid and menuItem.code <> "epg" and menuItem.code <> "search" then 
     if m.nodeSelected <> invalid and m.nodeSelected.selected <> invalid then m.nodeSelected.selected = false
     m.nodeSelected = menuItem
     if m.nodeSelected.selected <> invalid then m.nodeSelected.selected = true
