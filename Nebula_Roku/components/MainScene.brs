@@ -250,6 +250,11 @@ sub onProgramDetail()
     programDetail = m.ViewAllScreen.detail
     ' Ocultamos temporalmente ViewAll sin limpiar data para poder volver desde detalle.
     __hideViewAll(false) 
+  else if m.StackOfScreens.Peek() = "SearchScreen" then
+    ' Cuando venimos de Search, tomamos su payload de detalle.
+    programDetail = m.SearchScreen.detail
+    ' Ocultamos Search antes de navegar al detalle.
+    __hideSearch()
   end if
 
   if programDetail = invalid then return
@@ -313,6 +318,11 @@ sub onStreamingPlayer()
   else if m.StackOfScreens.Peek() = "ProgramDetailScreen" then
     streaming = m.ProgramDetailScreen.streaming
     __hideProgramDetail()
+    else if m.StackOfScreens.Peek() = "SearchScreen" then
+    ' Cuando streaming nace en Search, lo leemos desde ese componente.
+    streaming = m.SearchScreen.streaming
+    ' Ocultamos Search para transferir control al Player.
+    __hideSearch()
   else if m.StackOfScreens.Peek() = "KillSessionScreen" then
     m.StackOfScreens.Pop()
     streaming = m.KillSessionScreen.streaming
@@ -437,6 +447,8 @@ sub __initConfig()
   m.PlayerScreen.loading = m.loading
   m.ProgramDetailScreen.loading = m.loading
   m.KillSessionScreen.loading = m.loading
+  m.ViewAllScreen.loading = m.loading
+  m.SearchScreen.loading = m.loading
 
   m.MainScreen.ObserveField("logout", "onLogoutEvent")
   m.ProfileScreen.ObserveField("logout", "onLogoutEvent")
@@ -532,6 +544,10 @@ sub __showSearch()
   m.SearchScreen.visible = true
   m.SearchScreen.onFocus = true
   m.SearchScreen.setFocus(true)
+  ' Escucho salida de streaming para navegar al Player.
+  m.SearchScreen.ObserveField("streaming", "onStreamingPlayer")
+  ' Escucho salida de detail para navegar a ProgramDetail.
+  m.SearchScreen.ObserveField("detail", "onProgramDetail")
 end sub
 
 ' Muestra la pantalla del player y esucha sus observable relacionados
@@ -598,6 +614,14 @@ end sub
 sub __hideSearch()
   m.SearchScreen.visible = false
   m.SearchScreen.onFocus = false
+  ' Dejo de escuchar salida de streaming al ocultar Search.
+  m.SearchScreen.unobserveField("streaming")
+  ' Dejo de escuchar salida de detail al ocultar Search.
+  m.SearchScreen.unobserveField("detail")
+  ' Limpio payload de streaming para evitar retriggers.
+  m.SearchScreen.streaming = invalid
+  ' Limpio payload de detail para evitar retriggers.
+  m.SearchScreen.detail = invalid
 end sub
 
 ' Esconde la eliminar sesiones concurrentes y no escucha los eventos de esta pantalla ya que ahora abra otra 
@@ -728,6 +752,18 @@ sub __backManager(ScreenFocus)
     m.ViewAllScreen.ObserveField("detail", "onProgramDetail")
     ' Evitamos spinner colgado al volver desde Player.
     if m.loading <> invalid then m.loading.visible = false 
+  else if ScreenFocus = "SearchScreen" then
+    ' Restauramos Search al volver desde ProgramDetail cuando quedó en el stack.
+    if not m.SearchScreen.visible then m.SearchScreen.visible = true
+    ' Rehabilitamos foco para retomar navegación de resultados/recomendados.
+    m.SearchScreen.onFocus = true
+    m.SearchScreen.setFocus(true)
+    m.SearchScreen.ObserveField("streaming", "onStreamingPlayer")
+    m.SearchScreen.ObserveField("detail", "onProgramDetail")
+    ' Restauro foco en el último item seleccionado dentro de Search.
+    m.SearchScreen.callFunc("restoreFocus")
+    ' Evitamos spinner colgado al volver desde detalle.
+    if m.loading <> invalid then m.loading.visible = false
   else if ScreenFocus = "MainScreen" then 
     if not m.MainScreen.visible then m.MainScreen.visible = true
     m.MainScreen.onFocus = true

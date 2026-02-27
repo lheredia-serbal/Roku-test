@@ -16,9 +16,17 @@
   <script type="text/brightscript" uri="pkg:/source/Services/ErrorCode.brs" />
   <script type="text/brightscript" uri="pkg:/source/CarouselConstants.brs" />
 
-   <interface>
+  <script type="text/brightscript" uri="pkg:/source/StreamingConstants.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Storage.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Services/Watch.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Services/Streamings.brs" />
+
+  <interface>
     <!-- Paramentros de Entrada -->
+    <field id="loading" type="node" />
     <field id="onFocus" type="boolean" value="false" onChange="initFocus" />
+    <field id="streaming" type="string" />
+    <field id="detail" type="string" />
   </interface>
 
    <children>
