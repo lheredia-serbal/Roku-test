@@ -780,6 +780,24 @@ sub onSelectItem()
   ' Muestro loading global mientras resuelvo la navegación del item.
   if m.top.loading <> invalid then m.top.loading.visible = true
 
+    ' Si se selecciona la tarjeta "Ver todos", disparo navegación directa a ViewAllScreen.
+  if m.itemSelected.showSeeMore <> invalid and m.itemSelected.showSeeMore = true then
+    ' Mantengo el mismo contrato de MainScreen: envío carouselId desde m.carousels[m.carouselIndex].id.
+    if m.carouselIndex <> invalid and m.carousels <> invalid and m.carouselIndex >= 0 and m.carouselIndex < m.carousels.count() and m.carousels[m.carouselIndex] <> invalid then
+      contentViewId = m.currentSearchText.trim() ' Tomo el texto actual del buscador para enviarlo como contentViewId.
+      m.top.viewAll = FormatJson({ ' Notifico a MainScene para navegar a ViewAllScreen.
+        contentViewId: contentViewId ' Envío el valor buscado para habilitar búsqueda por id en ViewAll.
+        carouselId: m.carousels[m.carouselIndex].id ' Envío exactamente el carouselId del carrusel enfocado.
+        carouselCode: m.itemSelected.carouselCode ' Envío código para mantener contexto funcional.
+        title: m.itemSelected.carouselTitle ' Envío título para cabecera de ViewAll.
+      })
+    end if
+
+    ' Oculto loading al terminar navegación local.
+    if m.top.loading <> invalid then m.top.loading.visible = false
+    return
+  end if
+
   ' Si es item navegable distinto de creditId, aplico validación centralizada.
   if m.itemSelected.key <> invalid and LCase(m.itemSelected.key) <> "creditid" and m.itemSelected.id <> 0 then
     ' Delego navegación/validación por tipo de item.
@@ -798,18 +816,16 @@ sub onSelectItem()
     return
   end if
 
-  ' Si es item de acción (sin key/id), resuelvo guide o viewall.
-  if m.itemSelected.key = invalid and m.itemSelected.id = 0 then
+  ' Si es item de acción (sin key útil/id), resuelvo guide o viewall.
+  if (m.itemSelected.key = invalid or m.itemSelected.key = 0) and m.itemSelected.id = 0 then
     ' Si la redirección es guide, replico flujo de MainScreen.
     if m.itemSelected.redirectKey = "guide" then
       ' Disparo consulta de último canal visto para abrir Player con guía.
       __requestGuideLastWatched()
       return
     else if m.itemSelected.redirectKey = "viewall" then
-      ' Armo payload para abrir ViewAllScreen con id del carrusel enfocado.
-      if m.carouselIndex <> invalid and m.carousels <> invalid and m.carouselIndex >= 0 and m.carouselIndex < m.carousels.count() and m.carousels[m.carouselIndex] <> invalid then
-        m.top.viewAll = FormatJson({ carouselId: m.carousels[m.carouselIndex].id })
-      end if
+      ' Notifico ViewAll directo cuando el backend marca redirectKey explícito.
+      m.top.viewAll = FormatJson({ carouselId: m.carousels[m.carouselIndex].id })
       ' Oculto loading al terminar navegación local.
       if m.top.loading <> invalid then m.top.loading.visible = false
       return
@@ -820,7 +836,6 @@ sub onSelectItem()
   if m.top.loading <> invalid then m.top.loading.visible = false
   __restoreLastFocus()
 end sub
-
 ' Valida control parental y resuelve navegación a player o detalle según redirectKey.
 sub __validateCarouselItem(carouselItem)
   ' Si requiere control parental para canal, pido PIN reutilizando flujo de MainScreen.
@@ -1288,6 +1303,7 @@ sub __loadSearchCarousels(carousels)
         newCarousel.code = carouselData.code
         newCarousel.imageType = carouselData.imageType
         newCarousel.redirectType = carouselData.redirectType
+        newCarousel.redirectType = 4 ' Fuerzo la tarjeta "Ver todos" en cada carrusel de resultados de búsqueda.
         newCarousel.items = carouselData.items
 
         ' Ubico verticalmente este carrusel dentro del stack.

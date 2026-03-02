@@ -142,21 +142,23 @@ end function
 ' Solicita el detalle del carrusel seleccionado en la vista "Ver todos".
 sub __getViewAllCarousel()
   if m.viewAllPayload = invalid then return
-  if m.viewAllPayload.menuSelectedItemId = invalid or m.viewAllPayload.carouselId = invalid then return
+  if m.viewAllPayload.carouselId = invalid then return ' Validamos carouselId porque es requerido en ambos flujos de servicio.
   ' Obtenemos API base si aún no está cacheada.
   if m.apiUrl = invalid then m.apiUrl = getConfigVariable(m.global.configVariablesKeys.API_URL) 
   ' Abortamos si no hay URL de API disponible.
   if m.apiUrl = invalid then return 
   ' Mostramos loading durante la llamada.
   if m.top.loading <> invalid and not m.top.loading.visible then m.top.loading.visible = true 
+ requestConfig = __getViewAllRequestConfig() ' Resolvemos configuración del request para reutilizar lógica entre ViewAll y SearchById.
+  if requestConfig = invalid then return ' Cortamos si no se pudo construir la configuración del servicio.
   ' Creamos id único para registrar acción pendiente.
   requestId = createRequestId() 
   action = {
     apiRequestManager: m.apiRequestManager
-    url: urlViewAllCarousels(m.apiUrl, m.viewAllPayload.menuSelectedItemId, m.viewAllPayload.carouselId)
-    method: "GET"
+    url: requestConfig.url ' Reutilizamos URL resuelta según el payload recibido.
+    method: requestConfig.method ' Reutilizamos método HTTP según el flujo activo.
     responseMethod: "onViewAllCarouselResponse"
-    body: invalid
+    body: requestConfig.body ' Reutilizamos body cuando se usa endpoint SearchById.
     token: invalid
     publicApi: false
     requestId: requestId
@@ -171,6 +173,32 @@ sub __getViewAllCarousel()
   m.apiRequestManager = action.apiRequestManager
 end sub
 
+function __hasValidContentViewId() as boolean ' Evalúa si el payload trae contentViewId utilizable.
+  if m.viewAllPayload = invalid or m.viewAllPayload.contentViewId = invalid then return false ' Validamos existencia del campo contentViewId.
+  contentViewId = m.viewAllPayload.contentViewId.toStr().trim() ' Normalizamos el valor recibido para evitar espacios.
+  return contentViewId <> "" ' Consideramos válido solo cuando el string no está vacío.
+end function ' Finaliza validación de contentViewId.
+
+function __getViewAllRequestConfig() as Object ' Construye la configuración HTTP reutilizable según el payload.
+  if __hasValidContentViewId() then return { ' Si llega contentViewId válido, priorizamos el flujo SearchById.
+    url: urlSearchById(m.apiUrl, m.viewAllPayload.carouselId) ' Armamos URL del servicio SearchById con carouselId.
+    method: "POST" ' Definimos método POST para búsquedas por texto.
+    body: __buildSearchBody(m.viewAllPayload.contentViewId) ' Reutilizamos el mismo body del endpoint Search.
+  } ' Cerramos configuración de SearchById.
+  if m.viewAllPayload.menuSelectedItemId = invalid then return invalid ' Evitamos llamar ViewAll tradicional sin menuSelectedItemId.
+  return { ' Mantenemos el flujo original para ViewAll cuando no aplica SearchById.
+    url: urlViewAllCarousels(m.apiUrl, m.viewAllPayload.menuSelectedItemId, m.viewAllPayload.carouselId) ' Conservamos endpoint clásico de ViewAll.
+    method: "GET" ' Conservamos método GET original de ViewAll.
+    body: invalid ' Indicamos que el flujo clásico no necesita body.
+  } ' Cerramos configuración del flujo ViewAll clásico.
+end function ' Finaliza construcción de configuración de request.
+
+function __buildSearchBody(searchText as Dynamic) as string ' Genera body JSON compartido para búsquedas.
+  safeSearchText = "" ' Inicializamos valor por defecto para evitar valores inválidos en el body.
+  if searchText <> invalid then safeSearchText = searchText.toStr().trim() ' Convertimos a string y limpiamos espacios del texto de búsqueda.
+  return FormatJson({ searchText: safeSearchText }) ' Devolvemos el mismo formato de body usado por urlSearch.
+end function ' Finaliza construcción del body de búsqueda.
+
 ' Procesa la respuesta del servicio de ViewAll.
 sub onViewAllCarouselResponse()
   if m.apiRequestManager = invalid then
@@ -184,7 +212,7 @@ sub onViewAllCarouselResponse()
     removePendingAction(m.apiRequestManager.requestId) 
     resp = ParseJson(m.apiRequestManager.response)
     ' Validamos que existan items para pintar.
-    if resp <> invalid and resp.data <> invalid and resp.data.items <> invalid and resp.data.items.count() > 0 then 
+    if resp <> invalid and resp.data <> invalid and resp.data.carousels <> invalid and resp.data.carousels.count() > 0 then 
       m.carousel = resp.data
       ' Renderizamos carrusel con datos de ViewAll.
       __populateViewAllCarousel(resp.data) 
@@ -222,9 +250,9 @@ sub __populateViewAllCarousel(data as Object)
   ' Limpiamos carruseles previos antes de repintar contenido.
   __clearViewAllCarousel() 
   sourceItems = []
-  ' Usamos directamente data.items cuando ya es una lista de carruseles.
-  if data <> invalid and data.items <> invalid and data.items.count() > 0 and data.items[0].style <> invalid then sourceItems = data.items 
-  if sourceItems.count() = 0 and data <> invalid and data.items <> invalid and data.items.count() > 0 then sourceItems = [data]
+  ' Usamos directamente data.carousels cuando ya es una lista de carruseles.
+  if data <> invalid and data.carousels <> invalid and data.carousels.count() > 0 and data.carousels[0].style <> invalid then sourceItems = data.carousels 
+  if sourceItems.count() = 0 and data <> invalid and data.carousels <> invalid and data.carousels.count() > 0 then sourceItems = [data]
   ' Recorremos cada carrusel para crearlo igual que MainScreen.
   for each carouselData in sourceItems 
     ' Calculamos cuántos ítems entran en pantalla sin scroll horizontal.

@@ -784,7 +784,9 @@ sub onSelectItem()
   if m.itemSelected.showSeeMore <> invalid and m.itemSelected.showSeeMore = true then
     ' Mantengo el mismo contrato de MainScreen: envío carouselId desde m.carousels[m.carouselIndex].id.
     if m.carouselIndex <> invalid and m.carousels <> invalid and m.carouselIndex >= 0 and m.carouselIndex < m.carousels.count() and m.carousels[m.carouselIndex] <> invalid then
+      contentViewId = m.currentSearchText.trim() ' Tomo el texto actual del buscador para enviarlo como contentViewId.
       m.top.viewAll = FormatJson({ ' Notifico a MainScene para navegar a ViewAllScreen.
+        contentViewId: contentViewId ' Envío el valor buscado para habilitar búsqueda por id en ViewAll.
         carouselId: m.carousels[m.carouselIndex].id ' Envío exactamente el carouselId del carrusel enfocado.
         carouselCode: m.itemSelected.carouselCode ' Envío código para mantener contexto funcional.
         title: m.itemSelected.carouselTitle ' Envío título para cabecera de ViewAll.

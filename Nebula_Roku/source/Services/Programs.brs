@@ -21,3 +21,7 @@ end function
 function urlSearch(apiUrl)
     return apiUrl + "/"+ m.global.apiVersions.V3 +"/Programs/Search"
 end function
+
+function urlSearchById(apiUrl, carouselId)
+    return apiUrl + "/"+ m.global.apiVersions.V3 +"/Programs/Search/" + carouselId.toStr()
+end function
