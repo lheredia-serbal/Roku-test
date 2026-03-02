@@ -129,9 +129,31 @@ sub initFocus()
     __applyTranslations()
     ' Aseguro foco en el nodo top para cadena de foco correcta.
     m.top.setFocus(true)
-    ' Enfoco el input para disparar la lógica de teclado.
-    m.searchInput.setFocus(true)
+
+    ' Si Search se abrió desde MainScreen, fuerzo foco en input y refresh de ErrorPage.
+    if m.top.enterFromMainScreen then
+      m.top.enterFromMainScreen = false
+      m.top.returnFromProgramDetail = false
+      m.hasLoadedErrorPage = false
+      m.searchInput.setFocus(true)
+      __loadRelatedCarousel(invalid)
+      __loadSearchCarousels(invalid)
+      __getErrorPage()
+      return
+    end if
+
+    ' Si vuelvo desde ProgramDetail, intento restaurar foco en el último item.
+    if m.top.returnFromProgramDetail then
+      m.top.returnFromProgramDetail = false
+      __restoreFocusFromProgramDetail()
+    else
+      ' Enfoco el input para disparar la lógica de teclado.
+      m.searchInput.setFocus(true)
+    end if
+
     ' Disparo la carga del endpoint ErrorPage al entrar en la pantalla.
+    __loadRelatedCarousel(invalid)
+      __loadSearchCarousels(invalid)
     __getErrorPage()
   else
     ' Si pierde foco, detengo debounce pendiente para evitar búsquedas fuera de pantalla.
@@ -693,41 +715,34 @@ sub onSelectItem()
   if m.top.loading <> invalid then m.top.loading.visible = true
 
   ' Si es un canal, debo validar sesión antes de pedir streamings.
-  if m.itemSelected.redirectKey = "ChannelId" then
-    ' Obtengo la sesión de watch activa para el endpoint de validación.
-    watchSessionId = getWatchSessionId()
-    ' Genero id de request para trazabilidad y retries.
-    requestId = createRequestId()
-    ' Armo acción con metadata para el manejador de reintentos.
-    action = {
-      apiRequestManager: m.apiRequestManager
-      url: urlWatchValidate(m.apiUrl, watchSessionId, m.itemSelected.redirectKey, m.itemSelected.redirectId)
-      method: "GET"
-      responseMethod: "onWatchValidateResponse"
-      body: invalid
-      token: invalid
-      publicApi: false
-      dataAux: invalid
-      requestId: requestId
-      ' Defino ejecución HTTP real encapsulada para runAction.
-      run: function() as Object
-        ' Disparo request de validación de reproducción.
-        m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux)
-        ' Reporto éxito para el coordinador de acciones.
-        return { success: true, error: invalid }
-      end function
-    }
-    ' Registro acción para permitir retry centralizado.
-    runAction(requestId, action, ApiType().CLIENTS_API_URL)
-    ' Persiste manager actualizado luego de disparar la acción.
-    m.apiRequestManager = action.apiRequestManager
+
+  print "itemSelected " ; m.itemSelected
+
+  if m.itemSelected.key <> invalid and LCase(m.itemSelected.key.toLowerCase) <> "creditid" and m.itemSelected.id <> 0 then
+    __validateCarouselItem(m.itemSelected)
+    
+  else if m.carousels[m.carouselIndex].style = 7
+    ' Volver a realizar una busqueda usando el atributo title del item seleccionado
+  else if m.itemSelected.key = invalid and m.itemSelected.id = 0
+    if m.itemSelected.redirectKey = "guide" then
+      ' Redireccionar a la guía
+    else if m.itemSelected.redirectKey = "viewall"
+      ' Redireccionar a la pantalla ver todos y pasarle por parametro este valor m.carousels[carouselIndex].id
+    end if
   else
-    ' Limpio cualquier estado de request previo antes de ir a detalle.
-    m.apiRequestManager = clearApiRequest(m.apiRequestManager)
-    ' Emite payload de detalle para que MainScene navegue a ProgramDetail.
-    m.top.detail = FormatJson(m.itemSelected)
-    ' Oculto loading porque la navegación ya fue emitida.
-    if m.top.loading <> invalid then m.top.loading.visible = false
+    m.showLoading = false
+  end if
+end sub
+
+sub __validateCarouselItem(carouselItem)
+  if carouselItem.parentalControl = true and carouselItem.redirectKey = "ChannelId" then
+    print "Mostrar la validación de PIN, en caso correcto, redireccionar al Player"
+  else
+    if carouselItem.redirectKey = "ChannelId" then
+      print "redireccionar al player"
+    else
+      print "redireccionar al detallel del programa"
+    end if
   end if
 end sub
 
@@ -848,7 +863,7 @@ sub __restoreLastFocus()
   if m.lastFocusedNode = invalid then return
 
   ' Si el último foco fue recomendados, enfoco su lista interna.
-  if m.lastFocusedNode = m.related then
+  if m.lastFocusedNode.id = m.related.id then
     focusItem = m.related.findNode("carouselList")
     ' Si existe lista interna, reaplico foco directo.
     if focusItem <> invalid then focusItem.setFocus(true)
@@ -882,6 +897,42 @@ sub restoreFocus()
     ' Fallback: si no hay historial de foco, regreso al input.
     m.searchInput.setFocus(true)
   end if
+end sub
+
+' Fuerza restaurar foco al volver desde ProgramDetail priorizando resultados/recomendados.
+sub __restoreFocusFromProgramDetail()
+  ' Prioridad 1: último foco conocido en resultados/recomendados.
+  if m.lastFocusedNode <> invalid then
+    __restoreLastFocus()
+    return
+  end if
+
+  ' Prioridad 2: primer carrusel de resultados de búsqueda.
+  if m.carouselContainer <> invalid and m.carouselContainer.getChildCount() > 0 then
+    firstCarousel = m.carouselContainer.getChild(0)
+    firstList = firstCarousel.findNode("carouselList")
+    if firstList <> invalid then
+      m.lastFocusedNode = firstCarousel
+      firstList.setFocus(true)
+      m.searchSelectedIndicator.size = firstCarousel.size
+      m.searchSelectedIndicator.visible = true
+      return
+    end if
+  end if
+
+  ' Prioridad 3: carrusel de recomendados (ErrorPage).
+  if m.related <> invalid then
+    relatedList = m.related.findNode("carouselList")
+    if relatedList <> invalid then
+      relatedList.setFocus(true)
+      m.selectedIndicator.size = m.related.size
+      m.selectedIndicator.visible = true
+      return
+    end if
+  end if
+
+  ' Fallback final para no dejar pantalla sin foco navegable.
+  if m.searchInput <> invalid then m.searchInput.setFocus(true)
 end sub
 
 sub __getErrorPage()

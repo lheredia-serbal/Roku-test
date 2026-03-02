@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!-- Es necesario para evitar lso fallos de los enlaces profundos -->
-<component name="inputTask" extends="Task">
-    <interface>
-            <field id="inputData" type="assocarray" />
-    </interface>
-
-    <script type="text/brightscript" uri="pkg:/components/InputTask.brs" />
-</component>

@@ -27,6 +27,8 @@
     <field id="onFocus" type="boolean" value="false" onChange="initFocus" />
     <field id="streaming" type="string" />
     <field id="detail" type="string" />
+    <field id="returnFromProgramDetail" type="boolean" value="false" />
+    <field id="enterFromMainScreen" type="boolean" value="false" />
   </interface>
 
    <children>

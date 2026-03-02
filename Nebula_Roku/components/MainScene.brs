@@ -53,7 +53,11 @@ function onKeyEvent(key as string, press as boolean) as boolean
         __hideProgramDetail()
         m.ProgramDetailScreen.data = invalid
 
-        __backManager(m.StackOfScreens.Peek())
+        backScreen = m.StackOfScreens.Peek()
+        if m.lastProgramDetailParent = "SearchScreen" and backScreen <> "SearchScreen" then backScreen = "SearchScreen"
+        if m.lastProgramDetailParent = "SearchScreen" then m.SearchScreen.returnFromProgramDetail = true
+
+        __backManager(backScreen)
         
       else if m.StackOfScreens.Peek() = "SettingScreen" then 
         m.StackOfScreens.Pop()
@@ -241,6 +245,7 @@ end function
 sub onProgramDetail()
   ' Inicializamos payload para resolver si el detalle viene desde MainScreen o ViewAllScreen.
   programDetail = invalid 
+  m.lastProgramDetailParent = m.StackOfScreens.Peek()
   ' Cuando venimos de Home, tomamos detail desde MainScreen.
   if m.StackOfScreens.Peek() = "MainScreen" then 
     programDetail = m.MainScreen.detail
@@ -345,7 +350,11 @@ sub onBackDetail()
       __hideProgramDetail()
       m.ProgramDetailScreen.data = invalid
   
-      __backManager(m.StackOfScreens.Peek())
+      backScreen = m.StackOfScreens.Peek()
+      if m.lastProgramDetailParent = "SearchScreen" and backScreen <> "SearchScreen" then backScreen = "SearchScreen"
+      if m.lastProgramDetailParent = "SearchScreen" then m.SearchScreen.returnFromProgramDetail = true
+
+      __backManager(backScreen)
     end if
   end if
 end sub
@@ -541,6 +550,8 @@ end sub
 ' Muestra la pantalla de búsqueda con contenido básico.
 sub __showSearch()
   if m.MainScreen.visible then m.MainScreen.visible = false
+  m.SearchScreen.returnFromProgramDetail = false
+  m.SearchScreen.enterFromMainScreen = true
   m.SearchScreen.visible = true
   m.SearchScreen.onFocus = true
   m.SearchScreen.setFocus(true)
@@ -756,6 +767,7 @@ sub __backManager(ScreenFocus)
     ' Restauramos Search al volver desde ProgramDetail cuando quedó en el stack.
     if not m.SearchScreen.visible then m.SearchScreen.visible = true
     ' Rehabilitamos foco para retomar navegación de resultados/recomendados.
+    m.SearchScreen.enterFromMainScreen = false
     m.SearchScreen.onFocus = true
     m.SearchScreen.setFocus(true)
     m.SearchScreen.ObserveField("streaming", "onStreamingPlayer")
