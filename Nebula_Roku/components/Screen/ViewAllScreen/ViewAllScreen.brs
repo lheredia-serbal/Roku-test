@@ -285,6 +285,8 @@ sub __populateViewAllCarousel(data as Object)
       newCarousel.style = carouselData.style
       ' Mostramos título sólo en la primera fila.
       if rowIndex = 0 then newCarousel.title = carouselData.title else newCarousel.title = "" 
+      ' Construimos tags sólo para la primera fila donde se renderiza el título del carrusel.
+      if rowIndex = 0 then newCarousel.titleTagsText = __buildCarouselTitleTagsText(carouselData.titleTags) else newCarousel.titleTagsText = "" 
       newCarousel.code = carouselData.code
       newCarousel.imageType = carouselData.imageType
       newCarousel.redirectType = carouselData.redirectType
@@ -316,6 +318,60 @@ sub __populateViewAllCarousel(data as Object)
     m.selectedIndicator.visible = false 
   end if
 end sub
+
+' Construye el string de tags del título usando formato: "tag" | Tag2 | Tag3.
+function __buildCarouselTitleTagsText(titleTags as Dynamic) as String
+  ' Si titleTags no existe o no es lista, retornamos vacío para ocultar el texto.
+  if titleTags = invalid then return ""
+  ' Si el objeto no implementa ifArray, lo tratamos como estructura inválida.
+  if GetInterface(titleTags, "ifArray") = invalid then return ""
+
+  ' Inicializamos acumulador de tags válidos ya formateados.
+  formattedTags = []
+
+  ' Recorremos cada entrada recibida para construir el resultado final.
+  for each titleTag in titleTags
+    ' Cortamos el proceso al llegar al máximo de 5 tags.
+    if formattedTags.count() >= 5 then exit for
+    ' Ignoramos elementos inválidos para evitar errores de acceso.
+    if titleTag = invalid then continue for
+    ' Si no existe atributo tag, el elemento no es utilizable.
+    if titleTag.tag = invalid then continue for
+
+    ' Convertimos el tag a string y removemos espacios sobrantes.
+    tagText = titleTag.tag.toStr().trim()
+    ' Si el texto final queda vacío, no se agrega al resultado.
+    if tagText = "" then continue for
+
+    ' Si quote viene en true, encerramos el tag entre comillas dobles.
+    if titleTag.quote = true then
+      ' Aplicamos formato solicitado para tags con quote.
+      tagText = Chr(34) + tagText + Chr(34)
+    end if
+
+    ' Agregamos el tag válido y formateado al acumulador.
+    formattedTags.push(tagText)
+  end for
+
+  ' Si no se obtuvo ningún tag válido, devolvemos vacío.
+  if formattedTags.count() = 0 then return ""
+
+  ' Inicializamos string final para unir manualmente con separador pipe.
+  tagsText = ""
+  ' Concatenamos tags en orden respetando el separador requerido.
+  for each formattedTag in formattedTags
+    ' Primer elemento sin separador prefijo.
+    if tagsText = "" then
+      tagsText = formattedTag
+    else
+      ' Resto de elementos con separador " | ".
+      tagsText = tagsText + " | " + formattedTag
+    end if
+  end for
+
+  ' Retornamos string final para renderizar a la derecha del título.
+  return tagsText
+end function
 
 ' Devuelve la cantidad máxima de ítems por fila según el estilo del carrusel.
 function __getMaxItemsPerRow(style as integer) as integer
