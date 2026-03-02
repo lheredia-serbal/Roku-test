@@ -26,6 +26,6 @@ function urlSearchById(apiUrl, carouselId)
     return apiUrl + "/"+ m.global.apiVersions.V3 +"/Programs/Search/" + carouselId.toStr()
 end function
 
-function urlEpisodes(apiUrl, epgId)
-    return apiUrl + "/"+ m.global.apiVersions.V3 +"/Programs/EpgId/" + epgId.toStr() + "/Episodes"
+function urlEpisodes(apiUrl, key, id)
+    return apiUrl + "/"+ m.global.apiVersions.V3 +"/Programs/ " + key.toStr() + "/" + id.toStr() + "/Episodes"
 end function
