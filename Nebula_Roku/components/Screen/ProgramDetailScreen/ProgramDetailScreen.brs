@@ -647,21 +647,21 @@ sub __processActions()
       if focusElement = invalid then focusElement = btnRestart
     end if
 
-    ' if  m.program.actions.emissions <> invalid and m.program.actions.emissions then 
-    '   btnEmissions = m.actionsBtn.createChild("QvButton")
-    '   btnEmissions.id = "btnEmissions"
-    '   btnEmissions.text = "Emissions"
-    '   btnEmissions.focusable = true
-    '   btnEmissions.size = buttonSize
+    if  m.program.actions.emissions <> invalid and m.program.actions.emissions then 
+      btnEmissions = m.actionsBtn.createChild("QvButton")
+      btnEmissions.id = "btnEmissions"
+      btnEmissions.text = i18n_t(m.global.i18n, "button.emissions")
+      btnEmissions.focusable = true
+      btnEmissions.size = buttonSize
 
-    '   if lastBtnCreate <> invalid then 
-    '     lastBtnCreate.focusRight = btnEmissions
-    '     btnEmissions.focusLeft = lastBtnCreate
-    '   end if
-    '   lastBtnCreate = btnEmissions
+      if lastBtnCreate <> invalid then 
+        lastBtnCreate.focusRight = btnEmissions
+        btnEmissions.focusLeft = lastBtnCreate
+      end if
+      lastBtnCreate = btnEmissions
 
-    '   if focusElement = invalid then focusElement = btnEmissions
-    ' end if
+      if focusElement = invalid then focusElement = btnEmissions
+    end if
 
     btnBack = m.actionsBtn.createChild("QvButton")
     btnBack.id = "btnBack"

@@ -17,6 +17,7 @@
     <field id="style" type="integer" onChange="initSyle"/>
     <field id="items" type="array" onChange="initData"/>
     <field id="title" type="string"/>
+    <field id="titleTagsText" type="string" value=""/>
     <field id="code" type="string"/>
     <field id="contentType" type="integer"/>
     <field id="imageType" type="integer"/>
@@ -39,6 +40,13 @@
     <Label 
       id="carouselTitle"
       font="font:SmallestBoldSystemFont" 
+      />
+
+    <!-- Label para mostrar tags concatenados a la derecha del título del carrusel. -->
+    <Label
+      id="carouselTitleTags"
+      font="font:SmallestBoldSystemFont"
+      color="0xFFA500FF"
       />
 
       <QvTargetList 

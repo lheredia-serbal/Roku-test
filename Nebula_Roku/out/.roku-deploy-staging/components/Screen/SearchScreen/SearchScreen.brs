@@ -337,6 +337,9 @@ sub __getSearchPrograms(query as String)
     end function
   }
 
+  ' Antes de ejecutar la búsqueda, muestro loading para feedback inmediato al usuario.
+  if m.top.loading <> invalid then m.top.loading.visible = true
+
   ' Registro acción para retry/failover centralizado.
   runAction(requestId, action, ApiType().CLIENTS_API_URL)
   ' Persisto el manager actualizado luego del runAction.
@@ -1301,6 +1304,8 @@ sub __loadSearchCarousels(carousels)
         newCarousel.style = carouselData.style
         newCarousel.title = carouselData.title
         newCarousel.code = carouselData.code
+        ' Construyo texto de tags del título validando estructura y límite de 5 elementos.
+        newCarousel.titleTagsText = __buildCarouselTitleTagsText(carouselData.titleTags)
         newCarousel.imageType = carouselData.imageType
         newCarousel.redirectType = carouselData.redirectType
         newCarousel.redirectType = 4 ' Fuerzo la tarjeta "Ver todos" en cada carrusel de resultados de búsqueda.
@@ -1343,8 +1348,62 @@ end sub
 
 ' Limpia selected del carrusel enfocado para evitar reaperturas por notificaciones repetidas.
 sub onSearchCarouselSelectItem()
-onSelectItem()
+  onSelectItem()
 end sub
+
+' Construye el string de tags del título usando formato: "tag" | Tag2 | Tag3.
+function __buildCarouselTitleTagsText(titleTags as Dynamic) as String
+  ' Si titleTags no existe o no es lista, retorno vacío para ocultar el texto.
+  if titleTags = invalid then return ""
+  ' Si el objeto recibido no tiene count, no es una lista válida.
+  if GetInterface(titleTags, "ifArray") = invalid then return ""
+
+  ' Inicializo acumulador de tags válidos ya formateados.
+  formattedTags = []
+
+  ' Recorro cada tag recibido desde el servicio de búsqueda.
+  for each titleTag in titleTags
+    ' Si ya hay 5 tags concatenados, corto el recorrido.
+    if formattedTags.count() >= 5 then exit for
+    ' Si el item no existe, lo salto para evitar errores.
+    if titleTag = invalid then continue for
+    ' Si el atributo tag no existe o no es texto útil, lo descarto.
+    if titleTag.tag = invalid then continue for
+
+    ' Convierto tag a string y elimino espacios sobrantes.
+    tagText = titleTag.tag.toStr().trim()
+    ' Si queda vacío luego del trim, no lo agrego al resultado.
+    if tagText = "" then continue for
+
+    ' Si quote es true, encapsulo el tag entre comillas dobles.
+    if titleTag.quote = true then
+      ' Aplico formato requerido para tags con comillas.
+      tagText = Chr(34) + tagText + Chr(34)
+    end if
+
+    ' Agrego el tag ya validado y formateado al arreglo final.
+    formattedTags.push(tagText)
+  end for
+
+  ' Si no quedó ningún tag válido, retorno vacío para mostrar solo título.
+  if formattedTags.count() = 0 then return ""
+
+  ' Inicializo el resultado final con string vacío para concatenación manual.
+  tagsText = ""
+  ' Recorro los tags válidos para construir el texto final sin usar funciones no soportadas.
+  for each formattedTag in formattedTags
+    ' Si es el primer tag, lo seteo directo sin separador.
+    if tagsText = "" then
+      tagsText = formattedTag
+    else
+      ' Si no es el primero, agrego separador pipe antes del valor.
+      tagsText = tagsText + " | " + formattedTag
+    end if
+  end for
+
+  ' Retorno el string concatenado final para mostrar a la derecha del título.
+  return tagsText
+end function
 
 sub __loadRelatedCarousel(carouselData)
   ' Si hay items válidos, configuro y muestro el carrusel.

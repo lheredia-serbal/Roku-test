@@ -3,9 +3,14 @@ sub init()
   m.carouselList = m.top.findNode("carouselList")
   m.carouselTitle = m.top.findNode("carouselTitle")
   
+  ' Referencio el label secundario donde se dibujarán los tags de título.
+  m.carouselTitleTags = m.top.findNode("carouselTitleTags")
+  
   m.scaleInfo = m.global.scaleInfo
   
   m.carouselTitle.translation = scalePoint([70, 100], m.scaleInfo)
+  ' Alineo verticalmente los tags con el título principal del carrusel.
+  if m.carouselTitleTags <> invalid then m.carouselTitleTags.translation = m.carouselTitle.translation
   m.carouselList.translation = scalePoint([-80, 130], m.scaleInfo)
 
   m.labelSpace = scaleValue(40, m.scaleInfo)
@@ -18,7 +23,12 @@ end sub
 ' Carga los datos de componente, si no recibe datos o los recibe vacios entonces dispara la limpieza del componete
 sub initData()
   if m.top.items <> invalid and m.top.items.count() > 0 then
+    ' Seteo el título principal del carrusel con el valor recibido.
     m.carouselTitle.text = m.top.title
+    ' Seteo por defecto el texto de tags (puede ser vacío si no aplica).
+    if m.carouselTitleTags <> invalid then m.carouselTitleTags.text = m.top.titleTagsText
+    ' Recalculo la posición del texto de tags para que quede a la derecha del título.
+    __updateCarouselTitleTagsPosition()
     m.items = m.top.items
     __populateList()
   else 
@@ -202,6 +212,8 @@ sub __clearList()
   m.carouselList.unobserveField("leftEvent")
   m.items = m.clearItems
   m.carouselTitle.text = ""
+  ' Limpio el texto de tags cuando se vacía el carrusel.
+  if m.carouselTitleTags <> invalid then m.carouselTitleTags.text = ""
   m.carouselList.jumpToItem = 0 
   m.carouselList.targetSet = invalid
   m.carouselList.content = m.items
@@ -300,6 +312,22 @@ sub __populateList()
   __setupTargetList(focusedTargetSet, contentRoot)
 end sub
   
+' Reposiciona el label de tags para que inicie al final del título principal.
+sub __updateCarouselTitleTagsPosition()
+  ' Si no existe el label de tags, no hay nada para posicionar.
+  if m.carouselTitleTags = invalid then return
+  ' Si no existe el label principal, tampoco puedo calcular el offset horizontal.
+  if m.carouselTitle = invalid then return
+  ' Calculo separación horizontal mínima entre título y tags.
+  titleTagsSpacing = scaleValue(18, m.scaleInfo)
+  ' Calculo la posición X base usando la X del título más su ancho renderizado.
+  titleTagsX = m.carouselTitle.translation[0] + m.carouselTitle.localBoundingRect().width + titleTagsSpacing
+  ' Mantengo la misma Y del título principal para que queden alineados.
+  titleTagsY = m.carouselTitle.translation[1]
+  ' Aplico la traducción final del label de tags.
+  m.carouselTitleTags.translation = [titleTagsX, titleTagsY]
+end sub
+
 
 ' Función para configurar un TargetList con su TargetSet y contenido
 sub __setupTargetList(targetSet as Object, content as Object)

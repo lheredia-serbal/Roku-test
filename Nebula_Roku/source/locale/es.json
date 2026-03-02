@@ -1,6 +1,7 @@
 {
   "button": {
     "back": "Volver",
+    "emissions": "Emisiones",
     "backToHome": "Volver al inicio",
     "ok": "OK",
     "cancel": "Cancelar",

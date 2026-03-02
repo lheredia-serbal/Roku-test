@@ -1,6 +1,7 @@
 {
   "button": {
     "back": "Back",
+    "emissions": "Emissions",
     "backToHome": "Back to home",
     "ok": "OK",
     "cancel": "Cancel",
