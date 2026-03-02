@@ -118,7 +118,7 @@ sub initData()
     if m.beaconUrl = invalid then m.beaconUrl = getConfigVariable(m.global.configVariablesKeys.BEACON_URL) 
 
     data = ParseJson(m.top.data)
-    __getProgramDetail(data.redirectKey, data.redirectId)
+    __getProgramDetail(data.key, data.id)
   else
     _clearScreen()
   end if

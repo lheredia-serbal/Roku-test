@@ -121,6 +121,45 @@ sub init()
   __configSearchScreen()
 end sub
 
+' Limpia input y variables de estado de búsqueda al entrar a SearchScreen.
+sub __resetSearchState()
+  ' Detengo debounce previo para evitar requests rezagados.
+  if m.searchDebounceTimer <> invalid then m.searchDebounceTimer.control = "stop"
+
+  ' Limpio texto y cursor del input principal.
+  if m.searchInput <> invalid then
+    m.searchInput.text = ""
+    m.searchInput.cursorPosition = 0
+  end if
+
+  ' Limpio texto/cursor del teclado interno si ya está creado.
+  if m.searchKeyboard <> invalid and m.searchKeyboard.textEditBox <> invalid then
+    m.searchKeyboard.textEditBox.text = ""
+    m.searchKeyboard.textEditBox.cursorPosition = 0
+  end if
+
+  ' Reinicio variable persistida de texto de búsqueda.
+  m.currentSearchText = ""
+  ' Permito recargar ErrorPage en cada ingreso al componente.
+  m.hasLoadedErrorPage = false
+
+  ' Limpio estado visual de resultados e indicadores.
+  __showSearchNoResults(false)
+  __loadRelatedCarousel(invalid)
+  __loadSearchCarousels(invalid)
+  if m.selectedIndicator <> invalid then m.selectedIndicator.visible = false
+  if m.searchSelectedIndicator <> invalid then m.searchSelectedIndicator.visible = false
+
+  ' Limpio referencias auxiliares de selección/foco previas.
+  m.itemSelected = invalid
+  m.carouselIndex = invalid
+  m.lastFocusedNode = invalid
+
+  ' Reinicio flags de navegación para que la entrada siempre parta limpia.
+  m.top.returnFromProgramDetail = false
+  m.top.enterFromMainScreen = false
+end sub
+
 ' Inicializa foco cuando la pantalla se vuelve activa.
 sub initFocus()
   ' Si la pantalla recibió foco.
@@ -129,6 +168,11 @@ sub initFocus()
     __applyTranslations()
     ' Aseguro foco en el nodo top para cadena de foco correcta.
     m.top.setFocus(true)
+
+    ' Al entrar a Search, limpio input y estado para iniciar siempre desde cero.
+    __resetSearchState()
+    ' Enfoco el input para iniciar una nueva búsqueda.
+    m.searchInput.setFocus(true)
 
     ' Si Search se abrió desde MainScreen, fuerzo foco en input y refresh de ErrorPage.
     if m.top.enterFromMainScreen then
@@ -214,6 +258,11 @@ sub onKeyboardTextChanged()
   m.currentSearchText = m.searchKeyboard.textEditBox.text
   m.searchInput.text = m.currentSearchText
   ' Copio el estado activo del TextEditBox interno del teclado.
+
+  ' Fuerzo cursor al final del texto para que nuevos caracteres se agreguen al final.
+  cursorAtEnd = m.currentSearchText.len()
+  m.searchInput.cursorPosition = cursorAtEnd
+  m.searchKeyboard.textEditBox.cursorPosition = cursorAtEnd
   m.searchInput.active = m.searchKeyboard.textEditBox.active
 
   ' Programo llamada al servicio cuando dejan de escribir por 2 segundos.
@@ -297,6 +346,12 @@ end sub
 ' Procesa la respuesta de búsqueda.
 sub onGetSearchProgramsResponse()
   ' Si no hay manager disponible, no puedo procesar respuesta.
+  if m.apiRequestManager = invalid then
+    ' Si el manager no existe, cierro loading para evitar spinner colgado.
+    if m.top.loading <> invalid then m.top.loading.visible = false
+    return
+  end if
+
   if m.apiRequestManager = invalid then return
 
   ' Si el status HTTP es válido, proceso resultado de búsqueda.
@@ -317,6 +372,11 @@ sub onGetSearchProgramsResponse()
       __loadRelatedCarousel(invalid)
       ' Muestro feedback de no resultados al usuario.
       __showSearchNoResults(true)
+      ' Sin resultados, regreso el foco al input para facilitar nueva búsqueda.
+      if m.searchInput <> invalid then m.searchInput.setFocus(true)
+      ' Oculto indicadores de selección al no existir listas navegables.
+      if m.selectedIndicator <> invalid then m.selectedIndicator.visible = false
+      if m.searchSelectedIndicator <> invalid then m.searchSelectedIndicator.visible = false
     end if
   else
     ' Obtengo status para flujo de error/reintento.
@@ -335,6 +395,9 @@ sub onGetSearchProgramsResponse()
     ' Limpio manager tras error.
     m.apiRequestManager = clearApiRequest(m.apiRequestManager)
   end if
+
+  ' Cierro loading al finalizar la consulta (éxito o error) de búsqueda.
+  if m.top.loading <> invalid then m.top.loading.visible = false
 end sub
 
 ' Maneja eventos de control remoto para navegación/foco.
