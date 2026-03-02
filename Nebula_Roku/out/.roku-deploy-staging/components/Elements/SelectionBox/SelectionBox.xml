@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<component 
+  name="SelectionBox" 
+  extends="Group" 
+  xsi:noNamespaceSchemaLocation="https://devtools.web.roku.com/schema/RokuSceneGraph.xsd">
+  
+  <script type="text/brightscript" uri="SelectionBox.brs"/>
+  <script type="text/brightscript" uri="pkg:/source/Config.brs" />
+
+  <interface>
+    <!-- Paramentros de Entrada -->
+    <field id="size" type="array" onChange="changeSize" />
+    <field id="color" type="string" onChange="setColor" />
+  </interface>
+  
+  <children>
+    <Group translation="[0, 0]">
+        <!-- Bordes del cuadro con separación de 2 píxeles -->
+        <Rectangle id="rectLeft" translation="[0, 0]"/>  <!-- Izquierda -->
+        <Rectangle id="rectTop" translation="[0, 0]"/>  <!-- Superior -->
+        <Rectangle id="rectRight"/> <!-- Derecha -->
+        <Rectangle id="rectBottom"/> <!-- Inferior -->
+    </Group>
+  </children>
+</component>

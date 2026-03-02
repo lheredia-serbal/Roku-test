@@ -1,0 +1,197 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<component 
+  name="PlayerScreen" 
+  extends="Group"
+  initialFocus="Video" 
+  xsi:noNamespaceSchemaLocation="https://devtools.web.roku.com/schema/RokuSceneGraph.xsd">
+  
+  <script type="text/brightscript" uri="PlayerScreen.brs"/>
+  <script type="text/brightscript" uri="pkg:/source/StreamingConstants.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Storage.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Utils/i18nUtils.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Utils.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Utils/PlayerUtils.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Utils/DateFunctions.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Utils/RetryUtils.brs" />
+  <script type="text/brightscript" uri="pkg:/source/CarouselConstants.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Enums.brs" />
+
+  <script type="text/brightscript" uri="pkg:/source/Services/Channels.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Services/Health.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Services/ParentalControl.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Services/Streamings.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Services/Programs.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Services/Watch.brs" />
+
+  <script type="text/brightscript" uri="pkg:/source/Services/ActionLogs.brs" />
+
+  <script type="text/brightscript" uri="pkg:/source/Services/ErrorCode.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Services/Retry.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Services/DomainManager.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Services/ErrorManager.brs" />
+
+  <interface>
+    <!-- Paramentros de Entrada -->
+    <field id="loading" type="node" />
+    <field id="onFocus" type="boolean" value="false" />
+    <field id="openGuide" alwaysnotify="true" type="boolean" value="false" />
+    <field id="onBack" alwaysnotify="true" type="boolean" value="false"/>
+    <field id="data" type="string" value="" onChange="initData" />   
+
+    <!-- Paramentros de entrada/Salida -->
+    <field id="logout" alwaysnotify="true" type="boolean" value="false" onChange="onLogoutChange" />
+
+    <!-- Paramentros de Salida -->
+    <field id="killedMe" type="string" value="" />   
+  </interface>
+
+  <children>
+
+    <Video
+      id="VideoPlayer"
+      translation="[0,0]"
+      visible="false"/>
+
+      <Group 
+        id="playerControllers" 
+        translation="[0,0]"
+        visible="false">
+
+        <Poster
+          id="backgroundControllers" 
+          translation="[0,0]"
+          uri="pkg:/images/shared/player_info_gradient.png" />
+          
+        <LayoutGroup
+          id="programInfo"
+          layoutDirection="vert"
+          horizAlignment="custom"
+          vertAlignment="bottom"
+          itemSpacings="[4]">
+          
+          <ProgramSummaryPlayer id="programSummaryPlayer"/>
+
+          <TimelineBar
+            id="timelineBar"
+            visible="true"/>
+
+          <!--  Contenedor de Botones -->
+          <LayoutGroup
+            id="controlsRow"
+            layoutDirection="horiz"
+            horizAlignment="left"
+            vertAlignment="top"
+            translation="[-10, 0]"
+            itemSpacings="[20]">
+
+            <QvImageButton id="playPauseImageButton" uri="pkg:/images/shared/pause.png" focusable="true" tooltip=""/>
+            <QvImageButton id="restartImageButton"   uri="pkg:/images/shared/restart.png" focusable="true" tooltip=""/>
+            <QvImageButton id="toLiveImageButton"    uri="pkg:/images/shared/live.png" focusable="true" tooltip=""/>
+            <QvImageButton id="guideImageButton"     uri="pkg:/images/shared/guide.png" focusable="true" tooltip=""/>
+          </LayoutGroup>
+        </LayoutGroup>
+
+        <Group id="timelinePreviewOverlay" visible="false">
+          <Rectangle id="timelinePreviewBg" color="#000000" opacity="0.85" />
+          <Poster 
+            id="timelinePreviewPoster"
+            translation="[2,2]"
+            loadDisplayMode="scaleToFit" />
+        </Group>
+      </Group>
+
+    <Group id="errorChannel" visible="false">
+      <Rectangle id="connectingGroup" translation="[0, 0]" color="#222222" />
+        <LayoutGroup
+          id="connectingContainer"
+          layoutDirection="horiz"
+          horizAlignment="left"
+          vertAlignment="top"
+          itemSpacings="[25]">
+
+          <Poster id="errorChannelImage"/>
+
+          <LayoutGroup 
+            layoutDirection="vert"
+            horizAlignment="left"
+            vertAlignment="center"
+            itemSpacings="[10]"> 
+            
+            <Label
+              id="errorChannelTitle"
+              vertAlign="center"
+              wrap="false" 
+              maxLines="1"
+              font="font:SmallestSystemFont" />
+              
+            <Label
+              id="connectingSignal"
+              vertAlign="center"
+              wrap="false" 
+              maxLines="1"
+              font="font:TinySystemFont" />
+            
+          </LayoutGroup>
+        </LayoutGroup>
+
+        <Group id="spinnerGroup"> 
+          <Spinner id="spinner" visible="false"/>
+        </Group>
+    </Group>
+    
+    <Group id="channelListContainer" visible="false">
+      <ChannelList id="channelList"/>
+      <SelectionBox id="selectedIndicator" color="#FFFFFF"/>
+    </Group>
+
+    <Guide id="guide" visible="false"/>
+
+    <Group id="inactivityOverlay" visible="false">
+      <Rectangle
+        id="inactivityBackground"
+        opacity="0.8"
+        translation="[0, 0]"
+        color="#000000"/>
+
+      <LayoutGroup
+        id="inactivityContent"
+        horizAlignment="center"
+        layoutDirection="vert">
+
+        <Poster
+          id="inactivityLogo"
+          uri="pkg:/images/client/logo.png"
+          loadDisplayMode="scaleToFit" />
+
+        <Label
+          id="inactivityMessage"
+          horizAlign="center"
+          vertAlign="center"
+          wrap="true"
+          maxLines="2"
+          color="#FFFFFF"
+          font="font:MediumSystemFont" />
+
+        <QvButton
+          id="inactivityContinueButton"
+          size="[240, 54]"
+          focusable="true" />
+      </LayoutGroup>
+    </Group>
+
+    <Timer id="showInfoTimer" repeat="false" duration="5"/>
+    <Timer id="newProgramTimer" repeat="false"/>
+    <Timer id="beaconTimer" repeat="true"/>
+    <Timer id="retryReconnection" repeat="false" duration="15"/>
+    <Timer id="saveLastWatched" repeat="false" duration="50"/>
+    <Timer id="channelListTimer" repeat="false" duration="40" />
+    <Timer id="inactivityTimer" repeat="false" duration="60" />
+    <Timer id="inactivityAutoCloseTimer" repeat="false" duration="30" />
+    <Timer id="seekCommitTimer" repeat="false" duration="1" />
+    <Timer id="seekHoldTimer" repeat="true" duration="0.2" />
+    <Timer id="seekTimelineSyncTimer" repeat="false" duration="0.5" />
+    <Timer id="showTimeTimer" repeat="true" duration="1" control="stop" />
+  </children>
+
+</component>

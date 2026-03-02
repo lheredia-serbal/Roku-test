@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<component 
+  name="ChannelListItemContentNode"
+  extends="ContentNode"
+  xsi:noNamespaceSchemaLocation="https://devtools.web.roku.com/schema/RokuSceneGraph.xsd">
+  <interface>
+    <field id="key" type="string" />
+    <field id="id" type="integer" />
+    <field id="channelTitle" type="string" />
+    <field id="programTitle" type="string" />
+    <field id="startTime" type="integer" />
+    <field id="endTime" type="integer" />
+    <field id="date" type="string" />
+    <field id="percentageElapsed" type="integer" />
+    <field id="imageURL" type="string" />
+  </interface>
+</component>

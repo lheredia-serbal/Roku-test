@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<component 
+    name="ChannelListItem" 
+    extends="Group" 
+    xsi:noNamespaceSchemaLocation="https://devtools.web.roku.com/schema/RokuSceneGraph.xsd">
+
+    <script type="text/brightscript" uri="ChannelListItem.brs"/>
+    <script type="text/brightscript" uri="pkg:/source/Utils.brs" />
+
+    <interface>
+        <!-- Paramentros de Entrada -->
+        <field id="groupHasFocus" type="boolean" onChange="focusPercentChanged"/>
+        <field id="itemContent" type="node"   onChange="itemContentChanged" />
+        <field id="currRect"    type="rect2d" onChange="currRectChanged" />
+        <field id="focusPercent" type="float" onChange="focusPercentChanged" />
+    </interface>
+
+    <children>
+        <!-- Fondo negro -->
+        <Rectangle id="theRect" opacity="0.6" color="#000000">
+            <Group
+                id="contentGroup"
+                translation="[12, 14]">
+                <LayoutGroup
+                    layoutDirection="horiz"
+                    horizAlignment="left"
+                    vertAlignment="top"
+                    itemSpacings="[2]">
+
+                    <LayoutGroup
+                        layoutDirection="vert"
+                        horizAlignment="left"
+                        vertAlignment="center"
+                        itemSpacings="[6]">
+                        <Label 
+                            id="channelInfo" 
+                            wrap="false" 
+                            maxLines="1" 
+                            visible="false"
+                            font="font:TinySystemFont"/>
+                            
+                        <Label 
+                            id="programInfo" 
+                            wrap="false" 
+                            maxLines="1" 
+                            visible="false"
+                            font="font:TinySystemFont"/>
+
+                        <Label 
+                            id="programTime" 
+                            wrap="false" 
+                            maxLines="1" 
+                            visible="false"
+                            font="font:TinySystemFont"/>
+                    </LayoutGroup> 
+                    
+                    <Poster 
+                        id="channelImage" />
+                </LayoutGroup>
+                
+                <LayoutGroup
+                    id="progressGroup"
+                    layoutDirection="horiz"
+                    horizAlignment="left"
+                    vertAlignment="top">
+                    <Rectangle id="progressLeft" height="3"/>
+                    <Rectangle id="progressRight" height="3"/>
+                </LayoutGroup>
+            </Group>
+        </Rectangle>
+    </children>
+</component>
