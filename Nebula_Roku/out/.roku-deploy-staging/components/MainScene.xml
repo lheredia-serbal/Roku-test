@@ -84,6 +84,12 @@
       visible="false"
       translation="[0,0]"/>
 
+    <!-- Emissions -->
+    <EmissionsScreen
+      id="EmissionsScreen"
+      visible="false"
+      translation="[0,0]"/>
+
     <!-- KillSession -->
     <KillSessionScreen
       id="KillSessionScreen"

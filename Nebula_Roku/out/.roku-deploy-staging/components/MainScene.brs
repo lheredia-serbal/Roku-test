@@ -15,6 +15,8 @@ sub init()
   m.ProfileScreen = m.top.FindNode("ProfileScreen")
   m.MainScreen = m.top.FindNode("MainScreen")
   m.ProgramDetailScreen = m.top.FindNode("ProgramDetailScreen")
+  ' Referencia al componente de pantalla Emissions.
+  m.EmissionsScreen = m.top.FindNode("EmissionsScreen")
   m.KillSessionScreen = m.top.FindNode("KillSessionScreen")
   m.PlayerScreen = m.top.FindNode("PlayerScreen")
   m.SearchScreen = m.top.FindNode("SearchScreen")
@@ -46,6 +48,17 @@ function onKeyEvent(key as string, press as boolean) as boolean
         m.PlayerScreen.unobserveField("onBack")
         
         __playerBackProcessing()
+
+         ' Maneja retroceso desde EmissionsScreen.
+      else if m.StackOfScreens.Peek() = "EmissionsScreen" then
+        m.StackOfScreens.Pop()
+
+        ' Oculta y limpia EmissionsScreen durante reset.
+        __hideEmissions()
+        m.EmissionsScreen.data = invalid
+
+        __backManager(m.StackOfScreens.Peek())
+
 
       else if m.StackOfScreens.Peek() = "ProgramDetailScreen" then 
         m.StackOfScreens.Pop()
@@ -126,7 +139,7 @@ end sub
 
 ' Metodo que se ejecuta al desloguear al usuario. Resetea las varibles y configuracion de la app y redirige al login
 sub onLogoutEvent()
-  if m.MainScreen.logout or m.ProfileScreen.logout or m.ProgramDetailScreen.logout or m.KillSessionScreen.logout or m.PlayerScreen.logout then
+  if m.MainScreen.logout or m.ProfileScreen.logout or m.ProgramDetailScreen.logout or m.EmissionsScreen.logout or m.KillSessionScreen.logout or m.PlayerScreen.logout then
     ' Necesito hacer un bloqueo por procesamineto porque sino cuando dispara los logout de cada pantalla al 
     ' cambiar la propeidad logout esta volvera a disaparar el metodo de onLogoutEvent ya que tanto internamente 
     ' como externamente se esta escuchando el cambio de esta propiedad.  
@@ -356,6 +369,20 @@ sub onStreamingPlayer()
   if streaming <> invalid then __showPlayer(streaming, openGuide)
 end sub
 
+' Metodo que redirige a la pantalla de emisiones desde ProgramDetail.
+sub onEmissions()
+  if m.ProgramDetailScreen.emissions = invalid then return
+  if m.StackOfScreens.Peek() <> "ProgramDetailScreen" then return
+
+  emissionsData = m.ProgramDetailScreen.emissions
+  ' Limpia payload de navegación a Emissions.
+  m.ProgramDetailScreen.emissions = invalid
+
+  __hideProgramDetail()
+  m.StackOfScreens.Push("EmissionsScreen")
+  __showEmissions(emissionsData)
+end sub
+
 ' Metodo que retrocede de la pantalla de detalle limpiando las variables de dicha pantalla.
 sub onBackDetail()
   if m.ProgramDetailScreen.onBack then 
@@ -373,6 +400,21 @@ sub onBackDetail()
       if m.lastProgramDetailParent = "SearchScreen" then m.SearchScreen.returnFromProgramDetail = true
 
       __backManager(backScreen)
+    end if
+  end if
+end sub
+
+' Metodo que retrocede de la pantalla de emisiones limpiando sus variables.
+sub onBackEmissions()
+  if m.EmissionsScreen.onBack then
+    m.EmissionsScreen.unobserveField("onBack")
+    m.EmissionsScreen.onBack = false
+
+    if m.StackOfScreens.Peek() = "EmissionsScreen" then
+      m.StackOfScreens.Pop()
+      ' Oculta y limpia EmissionsScreen durante reset.
+      __hideEmissions()
+      __backManager(m.StackOfScreens.Peek())
     end if
   end if
 end sub
@@ -473,6 +515,8 @@ sub __initConfig()
   m.MainScreen.loading = m.loading
   m.PlayerScreen.loading = m.loading
   m.ProgramDetailScreen.loading = m.loading
+  ' Comparte loading global con EmissionsScreen.
+  m.EmissionsScreen.loading = m.loading
   m.KillSessionScreen.loading = m.loading
   m.ViewAllScreen.loading = m.loading
   m.SearchScreen.loading = m.loading
@@ -480,6 +524,8 @@ sub __initConfig()
   m.MainScreen.ObserveField("logout", "onLogoutEvent")
   m.ProfileScreen.ObserveField("logout", "onLogoutEvent")
   m.ProgramDetailScreen.ObserveField("logout", "onLogoutEvent")
+  ' Observa logout también desde EmissionsScreen.
+  m.EmissionsScreen.ObserveField("logout", "onLogoutEvent")
   m.KillSessionScreen.ObserveField("logout", "onLogoutEvent")
   m.PlayerScreen.ObserveField("logout", "onLogoutEvent")
 
@@ -543,6 +589,17 @@ sub __showProgramDetail()
   m.ProgramDetailScreen.ObserveField("onBack", "onBackDetail")
   m.ProgramDetailScreen.ObserveField("streaming", "onStreamingPlayer")
   m.ProgramDetailScreen.ObserveField("pendingStreamingSession", "onKillSession")
+  ' Escucha evento de navegación hacia Emissions desde ProgramDetail.
+  m.ProgramDetailScreen.ObserveField("emissions", "onEmissions")
+end sub
+
+' Muestra la pantalla de Emissions y escucha su evento de regreso.
+sub __showEmissions(emissionsData as string)
+  m.EmissionsScreen.visible = true
+  m.EmissionsScreen.data = emissionsData
+  m.EmissionsScreen.onFocus = true
+  m.EmissionsScreen.setFocus(true)
+  m.EmissionsScreen.ObserveField("onBack", "onBackEmissions")
 end sub
 
 ' Muestra la pantalla de Ver todos
@@ -620,8 +677,21 @@ sub __hideProgramDetail()
   m.ProgramDetailScreen.unobserveField("streaming")
   m.ProgramDetailScreen.unobserveField("onBack")
   m.ProgramDetailScreen.unobserveField("pendingStreamingSession")
+  ' Deja de escuchar navegación a Emissions al ocultar ProgramDetail.
+  m.ProgramDetailScreen.unobserveField("emissions")
   m.ProgramDetailScreen.streaming = invalid
   m.ProgramDetailScreen.pendingStreamingSession = invalid
+  ' Limpia payload de navegación a Emissions.
+  m.ProgramDetailScreen.emissions = invalid
+end sub
+
+' Esconde la pantalla de Emissions y limpia sus observables/salidas.
+sub __hideEmissions()
+  m.EmissionsScreen.visible = false
+  m.EmissionsScreen.onFocus = false
+  m.EmissionsScreen.unobserveField("onBack")
+  m.EmissionsScreen.onBack = false
+  m.EmissionsScreen.data = invalid
 end sub
 
 ' Esconde la pantalla Ver todos
@@ -718,6 +788,8 @@ sub __resetApp()
   if not m.ProfileScreen.logout then m.ProfileScreen.logout = true
   if not m.MainScreen.logout then m.MainScreen.logout = true
   if not m.ProgramDetailScreen.logout then m.ProgramDetailScreen.logout = true
+  ' Dispara limpieza de EmissionsScreen durante reset global.
+  if not m.EmissionsScreen.logout then m.EmissionsScreen.logout = true
   if not m.KillSessionScreen.logout then m.KillSessionScreen.logout = true
   if not m.PlayerScreen.logout then m.PlayerScreen.logout = true  
   
@@ -725,6 +797,8 @@ sub __resetApp()
   m.MainScreen.logout = false
   m.KillSessionScreen.logout = false
   m.ProgramDetailScreen.logout = false
+  ' Restablece bandera logout de EmissionsScreen.
+  m.EmissionsScreen.logout = false
   m.PlayerScreen.logout = false
 
   m.StackOfScreens = []
@@ -740,6 +814,8 @@ sub __resetApp()
   __hideSetting()
   __hideViewAll()
   __hideProgramDetail()
+  ' Oculta y limpia EmissionsScreen durante reset.
+  __hideEmissions()
   __hideKillSessionScreen()
   __hideSearch()
   
