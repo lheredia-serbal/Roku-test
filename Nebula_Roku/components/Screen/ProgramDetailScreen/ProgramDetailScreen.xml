@@ -43,6 +43,7 @@
     <field id="programOpenInPlayer" type="string" />
     <field id="pendingStreamingSession" type="string" />
     <field id="onBack" alwaysnotify="true" type="boolean" value="false" />
+    <field id="emissions" type="string" />
   </interface>
 
   <children>

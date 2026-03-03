@@ -801,8 +801,10 @@ end sub
 
 ' Dispara la navegacion a emisiones
 sub __openEmissions()
+  ' Marca que se abrió la pantalla de emisiones para preservar foco al volver.
   m.isOpenEmissions = true
-  printLog("openEmissions")
+  ' Dispara navegación hacia Emissions enviando key e id del programa actual.
+  m.top.emissions = FormatJson({ key: m.program.key, id: m.program.id })
 end sub
 
 ' Carga la configuracion inicial de la pantalla de detalle de programas.
@@ -846,6 +848,9 @@ sub __configProgramDetail()
   end if
 
   m.selectedIndicator.translation = scaleSize([68, 30], m.scaleInfo)
+
+  ' Limpia payload de navegación a emisiones para evitar re-disparos.
+  m.top.emissions = invalid
 end sub
 
 ' Metodo encargado de limpiar todas las dependecias, cancelar las peticiones y quitar los escuchadores de la pantalla
