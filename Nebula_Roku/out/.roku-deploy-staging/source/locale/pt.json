@@ -40,7 +40,8 @@
     "formatHours": "HH:mm",
     "formatDate": "dd/MM/yyyy",
     "formatDateAndHours": "dd/MM/yy HH:mm",
-    "formatDateAndTimeSpacing": "dd MMMM yyyy hh:mm"
+    "formatDateAndTimeSpacing": "dd MMMM yyyy hh:mm",
+    "to": "de"
   },
   "launcherScreen": {
     "copyright": "@copyright {{year}} - Qvix Solutions"

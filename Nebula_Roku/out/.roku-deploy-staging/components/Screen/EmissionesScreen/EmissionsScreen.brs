@@ -15,6 +15,20 @@ sub init()
     scene = m.top.getScene()
     if scene <> invalid then m.top.loading = scene.findNode("Loading")
   end if
+
+    ' Inicializa ancho de pantalla con fallback a resolución base.
+  m.screenWidth = 1280
+  ' Marca si scaleInfo global pudo proveer un ancho válido.
+  hasScaleWidth = false
+  ' Prioriza ancho calculado por scaleInfo global cuando está disponible.
+  if m.global <> invalid and m.global.scaleInfo <> invalid and m.global.scaleInfo.width <> invalid then
+    ' Guarda ancho de pantalla reportado por scaleInfo global.
+    m.screenWidth = m.global.scaleInfo.width
+    ' Indica que ya existe ancho válido proveniente de scaleInfo.
+    hasScaleWidth = true
+  end if
+  ' Usa ancho real de display cuando no existe scaleInfo global.
+  if not hasScaleWidth then m.screenWidth = CreateObject("roDeviceInfo").GetDisplaySize().w
 end sub
 
 ' Maneja foco de pantalla al mostrarse.
@@ -175,8 +189,6 @@ sub __renderEpisodes(episodes)
     newEpisodeItem.play = __resolveEpisodePlay(item)
     ' Pasa título compuesto con fecha, hora y nombre de canal.
     newEpisodeItem.title = __buildEpisodeTitle(item)
-
-    return
   end for
 end sub
 
@@ -184,9 +196,9 @@ end sub
 function __buildEpisodeItemData(item as dynamic) as object
   ' Inicia estructura con textos de ejemplo requeridos.
   data = {
-    episodeTitle: "3 de marzo de 2026 7:44 (HBO)"
-    episodeSynopsis: "T13 E2 - El espacio de humor de John Oliver, durante treinta minutos, le da una satírica mirada a los informes, política y diferentes acontecimientos de la actualidad. Contiene varios segmentos cortos y un ciclo principal, y los sketches breves casi siempre tienen relación con sucesos recientes. El bloque principal se centra en los detalles de una información de política, aún cuando no es de la semana. Éste periodista inyecta una dosis de gracia constante a su presentación, utilizando analogías sarcásticas y alusiones a la cultura popular y a las celebridades."
-    episodeTime: "40m"
+    episodeTitle: ""
+    episodeSynopsis: ""
+    episodeTime: ""
     emissionImage: ""
   }
   ' Evita leer campos cuando el item del servicio es inválido.
@@ -223,40 +235,23 @@ end function
 function __buildEpisodeTitle(item as dynamic) as string
   ' Devuelve string vacío cuando no hay episodio válido.
   if item = invalid then return ""
-  ' Convierte startTime a roDateTime según el formato recibido por API.
-  episodeDate = __toDateTimeFromStartTime(item.startTime)
+
+  startTime = CreateObject("roDateTime")
+
+  startTime.FromISO8601String(item.startTime)
+  startTime.ToLocalTime()
   ' Devuelve string vacío cuando no se pudo convertir startTime.
-  if episodeDate = invalid then return ""
+  if startTime = invalid then return ""
   ' Obtiene meses traducidos desde i18n para componer longDate.
   months = i18n_months(m.global.i18n)
   ' Formatea fecha larga equivalente al pipe pqvLocalDate: 'longDate'.
-  longDate = dateConverter(episodeDate, "dd MMMM yyyy", months)
+  longDate = dateConverter(startTime, "dd to MMMM yyyy hh:mm", months)
   ' Formatea hora corta equivalente al pipe pqvLocalDate: 'shortTime'.
-  shortTime = dateConverter(episodeDate, "HH:mm")
-  ' Obtiene nombre de canal con fallback vacío cuando falta.
   channelName = ""
   ' Lee channel.name cuando el nodo channel existe.
   if item.channel <> invalid and item.channel.name <> invalid then channelName = item.channel.name
   ' Compone título final con el formato solicitado por negocio.
-  return longDate + " " + shortTime + " (" + channelName + ")"
-end function
-
-' Convierte startTime dinámico a roDateTime soportando segundos o milisegundos.
-function __toDateTimeFromStartTime(startTime as dynamic) as dynamic
-  ' Corta cuando startTime no está presente.
-  if startTime = invalid then return invalid
-  ' Normaliza startTime numérico desde string/float/integer.
-  secondsValue = val(startTime.toStr())
-  ' Corta cuando startTime no es un número válido.
-  if secondsValue <= 0 then return invalid
-  ' Detecta epoch en milisegundos y lo convierte a segundos.
-  if secondsValue > 9999999999 then secondsValue = int(secondsValue / 1000)
-  ' Crea fecha local para formatear longDate y shortTime.
-  episodeDate = CreateObject("roDateTime")
-  ' Carga segundos epoch en la fecha local.
-  episodeDate.FromSeconds(secondsValue)
-  ' Devuelve objeto fecha listo para formatear.
-  return episodeDate
+  return longDate + " (" + channelName + ")"
 end function
 
 ' Limpia todos los EpisodeItem creados dinámicamente.

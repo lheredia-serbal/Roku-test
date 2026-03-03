@@ -31,38 +31,41 @@
       vertAlignment="top"
       itemSpacings="[24]">
 
-      <!-- Imagen principal del episodio (300px de ancho). -->
-      <Poster
-        id="emissionImage"
-        width="300"
-        loadDisplayMode="scaleToZoom"
-        uri="pkg:/images/shared/show_image_empty_1.jpg" />
+      <!-- Contenedor superpuesto para poster, play y duración. -->
+      <Group id="episodeMedia">
+        <!-- Imagen principal del episodio (300px de ancho). -->
+        <Poster
+          id="emissionImage"
+          width="300"
+          loadDisplayMode="scaleToZoom"
+          uri="pkg:/images/shared/show_image_empty_1.jpg" />
 
-      <!-- Grupo superpuesto para el ícono play centrado en emissionImage. -->
-      <!-- Inicia oculto y se muestra solo cuando play=true. -->
-      <Poster
-        id="playImage"
-        width="64"
-        height="64"
-        visible="false"
-        uri="pkg:/images/shared/play.png" />
+        <!-- Ícono play superpuesto al centro de emissionImage. -->
+        <!-- Inicia oculto y se muestra solo cuando play=true. -->
+        <Poster
+          id="playImage"
+          width="64"
+          height="64"
+          visible="false"
+          uri="pkg:/images/shared/play.png" />
 
-      <!-- Grupo de tiempo ubicado abajo a la derecha de emissionImage. -->
-      <Rectangle
-        id="episodeTimeGroup"
-        width="50"
-        height="30"
-        color="0x000000FF">
-        <Label
-          id="episodeTime"
-          text="40m"
-          color="0xFFA500FF"
-          horizAlign="center"
-          vertAlign="center"
+        <!-- Grupo de tiempo superpuesto abajo a la derecha de emissionImage. -->
+        <Rectangle
+          id="episodeTimeGroup"
           width="50"
           height="30"
-          font="font:SmallBoldSystemFont" />
-      </Rectangle>
+          color="0x000000FF">
+          <Label
+            id="episodeTime"
+            text="40m"
+            color="0xFFA500FF"
+            horizAlign="center"
+            vertAlign="center"
+            width="50"
+            height="30"
+            font="font:SmallBoldSystemFont" />
+        </Rectangle>
+      </Group>
 
       <!-- Columna de información del episodio con altura variable. -->
       <LayoutGroup

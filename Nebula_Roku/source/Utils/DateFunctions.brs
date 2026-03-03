@@ -132,6 +132,17 @@ function dateConverter(dateTime, format as string, monthArray = invalid) as stri
         minutes = dateTime.GetMinutes()
 
         return __completeDigit(days) + " " + __getMonth(month, monthArray) + " " + year.ToStr() + " " + __completeDigit(hours) + ":" + __completeDigit(minutes)
+
+    else if format = "dd to MMMM yyyy hh:mm" then
+        year = dateTime.GetYear()
+        month = dateTime.GetMonth()
+        days = dateTime.GetDayOfMonth()
+        hours = dateTime.GetHours()
+        minutes = dateTime.GetMinutes()
+
+        toText = i18n_t(m.global.i18n, "time.to")
+
+        return __completeDigit(days) + " " + toText + " " + __getMonth(month, monthArray) + " " + year.ToStr() + " " + __completeDigit(hours) + ":" + __completeDigit(minutes)
     
     else if format = "log" then
         month = dateTime.GetMonth()
