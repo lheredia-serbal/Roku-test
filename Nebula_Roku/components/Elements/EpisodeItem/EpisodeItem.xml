@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<component
+  name="EpisodeItem"
+  extends="Group"
+  xsi:noNamespaceSchemaLocation="https://devtools.web.roku.com/schema/RokuSceneGraph.xsd">
+
+  <script type="text/brightscript" uri="EpisodeItem.brs" />
+
+  <interface>
+    <!-- Ancho del item para ocupar toda la pantalla disponible. -->
+    <field id="widthContainer" type="integer" value="1280" onChange="onLayoutChanged" />
+    <!-- Estructura con datos del episodio para setear UI. -->
+    <field id="itemData" type="assocarray" onChange="onItemDataChanged" />
+  </interface>
+
+  <children>
+    <!-- Layout horizontal principal del episodio. -->
+    <LayoutGroup
+      id="episodeContainer"
+      layoutDirection="horiz"
+      horizAlignment="left"
+      vertAlignment="top"
+      itemSpacings="[24]">
+
+      <!-- Imagen principal del episodio (300px de ancho). -->
+      <Poster
+        id="emissionImage"
+        width="300"
+        loadDisplayMode="scaleToZoom"
+        uri="pkg:/images/shared/show_image_empty_1.jpg" />
+
+      <!-- Grupo superpuesto para el ícono play centrado en emissionImage. -->
+      <Poster
+        id="playImage"
+        width="64"
+        height="64"
+        uri="pkg:/images/shared/play.png" />
+
+      <!-- Grupo de tiempo ubicado abajo a la derecha de emissionImage. -->
+      <Rectangle
+        id="episodeTimeGroup"
+        width="50"
+        height="30"
+        color="0x000000FF">
+        <Label
+          id="episodeTime"
+          text="40m"
+          color="0xFFA500FF"
+          horizAlign="center"
+          vertAlign="center"
+          width="50"
+          height="30"
+          font="font:SmallBoldSystemFont" />
+      </Rectangle>
+
+      <!-- Columna de información del episodio con altura variable. -->
+      <LayoutGroup
+        id="episodeInfo"
+        layoutDirection="vert"
+        horizAlignment="left"
+        vertAlignment="top"
+        itemSpacings="[10]">
+
+        <!-- Título del episodio con tipografía grande. -->
+        <Label
+          id="episodeTitle"
+          text="3 de marzo de 2026 7:44 (HBO)"
+          wrap="true"
+          maxLines="2"
+          font="font:LargeBoldSystemFont" />
+
+        <!-- Sinopsis del episodio con tipografía menor. -->
+        <Label
+          id="episodeSynopsis"
+          text="T13 E2 - El espacio de humor de John Oliver, durante treinta minutos, le da una satírica mirada a los informes, política y diferentes acontecimientos de la actualidad. Contiene varios segmentos cortos y un ciclo principal, y los sketches breves casi siempre tienen relación con sucesos recientes. El bloque principal se centra en los detalles de una información de política, aún cuando no es de la semana. Éste periodista inyecta una dosis de gracia constante a su presentación, utilizando analogías sarcásticas y alusiones a la cultura popular y a las celebridades."
+          wrap="true"
+          maxLines="10"
+          font="font:MediumSystemFont" />
+      </LayoutGroup>
+    </LayoutGroup>
+  </children>
+</component>

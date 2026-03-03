@@ -32,6 +32,16 @@
 
   <children>
     <!-- Contenedor base sin UI adicional por ahora. -->
-    <Group id="emissionsRoot" />
+        <!-- Contenedor raíz de emisiones. -->
+    <Group id="emissionsRoot">
+      <!-- Lista vertical de EpisodeItem creada desde el servicio. -->
+      <LayoutGroup
+        id="episodesList"
+        layoutDirection="vert"
+        horizAlignment="left"
+        vertAlignment="top"
+        itemSpacings="[24]"
+        translation="[0, 40]" />
+    </Group>
   </children>
 </component>
