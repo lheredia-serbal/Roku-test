@@ -55,7 +55,7 @@ sub __updateLayout()
   ' Ajusta ancho del layout principal.
   m.episodeContainer.width = m.top.widthContainer
   ' Calcula ancho de imagen usando scale para mantener consistencia global.
-  scaledImageWidth = cint(scaleValue(230, m.scaleInfo))
+  scaledImageWidth = cint(scaleValue(180, m.scaleInfo))
   ' Fuerza ancho fijo solicitado para emissionImage con escala aplicada.
   m.emissionImage.width = scaledImageWidth
   ' Define ancho base para relación de aspecto vertical (3:4).
@@ -107,7 +107,7 @@ sub __updateLayout()
   ' Ubica bloque de tiempo en esquina inferior derecha de emissionImage.
   m.episodeTimeGroup.translation = [m.emissionImage.width - m.episodeTimeGroup.width, m.emissionImage.height - m.episodeTimeGroup.height]
   ' Ajusta ancho disponible para columna de texto.
-  infoWidth = m.top.widthContainer - m.emissionImage.width - cint(scaleValue(350, m.scaleInfo))
+  infoWidth = m.top.widthContainer - m.emissionImage.width - cint(scaleValue(450, m.scaleInfo))
   ' Evita valores negativos en resoluciones pequeñas.
   if infoWidth < cint(scaleValue(100, m.scaleInfo)) then infoWidth = cint(scaleValue(100, m.scaleInfo))
   ' Aplica ancho calculado a episodeInfo.

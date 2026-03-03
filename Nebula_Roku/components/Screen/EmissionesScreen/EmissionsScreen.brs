@@ -10,6 +10,12 @@ sub init()
   m.emissionsTitle = m.top.findNode("emissionsTitle")
   ' Guarda referencia de la lista visual de episodios.
   m.episodesList = m.top.findNode("episodesList")
+  ' Guarda referencia del indicador de selección fijo.
+  m.selectedIndicator = m.top.findNode("selectedIndicator")
+  ' Índice lógico del episodio actualmente enfocado por la selección.
+  m.selectedEpisodeIndex = 0
+  ' Cantidad de episodios renderizados para navegación vertical.
+  m.episodesCount = 0
   ' Obtiene scaleInfo global para escalar medidas y posiciones del layout.
   m.scaleInfo = m.global.scaleInfo
   ' Intenta resolver loading desde la escena cuando no viene inyectado.
@@ -53,6 +59,11 @@ sub __applyScaledLayout()
     m.episodesList.width = scaleValue(1600, m.scaleInfo)
     m.episodesList.height = scaleValue(860, m.scaleInfo)
   end if
+
+  if m.selectedIndicator <> invalid then
+    m.selectedIndicator.translation = scaleSize([80, 100], m.scaleInfo)
+    m.selectedIndicator.size = [scaleValue(1100, m.scaleInfo), scaleValue(237, m.scaleInfo)]
+  end if
 end sub
 
 
@@ -83,13 +94,27 @@ end sub
 
 ' Captura eventos de teclado para volver a la pantalla anterior.
 function onKeyEvent(key as string, press as boolean) as boolean
+  ' Ignora eventos de liberación de tecla.
+  if not press then return false
+
   ' Intercepta BACK para retornar a ProgramDetail.
-  if press and key = KeyButtons().BACK then
+  if key = KeyButtons().BACK then
     ' Notifica salida hacia MainScene.
     m.top.onBack = true
     ' Marca evento como manejado.
     return true
   end if
+
+  ' Navega episodio anterior manteniendo fijo el SelectionBox.
+  if key = KeyButtons().UP then
+    return __moveSelection(-1)
+  end if
+
+  ' Navega episodio siguiente manteniendo fijo el SelectionBox.
+  if key = KeyButtons().DOWN then
+    return __moveSelection(1)
+  end if
+
   ' Deja pasar otros eventos al padre.
   return false
 end function
@@ -215,6 +240,9 @@ sub __renderEpisodes(episodes)
     ' Pasa título compuesto con fecha, hora y nombre de canal.
     newEpisodeItem.title = __buildEpisodeTitle(item)
   end for
+
+  ' Reinicia índice al primer elemento y ajusta la lista al SelectionBox fijo.
+  __updateSelection(0)
 end sub
 
 ' Construye datos de EpisodeItem con fallback temporal.
@@ -284,11 +312,104 @@ sub __clearEpisodes()
   ' Evita operar si la lista no está inicializada.
   if m.episodesList = invalid then return
   ' Elimina cada hijo existente del contenedor.
+  m.episodesCount = 0
+  ' Reinicia el contador total para evitar navegación con datos obsoletos.
+  m.selectedEpisodeIndex = 0
+  ' Reinicia la selección al primer elemento para la próxima carga.
+  m.episodesList.translation = scaleSize([80, 100], m.scaleInfo)
+  ' Devuelve la lista a su posición base cuando se limpia la pantalla.
+
   while m.episodesList.getChildCount() > 0
     ' Remueve el primer hijo hasta vaciar la lista.
     m.episodesList.removeChild(m.episodesList.getChild(0))
   end while
+
+  ' Oculta el SelectionBox cuando no quedan episodios visibles.
+  if m.selectedIndicator <> invalid then m.selectedIndicator.visible = false
 end sub
+
+' Mueve la selección vertical y desplaza los EpisodeItem para mantener fijo el indicador.
+function __moveSelection(direction as integer) as boolean
+  ' Evita navegación cuando no existen episodios en pantalla.
+  if m.episodesList = invalid or m.episodesCount <= 0 then return false
+
+  ' Calcula el nuevo índice a partir de la dirección recibida por teclado.
+  newIndex = m.selectedEpisodeIndex + direction
+  ' Consume la tecla aunque el índice quede fuera de rango para frenar bubbling.
+  if newIndex < 0 or newIndex > m.episodesCount - 1 then return true
+
+  ' Aplica la selección válida y desplaza visualmente los ítems.
+  __updateSelection(newIndex)
+  ' Informa que UP/DOWN fue gestionado por EmissionsScreen.
+  return true
+end function
+
+' Aplica índice seleccionado y reposiciona la lista para dejar fijo el SelectionBox.
+sub __updateSelection(newIndex as integer)
+  ' Corta actualización cuando no existe la lista visual.
+  if m.episodesList = invalid then return
+
+  ' Refresca la cantidad de episodios a partir del árbol renderizado actual.
+  m.episodesCount = m.episodesList.getChildCount()
+  ' Si no hay episodios, oculta indicador y termina sin mover lista.
+  if m.episodesCount <= 0 then
+    ' Garantiza que el marco no quede visible cuando la lista está vacía.
+    if m.selectedIndicator <> invalid then m.selectedIndicator.visible = false
+    ' Sale temprano para evitar cálculos de desplazamiento sin contenido.
+    return
+  end if
+
+  ' Clampa el índice inferior para impedir valores negativos.
+  if newIndex < 0 then newIndex = 0
+  ' Clampa el índice superior para no sobrepasar el último elemento.
+  if newIndex > m.episodesCount - 1 then newIndex = m.episodesCount - 1
+
+  ' Persiste el índice seleccionado que usará la navegación posterior.
+  m.selectedEpisodeIndex = newIndex
+
+  ' Calcula la posición base (reposo) de la lista en la pantalla.
+  baseTranslation = scaleSize([80, 100], m.scaleInfo)
+  ' Obtiene el paso vertical real para desplazar exactamente un item.
+  stepY = __getEpisodeStepY()
+
+  ' Mueve la lista verticalmente mientras el SelectionBox permanece fijo.
+  m.episodesList.translation = [baseTranslation[0], baseTranslation[1] - (m.selectedEpisodeIndex * stepY)]
+
+  ' Muestra el marco de selección al existir un episodio activo.
+  if m.selectedIndicator <> invalid then m.selectedIndicator.visible = true
+end sub
+
+
+
+' Calcula el desplazamiento vertical por item (alto del episodio + spacing del LayoutGroup).
+function __getEpisodeStepY() as integer
+  ' Define fallback con valores de diseño base escalados.
+  ' Usa un fallback escalado para no depender de medidas aún no calculadas.
+  stepY = scaleValue(324, m.scaleInfo)
+  ' Retorna fallback cuando no hay lista o no existen hijos renderizados.
+  if m.episodesList = invalid or m.episodesList.getChildCount() <= 0 then return stepY
+
+  ' Toma el primer EpisodeItem como referencia de alto de fila.
+  firstEpisode = m.episodesList.getChild(0)
+  ' Solo calcula bounds si el primer item existe físicamente.
+  if firstEpisode <> invalid then
+    ' Lee boundingRect para usar altura real ya layout-eada por SceneGraph.
+    bounds = firstEpisode.boundingRect()
+    ' Usa altura real cuando viene informada y es mayor que cero.
+    if bounds <> invalid and bounds.height <> invalid and cint(bounds.height) > 0 then
+      ' Inicializa paso con la altura visual del EpisodeItem.
+      stepY = cint(bounds.height)
+      ' Suma spacing vertical configurado en el LayoutGroup de episodios.
+      if m.episodesList.itemSpacings <> invalid and m.episodesList.itemSpacings.count() > 0 then
+        ' Agrega separación entre filas para alinear salto con navegación real.
+        stepY = stepY + cint(m.episodesList.itemSpacings[0])
+      end if
+    end if
+  end if
+
+  ' Entrega el desplazamiento final que usará __updateSelection.
+  return stepY
+end function
 
 ' Limpia estado cuando ocurre logout.
 sub onLogoutChange()
@@ -305,5 +426,10 @@ sub onLogoutChange()
     ' Limpia último id cacheado.
     m.lastId = invalid
     if m.emissionsTitle <> invalid then m.emissionsTitle.text = ""
+
+    ' Limpia el título cuando se resetea la pantalla por logout.
+    if m.emissionsTitle <> invalid then m.emissionsTitle.text = ""
+    ' Oculta el marco para evitar residuos visuales al salir de sesión.
+    if m.selectedIndicator <> invalid then m.selectedIndicator.visible = false
   end if
 end sub

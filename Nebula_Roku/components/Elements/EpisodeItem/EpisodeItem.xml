@@ -36,7 +36,6 @@
         <!-- Imagen principal del episodio (300px de ancho). -->
         <Poster
           id="emissionImage"
-          width="300"
           loadDisplayMode="scaleToZoom"
           uri="pkg:/images/shared/show_image_empty_1.jpg" />
 
@@ -58,7 +57,7 @@
           <Label
             id="episodeTime"
             text="40m"
-            color="0xFFA500FF"
+            color="0xF98C00"
             horizAlign="center"
             vertAlign="center"
             width="50"

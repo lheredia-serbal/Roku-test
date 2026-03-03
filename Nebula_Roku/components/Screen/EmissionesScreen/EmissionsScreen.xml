@@ -50,6 +50,10 @@
         horizAlignment="left"
         vertAlignment="top"
         itemSpacings="[24]"/>
+
+      <SelectionBox
+        id="selectedIndicator"
+        visible="false" />
     </Group>
   </children>
 </component>
