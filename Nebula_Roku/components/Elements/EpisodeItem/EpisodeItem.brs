@@ -107,7 +107,7 @@ sub __updateLayout()
   ' Ubica bloque de tiempo en esquina inferior derecha de emissionImage.
   m.episodeTimeGroup.translation = [m.emissionImage.width - m.episodeTimeGroup.width, m.emissionImage.height - m.episodeTimeGroup.height]
   ' Ajusta ancho disponible para columna de texto.
-  infoWidth = m.top.widthContainer - m.emissionImage.width - cint(scaleValue(24, m.scaleInfo))
+  infoWidth = m.top.widthContainer - m.emissionImage.width - cint(scaleValue(350, m.scaleInfo))
   ' Evita valores negativos en resoluciones pequeñas.
   if infoWidth < cint(scaleValue(100, m.scaleInfo)) then infoWidth = cint(scaleValue(100, m.scaleInfo))
   ' Aplica ancho calculado a episodeInfo.

@@ -78,7 +78,7 @@
         <!-- Título del episodio con tipografía grande. -->
         <Label
           id="episodeTitle"
-          text="3 de marzo de 2026 7:44 (HBO)"
+          text=""
           wrap="true"
           maxLines="2"
           font="font:LargeBoldSystemFont" />
@@ -86,7 +86,7 @@
         <!-- Sinopsis del episodio con tipografía menor. -->
         <Label
           id="episodeSynopsis"
-          text="T13 E2 - El espacio de humor de John Oliver, durante treinta minutos, le da una satírica mirada a los informes, política y diferentes acontecimientos de la actualidad. Contiene varios segmentos cortos y un ciclo principal, y los sketches breves casi siempre tienen relación con sucesos recientes. El bloque principal se centra en los detalles de una información de política, aún cuando no es de la semana. Éste periodista inyecta una dosis de gracia constante a su presentación, utilizando analogías sarcásticas y alusiones a la cultura popular y a las celebridades."
+          text=""
           wrap="true"
           maxLines="10"
           font="font:MediumSystemFont" />

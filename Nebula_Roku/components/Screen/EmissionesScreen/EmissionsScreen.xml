@@ -49,8 +49,7 @@
         layoutDirection="vert"
         horizAlignment="left"
         vertAlignment="top"
-        itemSpacings="[24]"
-        translation="[0, 40]" />
+        itemSpacings="[24]"/>
     </Group>
   </children>
 </component>

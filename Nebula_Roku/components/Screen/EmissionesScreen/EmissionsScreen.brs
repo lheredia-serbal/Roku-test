@@ -10,6 +10,8 @@ sub init()
   m.emissionsTitle = m.top.findNode("emissionsTitle")
   ' Guarda referencia de la lista visual de episodios.
   m.episodesList = m.top.findNode("episodesList")
+  ' Obtiene scaleInfo global para escalar medidas y posiciones del layout.
+  m.scaleInfo = m.global.scaleInfo
   ' Intenta resolver loading desde la escena cuando no viene inyectado.
   if m.top <> invalid and m.top.loading = invalid then
     scene = m.top.getScene()
@@ -29,7 +31,30 @@ sub init()
   end if
   ' Usa ancho real de display cuando no existe scaleInfo global.
   if not hasScaleWidth then m.screenWidth = CreateObject("roDeviceInfo").GetDisplaySize().w
+  ' Crea scaleInfo de fallback cuando aún no está disponible en globals.
+  if m.scaleInfo = invalid then m.scaleInfo = getScaleInfo(CreateObject("roDeviceInfo"))
+  ' Aplica tamaños y posiciones escaladas para todos los nodos de emisiones.
+  __applyScaledLayout()
 end sub
+
+' Aplica medidas escaladas a width y height de los nodos visuales.
+sub __applyScaledLayout()
+  ' Evita aplicar layout cuando no existe información de escala.
+  if m.scaleInfo = invalid then return
+  ' Escala ancho del título para respetar resolución del dispositivo.
+  ' Escala posición y tamaño de la lista de episodios.
+
+  if m.emissionsTitle <> invalid then
+    m.emissionsTitle.translation = scaleSize([80, 40], m.scaleInfo)
+  end if
+
+  if m.episodesList <> invalid then
+    m.episodesList.translation = scaleSize([80, 100], m.scaleInfo)
+    m.episodesList.width = scaleValue(1600, m.scaleInfo)
+    m.episodesList.height = scaleValue(860, m.scaleInfo)
+  end if
+end sub
+
 
 ' Maneja foco de pantalla al mostrarse.
 sub initFocus()
@@ -178,7 +203,7 @@ sub __renderEpisodes(episodes)
     ' Crea un nuevo componente reusable EpisodeItem.
     newEpisodeItem = m.episodesList.createChild("EpisodeItem")
     ' Asigna ancho al 100% de la pantalla.
-    newEpisodeItem.widthContainer = m.screenWidth
+    newEpisodeItem.widthContainer = scaleValue(m.screenWidth - 400, m.scaleInfo)
     ' Pasa el objeto image para que EpisodeItem use getImageUrl internamente.
     if item <> invalid and item.image <> invalid then newEpisodeItem.image = item.image
     ' Pasa synopsis para setearla en episodeSynopsis dentro de EpisodeItem.
