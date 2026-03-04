@@ -600,7 +600,7 @@ sub __updateSelection(newIndex as integer)
   stepY = __getEpisodeStepY()
 
   ' Mueve la lista verticalmente mientras el SelectionBox permanece fijo.
-  targetTranslation = [baseTranslation[0], baseTranslation[1] - (m.selectedEpisodeIndex * stepY)]
+  targetTranslation = [baseTranslation[0], baseTranslation[1] - (m.selectedEpisodeIndex * stepY) + (m.selectedEpisodeIndex * 0.5)]
   animateTransition = previousIndex <> newIndex
   __setEpisodesListTranslation(targetTranslation, animateTransition)
 
