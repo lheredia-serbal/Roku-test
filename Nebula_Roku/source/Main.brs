@@ -33,9 +33,6 @@ sub Main(args as Object)
         'respond to the appExit field on MainScene
         else if HandleSystemEvents(msg)
             ' Evento de sistema/memoria ya gestionado
-       
-        else if msgType = "roInputEvent"
-            info = msg.GetInfo()
 
         else if msgType = "roSGNodeEvent" then
             field = msg.getField()

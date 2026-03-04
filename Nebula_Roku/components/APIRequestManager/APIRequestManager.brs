@@ -253,7 +253,7 @@ function __getHeaderValue(headers as Object, key as String) as boolean
 
     if headers.Count() = 0 then return false
 
-    if not headers.doesexist("x-service-id") then return false
+    if not headers.doesexist(key) then return false
 
     return true
 end function

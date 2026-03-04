@@ -30,7 +30,6 @@ sub __applyLayout()
   padding = scaleSize([350, 180], m.scaleInfo)
   logoWidth = scaleValue(260, m.scaleInfo)
   logoHeight = scaleValue(110, m.scaleInfo)
-  spacing = scaleValue(20, m.scaleInfo)
 
   m.dialogContainer.translation = [((m.scaleInfo.width - dialogWidth) / 2), ((m.scaleInfo.height - dialogHeight) / 2)]
   m.dialogBackground.width = dialogWidth
@@ -39,7 +38,6 @@ sub __applyLayout()
   m.contentLayout.translation = padding
 
   contentWidth = dialogWidth - (padding[0] / 4)
-  contentHeight = dialogHeight
 
   m.logo.width = logoWidth
   m.logo.height = logoHeight

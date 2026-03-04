@@ -1009,8 +1009,6 @@ sub restartVideo(validateLimitRewindDuration as boolean)
     'Si no esta cargado cargo el rewind
     if m.streaming.realStreamingType = getStreamingType().DEFAULT then
 
-      programId = 0
-      if m.program <> invalid and m.program.id <> invalid then programId = m.program.id
       __loadStreamingURL(m.lastKey, m.lastId, getStreamingAction().PLAY, getStreamingType().LIVE_REWIND, m.program.id)
       return
     else
@@ -1018,8 +1016,6 @@ sub restartVideo(validateLimitRewindDuration as boolean)
       'Si no lo es pido de nuevo el rewind s ies la primera vez que se llama el metodo
 
       if validateLimitRewindDuration and (m.liveRewindDuration <> m.liveRewindMinDuration or dtIsBefore(toDateTime(m.program.startTime), toDateTime(m.startPlayerFrozen))) then
-        programId = 0
-        if m.program <> invalid and m.program.id <> invalid then programId = m.program.id
         __loadStreamingURL(m.lastKey, m.lastId, getStreamingAction().PLAY, getStreamingType().LIVE_REWIND, m.program.id)
         return
       else
@@ -1031,7 +1027,6 @@ sub restartVideo(validateLimitRewindDuration as boolean)
           programStartDate = toDateTime(m.program.startTime)
           if isSameOrAfter(programStartDate, toDateTime(m.startPlayerFrozen)) then
             m.pauseMoment = cloneDateTime(programStartDate)
-            positionInSeconds = diffSeconds(m.pauseMoment, m.streamStartDate) - m.diffDuration
             __selectTime()
             __playVideo()
           else
@@ -1053,7 +1048,6 @@ sub restartVideo(validateLimitRewindDuration as boolean)
 
       if isSameOrAfter(startDate, m.startPlayerFrozen) then
         m.pauseMoment = cloneDateTime(startDate)
-        positionInSeconds = diffSeconds(m.pauseMoment, m.streamStartDate) - m.diffDuration
 
         __selectTime()
         __playVideo()

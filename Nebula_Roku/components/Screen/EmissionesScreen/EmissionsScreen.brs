@@ -67,18 +67,10 @@ if m.episodesViewport <> invalid and m.episodesList <> invalid then
     episodesViewportHeight = scaleValue(860, m.scaleInfo)
     ' Posiciona viewport debajo del título para fijar el área visible.
     m.episodesViewport.translation = scaleSize([80, 100], m.scaleInfo)
-    ' Ajusta ancho del viewport para clipping consistente por resolución.
-    m.episodesViewport.width = episodesViewportWidth
-    ' Ajusta alto del viewport para clipping consistente por resolución.
-    m.episodesViewport.height = episodesViewportHeight
     ' Recorta el contenido de episodios al rectángulo visible del viewport.
     m.episodesViewport.clippingRect = [0, 0, episodesViewportWidth, episodesViewportHeight]
     ' Reinicia posición de lista dentro del viewport sin desplazar el viewport.
     __setEpisodesListTranslation([0, 0], false)
-    ' Ajusta ancho interno de la lista al tamaño del viewport.
-    m.episodesList.width = episodesViewportWidth
-    ' Ajusta alto interno de la lista al tamaño del viewport.
-    m.episodesList.height = episodesViewportHeight
   end if
 
   if m.selectedIndicator <> invalid then

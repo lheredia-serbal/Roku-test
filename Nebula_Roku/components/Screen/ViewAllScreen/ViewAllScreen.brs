@@ -607,7 +607,7 @@ sub onWatchValidateResponse()
         ' Limpiamos request manager al cortar el flujo.
         m.apiRequestManager = clearApiRequest(m.apiRequestManager) 
         ' Reutilizamos manejo de errores funcionales de MainScreen.
-        __validateError(0, resp.resultCode, invalid) 
+        __validateError(0) 
         printError("WatchValidate ResultCode ViewAll:", resp.resultCode)
       end if
     else
@@ -617,7 +617,7 @@ sub onWatchValidateResponse()
       errorResponse = m.apiRequestManager.errorResponse
       m.apiRequestManager = clearApiRequest(m.apiRequestManager)
       ' Delegamos el handling de error común.
-      __validateError(statusCode, 0, errorResponse) 
+      __validateError(statusCode) 
       printError("WatchValidate Status ViewAll:", statusCode.toStr() + " " + errorResponse)
     end if
   end if
@@ -663,7 +663,7 @@ sub onStreamingsResponse()
       m.apiRequestManager = clearApiRequest(m.apiRequestManager)
       ' Recuperamos foco para mantener navegabilidad.
       __restoreLastFocus() 
-      __validateError(statusCode, 0, errorResponse)
+      __validateError(statusCode)
       printError("Streamings ViewAll:", errorResponse)
     end if
   end if
@@ -682,7 +682,7 @@ sub __restoreLastFocus()
 end sub
 
 ' Reutiliza validación de errores estándar para resolver logout cuando aplica.
-sub __validateError(statusCode as integer, resultCode as integer, errorResponse)
+sub __validateError(statusCode as integer)
   ' Si el error implica logout, delegamos y detenemos el flujo local.
   if validateLogout(statusCode, m.top) then return 
 end sub

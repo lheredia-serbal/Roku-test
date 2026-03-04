@@ -242,7 +242,6 @@ sub __updateProgress()
     return
   else 
     if (m.top.streamType = getStreamingType().LIVE_REWIND) then 
-      liveText = "-"
       remaining = m.currentDuration - m.currentPosition
       if remaining < 0 then remaining = 0
       if (m.top.isPaused = true) then

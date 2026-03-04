@@ -96,7 +96,6 @@ end sub
 sub changeStatusAction(requestId as String, status as String)
     if requestId = invalid or requestId = "" then return
     pendingActions = __getPendingActions()
-    remaining = []
     for each item in pendingActions
         if item <> invalid and item.id = requestId then
             item.action.status = status
@@ -207,11 +206,11 @@ sub retryAll()
 end sub
 
 ' Ejecuta llamadas HTTP con failover y reconfiguración si es necesario.
-sub runAction(requestId, httpRequest as Object, apiTypeParam as Dynamic, executeFailover = true as Boolean)
+sub runAction(requestId, httpRequest as Object, apiTypeParam as Dynamic)
     ' Ejecuta llamadas HTTP con failover y reconfiguración si es necesario.
     httpRequest.status = "running"
     __registerPendingAction(requestId, httpRequest)
-    result = __runAction(httpRequest)
+    __runAction(httpRequest)
 end sub
 
 sub updatePendingActionsApiUrl(previousApiUrl as Dynamic, nextApiUrl as Dynamic)
