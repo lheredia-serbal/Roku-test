@@ -350,7 +350,12 @@ sub onStreamingPlayer()
   else if m.StackOfScreens.Peek() = "ProgramDetailScreen" then
     streaming = m.ProgramDetailScreen.streaming
     __hideProgramDetail()
-    else if m.StackOfScreens.Peek() = "SearchScreen" then
+  else if m.StackOfScreens.Peek() = "EmissionsScreen" then
+    ' Cuando streaming nace en Emissions, lo leemos desde esa pantalla.
+    streaming = m.EmissionsScreen.streaming
+    ' Ocultamos Emissions antes de transferir control al Player.
+    __hideEmissions()
+  else if m.StackOfScreens.Peek() = "SearchScreen" then
     ' Cuando streaming nace en Search, lo leemos desde ese componente.
     streaming = m.SearchScreen.streaming
     ' También transportamos bandera openGuide cuando Search abre guía.
@@ -600,6 +605,7 @@ sub __showEmissions(emissionsData as string)
   m.EmissionsScreen.onFocus = true
   m.EmissionsScreen.setFocus(true)
   m.EmissionsScreen.ObserveField("onBack", "onBackEmissions")
+  m.EmissionsScreen.ObserveField("streaming", "onStreamingPlayer")
 end sub
 
 ' Muestra la pantalla de Ver todos
@@ -686,13 +692,19 @@ sub __hideProgramDetail()
 end sub
 
 ' Esconde la pantalla de Emissions y limpia sus observables/salidas.
-sub __hideEmissions()
+sub __hideEmissions(clearData = true)
   m.EmissionsScreen.visible = false
   m.EmissionsScreen.onFocus = false
   m.EmissionsScreen.unobserveField("onBack")
+  ' Deja de escuchar salida de streaming al ocultar Emissions.
+  m.EmissionsScreen.unobserveField("streaming")
   m.EmissionsScreen.onBack = false
-  m.EmissionsScreen.data = invalid
+  ' Limpia payload de streaming para evitar retriggers.
+  m.EmissionsScreen.streaming = invalid
+  ' Limpia payload de entrada solo cuando corresponde resetear completamente la pantalla.
+  if clearData then m.EmissionsScreen.data = invalid
 end sub
+
 
 ' Esconde la pantalla Ver todos
 sub __hideViewAll(clearData = true)
@@ -878,6 +890,18 @@ sub __backManager(ScreenFocus)
     ' Restauro foco en el último item seleccionado dentro de Search.
     m.SearchScreen.callFunc("restoreFocus")
     ' Evitamos spinner colgado al volver desde detalle.
+    if m.loading <> invalid then m.loading.visible = false
+  else if ScreenFocus = "EmissionsScreen" then
+    ' Restauramos Emissions al volver desde Player cuando quedó en el stack.
+    if not m.EmissionsScreen.visible then m.EmissionsScreen.visible = true
+    ' Rehabilitamos foco para retomar navegación de episodios.
+    m.EmissionsScreen.onFocus = true
+    m.EmissionsScreen.setFocus(true)
+    ' Reescuchamos evento de back para salir nuevamente de Emissions.
+    m.EmissionsScreen.ObserveField("onBack", "onBackEmissions")
+    ' Reescuchamos salida de streaming para nuevos ingresos al Player.
+    m.EmissionsScreen.ObserveField("streaming", "onStreamingPlayer")
+    ' Evitamos loading infinito al regresar del Player.
     if m.loading <> invalid then m.loading.visible = false
   else if ScreenFocus = "MainScreen" then 
     if not m.MainScreen.visible then m.MainScreen.visible = true

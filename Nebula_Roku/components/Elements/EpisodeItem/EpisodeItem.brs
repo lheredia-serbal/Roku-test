@@ -50,10 +50,6 @@ end sub
 
 ' Ajusta posiciones y tamaños para cumplir el diseño solicitado.
 sub __updateLayout()
-  ' Aplica ancho total del item (100% pantalla disponible).
-  'm.width = m.top.widthContainer
-  ' Ajusta ancho del layout principal.
-  'm.episodeContainer.width = m.top.widthContainer
   ' Calcula ancho de imagen usando scale para mantener consistencia global.
   scaledImageWidth = cint(scaleValue(180, m.scaleInfo))
   ' Fuerza ancho fijo solicitado para emissionImage con escala aplicada.

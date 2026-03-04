@@ -12,13 +12,13 @@
     <field id="widthContainer" type="integer" value="1280" onChange="onLayoutChanged" />
     <!-- Imagen del episodio que llega como objeto para resolver URL con getImageUrl. -->
     <field id="image" type="assocarray" onChange="onEpisodeInputChanged" />
-    <!-- Sinopsis del episodio para setear en el label episodeSynopsis. -->
+    <!-- Sinopsis del episodio. -->
     <field id="synopsis" type="string" onChange="onEpisodeInputChanged" />
-    <!-- Duración formateada del episodio para setear en el label episodeTime. -->
+    <!-- Duración formateada del episodio. -->
     <field id="formattedDuration" type="string" onChange="onEpisodeInputChanged" />
     <!-- Flag para decidir si se muestra el ícono playImage. -->
     <field id="play" type="boolean" value="false" onChange="onEpisodeInputChanged" />
-    <!-- Título compuesto del episodio para setear en el label episodeTitle. -->
+    <!-- Título compuesto del episodio. -->
     <field id="title" type="string" onChange="onEpisodeInputChanged" />
   </interface>
 
@@ -33,7 +33,7 @@
 
       <!-- Contenedor superpuesto para poster, play y duración. -->
       <Group id="episodeMedia">
-        <!-- Imagen principal del episodio (300px de ancho). -->
+        <!-- Imagen principal del episodio. -->
         <Poster
           id="emissionImage"
           loadDisplayMode="scaleToZoom"

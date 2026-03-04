@@ -17,6 +17,10 @@
   <script type="text/brightscript" uri="pkg:/source/Services/ErrorCode.brs" />
   <script type="text/brightscript" uri="pkg:/source/Services/Health.brs" />
   <script type="text/brightscript" uri="pkg:/source/Services/Retry.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Services/Streamings.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Services/Watch.brs" />
+  <script type="text/brightscript" uri="pkg:/source/StreamingConstants.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Storage.brs" />
 
   <interface>
     <!-- Nodo loading compartido desde MainScene. -->
@@ -27,6 +31,8 @@
     <field id="data" type="string" onChange="initData" />
     <!-- Evento de salida para volver a la pantalla anterior. -->
     <field id="onBack" alwaysnotify="true" type="boolean" value="false" />
+    <!-- Salida de streaming para que MainScene navegue al PlayerScreen. -->
+    <field id="streaming" alwaysnotify="true" type="string" />
     <!-- Campo para limpieza de sesión consistente con otras pantallas. -->
     <field id="logout" alwaysnotify="true" type="boolean" value="false" onChange="onLogoutChange" />
   </interface>

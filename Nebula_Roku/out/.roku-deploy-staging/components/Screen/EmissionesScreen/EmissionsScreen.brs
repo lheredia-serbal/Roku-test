@@ -22,6 +22,10 @@ sub init()
   m.episodeSeparatorHeight = 1
   ' Cantidad de episodios renderizados para navegación vertical.
   m.episodesCount = 0
+  ' Cachea episodios crudos para resolver selección y abrir player con redirectKey/redirectId.
+  m.episodesData = []
+  ' Guarda episodio seleccionado para reutilizarlo en watchValidate/streaming.
+  m.selectedEpisode = invalid
   ' Obtiene scaleInfo global para escalar medidas y posiciones del layout.
   m.scaleInfo = m.global.scaleInfo
   ' Intenta resolver loading desde la escena cuando no viene inyectado.
@@ -132,6 +136,12 @@ function onKeyEvent(key as string, press as boolean) as boolean
     end if
   end if
 
+  ' Intercepta OK para abrir Player cuando el episodio seleccionado tiene play habilitado.
+  if key = KeyButtons().OK then
+    ' Intenta abrir player con el episodio seleccionado y marca la tecla como manejada cuando aplica.
+    return __openSelectedEpisode()
+  end if
+
   ' Deja pasar otros eventos al padre.
   return false
 end function
@@ -240,6 +250,8 @@ sub __renderEpisodes(episodes)
   __clearEpisodes()
   ' Corta render cuando la respuesta no contiene lista.
   if episodes = invalid then return
+  ' Guarda episodios originales para poder abrir player desde selección actual.
+  m.episodesData = episodes
   ' Guarda la cantidad real de EpisodeItem para navegación con separadores.
   m.episodesCount = episodes.count()
   ' Recorre episodios para crear un EpisodeItem por cada uno.
@@ -271,6 +283,188 @@ sub __renderEpisodes(episodes)
 
   ' Reinicia índice al primer elemento y ajusta la lista al SelectionBox fijo.
   __updateSelection(0)
+end sub
+
+' Intenta abrir player con el episodio seleccionado cuando playImage está visible.
+function __openSelectedEpisode() as boolean
+  ' Evita flujo cuando no hay episodios cacheados.
+  if m.episodesData = invalid or m.episodesData.count() <= 0 then return false
+  ' Evita índices inválidos cuando no existe selección válida.
+  if m.selectedEpisodeIndex < 0 or m.selectedEpisodeIndex >= m.episodesData.count() then return false
+
+  ' Obtiene episodio enfocado para evaluar si tiene reproducción habilitada.
+  selectedEpisode = m.episodesData[m.selectedEpisodeIndex]
+  ' Bloquea apertura cuando el episodio no tiene play habilitado (ícono play oculto).
+  if not __resolveEpisodePlay(selectedEpisode) then return true
+
+  ' Resuelve key de navegación priorizando redirectKey cuando existe.
+  selectedKey = invalid
+  ' Usa redirectKey si el backend ya entrega contrato de navegación.
+  if selectedEpisode.redirectKey <> invalid then selectedKey = selectedEpisode.redirectKey
+  ' Fallback a key cuando redirectKey no viene informado.
+  if selectedKey = invalid and selectedEpisode.key <> invalid then selectedKey = selectedEpisode.key
+  ' Resuelve id de navegación priorizando redirectId cuando existe.
+  selectedId = invalid
+  ' Usa redirectId si el backend ya entrega contrato de navegación.
+  if selectedEpisode.redirectId <> invalid then selectedId = selectedEpisode.redirectId
+  ' Fallback a id cuando redirectId no viene informado.
+  if selectedId = invalid and selectedEpisode.id <> invalid then selectedId = selectedEpisode.id
+  ' Valida que exista key requerida para seguir el flujo de MainScreen.
+  if selectedKey = invalid then return true
+  ' Valida que exista id requerido para seguir el flujo de MainScreen.
+  if selectedId = invalid then return true
+
+  ' Cachea el episodio seleccionado para usarlo en callbacks asíncronos.
+  m.selectedEpisode = selectedEpisode
+  ' Normaliza redirectKey para reutilizar contrato de MainScreen.
+  m.selectedEpisode.redirectKey = selectedKey
+  ' Normaliza redirectId para reutilizar contrato de MainScreen.
+  m.selectedEpisode.redirectId = selectedId
+
+  ' Muestra loading global mientras se resuelve URL de reproducción.
+  if m.top.loading <> invalid then m.top.loading.visible = true
+  ' Obtiene watchSessionId para ejecutar WatchValidate como en MainScreen.
+  watchSessionId = getWatchSessionId()
+  ' Crea requestId para registrar acción reintentable en retry manager.
+  requestId = createRequestId()
+
+  ' Construye acción WatchValidate siguiendo el mismo patrón de MainScreen.
+  action = {
+    apiRequestManager: m.apiRequestManager
+    url: urlWatchValidate(m.apiUrl, watchSessionId, m.selectedEpisode.redirectKey, m.selectedEpisode.redirectId)
+    method: "GET"
+    responseMethod: "onEpisodeWatchValidateResponse"
+    body: invalid
+    token: invalid
+    publicApi: false
+    dataAux: invalid
+    requestId: requestId
+    run: function() as Object
+      m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux)
+      return { success: true, error: invalid }
+    end function
+  }
+
+  ' Ejecuta WatchValidate con soporte de retry global.
+  runAction(requestId, action, ApiType().CLIENTS_API_URL)
+  ' Sincroniza manager local con la acción ejecutada.
+  m.apiRequestManager = action.apiRequestManager
+  ' Consume OK para evitar bubbling mientras se procesa la acción.
+  return true
+end function
+
+' Procesa respuesta de WatchValidate para continuar a streaming como MainScreen.
+sub onEpisodeWatchValidateResponse()
+  ' Reintenta selección si el manager quedó inválido durante callback.
+  if m.apiRequestManager = invalid then
+    ' Reintenta abrir el episodio actualmente seleccionado.
+    __openSelectedEpisode()
+    ' Corta ejecución actual para esperar siguiente respuesta válida.
+    return
+  end if
+
+  ' Maneja respuesta HTTP exitosa de WatchValidate.
+  if validateStatusCode(m.apiRequestManager.statusCode) then
+    ' Parsea payload data devuelto por WatchValidate.
+    response = ParseJson(m.apiRequestManager.response)
+    watchData = invalid
+    if response <> invalid then watchData = response.data
+
+    ' Continúa a streaming solo cuando resultCode indica éxito funcional.
+    if watchData <> invalid and watchData.resultCode = 200 then
+      ' Persiste sesión/token para mantener contrato del player.
+      setWatchSessionId(watchData.watchSessionId)
+      setWatchToken(watchData.watchToken)
+      ' Solicita streaming del episodio validado igual que MainScreen.
+      m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlStreaming(m.apiUrl, m.selectedEpisode.redirectKey, m.selectedEpisode.redirectId), "GET", "onEpisodeStreamingResponse")
+      ' Corta aquí para no limpiar loading hasta terminar streaming.
+      return
+    else
+      ' Obtiene resultCode para diagnóstico cuando WatchValidate falla.
+      resultCode = invalid
+      if watchData <> invalid then resultCode = watchData.resultCode
+      ' Limpia loading al no poder continuar a streaming.
+      if m.top.loading <> invalid then m.top.loading.visible = false
+      ' Limpia request manager al finalizar respuesta inválida.
+      m.apiRequestManager = clearApiRequest(m.apiRequestManager)
+      ' Reutiliza manejo global de errores funcionales.
+      __validateError(0)
+      ' Loguea resultado no exitoso para soporte.
+      printError("Episode WatchValidate ResultCode:", resultCode)
+      return
+    end if
+  else
+    ' Obtiene status para manejo de errores HTTP.
+    statusCode = m.apiRequestManager.statusCode
+    ' Obtiene payload de error para logging.
+    errorResponse = m.apiRequestManager.errorResponse
+    ' Limpia loading al no poder continuar a streaming.
+    if m.top.loading <> invalid then m.top.loading.visible = false
+    ' Limpia request manager al finalizar respuesta con error.
+    m.apiRequestManager = clearApiRequest(m.apiRequestManager)
+    ' Reutiliza manejo global de errores HTTP.
+    __validateError(statusCode)
+    ' Loguea error de WatchValidate para soporte.
+    printError("Episode WatchValidate Status:", statusCode.toStr() + " " + errorResponse)
+    return
+  end if
+end sub
+
+' Procesa respuesta de streaming del episodio y notifica navegación al player.
+sub onEpisodeStreamingResponse()
+  ' Reintenta apertura cuando el manager quedó inválido durante la respuesta.
+  if m.apiRequestManager = invalid then
+    ' Reintenta abrir el episodio actualmente seleccionado.
+    __openSelectedEpisode()
+    ' Corta ejecución actual para esperar próxima respuesta.
+    return
+  end if
+
+  ' Maneja respuesta exitosa para navegar al player.
+  if validateStatusCode(m.apiRequestManager.statusCode) then
+    ' Remueve acción pendiente al completar streaming.
+    if m.apiRequestManager.requestId <> invalid then removePendingAction(m.apiRequestManager.requestId)
+    ' Parsea respuesta para extraer nodo data con la URL de reproducción.
+    response = ParseJson(m.apiRequestManager.response)
+    if response <> invalid and response.data <> invalid then
+      ' Prepara payload con identificadores mínimos para PlayerScreen.
+      streaming = response.data
+      ' Completa key con redirectKey del episodio como en MainScreen.
+      streaming.key = m.selectedEpisode.redirectKey
+      ' Completa id con redirectId del episodio como en MainScreen.
+      streaming.id = m.selectedEpisode.redirectId
+      ' Define tipo por defecto tal como otras pantallas antes de abrir Player.
+      streaming.streamingType = getStreamingType().DEFAULT
+      ' Emite salida para que MainScene redireccione al player.
+      m.top.streaming = FormatJson(streaming)
+    else
+      ' Informa falta de data para diagnóstico sin abrir player.
+      printError("Emission Streaming Empty:", m.apiRequestManager.response)
+    end if
+  else
+    ' Obtiene status para manejar errores funcionales.
+    statusCode = m.apiRequestManager.statusCode
+    ' Obtiene payload de error para logging.
+    errorResponse = m.apiRequestManager.errorResponse
+    ' Informa error de streaming del episodio para soporte.
+    printError("Emission Streaming:", errorResponse)
+    ' Valida logout por sesión expirada igual que otros flujos.
+    if validateLogout(statusCode, m.top) then
+      ' Limpia manager antes de salir por logout.
+      m.apiRequestManager = clearApiRequest(m.apiRequestManager)
+      ' Oculta loading al salir por logout.
+      if m.top.loading <> invalid then m.top.loading.visible = false
+      ' Corta ejecución para no continuar con limpieza duplicada.
+      return
+    end if
+  end if
+
+  ' Limpia request manager al finalizar procesamiento.
+  m.apiRequestManager = clearApiRequest(m.apiRequestManager)
+  ' Oculta loading global al terminar el flujo de streaming.
+  if m.top.loading <> invalid then m.top.loading.visible = false
+  ' Limpia episodio seleccionado al finalizar intento de reproducción.
+  m.selectedEpisode = invalid
 end sub
 
 ' Construye datos de EpisodeItem con fallback temporal.
@@ -341,6 +535,10 @@ sub __clearEpisodes()
   if m.episodesList = invalid then return
   ' Elimina cada hijo existente del contenedor.
   m.episodesCount = 0
+  ' Limpia cache de episodios para evitar abrir contenidos obsoletos.
+  m.episodesData = []
+  ' Limpia episodio seleccionado para evitar reuso de estado obsoleto.
+  m.selectedEpisode = invalid
   ' Reinicia el contador total para evitar navegación con datos obsoletos.
   m.selectedEpisodeIndex = 0
   ' Reinicia la selección al primer elemento para la próxima carga.
@@ -501,9 +699,19 @@ sub onLogoutChange()
     m.lastKey = invalid
     ' Limpia último id cacheado.
     m.lastId = invalid
+    ' Limpia salida de streaming para evitar retriggers al reloguear.
+    m.top.streaming = invalid
+    ' Limpia episodio seleccionado durante logout.
+    m.selectedEpisode = invalid
     ' Limpia el título cuando se resetea la pantalla por logout.
     if m.emissionsTitle <> invalid then m.emissionsTitle.text = ""
     ' Oculta el marco para evitar residuos visuales al salir de sesión.
     if m.selectedIndicator <> invalid then m.selectedIndicator.visible = false
   end if
+end sub
+
+' Reutiliza validación de errores estándar para resolver logout cuando aplica.
+sub __validateError(statusCode as integer)
+  ' Si el error implica logout, delegamos y detenemos el flujo local.
+  if validateLogout(statusCode, m.top) then return 
 end sub
