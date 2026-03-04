@@ -29,7 +29,7 @@
       layoutDirection="horiz"
       horizAlignment="left"
       vertAlignment="top"
-      itemSpacings="[24]">
+      itemSpacings="[40]">
 
       <!-- Contenedor superpuesto para poster, play y duración. -->
       <Group id="episodeMedia">
@@ -62,7 +62,7 @@
             vertAlign="center"
             width="50"
             height="30"
-            font="font:SmallBoldSystemFont" />
+            font="font:TinySystemFont" />
         </Rectangle>
       </Group>
 
@@ -73,6 +73,9 @@
         horizAlignment="left"
         vertAlignment="top"
         itemSpacings="[10]">
+
+        <Rectangle height="20">
+        </Rectangle>
 
         <!-- Título del episodio con tipografía grande. -->
         <Label

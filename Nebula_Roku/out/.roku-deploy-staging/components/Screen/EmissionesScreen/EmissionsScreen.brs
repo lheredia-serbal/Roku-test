@@ -10,10 +10,16 @@ sub init()
   m.emissionsTitle = m.top.findNode("emissionsTitle")
   ' Guarda referencia de la lista visual de episodios.
   m.episodesList = m.top.findNode("episodesList")
+  ' Guarda referencia del viewport que recorta la lista bajo el título.
+  m.episodesViewport = m.top.findNode("episodesViewport")
   ' Guarda referencia del indicador de selección fijo.
   m.selectedIndicator = m.top.findNode("selectedIndicator")
+  m.episodesMoveAnimation = m.top.findNode("episodesMoveAnimation")
+  m.episodesMoveInterpolator = m.top.findNode("episodesMoveInterpolator")
   ' Índice lógico del episodio actualmente enfocado por la selección.
   m.selectedEpisodeIndex = 0
+  ' Alto del separador para incluirlo en el desplazamiento vertical.
+  m.episodeSeparatorHeight = 1
   ' Cantidad de episodios renderizados para navegación vertical.
   m.episodesCount = 0
   ' Obtiene scaleInfo global para escalar medidas y posiciones del layout.
@@ -54,10 +60,25 @@ sub __applyScaledLayout()
     m.emissionsTitle.translation = scaleSize([80, 40], m.scaleInfo)
   end if
 
-  if m.episodesList <> invalid then
-    m.episodesList.translation = scaleSize([80, 100], m.scaleInfo)
-    m.episodesList.width = scaleValue(1600, m.scaleInfo)
-    m.episodesList.height = scaleValue(860, m.scaleInfo)
+if m.episodesViewport <> invalid and m.episodesList <> invalid then
+    ' Calcula el tamaño del viewport que recorta visualmente la lista.
+    episodesViewportWidth = scaleValue(1600, m.scaleInfo)
+    ' Calcula altura visible de episodios para evitar superposición con el título.
+    episodesViewportHeight = scaleValue(860, m.scaleInfo)
+    ' Posiciona viewport debajo del título para fijar el área visible.
+    m.episodesViewport.translation = scaleSize([80, 100], m.scaleInfo)
+    ' Ajusta ancho del viewport para clipping consistente por resolución.
+    m.episodesViewport.width = episodesViewportWidth
+    ' Ajusta alto del viewport para clipping consistente por resolución.
+    m.episodesViewport.height = episodesViewportHeight
+    ' Recorta el contenido de episodios al rectángulo visible del viewport.
+    m.episodesViewport.clippingRect = [0, 0, episodesViewportWidth, episodesViewportHeight]
+    ' Reinicia posición de lista dentro del viewport sin desplazar el viewport.
+    __setEpisodesListTranslation([0, 0], false)
+    ' Ajusta ancho interno de la lista al tamaño del viewport.
+    m.episodesList.width = episodesViewportWidth
+    ' Ajusta alto interno de la lista al tamaño del viewport.
+    m.episodesList.height = episodesViewportHeight
   end if
 
   if m.selectedIndicator <> invalid then
@@ -112,7 +133,11 @@ function onKeyEvent(key as string, press as boolean) as boolean
 
   ' Navega episodio siguiente manteniendo fijo el SelectionBox.
   if key = KeyButtons().DOWN then
-    return __moveSelection(1)
+    if m.selectedEpisodeIndex + 1 < m.episodesCount then 
+      return __moveSelection(1)
+    else 
+      return true
+    end if
   end if
 
   ' Deja pasar otros eventos al padre.
@@ -223,8 +248,11 @@ sub __renderEpisodes(episodes)
   __clearEpisodes()
   ' Corta render cuando la respuesta no contiene lista.
   if episodes = invalid then return
+  ' Guarda la cantidad real de EpisodeItem para navegación con separadores.
+  m.episodesCount = episodes.count()
   ' Recorre episodios para crear un EpisodeItem por cada uno.
-  for each item in episodes
+  for i = 0 to episodes.count() - 1
+    item = episodes[i]
     ' Crea un nuevo componente reusable EpisodeItem.
     newEpisodeItem = m.episodesList.createChild("EpisodeItem")
     ' Asigna ancho al 100% de la pantalla.
@@ -239,6 +267,14 @@ sub __renderEpisodes(episodes)
     newEpisodeItem.play = __resolveEpisodePlay(item)
     ' Pasa título compuesto con fecha, hora y nombre de canal.
     newEpisodeItem.title = __buildEpisodeTitle(item)
+
+    ' Agrega un separador visual entre episodios autogenerados.
+    if i < episodes.count() - 1 then
+      episodeSeparator = m.episodesList.createChild("Rectangle")
+      episodeSeparator.width = scaleValue(1105, m.scaleInfo)
+      episodeSeparator.height = scaleValue(1, m.scaleInfo)
+      episodeSeparator.color = "0x7F7F7FFF"
+    end if
   end for
 
   ' Reinicia índice al primer elemento y ajusta la lista al SelectionBox fijo.
@@ -279,7 +315,7 @@ function __resolveEpisodePlay(item as dynamic) as boolean
   ' Corta cuando play no existe en actions.
   if item.actions.play = invalid then return result
   ' Activa play solo cuando el valor sea boolean true.
-  if type(item.actions.play) = "roBoolean" and item.actions.play then result = true
+  result = item.actions.play
   ' Devuelve flag final para EpisodeItem.
   return result
 end function
@@ -316,7 +352,7 @@ sub __clearEpisodes()
   ' Reinicia el contador total para evitar navegación con datos obsoletos.
   m.selectedEpisodeIndex = 0
   ' Reinicia la selección al primer elemento para la próxima carga.
-  m.episodesList.translation = scaleSize([80, 100], m.scaleInfo)
+  __setEpisodesListTranslation(scaleSize([80, 100], m.scaleInfo), false)
   ' Devuelve la lista a su posición base cuando se limpia la pantalla.
 
   while m.episodesList.getChildCount() > 0
@@ -349,8 +385,6 @@ sub __updateSelection(newIndex as integer)
   ' Corta actualización cuando no existe la lista visual.
   if m.episodesList = invalid then return
 
-  ' Refresca la cantidad de episodios a partir del árbol renderizado actual.
-  m.episodesCount = m.episodesList.getChildCount()
   ' Si no hay episodios, oculta indicador y termina sin mover lista.
   if m.episodesCount <= 0 then
     ' Garantiza que el marco no quede visible cuando la lista está vacía.
@@ -364,51 +398,101 @@ sub __updateSelection(newIndex as integer)
   ' Clampa el índice superior para no sobrepasar el último elemento.
   if newIndex > m.episodesCount - 1 then newIndex = m.episodesCount - 1
 
+  ' Guarda índice anterior para decidir si corresponde animar el movimiento.
+  previousIndex = m.selectedEpisodeIndex
+
   ' Persiste el índice seleccionado que usará la navegación posterior.
   m.selectedEpisodeIndex = newIndex
 
   ' Calcula la posición base (reposo) de la lista en la pantalla.
-  baseTranslation = scaleSize([80, 100], m.scaleInfo)
+  baseTranslation = [0, 0]
   ' Obtiene el paso vertical real para desplazar exactamente un item.
   stepY = __getEpisodeStepY()
 
   ' Mueve la lista verticalmente mientras el SelectionBox permanece fijo.
-  m.episodesList.translation = [baseTranslation[0], baseTranslation[1] - (m.selectedEpisodeIndex * stepY)]
+  targetTranslation = [baseTranslation[0], baseTranslation[1] - (m.selectedEpisodeIndex * stepY)]
+  animateTransition = previousIndex <> newIndex
+  __setEpisodesListTranslation(targetTranslation, animateTransition)
 
   ' Muestra el marco de selección al existir un episodio activo.
   if m.selectedIndicator <> invalid then m.selectedIndicator.visible = true
 end sub
 
+' Aplica translation a la lista de episodios con animación opcional.
+sub __setEpisodesListTranslation(targetTranslation as object, animate as boolean)
+  ' Evita mover la lista cuando no existe el nodo visual.
+  if m.episodesList = invalid then return
 
+  ' Corrige valores inválidos usando posición base escalada.
+  if targetTranslation = invalid or targetTranslation.count() < 2 then
+    targetTranslation = [0, 0]
+  end if
+
+  ' Aplica movimiento inmediato cuando no corresponde animar o no existe animation node.
+  if not animate or m.episodesMoveAnimation = invalid or m.episodesMoveInterpolator = invalid then
+    m.episodesList.translation = targetTranslation
+    return
+  end if
+
+  ' Captura posición actual para construir interpolación desde el estado visible.
+  currentTranslation = m.episodesList.translation
+  if currentTranslation = invalid or currentTranslation.count() < 2 then
+    currentTranslation = [0, 0]
+  end if
+
+  ' Evita iniciar animación cuando origen y destino son iguales.
+  if currentTranslation[0] = targetTranslation[0] and currentTranslation[1] = targetTranslation[1] then return
+
+  ' Reinicia y ejecuta interpolación vertical suave entre episodios.
+  m.episodesMoveInterpolator.keyValue = [currentTranslation, targetTranslation]
+  m.episodesMoveAnimation.control = "stop"
+  m.episodesMoveAnimation.control = "start"
+end sub
 
 ' Calcula el desplazamiento vertical por item (alto del episodio + spacing del LayoutGroup).
 function __getEpisodeStepY() as integer
   ' Define fallback con valores de diseño base escalados.
-  ' Usa un fallback escalado para no depender de medidas aún no calculadas.
   stepY = scaleValue(324, m.scaleInfo)
   ' Retorna fallback cuando no hay lista o no existen hijos renderizados.
   if m.episodesList = invalid or m.episodesList.getChildCount() <= 0 then return stepY
 
-  ' Toma el primer EpisodeItem como referencia de alto de fila.
-  firstEpisode = m.episodesList.getChild(0)
-  ' Solo calcula bounds si el primer item existe físicamente.
-  if firstEpisode <> invalid then
-    ' Lee boundingRect para usar altura real ya layout-eada por SceneGraph.
-    bounds = firstEpisode.boundingRect()
-    ' Usa altura real cuando viene informada y es mayor que cero.
-    if bounds <> invalid and bounds.height <> invalid and cint(bounds.height) > 0 then
-      ' Inicializa paso con la altura visual del EpisodeItem.
-      stepY = cint(bounds.height)
-      ' Suma spacing vertical configurado en el LayoutGroup de episodios.
-      if m.episodesList.itemSpacings <> invalid and m.episodesList.itemSpacings.count() > 0 then
-        ' Agrega separación entre filas para alinear salto con navegación real.
-        stepY = stepY + cint(m.episodesList.itemSpacings[0])
+  ' Intenta medir la distancia real entre dos EpisodeItem consecutivos.
+  firstEpisode = invalid
+  secondEpisode = invalid
+  for i = 0 to m.episodesList.getChildCount() - 1
+    child = m.episodesList.getChild(i)
+    if child <> invalid and child.subtype() = "EpisodeItem" then
+      if firstEpisode = invalid then
+        firstEpisode = child
+      else
+        secondEpisode = child
+        exit for
       end if
+    end if
+  end for
+
+  if firstEpisode <> invalid and secondEpisode <> invalid then
+    firstY = cint(firstEpisode.translation[1])
+    secondY = cint(secondEpisode.translation[1])
+    measuredStep = secondY - firstY
+    if measuredStep > 0 then return measuredStep
+  end if
+
+  ' Fallback: alto de episodio + spacing superior/inferior + separador.
+  if firstEpisode <> invalid then
+    bounds = firstEpisode.boundingRect()
+    if bounds <> invalid and bounds.height <> invalid and cint(bounds.height) > 0 then
+      stepY = cint(bounds.height)
+      spacingY = 0
+      if m.episodesList.itemSpacings <> invalid and m.episodesList.itemSpacings.count() > 0 then
+        spacingY = cint(m.episodesList.itemSpacings[0])
+      end if
+      stepY = stepY + (spacingY * 2) + scaleValue(m.episodeSeparatorHeight, m.scaleInfo)
     end if
   end if
 
   ' Entrega el desplazamiento final que usará __updateSelection.
-  return stepY
+  return cint(stepY)
 end function
 
 ' Limpia estado cuando ocurre logout.
@@ -425,8 +509,6 @@ sub onLogoutChange()
     m.lastKey = invalid
     ' Limpia último id cacheado.
     m.lastId = invalid
-    if m.emissionsTitle <> invalid then m.emissionsTitle.text = ""
-
     ' Limpia el título cuando se resetea la pantalla por logout.
     if m.emissionsTitle <> invalid then m.emissionsTitle.text = ""
     ' Oculta el marco para evitar residuos visuales al salir de sesión.

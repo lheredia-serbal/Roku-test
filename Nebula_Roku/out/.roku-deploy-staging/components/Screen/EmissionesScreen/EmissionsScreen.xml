@@ -33,27 +33,41 @@
 
   <children>
     <!-- Contenedor base sin UI adicional por ahora. -->
-        <!-- Contenedor raíz de emisiones. -->
+    <!-- Contenedor raíz de emisiones. -->
     <Group id="emissionsRoot">
-      <Label
-        id="emissionsTitle"
-        text=""
-        translation="[80,40]"
-        width="1760"
-        horizAlign="left"
-        vertAlign="center"
-        font="font:LargeBoldSystemFont" />
-      <!-- Lista vertical de EpisodeItem creada desde el servicio. -->
-      <LayoutGroup
-        id="episodesList"
-        layoutDirection="vert"
-        horizAlignment="left"
-        vertAlignment="top"
-        itemSpacings="[24]"/>
+      <!-- Viewport fijo de la lista para recortar los items al subir/bajar. -->
+      <Group id="episodesViewport">
+        <!-- Lista vertical de EpisodeItem creada desde el servicio. -->
+        <LayoutGroup
+          id="episodesList"
+          layoutDirection="vert"
+          horizAlignment="left"
+          vertAlignment="top"
+          itemSpacings="[24]"/>
+      </Group>
 
       <SelectionBox
         id="selectedIndicator"
         visible="false" />
+
+      <Label
+        id="emissionsTitle"
+        text=""
+        width="1760"
+        horizAlign="left"
+        vertAlign="center"
+        font="font:LargeBoldSystemFont" />
+
+      <Animation
+        id="episodesMoveAnimation"
+        duration="0.16"
+        repeat="false">
+        <Vector2DFieldInterpolator
+          id="episodesMoveInterpolator"
+          key="[0.0, 1.0]"
+          keyValue="[[80, 100], [80, 100]]"
+          fieldToInterp="episodesList.translation" />
+      </Animation>
     </Group>
   </children>
 </component>

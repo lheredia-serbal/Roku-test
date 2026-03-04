@@ -61,7 +61,6 @@
     <Rectangle
       id="searchKeyboardBackground"
       color="0x000000FF"
-      opacity="0.0"
       visible="true" />
 
     <Keyboard

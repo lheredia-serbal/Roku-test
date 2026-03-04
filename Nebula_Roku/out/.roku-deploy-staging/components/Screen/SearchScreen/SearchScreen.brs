@@ -48,6 +48,7 @@ sub init()
   m.searchInput.translation = scaleSize([50, 50], m.scaleInfo)
   ' Defino el largo máximo de texto permitido en el input.
   m.searchInput.maxTextLength = 255
+  m.searchKeyboardBackgroundoOpacity = "1.0"
   ' Defino el color del texto de ayuda del input.
   m.searchInput.hintTextColor = m.global.colors.LIGHT_GRAY
 
@@ -80,7 +81,7 @@ sub init()
     m.searchKeyboardBackground.width = m.scaleInfo.width
     m.searchKeyboardBackground.height = m.keyboardDefaultHeight
     m.searchKeyboardBackground.translation = [0, m.scaleInfo.height]
-    m.searchKeyboardBackground.opacity = 0.0
+    m.searchKeyboardBackground.opacity = m.searchKeyboardBackgroundoOpacity
   end if
 
   ' Observo cambios de foco del input para mostrar/ocultar teclado.
@@ -332,7 +333,7 @@ sub __getSearchPrograms(query as String)
     run: function() as Object
       ' Disparo request con helper estándar del proyecto.
       m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux)
-      ' Retorno resultado esperado por runAction.
+      ' Retorno resultado esperado por runAction. 
       return { success: true, error: invalid }
     end function
   }
@@ -575,7 +576,7 @@ sub __showKeyboard()
     ' Ubico fondo en posición oculta inicial para animar junto al teclado.
   if m.searchKeyboardBackground <> invalid then
     m.searchKeyboardBackground.translation = m.keyboardBackgroundHiddenTranslation
-    m.searchKeyboardBackground.opacity = 0.0
+    m.searchKeyboardBackground.opacity = m.searchKeyboardBackgroundoOpacity
   end if
 
 ' Refuerzo observers del TextEditBox al abrir teclado.
@@ -626,7 +627,7 @@ sub __hideKeyboard(withAnimation as Boolean)
     ' Oculto fondo opaco del teclado sin animación.
     if m.searchKeyboardBackground <> invalid then
       m.searchKeyboardBackground.translation = [0, m.scaleInfo.height]
-      m.searchKeyboardBackground.opacity = 0.0
+      m.searchKeyboardBackground.opacity = m.searchKeyboardBackgroundoOpacity
     end if
   end if
   
@@ -649,7 +650,7 @@ sub onKeyboardHideAnimationStateChanged()
     ' Al terminar, también oculto el fondo opaco del teclado.
     if m.searchKeyboardBackground <> invalid then
       m.searchKeyboardBackground.translation = [0, m.scaleInfo.height]
-      m.searchKeyboardBackground.opacity = 0.0
+      m.searchKeyboardBackground.opacity = m.searchKeyboardBackgroundoOpacity
     end if
   end if
 end sub

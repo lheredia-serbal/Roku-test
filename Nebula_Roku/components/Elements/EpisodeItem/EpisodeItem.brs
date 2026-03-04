@@ -51,9 +51,9 @@ end sub
 ' Ajusta posiciones y tamaños para cumplir el diseño solicitado.
 sub __updateLayout()
   ' Aplica ancho total del item (100% pantalla disponible).
-  m.top.width = m.top.widthContainer
+  'm.width = m.top.widthContainer
   ' Ajusta ancho del layout principal.
-  m.episodeContainer.width = m.top.widthContainer
+  'm.episodeContainer.width = m.top.widthContainer
   ' Calcula ancho de imagen usando scale para mantener consistencia global.
   scaledImageWidth = cint(scaleValue(180, m.scaleInfo))
   ' Fuerza ancho fijo solicitado para emissionImage con escala aplicada.
@@ -87,9 +87,9 @@ sub __updateLayout()
   ' Aplica el alto final manteniendo la proporción seleccionada.
   m.emissionImage.height = expectedHeight
   ' Sincroniza tamaño del contenedor superpuesto con la imagen principal.
-  m.episodeMedia.width = m.emissionImage.width
+  'm.episodeMedia.width = m.emissionImage.width
   ' Sincroniza alto del contenedor superpuesto con la imagen principal.
-  m.episodeMedia.height = m.emissionImage.height
+  'm.episodeMedia.height = m.emissionImage.height
   ' Centra playImage dentro de emissionImage en eje X.
   centeredPlayX = cint((m.emissionImage.width - m.playImage.width) / 2)
   ' Centra playImage dentro de emissionImage en eje Y.
@@ -97,11 +97,11 @@ sub __updateLayout()
   ' Aplica traslación final para que playImage quede justo en el centro de la imagen.
   m.playImage.translation = [centeredPlayX, centeredPlayY]
   ' Escala el ancho del bloque de tiempo para mantener consistencia visual.
-  m.episodeTimeGroup.width = cint(scaleValue(100, m.scaleInfo))
+  m.episodeTimeGroup.width = cint(scaleValue(70, m.scaleInfo))
   ' Escala el alto del bloque de tiempo para mantener consistencia visual.
   m.episodeTimeGroup.height = cint(scaleValue(30, m.scaleInfo))
   ' Escala el ancho del texto de duración para mantener consistencia visual.
-  m.episodeTime.width = cint(scaleValue(100, m.scaleInfo))
+  m.episodeTime.width = cint(scaleValue(70, m.scaleInfo))
   ' Escala el alto del texto de duración para mantener consistencia visual.
   m.episodeTime.height = cint(scaleValue(30, m.scaleInfo))
   ' Ubica bloque de tiempo en esquina inferior derecha de emissionImage.
@@ -111,7 +111,8 @@ sub __updateLayout()
   ' Evita valores negativos en resoluciones pequeñas.
   if infoWidth < cint(scaleValue(100, m.scaleInfo)) then infoWidth = cint(scaleValue(100, m.scaleInfo))
   ' Aplica ancho calculado a episodeInfo.
-  m.episodeInfo.width = infoWidth
+  
+  'm.episodeInfo.width = infoWidth
   ' Aplica ancho del texto al título.
   m.episodeTitle.width = infoWidth
   ' Aplica ancho del texto a la sinopsis.
