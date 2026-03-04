@@ -23,6 +23,7 @@
   <script type="text/brightscript" uri="pkg:/source/Services/Channels.brs" />
   <script type="text/brightscript" uri="pkg:/source/Services/ParentalControl.brs" />
   <script type="text/brightscript" uri="pkg:/source/Services/Health.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Services/ActionLogs.brs" />
 
   <interface>
     <!-- Paramentros de Entrada -->

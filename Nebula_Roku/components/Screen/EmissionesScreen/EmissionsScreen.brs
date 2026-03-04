@@ -26,6 +26,10 @@ sub init()
   m.episodesData = []
   ' Guarda episodio seleccionado para reutilizarlo en watchValidate/streaming.
   m.selectedEpisode = invalid
+    ' Guarda referencia del PIN modal para validar control parental antes de reproducir.
+  m.pinDialog = invalid
+  ' Guarda referencia del diálogo de error para informar PIN inválido.
+  m.dialog = invalid
   ' Obtiene scaleInfo global para escalar medidas y posiciones del layout.
   m.scaleInfo = m.global.scaleInfo
   ' Intenta resolver loading desde la escena cuando no viene inyectado.
@@ -107,6 +111,13 @@ sub initData()
   if payload.id = invalid then return
   ' Ejecuta request de episodios con key e id recibidos.
   __getEpisodes(payload.key, payload.id)
+
+  actionLog = getActionLog({
+    actionCode: ActionLogCode().OPEN_PAGE,
+    pageUrl: "Emissions"
+  })
+
+  __saveActionLog(actionLog)
 end sub
 
 ' Captura eventos de teclado para volver a la pantalla anterior.
@@ -213,8 +224,6 @@ sub onEpisodesResponse()
         m.emissionsTitle.text = ""
       end if
     end if
-    ' Limpia request manager al finalizar.
-    m.apiRequestManager = clearApiRequest(m.apiRequestManager)
   else
     ' Obtiene status para decisiones de error.
     statusCode = m.apiRequestManager.statusCode
@@ -233,9 +242,13 @@ sub onEpisodesResponse()
       ' Valida si corresponde logout por sesión expirada.
       if validateLogout(statusCode, m.top) then return
     end if
-    ' Limpia request manager luego de manejar error.
-    m.apiRequestManager = clearApiRequest(m.apiRequestManager)
+    ' Guardar el log de Error
+    actionLog = createLogError(generateErrorDescription(errorResponse), generateErrorPageUrl("getEmissions", "ProgramEmissionsComponent"), getServerErrorStack(errorResponse), m.lastKey, m.lastId)
+    __saveActionLog(actionLog)
   end if
+
+  ' Limpia request manager al finalizar.
+  m.apiRequestManager = clearApiRequest(m.apiRequestManager)
 
   ' Oculta loading al finalizar cualquier resultado.
   if m.top.loading <> invalid then m.top.loading.visible = false
@@ -321,6 +334,25 @@ function __openSelectedEpisode() as boolean
   ' Normaliza redirectId para reutilizar contrato de MainScreen.
   m.selectedEpisode.redirectId = selectedId
 
+  ' Abre modal de PIN cuando el episodio tiene control parental activo.
+  if m.selectedEpisode.parentalControl <> invalid and m.selectedEpisode.parentalControl then
+    ' Crea y muestra el modal de PIN replicando el comportamiento de MainScreen.
+    m.pinDialog = createAndShowPINDialog(m.top, i18n_t(m.global.i18n, "shared.parentalControlModal.title"), "onEpisodePinDialogLoad", [i18n_t(m.global.i18n, "button.ok"), i18n_t(m.global.i18n, "button.cancel")])
+    ' Consume OK porque el flujo continúa desde el callback del modal.
+    return true
+  end if
+
+  ' Ejecuta validación de visualización cuando no requiere PIN.
+  __runEpisodeWatchValidate()
+  ' Consume OK para evitar bubbling mientras se procesa la acción.
+  return true
+end function
+
+' Ejecuta WatchValidate del episodio seleccionado para continuar al player.
+sub __runEpisodeWatchValidate()
+  ' Evita requests cuando todavía no existe episodio seleccionado.
+  if m.selectedEpisode = invalid then return
+
   ' Muestra loading global mientras se resuelve URL de reproducción.
   if m.top.loading <> invalid then m.top.loading.visible = true
   ' Obtiene watchSessionId para ejecutar WatchValidate como en MainScreen.
@@ -349,9 +381,101 @@ function __openSelectedEpisode() as boolean
   runAction(requestId, action, ApiType().CLIENTS_API_URL)
   ' Sincroniza manager local con la acción ejecutada.
   m.apiRequestManager = action.apiRequestManager
-  ' Consume OK para evitar bubbling mientras se procesa la acción.
-  return true
-end function
+end sub
+
+' Se dispara la validación del PIN cargado en el modal de emisiones.
+sub onEpisodePinDialogLoad()
+  ' Obtiene opción/pin ingresado y limpia referencia del modal de PIN.
+  resp = clearPINDialogAndGetOption(m.top, m.pinDialog)
+  ' Limpia referencia para evitar reutilización accidental del modal.
+  m.pinDialog = invalid
+  ' Crea requestId para registrar la validación de PIN en el retry manager.
+  requestId = createRequestId()
+
+  ' Continúa solo cuando el usuario confirma y envía un PIN de 4 dígitos.
+  if resp.option = 0 and resp.pin <> invalid and Len(resp.pin) = 4 then
+    ' Muestra loading global mientras se valida el PIN contra backend.
+    if m.top.loading <> invalid then m.top.loading.visible = true
+    ' Construye acción para endpoint de validación parental por PIN.
+    action = {
+      apiRequestManager: m.apiRequestManager
+      url: urlParentalControlPin(m.apiUrl, resp.pin)
+      method: "GET"
+      responseMethod: "onEpisodeParentalControlResponse"
+      body: invalid
+      token: invalid
+      publicApi: false
+      dataAux: invalid
+      requestId: requestId
+      run: function() as Object
+        m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux)
+        return { success: true, error: invalid }
+      end function
+    }
+
+    ' Ejecuta validación de PIN con soporte de retry global.
+    runAction(requestId, action, ApiType().CLIENTS_API_URL)
+    ' Sincroniza manager local con la acción ejecutada.
+    m.apiRequestManager = action.apiRequestManager
+  end if
+end sub
+
+' Procesa respuesta de validación de PIN para habilitar WatchValidate del episodio.
+sub onEpisodeParentalControlResponse()
+  ' Reintenta flujo de PIN si el manager quedó inválido durante callback.
+  if m.apiRequestManager = invalid then
+    ' Reintenta la lectura del modal de PIN para sostener el flujo.
+    onEpisodePinDialogLoad()
+    ' Corta ejecución actual para esperar siguiente respuesta válida.
+    return
+  end if
+
+  ' Procesa respuesta HTTP exitosa de validación de PIN.
+  if validateStatusCode(m.apiRequestManager.statusCode) then
+    ' Parsea payload para revisar bandera booleana de validación.
+    response = ParseJson(m.apiRequestManager.response)
+    ' Continúa a reproducción cuando backend confirma PIN correcto.
+    if response <> invalid and response.data <> invalid and response.data then
+      ' Remueve acción pendiente al completar validación de PIN.
+      removePendingAction(m.apiRequestManager.requestId)
+      ' Encadena WatchValidate exactamente igual que MainScreen.
+      __runEpisodeWatchValidate()
+      ' Corta ejecución para esperar respuesta de WatchValidate.
+      return
+    else
+      ' Oculta loading al no poder continuar con reproducción.
+      if m.top.loading <> invalid then m.top.loading.visible = false
+      ' Muestra mensaje de PIN inválido replicando MainScreen.
+      m.dialog = createAndShowDialog(m.top, "", i18n_t(m.global.i18n, "shared.parentalControlModal.error.invalid"), "onEpisodePinErrorDialogClosed")
+    end if
+  else
+    ' Captura status de error HTTP para logging y logout.
+    statusCode = m.apiRequestManager.statusCode
+    ' Captura payload de error para diagnóstico.
+    errorResponse = m.apiRequestManager.errorResponse
+    ' Oculta loading al fallar validación de PIN.
+    if m.top.loading <> invalid then m.top.loading.visible = false
+    ' Limpia request manager al finalizar error de validación de PIN.
+    m.apiRequestManager = clearApiRequest(m.apiRequestManager)
+    ' Reutiliza validación global para logout cuando aplica.
+    __validateError(statusCode)
+    ' Loguea fallo de validación de PIN para soporte.
+    printError("Episode ParentalControl:", statusCode.toStr() + " " + errorResponse)
+    ' Corta ejecución tras manejar error HTTP.
+    return
+  end if
+
+  ' Limpia manager al finalizar validación de PIN sin errores HTTP.
+  m.apiRequestManager = clearApiRequest(m.apiRequestManager)
+end sub
+
+' Procesa cierre del diálogo de PIN inválido para liberar el modal.
+sub onEpisodePinErrorDialogClosed()
+  ' Limpia diálogo y descarta la opción porque solo hay botón de cierre.
+  option = clearDialogAndGetOption(m.top, m.dialog)
+  ' Limpia referencia del diálogo luego del cierre.
+  m.dialog = invalid
+end sub
 
 ' Procesa respuesta de WatchValidate para continuar a streaming como MainScreen.
 sub onEpisodeWatchValidateResponse()
@@ -714,4 +838,66 @@ end sub
 sub __validateError(statusCode as integer)
   ' Si el error implica logout, delegamos y detenemos el flujo local.
   if validateLogout(statusCode, m.top) then return 
+end sub
+
+' Guardar el log cuandos se cambia una opción del menú 
+sub __saveActionLog(actionLog as object)
+
+  if beaconTokenExpired() and m.apiUrl <> invalid then
+    requestId = createRequestId()
+
+    action = {
+      apiRequestManager: m.apiLogRequestManager
+      url: urlActionLogsToken(m.apiUrl)
+      method: "GET"
+      responseMethod: "onActionLogTokenResponse"
+      body: invalid
+      token: invalid
+      publicApi: false
+      requestId: requestId
+      dataAux: FormatJson(actionLog)
+      run: function() as Object
+        m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux)
+        return { success: true, error: invalid }
+      end function
+    }
+    
+    runAction(requestId, action, ApiType().LOGS_API_URL)
+    m.apiLogRequestManager = action.apiRequestManager
+  else
+    __sendActionLog(actionLog)
+  end if
+end sub
+
+' Llamar al servicio para guardar el log
+sub __sendActionLog(actionLog as object)
+  beaconToken = getBeaconToken()
+
+  if (beaconToken <> invalid and m.beaconUrl <> invalid)
+    requestId = createRequestId()
+
+    action = {
+      apiRequestManager: m.apiLogRequestManager
+      url: urlActionLogs(m.beaconUrl)
+      method: "POST"
+      responseMethod: "onActionLogResponse"
+      body: FormatJson(actionLog)
+      token: beaconToken
+      publicApi: false
+      dataAux: invalid
+      requestId: requestId
+      run: function() as Object
+        m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux)
+        return { success: true, error: invalid }
+      end function
+    }
+    
+    runAction(requestId, action, ApiType().LOGS_API_URL)
+    m.apiLogRequestManager = action.apiRequestManager
+  end if
+end sub
+
+' Limpiar la llamada del log
+sub onActionLogResponse() 
+  m.apiLogRequestManager = clearApiRequest(m.apiLogRequestManager)
 end sub

@@ -36,7 +36,7 @@
         <!-- Imagen principal del episodio. -->
         <Poster
           id="emissionImage"
-          loadDisplayMode="scaleToZoom"
+          loadDisplayMode="scaleToFin"
           uri="pkg:/images/shared/show_image_empty_1.jpg" />
 
         <!-- Ícono play superpuesto al centro de emissionImage. -->
@@ -53,6 +53,7 @@
           id="episodeTimeGroup"
           width="50"
           height="30"
+          opacity="0.7"
           color="0x000000FF">
           <Label
             id="episodeTime"
@@ -62,6 +63,7 @@
             vertAlign="center"
             width="50"
             height="30"
+            opacity="1"
             font="font:TinySystemFont" />
         </Rectangle>
       </Group>
@@ -91,7 +93,7 @@
           text=""
           wrap="true"
           maxLines="10"
-          font="font:MediumSystemFont" />
+          font="font:SmallSystemFont" />
       </LayoutGroup>
     </LayoutGroup>
   </children>

@@ -159,6 +159,13 @@ sub __resetSearchState()
   ' Reinicio flags de navegación para que la entrada siempre parta limpia.
   m.top.returnFromProgramDetail = false
   m.top.enterFromMainScreen = false
+
+  actionLog = getActionLog({
+    actionCode: ActionLogCode().OPEN_PAGE,
+    pageUrl: "Search"
+  })
+
+  __saveActionLog(actionLog)
 end sub
 
 ' Inicializa foco cuando la pantalla se vuelve activa.
@@ -172,8 +179,13 @@ sub initFocus()
 
     ' Al entrar a Search, limpio input y estado para iniciar siempre desde cero.
     __resetSearchState()
+
+    m.searchKeyboard.unobserveField("textEditBox")
+
     ' Enfoco el input para iniciar una nueva búsqueda.
     m.searchInput.setFocus(true)
+
+    m.searchKeyboard.ObserveField("textEditBox", "onTextBoxManagment")
 
     ' Si Search se abrió desde MainScreen, fuerzo foco en input y refresh de ErrorPage.
     if m.top.enterFromMainScreen then
@@ -230,6 +242,13 @@ sub onSearchInputFocusChanged()
     __restoreSearchInputText()
     __hideKeyboard(true)
   end if
+end sub
+
+' Administrar el uso de los Inputs anidando el input posicionado en pantalla con el que usa internamente el teclado.
+sub onTextBoxManagment()
+  m.searchInput.cursorPosition = m.searchKeyboard.textEditBox.cursorPosition
+  m.searchInput.text = m.searchKeyboard.textEditBox.text
+  m.searchInput.active = m.searchKeyboard.textEditBox.active
 end sub
 
 ' Vincula observers directos al TextEditBox interno del teclado para detectar tipeo.
@@ -817,6 +836,8 @@ sub onSelectItem()
     if m.searchInput <> invalid then m.searchInput.text = m.currentSearchText
     ' Disparo request de búsqueda con el title del elemento seleccionado.
     __getSearchPrograms(m.itemSelected.title)
+
+    m.searchInput.setFocus(true)
     return
   end if
 
@@ -832,6 +853,8 @@ sub onSelectItem()
       m.top.viewAll = FormatJson({ carouselId: m.carousels[m.carouselIndex].id })
       ' Oculto loading al terminar navegación local.
       if m.top.loading <> invalid then m.top.loading.visible = false
+
+      m.searchKeyboard.unobserveField("textEditBox")
       return
     end if
   end if
@@ -1105,6 +1128,7 @@ sub onStreamingsResponse()
       streaming.streamingType = getStreamingType().DEFAULT
       ' Emitimos evento para que MainScene abra Player.
       m.top.streaming = FormatJson(streaming)
+      m.searchKeyboard.unobserveField("textEditBox")
     else
       ' Oculto loading cuando no llega data reproducible.
       if m.top.loading <> invalid then m.top.loading.visible = false
@@ -1286,7 +1310,7 @@ sub __loadSearchCarousels(carousels)
   if m.carouselContainer.getChildCount() > 0 then m.carouselContainer.removeChildrenIndex(m.carouselContainer.getChildCount(), 0)
   ' Posición base del contenedor para el cálculo de desplazamiento vertical al navegar.
   m.carouselContainer.translation = scaleSize([0, -63], m.scaleInfo)
-  m.searchSelectedIndicator.translation = scaleSize([68, 65], m.scaleInfo)
+  m.searchSelectedIndicator.translation = scaleSize([69.5, 65], m.scaleInfo)
   m.carouselXPosition = m.carouselContainer.translation[0]
   m.carouselYPosition = m.carouselContainer.translation[1]
 
@@ -1446,5 +1470,45 @@ sub __configSearchScreen()
   ' Posiciono el carrusel en origen relativo del contenedor.
   m.related.translation = scaleSize([0, 0], m.scaleInfo)
   ' Alineo indicador de selección con la geometría del carrusel.
-  m.selectedIndicator.translation = scaleSize([68, 130], m.scaleInfo)
+  m.selectedIndicator.translation = scaleSize([69.5, 128], m.scaleInfo)
+end sub
+
+' Guardar el log cuandos se cambia una opción del menú 
+sub __saveActionLog(actionLog as object)
+
+  if beaconTokenExpired() and m.apiUrl <> invalid then
+    m.apiLogRequestManager = sendApiRequest(m.apiLogRequestManager, urlActionLogsToken(m.apiUrl), "GET", "onActionLogTokenResponse", invalid, invalid, invalid, false, FormatJson(actionLog))
+  else
+      __sendActionLog(actionLog)
+  end if
+end sub
+
+' Obtener el beacon token
+sub onActionLogTokenResponse() 
+
+  resp = ParseJson(m.apiLogRequestManager.response)
+  actionLog = ParseJson(m.apiLogRequestManager.dataAux)
+
+  setBeaconToken(resp.actionsLogToken)
+
+  now = CreateObject("roDateTime")
+  now.ToLocalTime()
+  m.global.beaconTokenExpiresIn = now.asSeconds() + ((resp.expiresIn - 60) * 1000)
+
+  m.apiLogRequestManager = clearApiRequest(m.apiLogRequestManager) 
+  __sendActionLog(actionLog)
+end sub
+
+' Llamar al servicio para guardar el log
+sub __sendActionLog(actionLog as object)
+  beaconToken = getBeaconToken()
+
+  if (beaconToken <> invalid and m.beaconUrl <> invalid)
+    m.apiLogRequestManager = sendApiRequest(m.apiLogRequestManager, urlActionLogs(m.beaconUrl), "POST", "onActionLogResponse", invalid, FormatJson(actionLog), beaconToken, false)
+  end if
+end sub
+
+' Limpiar la llamada del log
+sub onActionLogResponse() 
+  m.apiLogRequestManager = clearApiRequest(m.apiLogRequestManager)
 end sub

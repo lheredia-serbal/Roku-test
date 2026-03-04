@@ -19,8 +19,10 @@
   <script type="text/brightscript" uri="pkg:/source/Services/Retry.brs" />
   <script type="text/brightscript" uri="pkg:/source/Services/Streamings.brs" />
   <script type="text/brightscript" uri="pkg:/source/Services/Watch.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Services/ActionLogs.brs" />
   <script type="text/brightscript" uri="pkg:/source/StreamingConstants.brs" />
   <script type="text/brightscript" uri="pkg:/source/Storage.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Services/ParentalControl.brs" />
 
   <interface>
     <!-- Nodo loading compartido desde MainScene. -->

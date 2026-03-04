@@ -29,6 +29,13 @@ sub onDataChange()
   __applyLayout()
   ' Disparamos el consumo del servicio de ViewAll.
   __getViewAllCarousel() 
+
+  actionLog = getActionLog({
+    actionCode: ActionLogCode().OPEN_PAGE,
+    pageUrl: "View All"
+  })
+
+  __saveActionLog(actionLog)
 end sub
 
 ' Maneja la lógica de foco para la pantalla.
@@ -230,6 +237,11 @@ sub onViewAllCarouselResponse()
       ' Limpiamos acción pendiente no reintentable.
       removePendingAction(m.apiRequestManager.requestId) 
       printError("ViewAllCarousel:", error)
+
+      ' Guardar el log de Error
+      actionLog = createLogError(generateErrorDescription(error), generateErrorPageUrl("getCarousel", "ViewAllComponent"), getServerErrorStack(error))
+      __saveActionLog(actionLog)
+
       ' Validamos si el error requiere forzar logout.
       if validateLogout(statusCode, m.top) then 
         m.apiRequestManager = clearApiRequest(m.apiRequestManager)
@@ -685,4 +697,44 @@ end sub
 sub __validateError(statusCode as integer)
   ' Si el error implica logout, delegamos y detenemos el flujo local.
   if validateLogout(statusCode, m.top) then return 
+end sub
+
+' Guardar el log cuandos se cambia una opción del menú 
+sub __saveActionLog(actionLog as object)
+
+  if beaconTokenExpired() and m.apiUrl <> invalid then
+    m.apiLogRequestManager = sendApiRequest(m.apiLogRequestManager, urlActionLogsToken(m.apiUrl), "GET", "onActionLogTokenResponse", invalid, invalid, invalid, false, FormatJson(actionLog))
+  else
+      __sendActionLog(actionLog)
+  end if
+end sub
+
+' Obtener el beacon token
+sub onActionLogTokenResponse() 
+
+  resp = ParseJson(m.apiLogRequestManager.response)
+  actionLog = ParseJson(m.apiLogRequestManager.dataAux)
+
+  setBeaconToken(resp.actionsLogToken)
+
+  now = CreateObject("roDateTime")
+  now.ToLocalTime()
+  m.global.beaconTokenExpiresIn = now.asSeconds() + ((resp.expiresIn - 60) * 1000)
+
+  m.apiLogRequestManager = clearApiRequest(m.apiLogRequestManager) 
+  __sendActionLog(actionLog)
+end sub
+
+' Llamar al servicio para guardar el log
+sub __sendActionLog(actionLog as object)
+  beaconToken = getBeaconToken()
+
+  if (beaconToken <> invalid and m.beaconUrl <> invalid)
+    m.apiLogRequestManager = sendApiRequest(m.apiLogRequestManager, urlActionLogs(m.beaconUrl), "POST", "onActionLogResponse", invalid, FormatJson(actionLog), beaconToken, false)
+  end if
+end sub
+
+' Limpiar la llamada del log
+sub onActionLogResponse() 
+  m.apiLogRequestManager = clearApiRequest(m.apiLogRequestManager)
 end sub
