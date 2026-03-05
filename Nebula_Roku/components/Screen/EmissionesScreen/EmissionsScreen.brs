@@ -14,6 +14,10 @@ sub init()
   m.episodesViewport = m.top.findNode("episodesViewport")
   ' Guarda referencia del indicador de selección fijo.
   m.selectedIndicator = m.top.findNode("selectedIndicator")
+  ' Cachea el ancho fijo del indicador para reutilizarlo al recalcular su alto dinámico.
+  m.selectedIndicatorWidth = scaleValue(1100, m.scaleInfo)
+  ' Cachea alto fallback del indicador para usarlo cuando no se pueda medir el EpisodeItem.
+  m.selectedIndicatorFallbackHeight = scaleValue(237, m.scaleInfo)
   m.episodesMoveAnimation = m.top.findNode("episodesMoveAnimation")
   m.episodesMoveInterpolator = m.top.findNode("episodesMoveInterpolator")
   ' Índice lógico del episodio actualmente enfocado por la selección.
@@ -81,9 +85,14 @@ if m.episodesViewport <> invalid and m.episodesList <> invalid then
     __setEpisodesListTranslation([0, 0], false)
   end if
 
-  if m.selectedIndicator <> invalid then
+if m.selectedIndicator <> invalid then
     m.selectedIndicator.translation = scaleSize([80, 100], m.scaleInfo)
-    m.selectedIndicator.size = [scaleValue(1100, m.scaleInfo), scaleValue(237, m.scaleInfo)]
+    ' Actualiza ancho cacheado con el valor escalado vigente para mantener consistencia visual.
+    m.selectedIndicatorWidth = scaleValue(1100, m.scaleInfo)
+    ' Actualiza alto fallback cacheado con el valor escalado vigente para mantener consistencia visual.
+    m.selectedIndicatorFallbackHeight = scaleValue(237, m.scaleInfo)
+    ' Mantiene tamaño inicial del indicador antes de poder medir el EpisodeItem enfocado.
+    m.selectedIndicator.size = [m.selectedIndicatorWidth, m.selectedIndicatorFallbackHeight]
   end if
 end sub
 
@@ -726,11 +735,58 @@ sub __updateSelection(newIndex as integer)
   ' Mueve la lista verticalmente mientras el SelectionBox permanece fijo.
   targetTranslation = [baseTranslation[0], baseTranslation[1] - (m.selectedEpisodeIndex * stepY) + (m.selectedEpisodeIndex * 0.5)]
   animateTransition = previousIndex <> newIndex
+    ' Sincroniza el alto del indicador con el EpisodeItem actualmente enfocado.
+  __syncSelectedIndicatorSize()
   __setEpisodesListTranslation(targetTranslation, animateTransition)
 
   ' Muestra el marco de selección al existir un episodio activo.
   if m.selectedIndicator <> invalid then m.selectedIndicator.visible = true
 end sub
+
+' Sincroniza el tamaño del SelectionBox para igualar el alto del EpisodeItem enfocado.
+sub __syncSelectedIndicatorSize()
+  ' Evita cálculos cuando el indicador aún no está disponible en la pantalla.
+  if m.selectedIndicator = invalid then return
+  ' Usa ancho cacheado como base para conservar el diseño horizontal del marco.
+  indicatorWidth = m.selectedIndicatorWidth
+  ' Usa alto fallback como base en caso de que no se pueda medir el EpisodeItem activo.
+  indicatorHeight = m.selectedIndicatorFallbackHeight
+  ' Obtiene referencia del EpisodeItem correspondiente al índice actualmente seleccionado.
+  selectedEpisodeItem = __getEpisodeItemByIndex(m.selectedEpisodeIndex)
+  ' Intenta medir alto real solo cuando el EpisodeItem enfocado existe.
+  if selectedEpisodeItem <> invalid then
+    ' Lee el bounding rect del EpisodeItem para capturar su altura dinámica actual.
+    selectedEpisodeBounds = selectedEpisodeItem.boundingRect()
+    ' Reemplaza el alto fallback solo cuando la altura medida es válida y mayor a cero.
+    if selectedEpisodeBounds <> invalid and selectedEpisodeBounds.height <> invalid and cint(selectedEpisodeBounds.height) > 0 then indicatorHeight = cint(selectedEpisodeBounds.height)
+  end if
+  ' Aplica tamaño final al SelectionBox usando ancho fijo y alto dinámico.
+  m.selectedIndicator.size = [indicatorWidth, indicatorHeight]
+end sub
+
+' Obtiene el EpisodeItem visual asociado al índice lógico de selección.
+function __getEpisodeItemByIndex(targetIndex as integer) as dynamic
+  ' Evita búsqueda cuando no existe lista renderizada en pantalla.
+  if m.episodesList = invalid then return invalid
+  ' Evita búsqueda cuando el índice pedido es negativo.
+  if targetIndex < 0 then return invalid
+  ' Inicia contador de EpisodeItem para mapear índice lógico a hijos reales con separadores.
+  currentEpisodeIndex = 0
+  ' Recorre todos los nodos hijos porque la lista también contiene separadores.
+  for i = 0 to m.episodesList.getChildCount() - 1
+    ' Obtiene el hijo actual para evaluar si corresponde a un EpisodeItem.
+    child = m.episodesList.getChild(i)
+    ' Continúa solo cuando el hijo es un EpisodeItem válido.
+    if child <> invalid and child.subtype() = "EpisodeItem" then
+      ' Retorna el EpisodeItem cuando coincide con el índice lógico solicitado.
+      if currentEpisodeIndex = targetIndex then return child
+      ' Avanza índice lógico únicamente al pasar por un EpisodeItem.
+      currentEpisodeIndex = currentEpisodeIndex + 1
+    end if
+  end for
+  ' Retorna invalid cuando no se encontró EpisodeItem para el índice solicitado.
+  return invalid
+end function
 
 ' Aplica translation a la lista de episodios con animación opcional.
 sub __setEpisodesListTranslation(targetTranslation as object, animate as boolean)

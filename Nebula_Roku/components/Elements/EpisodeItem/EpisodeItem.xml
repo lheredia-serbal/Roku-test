@@ -5,6 +5,7 @@
   xsi:noNamespaceSchemaLocation="https://devtools.web.roku.com/schema/RokuSceneGraph.xsd">
 
   <script type="text/brightscript" uri="EpisodeItem.brs" />
+
   <script type="text/brightscript" uri="pkg:/source/Utils.brs" />
 
   <interface>
@@ -53,7 +54,6 @@
           id="episodeTimeGroup"
           width="50"
           height="30"
-          opacity="0.7"
           color="0x000000FF">
           <Label
             id="episodeTime"
@@ -63,7 +63,6 @@
             vertAlign="center"
             width="50"
             height="30"
-            opacity="1"
             font="font:TinySystemFont" />
         </Rectangle>
       </Group>

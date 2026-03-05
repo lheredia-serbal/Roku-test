@@ -20,6 +20,7 @@ sub init()
   m.episodeSynopsis = m.top.findNode("episodeSynopsis")
   ' Obtiene escala global para dimensionar como el resto de la app.
   m.scaleInfo = m.global.scaleInfo
+
   ' Ejecuta primera sincronización usando los campos de entrada declarados.
   onEpisodeInputChanged()
   ' Ajusta layout inicial del item.
@@ -44,7 +45,9 @@ sub onEpisodeInputChanged()
   if m.top.image <> invalid then m.emissionImage.uri = getImageUrl(m.top.image)
   ' Muestra u oculta playImage según el flag play recibido.
   m.playImage.visible = m.top.play
-  ' Recalcula layout para respetar altura de imagen cargada.
+  ' Fuerza opacidad completa del texto de duración para evitar herencias visuales.
+  m.episodeTime.opacity = 1
+  ' Recalcula layout para respetar altura de imágen cargada.
   __updateLayout()
 end sub
 
@@ -52,63 +55,42 @@ end sub
 sub __updateLayout()
   ' Calcula ancho de imagen usando scale para mantener consistencia global.
   scaledImageWidth = cint(scaleValue(180, m.scaleInfo))
-  ' Fuerza ancho fijo solicitado para emissionImage con escala aplicada.
   m.emissionImage.width = scaledImageWidth
-  ' Define ancho base para relación de aspecto vertical (3:4).
+  ' Define ancho y alto base para relación de aspecto vertical (3:4).
   aspectWidth = 3
-  ' Define alto base para relación de aspecto vertical (3:4).
   aspectHeight = 4
-  ' Lee ancho original enviado en el objeto image cuando existe.
+
+  ' Lee ancho y alto original enviado en el objeto image cuando existe.
   sourceWidth = invalid
-  ' Lee alto original enviado en el objeto image cuando existe.
   sourceHeight = invalid
-  ' Intenta usar tamaño original si llega dentro del payload image.
-  if m.top.image <> invalid then
-    ' Toma image.width cuando está disponible.
-    if m.top.image.width <> invalid then sourceWidth = val(m.top.image.width.toStr())
-    ' Toma image.height cuando está disponible.
-    if m.top.image.height <> invalid then sourceHeight = val(m.top.image.height.toStr())
-  end if
-  ' Reemplaza relación base con la relación real solo si ya es vertical.
-  if sourceWidth <> invalid and sourceHeight <> invalid and sourceWidth > 0 and sourceHeight > sourceWidth then
-    ' Usa el ancho real para conservar la proporción vertical de origen.
-    aspectWidth = sourceWidth
-    ' Usa el alto real para conservar la proporción vertical de origen.
-    aspectHeight = sourceHeight
-  end if
+
   ' Calcula alto esperado a partir del ancho fijo y la proporción elegida.
   expectedHeight = cint((scaledImageWidth * aspectHeight) / aspectWidth)
-  ' Garantiza que la imagen quede más alta que ancha.
+  ' Garantiza que la imágen quede más alta que ancha.
   if expectedHeight <= m.emissionImage.width then expectedHeight = m.emissionImage.width + 1
   ' Aplica el alto final manteniendo la proporción seleccionada.
   m.emissionImage.height = expectedHeight
-  ' Sincroniza tamaño del contenedor superpuesto con la imagen principal.
-  'm.episodeMedia.width = m.emissionImage.width
-  ' Sincroniza alto del contenedor superpuesto con la imagen principal.
-  'm.episodeMedia.height = m.emissionImage.height
-  ' Centra playImage dentro de emissionImage en eje X.
-  centeredPlayX = cint((m.emissionImage.width - m.playImage.width) / 2)
-  ' Centra playImage dentro de emissionImage en eje Y.
-  centeredPlayY = cint((m.emissionImage.height - m.playImage.height) / 2)
+
   ' Aplica traslación final para que playImage quede justo en el centro de la imagen.
+  centeredPlayX = cint((m.emissionImage.width - m.playImage.width) / 2)
+  centeredPlayY = cint((m.emissionImage.height - m.playImage.height) / 2)
   m.playImage.translation = [centeredPlayX, centeredPlayY]
-  ' Escala el ancho del bloque de tiempo para mantener consistencia visual.
+
+  ' Setear el ancho y alto de los componentes
   m.episodeTimeGroup.width = cint(scaleValue(70, m.scaleInfo))
-  ' Escala el alto del bloque de tiempo para mantener consistencia visual.
   m.episodeTimeGroup.height = cint(scaleValue(30, m.scaleInfo))
   ' Escala el ancho del texto de duración para mantener consistencia visual.
   m.episodeTime.width = cint(scaleValue(70, m.scaleInfo))
   ' Escala el alto del texto de duración para mantener consistencia visual.
   m.episodeTime.height = cint(scaleValue(30, m.scaleInfo))
+  ' Reafirma opacidad completa del texto de duración durante cada actualización de layout.
+  m.episodeTime.opacity = 1
   ' Ubica bloque de tiempo en esquina inferior derecha de emissionImage.
-  m.episodeTimeGroup.translation = [m.emissionImage.width - m.episodeTimeGroup.width, m.emissionImage.height - m.episodeTimeGroup.height]
+  m.episodeTimeGroup.translation = [m.emissionImage.width - cint(scaleValue(70, m.scaleInfo)), m.emissionImage.height - cint(scaleValue(30, m.scaleInfo))]
   ' Ajusta ancho disponible para columna de texto.
   infoWidth = m.top.widthContainer - m.emissionImage.width - cint(scaleValue(450, m.scaleInfo))
   ' Evita valores negativos en resoluciones pequeñas.
   if infoWidth < cint(scaleValue(100, m.scaleInfo)) then infoWidth = cint(scaleValue(100, m.scaleInfo))
-  ' Aplica ancho calculado a episodeInfo.
-  
-  'm.episodeInfo.width = infoWidth
   ' Aplica ancho del texto al título.
   m.episodeTitle.width = infoWidth
   ' Aplica ancho del texto a la sinopsis.
