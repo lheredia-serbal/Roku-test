@@ -9,12 +9,14 @@ sub init()
     ' Referencia a la capa oscura que mejora legibilidad sobre la imagen.
     m.overlay = m.top.findNode("overlay")
 
-    ' Color por defecto para dots inactivos (gris claro).
-    m.inactiveDotColor = "#CFCFCF"
-    ' Color para dot activo (blanco).
-    m.activeDotColor = "#FFFFFF"
+    ' Opacidad por defecto para dots inactivos.
+    m.inactiveDotOpacity = 0.45
+    ' Opacidad para dot activo.
+    m.activeDotOpacity = 1.0
     ' Tamaño de cada dot.
     m.dotSize = 12
+
+    m.scaleInfo = m.global.scaleInfo
 
     ' Ajusta layout base a pantalla completa y dibuja contenido inicial.
     updateLayoutForResolution()
@@ -88,9 +90,13 @@ sub updateLayoutForResolution()
     ' Ajusta ancho máximo útil del título.
     m.newsTitle.width = int(screenWidth * 0.72)
     ' Mantiene un alto cómodo para hasta 3 líneas grandes.
-    m.newsTitle.height = int(screenHeight * 0.30)
-    ' Posiciona el título abajo-izquierda con margen dentro del bloque de noticias.
-    m.newsTitle.translation = [int(screenWidth * 0.04), int(screenHeight * 0.62)]
+    ' Incrementa el alto disponible para acompañar un título visualmente más grande.
+    m.newsTitle.height = int(screenHeight * 0.36)
+    ' Posiciona el título más arriba para mejorar la composición del hero de noticias.
+    ' Desplaza el título hacia la derecha sin centrarlo para mantener jerarquía visual con el menú.
+    m.newsTitle.translation = [int(screenWidth * 0.15), int(screenHeight * 0.2)]
+    ' Escala el label para aumentar el tamaño percibido del título del NewsItem.
+    m.newsTitle.scale = [1.7, 1.7]
 
     ' Centra los dots cerca del borde inferior del bloque de noticias.
     m.dotsContainer.translation = [int(screenWidth * 0.50), int(screenHeight * 0.92)]
@@ -141,20 +147,22 @@ sub renderDots()
 
     ' Recorre cada posición de item para crear su dot.
     for i = 0 to totalItems - 1
-        ' Crea un rectángulo cuadrado como dot.
-        dot = createObject("roSGNode", "Rectangle")
+        ' Crea un poster circular como dot reutilizando el asset redondo compartido.
+        dot = createObject("roSGNode", "Poster")
         ' Define ancho del dot.
         dot.width = m.dotSize
         ' Define alto del dot.
         dot.height = m.dotSize
+        ' Usa un asset circular para garantizar forma redonda en todos los dispositivos.
+        dot.uri = "pkg:/images/shared/ball.png"
 
-        ' Pinta de blanco el dot activo y gris claro los demás.
+        ' Ajusta opacidad para diferenciar el dot activo de los inactivos.
         if i = m.top.currentIndex then
-            ' Color activo.
-            dot.color = m.activeDotColor
+            ' Opacidad activa.
+            dot.opacity = m.activeDotOpacity
         else
-            ' Color inactivo.
-            dot.color = m.inactiveDotColor
+            ' Opacidad inactiva.
+            dot.opacity = m.inactiveDotOpacity
         end if
 
         ' Agrega el dot al contenedor horizontal.

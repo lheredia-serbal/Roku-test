@@ -118,6 +118,13 @@
         uri="pkg:/images/client/info_gradient.png" />
     </Group>
 
+     <!-- Sombreado difuminado del borde izquierdo para reforzar la separación visual del menú. -->
+    <Poster
+      id="leftBlurShade"
+      translation="[0,0]"
+      loadDisplayMode="scaleToFill"
+      uri="pkg:/images/shared/menu_contracted.png" />
+
     <!--  Menu contairner -->
     <Menu id="myMenu" />
 

@@ -7,6 +7,9 @@ sub init()
   ' Referencia al contenedor absoluto para el carrusel de noticias.
   m.newsContainer = m.top.findNode("newsContainer")
 
+  ' Referencia al sombreado difuminado izquierdo que se dibuja detrás del menú.
+  m.leftBlurShade = m.top.findNode("leftBlurShade")
+
   'carousel
   m.carouselContainer = m.top.findNode("carouselContainer")
   m.selectedIndicator = m.top.findNode("selectedIndicator")
@@ -40,6 +43,19 @@ function onKeyEvent(key as string, press as boolean) as boolean
   end if
 
   handled = false
+    ' Si el foco está en NewsItem, permite bajar al primer carrusel navegable.
+  if key = KeyButtons().DOWN and press and __isNewsFocused() then
+    __focusFirstCarouselFromNews()
+    handled = true
+  else if key = KeyButtons().UP and press and m.carouselContainer <> invalid and m.carouselContainer.isInFocusChain() and m.carouselContainer.focusedChild <> invalid and m.carouselContainer.focusedChild.focusUp = m.newsCarouselItem then
+    ' Si el carrusel actual tiene como foco superior a NewsItem, vuelve al hero de noticias.
+    m.newsCarouselItem.setFocus(true)
+    __updateOverlayVisibilityByFocus()
+    handled = true
+  end if
+
+  if handled then return true
+
   if key = KeyButtons().UP
     if press and m.carouselContainer <> invalid and m.carouselContainer.isInFocusChain() and m.carouselContainer.focusedChild <> invalid and m.carouselContainer.focusedChild.focusUp <> invalid then
       focusItem = m.carouselContainer.focusedChild.focusUp.findNode("carouselList")
@@ -108,6 +124,15 @@ sub initData()
     
     m.groupOpacityForMenu.clippingRect = [0, 0, safeX + scaleValue(60, m.scaleInfo), height]
 
+    ' Define un ancho fijo de 400 escalado para el sombreado lateral izquierdo.
+    leftShadeWidth = scaleValue(800, m.scaleInfo)
+    ' Aplica el ancho calculado al sombreado difuminado.
+    m.leftBlurShade.width = leftShadeWidth
+    ' Extiende el sombreado al 100% de alto de pantalla.
+    m.leftBlurShade.height = height
+    ' Posiciona el sombreado en el borde izquierdo de la pantalla.
+    m.leftBlurShade.translation = [0, 0]
+
     logoWidth = scaleValue(200, m.scaleInfo)
     logoHeight = scaleValue(100, m.scaleInfo)
     m.logo.width = logoWidth
@@ -142,7 +167,13 @@ sub initFocus()
   if m.top.onFocus then 
     __applyTranslations()
     __validateAutoUpgradeTime()
-    m.carouselContainer.setFocus(true)
+     ' Prioriza foco inicial en NewsItem cuando existe; si no, mantiene foco en carouseles.
+    if m.newsCarouselItem <> invalid then
+      m.newsCarouselItem.setFocus(true)
+    else
+      m.carouselContainer.setFocus(true)
+    end if
+    __updateOverlayVisibilityByFocus()
   end if 
   if m.dialog <> invalid and m.dialog.visible then return
   if m.top.onFocus and m.lastFocus <> invalid then
@@ -203,6 +234,8 @@ sub populateCarousels(data as Object)
       ' Crea una instancia del componente NewsItem para representar el carrusel tipo noticias.
       ' Crea el NewsItem dentro de un contenedor independiente para mantenerlo en (0,0).
       newsCarouselItem = m.newsContainer.createChild("NewsItem")
+      ' Guarda referencia persistente al NewsItem para orquestar foco y visibilidad de overlays.
+      m.newsCarouselItem = newsCarouselItem
       ' Asigna el conjunto de items de noticias recibido del servidor.
       newsCarouselItem.items = carouselData.items
       ' Setea un título fallback por si los items no traen title.
@@ -263,12 +296,29 @@ sub populateCarousels(data as Object)
       firstList = firstCarousel.findNode("carouselList")
       ' Si encontró una lista válida y no hay diálogo de auto-upgrade, fija foco e indicador.
       if firstList <> invalid and m.autoUpgradeDialogOpen <> true then
-        ' Aplica el foco al primer carrusel navegable.
-        firstList.setFocus(true)
-        ' Ajusta el tamaño del indicador según el carrusel enfocado.
-        m.selectedIndicator.size = firstCarousel.size
-        ' Muestra el indicador visual de selección.
-        m.selectedIndicator.visible = true
+        
+        ' Conecta navegación: desde NewsItem se baja al primer carrusel y viceversa.
+        if m.newsCarouselItem <> invalid then
+          ' Permite bajar desde NewsItem al primer carrusel.
+          m.newsCarouselItem.focusDown = firstCarousel
+          ' Permite subir desde el primer carrusel al NewsItem.
+          firstCarousel.focusUp = m.newsCarouselItem
+        end if
+
+        ' Si existe NewsItem, prioriza su foco inicial al entrar en MainScreen.
+        if m.newsCarouselItem <> invalid then
+          m.newsCarouselItem.setFocus(true)
+          __updateOverlayVisibilityByFocus()
+        else
+          ' Aplica el foco al primer carrusel navegable cuando no hay NewsItem.
+          firstList.setFocus(true)
+          ' Ajusta el tamaño del indicador según el carrusel enfocado.
+          m.selectedIndicator.size = firstCarousel.size
+          ' Muestra el indicador visual de selección.
+          m.selectedIndicator.visible = true
+          __updateOverlayVisibilityByFocus()
+        end if
+
         ' Corta la búsqueda al encontrar el primer carrusel navegable.
         exit for
       end if
@@ -418,6 +468,7 @@ sub onFocusItem()
       m.programTimer.ObserveField("fire","getProgramInfo")
       m.programTimer.control = "start"
     end if
+    __updateOverlayVisibilityByFocus()
   end if
 end sub
 
@@ -1172,6 +1223,8 @@ end sub
 sub __clearContentView()
   m.program = invalid
   m.withoutContentLayoutGroup.visible = false
+  ' Reinicia referencia al NewsItem para evitar foco a nodos eliminados.
+  m.newsCarouselItem = invalid
 
   ' Limpia el contenedor dedicado de noticias para recrearlo desde cero.
   while m.newsContainer <> invalid and m.newsContainer.getChildCount() > 0
@@ -1234,11 +1287,51 @@ sub __focusCarousels()
   else
     m.carouselContainer.setFocus(true)
   end if
+  __updateOverlayVisibilityByFocus()
+end sub
+
+' Indica si el foco actual está en el carrusel hero de noticias.
+function __isNewsFocused() as boolean
+  ' Valida que exista referencia al NewsItem.
+  if m.newsCarouselItem = invalid then return false
+  ' Retorna true cuando NewsItem participa en la cadena de foco activa.
+  return m.newsCarouselItem.isInFocusChain()
+end function
+
+' Mueve el foco desde NewsItem al primer carrusel navegable cuando el usuario presiona DOWN.
+sub __focusFirstCarouselFromNews()
+  ' Recorre carruseles para ubicar el primer carouselList habilitado.
+  if m.carouselContainer = invalid then return
+  for i = 0 to m.carouselContainer.getChildCount() - 1
+    carouselNode = m.carouselContainer.getChild(i)
+    carouselList = carouselNode.findNode("carouselList")
+    if carouselList <> invalid then
+      carouselList.setFocus(true)
+      m.selectedIndicator.size = carouselNode.size
+      __updateOverlayVisibilityByFocus()
+      return
+    end if
+  end for
+end sub
+
+' Alterna visibilidad de ProgramInfo y SelectedIndicator según foco en NewsItem.
+sub __updateOverlayVisibilityByFocus()
+  ' Si el foco está en NewsItem, se ocultan overlays superiores del listado.
+  if __isNewsFocused() then
+    m.programInfo.visible = false
+    m.selectedIndicator.visible = false
+  else
+    ' Si el foco salió de NewsItem, vuelve a mostrar overlays contextuales.
+    m.programInfo.visible = true
+    if m.carouselContainer <> invalid and m.carouselContainer.focusedChild <> invalid then
+      m.selectedIndicator.visible = true
+    end if
+  end if
 end sub
 
 ' Actualiza el indicador de seleccion segun el carrusel enfocado
 sub __updateSelectedIndicator()
-  if m.carouselContainer <> invalid and m.carouselContainer.focusedChild <> invalid then
+  if m.carouselContainer <> invalid and m.carouselContainer.focusedChild <> invalid and not __isNewsFocused() then
     m.selectedIndicator.size = m.carouselContainer.focusedChild.size
     m.selectedIndicator.visible = true
   end if

@@ -3,6 +3,7 @@
 <component
     name="NewsItem"
     extends="Group"
+    focusable="true"
     xsi:noNamespaceSchemaLocation="https://devtools.web.roku.com/schema/RokuSceneGraph.xsd">
 
     <!-- Script de lógica para el slider de noticias. -->
