@@ -65,7 +65,7 @@ sub init()
   ' Defino una altura por defecto para el teclado si no hay medidas reales aún.
   m.keyboardDefaultHeight = scaleValue(320, m.scaleInfo)
 
-   m.relatedContainer.translation = scaleSize([0, 25], m.scaleInfo)
+  m.relatedContainer.translation = scaleSize([0, 25], m.scaleInfo)
 
   ' Posiciono inicialmente el teclado fuera de pantalla (debajo).
   m.searchKeyboard.translation = [0, m.scaleInfo.height]
@@ -76,7 +76,7 @@ sub init()
   ' Evito que el teclado dibuje su propio TextEditBox interno.
   m.searchKeyboard.showTextEditBox = false
 
-' Configuro fondo opaco para que el teclado no se vea transparente sobre carruseles.
+  ' Configuro fondo opaco para que el teclado no se vea transparente sobre carruseles.
   if m.searchKeyboardBackground <> invalid then
     m.searchKeyboardBackground.width = m.scaleInfo.width
     m.searchKeyboardBackground.height = m.keyboardDefaultHeight
@@ -92,19 +92,8 @@ sub init()
   ' Observo cuando vence el debounce para disparar el servicio de búsqueda.
   if m.searchDebounceTimer <> invalid then m.searchDebounceTimer.observeField("fire", "onSearchDebounceTimerFire")
 
-  ' Indico que la primera vez que el input tome foco no debe abrir teclado automáticamente.
-  m.skipKeyboardOnFirstFocus = true
-
-  ' Inicializo bandera para evitar recargar ErrorPage múltiples veces innecesariamente.
-  m.hasLoadedErrorPage = false
-  ' Cacheo URL base de API para flujos de detalle/streaming.
-  if m.apiUrl = invalid then m.apiUrl = getConfigVariable(m.global.configVariablesKeys.API_URL)
-  ' Mantengo referencia al último carrusel enfocado para restaurar UX tras errores.
-  m.lastFocusedNode = invalid
-  ' Cacheo URL base de API para flujos de detalle/streaming.
-  if m.apiUrl = invalid then m.apiUrl = getConfigVariable(m.global.configVariablesKeys.API_URL)
-  ' Mantengo referencia al último carrusel enfocado para restaurar UX tras errores.
-  m.lastFocusedNode = invalid
+  ' Inicializo bandera para evitar recargar el carrusel de recomendados múltiples veces innecesariamente.
+  m.hasLoadedRecommended = false
   ' Cacheo URL base de API para flujos de detalle/streaming.
   if m.apiUrl = invalid then m.apiUrl = getConfigVariable(m.global.configVariablesKeys.API_URL)
   ' Mantengo referencia al último carrusel enfocado para restaurar UX tras errores.
@@ -141,13 +130,15 @@ sub __resetSearchState()
 
   ' Reinicio variable persistida de texto de búsqueda.
   m.currentSearchText = ""
-  ' Permito recargar ErrorPage en cada ingreso al componente.
-  m.hasLoadedErrorPage = false
+  ' Permito recargar recomendados en cada ingreso al componente.
+  m.hasLoadedRecommended = false
 
   ' Limpio estado visual de resultados e indicadores.
   __showSearchNoResults(false)
-  __loadRelatedCarousel(invalid)
+  __loadRecommendedCarousel(invalid)
   __loadSearchCarousels(invalid)
+
+  ' Oculto los selectores
   if m.selectedIndicator <> invalid then m.selectedIndicator.visible = false
   if m.searchSelectedIndicator <> invalid then m.searchSelectedIndicator.visible = false
 
@@ -158,7 +149,13 @@ sub __resetSearchState()
 
   ' Reinicio flags de navegación para que la entrada siempre parta limpia.
   m.top.returnFromProgramDetail = false
-  m.top.enterFromMainScreen = false
+
+  ' Guardo el log para indicar que el usuario ingreso a la pantalla de búsqueda
+  actionLog = getActionLog({
+    actionCode: ActionLogCode().OPEN_PAGE,
+    pageUrl: "Search"
+  })
+  __saveActionLog(actionLog)
 end sub
 
 ' Inicializa foco cuando la pantalla se vuelve activa.
@@ -172,18 +169,26 @@ sub initFocus()
 
     ' Al entrar a Search, limpio input y estado para iniciar siempre desde cero.
     __resetSearchState()
+
+    m.searchKeyboard.unobserveField("textEditBox")
+
     ' Enfoco el input para iniciar una nueva búsqueda.
     m.searchInput.setFocus(true)
 
-    ' Si Search se abrió desde MainScreen, fuerzo foco en input y refresh de ErrorPage.
+    ' Agrego el observable para leer las teclas ingresadas en el teclado
+    m.searchKeyboard.ObserveField("textEditBox", "onTextBoxManagment")
+
+    ' Si Search se abrió desde MainScreen, fuerzo foco en input y refrescar el carrusel de recomendados.
     if m.top.enterFromMainScreen then
       m.top.enterFromMainScreen = false
       m.top.returnFromProgramDetail = false
-      m.hasLoadedErrorPage = false
+      m.hasLoadedRecommended = false
       m.searchInput.setFocus(true)
-      __loadRelatedCarousel(invalid)
+      __loadRecommendedCarousel(invalid)
       __loadSearchCarousels(invalid)
-      __getErrorPage()
+      __getRecommendedCarousel()
+
+      __showKeyboard()
       return
     end if
 
@@ -191,15 +196,7 @@ sub initFocus()
     if m.top.returnFromProgramDetail then
       m.top.returnFromProgramDetail = false
       __restoreFocusFromProgramDetail()
-    else
-      ' Enfoco el input para disparar la lógica de teclado.
-      m.searchInput.setFocus(true)
     end if
-
-    ' Disparo la carga del endpoint ErrorPage al entrar en la pantalla.
-    __loadRelatedCarousel(invalid)
-      __loadSearchCarousels(invalid)
-    __getErrorPage()
   else
     ' Si pierde foco, detengo debounce pendiente para evitar búsquedas fuera de pantalla.
     if m.searchDebounceTimer <> invalid then m.searchDebounceTimer.control = "stop"
@@ -214,22 +211,23 @@ sub onSearchInputFocusChanged()
   ' Si el input no existe, no hago nada.
   if m.searchInput = invalid then return
 
- ' Si el input tiene foco, muestro teclado (excepto en el primer ingreso).
+  ' Si el input tiene foco, muestro teclado (excepto en el primer ingreso).
   if m.searchInput.hasFocus() then
-    ' En el primer foco inicial solo dejo foco en input sin desplegar teclado.
-    if m.skipKeyboardOnFirstFocus then
-      ' Consumo esta excepción para que aplique solo una vez por ciclo de vida del componente.
-      m.skipKeyboardOnFirstFocus = false
-      ' Salgo sin mostrar teclado en el primer ingreso.
-      return
-    end if
     ' Muestro teclado animado.
     __showKeyboard()
   else
-    ' Si el input pierde foco, restauro texto persistido y oculto teclado animado.
-    __restoreSearchInputText()
+    ' Oculto teclado animado.
     __hideKeyboard(true)
   end if
+end sub
+
+' Administrar el uso de los Inputs anidando el input posicionado en pantalla con el que usa internamente el teclado.
+sub onTextBoxManagment()
+  m.searchInput.cursorPosition = m.searchKeyboard.textEditBox.cursorPosition
+  m.searchInput.text = m.searchKeyboard.textEditBox.text
+  m.searchInput.active = m.searchKeyboard.textEditBox.active
+
+  m.currentSearchText = m.searchInput.text
 end sub
 
 ' Vincula observers directos al TextEditBox interno del teclado para detectar tipeo.
@@ -246,25 +244,10 @@ end sub
 sub onKeyboardTextChanged()
   ' Si falta teclado o input, salgo.
   if m.searchKeyboard = invalid or m.searchInput = invalid then return
-    ' Si aún no existe el TextEditBox interno, no hay nada para sincronizar.
+  ' Si aún no existe el TextEditBox interno, no hay nada para sincronizar.
   if m.searchKeyboard.textEditBox = invalid then return
   ' Solo sincronizo cambios cuando el foco está realmente dentro del teclado.
   if not m.searchKeyboard.isInFocusChain() then return
-
-
-  ' Copio la posición de cursor desde el TextEditBox interno del teclado.
-  m.searchInput.cursorPosition = m.searchKeyboard.textEditBox.cursorPosition
-  ' Copio el texto desde el TextEditBox interno del teclado.
-  print "Keyboard text " ; m.searchKeyboard.textEditBox.text
-  m.currentSearchText = m.searchKeyboard.textEditBox.text
-  m.searchInput.text = m.currentSearchText
-  ' Copio el estado activo del TextEditBox interno del teclado.
-
-  ' Fuerzo cursor al final del texto para que nuevos caracteres se agreguen al final.
-  cursorAtEnd = m.currentSearchText.len()
-  m.searchInput.cursorPosition = cursorAtEnd
-  m.searchKeyboard.textEditBox.cursorPosition = cursorAtEnd
-  m.searchInput.active = m.searchKeyboard.textEditBox.active
 
   ' Programo llamada al servicio cuando dejan de escribir por 2 segundos.
   __scheduleSearchRequest()
@@ -272,7 +255,7 @@ end sub
 
 ' Reinicia el debounce de búsqueda para disparar consulta al dejar de tipear.
 sub __scheduleSearchRequest()
-    ' Si la pantalla no está activa, no programo búsquedas.
+  ' Si la pantalla no está activa, no programo búsquedas.
   if not m.top.onFocus then return
   ' Si no existe el timer, no se puede debouncear.
   if m.searchDebounceTimer = invalid then return
@@ -284,26 +267,25 @@ end sub
 
 ' Se ejecuta cuando pasan 2 segundos sin cambios en el input.
 sub onSearchDebounceTimerFire()
-    ' Solo proceso debounce si la pantalla Search está activa/en foco.
+  ' Solo proceso debounce si la pantalla Search está activa/en foco.
   if not m.top.onFocus then return
   ' Si no hay input disponible, no realizo consulta.
   if m.searchInput = invalid then return
 
   ' Tomo y limpio el texto para evitar consultas con espacios.
   query = m.currentSearchText.trim()
-  ' Si no hay término de búsqueda, recargo carrusel de ErrorPage.
+  ' Si no hay término de búsqueda, recargo carrusel de recomendados.
   if query = "" then
-    m.hasLoadedErrorPage = false
-    __getErrorPage()
-    return
+    m.hasLoadedRecommended = false
+    __getRecommendedCarousel()
+  else
+    ' Disparo request al endpoint de búsqueda.
+    __getSearchPrograms(query)
   end if
-
-  ' Disparo request al endpoint de búsqueda.
-  __getSearchPrograms(query)
 end sub
 
 ' Ejecuta la consulta de programas para el texto ingresado.
-sub __getSearchPrograms(query as String)
+sub __getSearchPrograms(query as string)
   ' Si no hay API URL cacheada, la obtengo de la configuración global.
   if m.apiUrl = invalid then m.apiUrl = getConfigVariable(m.global.configVariablesKeys.API_URL)
 
@@ -311,29 +293,17 @@ sub __getSearchPrograms(query as String)
   requestId = createRequestId()
   ' Construyo la acción HTTP de búsqueda.
   action = {
-    ' Reutilizo request manager del componente.
     apiRequestManager: m.apiRequestManager
-    ' URL del endpoint Search.
     url: urlSearch(m.apiUrl)
-    ' Método HTTP de consulta.
     method: "POST"
-    ' Callback al resolver la respuesta.
     responseMethod: "onGetSearchProgramsResponse"
-    ' GET sin body.
     body: FormatJson({ "searchText": query.trim() })
-    ' Token no explícito (flujo interno existente).
     token: invalid
-    ' Se consume API privada de clientes.
     publicApi: false
-    ' Sin datos auxiliares.
     dataAux: invalid
-    ' Asocio el requestId de la acción.
     requestId: requestId
-    ' Función ejecutora del envío HTTP.
-    run: function() as Object
-      ' Disparo request con helper estándar del proyecto.
+    run: function() as object
       m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux)
-      ' Retorno resultado esperado por runAction. 
       return { success: true, error: invalid }
     end function
   }
@@ -343,7 +313,6 @@ sub __getSearchPrograms(query as String)
 
   ' Registro acción para retry/failover centralizado.
   runAction(requestId, action, ApiType().CLIENTS_API_URL)
-  ' Persisto el manager actualizado luego del runAction.
   m.apiRequestManager = action.apiRequestManager
 end sub
 
@@ -356,8 +325,6 @@ sub onGetSearchProgramsResponse()
     return
   end if
 
-  if m.apiRequestManager = invalid then return
-
   ' Si el status HTTP es válido, proceso resultado de búsqueda.
   if validateStatusCode(m.apiRequestManager.statusCode) then
     removePendingAction(m.apiRequestManager.requestId)
@@ -365,19 +332,23 @@ sub onGetSearchProgramsResponse()
     m.apiRequestManager = clearApiRequest(m.apiRequestManager)
 
     if resp <> invalid and resp.data <> invalid and resp.data.carousels <> invalid and resp.data.carousels.count() > 0 then
-      ' Pinto carruseles dinámicos de resultados de búsqueda.
+      ' Dibujo carruseles dinámicos de resultados de búsqueda.
       __loadSearchCarousels(resp.data.carousels)
+      ' Oculto el carrusel de recomendados
+      __loadRecommendedCarousel(invalid)
       ' Oculto mensaje de no resultados porque hay contenido para mostrar.
-      __loadRelatedCarousel(invalid)
       __showSearchNoResults(false)
     else
       ' Limpio carruseles de búsqueda cuando no hay resultados.
       __loadSearchCarousels(invalid)
-      __loadRelatedCarousel(invalid)
+      ' Oculto el carrusel de recomendados
+      __loadRecommendedCarousel(invalid)
       ' Muestro feedback de no resultados al usuario.
       __showSearchNoResults(true)
+
       ' Sin resultados, regreso el foco al input para facilitar nueva búsqueda.
       if m.searchInput <> invalid then m.searchInput.setFocus(true)
+
       ' Oculto indicadores de selección al no existir listas navegables.
       if m.selectedIndicator <> invalid then m.selectedIndicator.visible = false
       if m.searchSelectedIndicator <> invalid then m.searchSelectedIndicator.visible = false
@@ -405,23 +376,18 @@ sub onGetSearchProgramsResponse()
 end sub
 
 ' Maneja eventos de control remoto para navegación/foco.
-function onKeyEvent(key as String, press as Boolean) as Boolean
+function onKeyEvent(key as string, press as boolean) as boolean
 
   ' Si presionan BACK con teclado visible, cierro teclado y retorno foco al input.
   if key = KeyButtons().BACK and m.searchKeyboard <> invalid and m.searchKeyboard.visible and press then
-    ' Oculto teclado con animación.
     __hideKeyboard(true)
-    ' Retorno foco al input.
     m.searchInput.setFocus(true)
-    ' Indico que el evento fue manejado.
     return true
   end if
 
   ' Si el usuario baja desde el input, intento enviar foco a resultados visibles.
   if key = KeyButtons().DOWN and m.searchInput <> invalid and m.searchInput.isInFocusChain() then
 
-    __restoreSearchInputText()
-    
     ' Prioridad 1: carruseles de búsqueda (cuando hay resultados de search).
     if m.searchCarousels <> invalid and m.searchCarousels.visible and m.carouselContainer <> invalid and m.carouselContainer.getChildCount() > 0 then
       firstCarousel = m.carouselContainer.getChild(0)
@@ -449,7 +415,7 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
         if focusItem <> invalid then
           m.carouselContainer.focusedChild.focusUp.opacity = "1.0"
           focusItem.setFocus(true)
-          m.carouselContainer.translation = [m.carouselXPosition, -(m.carouselContainer.focusedChild.translation[1] - m.carouselYPosition)]
+          m.carouselContainer.translation = [m.carouselXPosition, - (m.carouselContainer.focusedChild.translation[1] - m.carouselYPosition)]
           m.searchSelectedIndicator.size = m.carouselContainer.focusedChild.size
         end if
       else
@@ -471,18 +437,20 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
       if focusItem <> invalid then
         m.carouselContainer.focusedChild.opacity = "0.0"
         focusItem.setFocus(true)
-        m.carouselContainer.translation = [m.carouselXPosition, -(m.carouselContainer.focusedChild.translation[1] - m.carouselYPosition)]
+        m.carouselContainer.translation = [m.carouselXPosition, - (m.carouselContainer.focusedChild.translation[1] - m.carouselYPosition)]
         m.searchSelectedIndicator.size = m.carouselContainer.focusedChild.size
       end if
     end if
     return true
   end if
 
+  ' El foco esta en el input de busqueda, mostrar el teclado
   if m.searchInput <> invalid and m.searchInput.isInFocusChain() and key = KeyButtons().OK and press then
     __showKeyboard()
     return true
   end if
 
+  ' El foco esta en el carrusel de recomendados, y se presiona hacia abajo, no hacer nada
   if key = KeyButtons().DOWN and m.related <> invalid and m.related.isInFocusChain() then
     return true
   end if
@@ -547,7 +515,7 @@ sub __configureKeyboardAnimations()
     m.keyboardHideTranslationInterpolator.keyValue = [m.keyboardVisibleTranslation, m.keyboardHiddenTranslation]
   end if
 
-    ' Si existe interpolador de mostrar del fondo del teclado.
+  ' Si existe interpolador de mostrar del fondo del teclado.
   if m.keyboardBackgroundShowTranslationInterpolator <> invalid then
     m.keyboardBackgroundShowTranslationInterpolator.keyValue = [m.keyboardBackgroundHiddenTranslation, m.keyboardBackgroundVisibleTranslation]
   end if
@@ -573,13 +541,13 @@ sub __showKeyboard()
   ' Ubico teclado en posición oculta inicial para animar entrada.
   m.searchKeyboard.translation = m.keyboardHiddenTranslation
 
-    ' Ubico fondo en posición oculta inicial para animar junto al teclado.
+  ' Ubico fondo en posición oculta inicial para animar junto al teclado.
   if m.searchKeyboardBackground <> invalid then
     m.searchKeyboardBackground.translation = m.keyboardBackgroundHiddenTranslation
     m.searchKeyboardBackground.opacity = m.searchKeyboardBackgroundoOpacity
   end if
 
-' Refuerzo observers del TextEditBox al abrir teclado.
+  ' Refuerzo observers del TextEditBox al abrir teclado.
   __observeKeyboardTextEditBox()
   ' Inicio teclado transparente para fade in.
   m.searchKeyboard.opacity = 0.0
@@ -596,7 +564,7 @@ sub __showKeyboard()
 end sub
 
 ' Oculta el teclado con animación descendente.
-sub __hideKeyboard(withAnimation as Boolean)
+sub __hideKeyboard(withAnimation as boolean)
   ' Si teclado no existe, salgo.
   if m.searchKeyboard = invalid then return
 
@@ -630,7 +598,7 @@ sub __hideKeyboard(withAnimation as Boolean)
       m.searchKeyboardBackground.opacity = m.searchKeyboardBackgroundoOpacity
     end if
   end if
-  
+
 end sub
 
 ' Al finalizar la animación de ocultar, deja el teclado invisible.
@@ -655,7 +623,7 @@ sub onKeyboardHideAnimationStateChanged()
   end if
 end sub
 
-' Aplica traducciones del placeholder del input.
+' Aplica traducciones
 sub __applyTranslations()
   ' Si no hay diccionario i18n, salgo.
   if m.global.i18n = invalid then return
@@ -664,7 +632,7 @@ sub __applyTranslations()
   m.searchInput.hintText = i18n_t(m.global.i18n, "search.noResultsDefaultSearch")
 
   ' Aplico traducción del mensaje cuando la búsqueda no devuelve resultados.
-  if m.noResultsLabel <> invalid then m.noResultsLabel.text = i18n_t(m.global.i18n, "search.noResultsRecomendations")
+  m.noResultsLabel.text = i18n_t(m.global.i18n, "search.noResultsRecomendations")
 end sub
 
 ' Recompone el texto visible del input ante pérdidas de foco que vacían el valor.
@@ -677,84 +645,77 @@ sub __restoreSearchInputText()
 end sub
 
 ' Muestra u oculta el mensaje de búsqueda sin resultados.
-sub __showSearchNoResults(show as Boolean)
+sub __showSearchNoResults(show as boolean)
   if m.noResultsLabel = invalid then return
   m.noResultsLabel.visible = show
 end sub
 
+' Evento que se ejecunta cuando se modifica al API Url global
 sub onActiveApiUrlChanged()
   ' Limpio API actual para que se recalcule desde configuración cuando cambie el dominio.
   m.apiUrl = invalid
   ' Reinicio bandera de carga para permitir nueva consulta con la nueva API.
-  m.hasLoadedErrorPage = false
+  m.hasLoadedRecommended = false
   ' Si la pantalla está activa, disparo nuevamente la carga de ErrorPage.
-  if m.top.onFocus then __getErrorPage()
+  if m.top.onFocus then __getRecommendedCarousel()
 end sub
 
-sub onGetErrorPageResponse()
+sub onGetRecommendedResponse()
   ' Si no hay manager disponible, no puedo procesar respuesta.
-  if m.apiRequestManager = invalid then
-    ' Salgo sin hacer cambios.
-    return
-  else
-    ' Si el status HTTP es válido, proceso respuesta normal.
-    if validateStatusCode(m.apiRequestManager.statusCode) then
-      ' Quito la acción de la cola de pendientes.
-      removePendingAction(m.apiRequestManager.requestId)
-      ' Parseo el payload JSON recibido.
-      resp = ParseJson(m.apiRequestManager.response)
-      ' Limpio el request manager para próximas operaciones.
-      m.apiRequestManager = clearApiRequest(m.apiRequestManager)
-      ' Marco que la carga de ErrorPage ya se realizó.
-      m.hasLoadedErrorPage = true
+  if m.apiRequestManager = invalid then return
 
-      ' Al refrescar carrusel base, oculto mensaje de no resultados de búsqueda.
-      __showSearchNoResults(false)
+  ' Si el status HTTP es válido, proceso respuesta normal.
+  if validateStatusCode(m.apiRequestManager.statusCode) then
+    ' Quito la acción de la cola de pendientes.
+    removePendingAction(m.apiRequestManager.requestId)
+    ' Parseo el payload JSON recibido.
+    resp = ParseJson(m.apiRequestManager.response)
+    ' Marco que la carga de recomendados ya se realizó.
+    m.hasLoadedRecommended = true
 
-      __loadSearchCarousels(invalid)
-      ' Si la API devuelve data, cargo el carrusel.
-      if resp.data <> invalid then
-        ' Pinto items en el carrusel de relacionados.
-        __loadRelatedCarousel(resp.data)
-      else
-        ' Si no hay data, oculto limpiamente el carrusel.
-        __loadRelatedCarousel(invalid)
-      end if
+    ' Oculto mensaje de no resultados de búsqueda.
+    __showSearchNoResults(false)
+
+    ' Ocultar el carrusel de busqueda
+    __loadSearchCarousels(invalid)
+
+    ' Si la API devuelve data, cargo el carrusel.
+    if resp.data <> invalid then
+      ' Pinto items en el carrusel de relacionados.
+      __loadRecommendedCarousel(resp.data)
     else
-      ' Obtengo status para flujo de error/reintento.
-      statusCode = m.apiRequestManager.statusCode
-      ' Obtengo cuerpo de error para logging.
-      errorResponse = m.apiRequestManager.errorResponse
-
-      ' Si es error de servidor, sigo la misma estrategia de retry global.
-      if m.apiRequestManager.serverError then
-        ' Guardo código CDN según status para telemetría/failover.
-        setCdnErrorCodeFromStatus(statusCode, ApiType().CLIENTS_API_URL)
-        ' Marco la acción como error para reintentos centralizados.
-        changeStatusAction(m.apiRequestManager.requestId, "error")
-        ' Disparo reintentos pendientes.
-        retryAll()
-      else
-        ' Remuevo la acción pendiente si no es serverError.
-        removePendingAction(m.apiRequestManager.requestId)
-
-        ' Si el status implica logout, corto el flujo aquí.
-        if validateLogout(statusCode, m.top) then return
-
-        ' Registro error para diagnóstico.
-        printError("ErrorPage:", errorResponse)
-      end if
-
-      ' Limpio manager tras error.
-      m.apiRequestManager = clearApiRequest(m.apiRequestManager)
-      ' Ante error, oculto carrusel para no mostrar estado inconsistente.
-      __loadRelatedCarousel(invalid)
+      ' Si no hay data, oculto limpiamente el carrusel.
+      __loadRecommendedCarousel(invalid)
+      __showSearchNoResults(true)
     end if
+  else
+    statusCode = m.apiRequestManager.statusCode
+    errorResponse = m.apiRequestManager.errorResponse
+
+    ' Si es error de servidor, sigo la misma estrategia de retry global.
+    if m.apiRequestManager.serverError then
+      setCdnErrorCodeFromStatus(statusCode, ApiType().CLIENTS_API_URL)
+      ' Marco la acción como error para reintentos centralizados.
+      changeStatusAction(m.apiRequestManager.requestId, "error")
+      ' Disparo reintentos pendientes.
+      retryAll()
+    else
+      ' Remuevo la acción pendiente si no es serverError.
+      removePendingAction(m.apiRequestManager.requestId)
+      ' Si el status implica logout, corto el flujo aquí.
+      if validateLogout(statusCode, m.top) then return
+    end if
+
+    ' Ante error, oculto carrusel para no mostrar estado inconsistente.
+    __loadRecommendedCarousel(invalid)
   end if
+
+  ' Limpio el request manager para próximas operaciones.
+  m.apiRequestManager = clearApiRequest(m.apiRequestManager)
 end sub
 
+' Función que se ejecuta cuando se presiona OK sobre algún item
 sub onSelectItem()
-  ' Inicializo variable local para almacenar el item parseado.
   itemSelected = invalid
 
   ' Si hay foco en recomendados, tomo selección desde ese carrusel.
@@ -784,12 +745,13 @@ sub onSelectItem()
   ' Muestro loading global mientras resuelvo la navegación del item.
   if m.top.loading <> invalid then m.top.loading.visible = true
 
-    ' Si se selecciona la tarjeta "Ver todos", disparo navegación directa a ViewAllScreen.
+  ' Si se selecciona la tarjeta "Ver todos", disparo navegación directa a ViewAllScreen.
   if m.itemSelected.showSeeMore <> invalid and m.itemSelected.showSeeMore = true then
-    ' Mantengo el mismo contrato de MainScreen: envío carouselId desde m.carousels[m.carouselIndex].id.
     if m.carouselIndex <> invalid and m.carousels <> invalid and m.carouselIndex >= 0 and m.carouselIndex < m.carousels.count() and m.carousels[m.carouselIndex] <> invalid then
-      contentViewId = m.currentSearchText.trim() ' Tomo el texto actual del buscador para enviarlo como contentViewId.
-      m.top.viewAll = FormatJson({ ' Notifico a MainScene para navegar a ViewAllScreen.
+      ' Tomo el texto actual del buscador para enviarlo como contentViewId.
+      contentViewId = m.currentSearchText.trim() 
+      ' Notifico a MainScene para navegar a ViewAllScreen.
+      m.top.viewAll = FormatJson({ 
         contentViewId: contentViewId ' Envío el valor buscado para habilitar búsqueda por id en ViewAll.
         carouselId: m.carousels[m.carouselIndex].id ' Envío exactamente el carouselId del carrusel enfocado.
         carouselCode: m.itemSelected.carouselCode ' Envío código para mantener contexto funcional.
@@ -811,12 +773,13 @@ sub onSelectItem()
 
   ' Si es carrusel de estilo 7, rehago búsqueda usando el title del item seleccionado.
   if m.carouselIndex <> invalid and m.carousels <> invalid and m.carouselIndex >= 0 and m.carouselIndex < m.carousels.count() and m.carousels[m.carouselIndex] <> invalid and m.carousels[m.carouselIndex].style = 7 then
-    ' Mantengo texto actual con el título del item para coherencia visual.
     m.currentSearchText = m.itemSelected.title
     ' Reflejo texto en input para que el usuario vea la nueva query aplicada.
     if m.searchInput <> invalid then m.searchInput.text = m.currentSearchText
     ' Disparo request de búsqueda con el title del elemento seleccionado.
     __getSearchPrograms(m.itemSelected.title)
+
+    m.searchInput.setFocus(true)
     return
   end if
 
@@ -832,6 +795,8 @@ sub onSelectItem()
       m.top.viewAll = FormatJson({ carouselId: m.carousels[m.carouselIndex].id })
       ' Oculto loading al terminar navegación local.
       if m.top.loading <> invalid then m.top.loading.visible = false
+      ' Dejar de escuchar el teclado
+      m.searchKeyboard.unobserveField("textEditBox")
       return
     end if
   end if
@@ -840,6 +805,7 @@ sub onSelectItem()
   if m.top.loading <> invalid then m.top.loading.visible = false
   __restoreLastFocus()
 end sub
+
 ' Valida control parental y resuelve navegación a player o detalle según redirectKey.
 sub __validateCarouselItem(carouselItem)
   ' Si requiere control parental para canal, pido PIN reutilizando flujo de MainScreen.
@@ -872,14 +838,14 @@ sub __navigateToSelectedItem(carouselItem)
       publicApi: false
       dataAux: invalid
       requestId: requestId
-      run: function() as Object
+      run: function() as object
         m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux)
         return { success: true, error: invalid }
       end function
     }
+
     ' Registro la acción en el gestor de reintentos global.
     runAction(requestId, action, ApiType().CLIENTS_API_URL)
-    ' Persisto manager actualizado por runAction.
     m.apiRequestManager = action.apiRequestManager
   else
     ' Si no es canal, redirecciono al detalle del programa con key/id.
@@ -898,11 +864,11 @@ function __getFocusedCarouselIndex() as dynamic
     ' Comparo id del hijo con id del carrusel enfocado.
     if m.carouselContainer.getChild(index).id = m.carouselContainer.focusedChild.id then return index
   end for
-  ' Si no coincide ninguno, retorno invalid.
+  
   return invalid
 end function
 
-' Reutiliza flujo de MainScreen para abrir guía con último canal visto.
+' Redirecciona a Player con la guía abierta
 sub __requestGuideLastWatched()
   ' Activo bandera de abrir guía en PlayerScreen.
   m.top.openGuide = true
@@ -919,14 +885,13 @@ sub __requestGuideLastWatched()
     publicApi: false
     dataAux: invalid
     requestId: requestId
-    run: function() as Object
+    run: function() as object
       m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux)
       return { success: true, error: invalid }
     end function
   }
   ' Registro acción para retry/failover estándar.
   runAction(requestId, action, ApiType().CLIENTS_API_URL)
-  ' Persisto manager actualizado luego del envío.
   m.apiRequestManager = action.apiRequestManager
 end sub
 
@@ -943,8 +908,7 @@ sub onLastWatchedResponse()
     removePendingAction(m.apiRequestManager.requestId)
     ' Parseo respuesta JSON para extraer data.
     resp = ParseJson(m.apiRequestManager.response)
-    ' Limpio manager luego de parsear respuesta.
-    m.apiRequestManager = clearApiRequest(m.apiRequestManager)
+
     ' Si hay al menos un canal, preparo streaming mínimo para PlayerScreen.
     if resp <> invalid and resp.data <> invalid and resp.data.count() > 0 then
       m.top.streaming = FormatJson({ key: "ChannelId", id: resp.data[0].id })
@@ -959,10 +923,11 @@ sub onLastWatchedResponse()
     statusCode = m.apiRequestManager.statusCode
     errorResponse = m.apiRequestManager.errorResponse
     removePendingAction(m.apiRequestManager.requestId)
-    m.apiRequestManager = clearApiRequest(m.apiRequestManager)
     __restoreLastFocus()
     printError("LastWatched Search:", statusCode.toStr() + " " + errorResponse)
   end if
+
+    m.apiRequestManager = clearApiRequest(m.apiRequestManager)
 end sub
 
 ' Procesa callback del modal PIN reutilizando lógica de MainScreen.
@@ -984,7 +949,7 @@ sub onPinDialogLoad()
       publicApi: false
       dataAux: invalid
       requestId: requestId
-      run: function() as Object
+      run: function() as object
         m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux)
         return { success: true, error: invalid }
       end function
@@ -1056,8 +1021,6 @@ sub onWatchValidateResponse()
     else
       ' Oculto loading cuando backend rechaza la validación funcional.
       if m.top.loading <> invalid then m.top.loading.visible = false
-      ' Limpio manager al abortar el flujo de reproducción.
-      m.apiRequestManager = clearApiRequest(m.apiRequestManager)
       ' Restaura foco al item previo para continuidad de UX.
       __restoreLastFocus()
       ' Logueo resultCode para diagnóstico.
@@ -1070,13 +1033,14 @@ sub onWatchValidateResponse()
     statusCode = m.apiRequestManager.statusCode
     ' Obtengo cuerpo de error para logging.
     errorResponse = m.apiRequestManager.errorResponse
-    ' Limpio manager al finalizar flujo con error.
-    m.apiRequestManager = clearApiRequest(m.apiRequestManager)
     ' Restauro foco al último nodo para no perder navegabilidad.
     __restoreLastFocus()
     ' Registro error de status para diagnóstico.
     printError("WatchValidate Status Search:", statusCode.toStr() + " " + errorResponse)
   end if
+
+  ' Limpio manager al finalizar flujo con error.
+    m.apiRequestManager = clearApiRequest(m.apiRequestManager)
 end sub
 
 sub onStreamingsResponse()
@@ -1093,27 +1057,20 @@ sub onStreamingsResponse()
     ' Parseo respuesta de streamings.
     resp = ParseJson(m.apiRequestManager.response)
     if resp.data <> invalid then
-      ' Limpio manager al tener respuesta útil.
+
       m.apiRequestManager = clearApiRequest(m.apiRequestManager)
-      ' Copio objeto de streaming retornado por API.
       streaming = resp.data
-      ' Adjuntamos clave original seleccionada.
       streaming.key = m.itemSelected.redirectKey
-      ' Adjuntamos id original seleccionado.
       streaming.id = m.itemSelected.redirectId
-      ' Definimos tipo de streaming por defecto.
       streaming.streamingType = getStreamingType().DEFAULT
       ' Emitimos evento para que MainScene abra Player.
       m.top.streaming = FormatJson(streaming)
+      m.searchKeyboard.unobserveField("textEditBox")
     else
-      ' Oculto loading cuando no llega data reproducible.
       if m.top.loading <> invalid then m.top.loading.visible = false
       ' Restauro foco para permitir nueva selección.
       __restoreLastFocus()
-      ' Logueo respuesta vacía para diagnóstico.
       printError("Streamings Empty Search:", m.apiRequestManager.response)
-      ' Limpio manager al cerrar flujo.
-      m.apiRequestManager = clearApiRequest(m.apiRequestManager)
     end if
   else
     ' Oculto loading ante error HTTP en streamings.
@@ -1124,13 +1081,13 @@ sub onStreamingsResponse()
     errorResponse = m.apiRequestManager.errorResponse
     ' Remuevo acción fallida del pool de pendientes.
     removePendingAction(m.apiRequestManager.requestId)
-    ' Limpio manager al finalizar con error.
-    m.apiRequestManager = clearApiRequest(m.apiRequestManager)
     ' Restaura foco al elemento previamente activo.
     __restoreLastFocus()
-    ' Registro error de streamings para diagnóstico.
     printError("Streamings Search:", statusCode.toStr() + " " + errorResponse)
   end if
+
+  ' Limpio manager al cerrar flujo.
+  m.apiRequestManager = clearApiRequest(m.apiRequestManager)
 end sub
 
 ' Cierra dialog de error y devuelve foco al último carrusel seleccionado.
@@ -1177,7 +1134,7 @@ sub __restoreLastFocus()
     ' Muestro indicador de selección de búsqueda.
     m.searchSelectedIndicator.visible = true
     ' Reposiciono contenedor vertical para dejar visible la fila.
-    m.carouselContainer.translation = [m.carouselXPosition, -(m.lastFocusedNode.translation[1] - m.carouselYPosition)]
+    m.carouselContainer.translation = [m.carouselXPosition, - (m.lastFocusedNode.translation[1] - m.carouselYPosition)]
   end if
 end sub
 
@@ -1228,14 +1185,14 @@ sub __restoreFocusFromProgramDetail()
   if m.searchInput <> invalid then m.searchInput.setFocus(true)
 end sub
 
-sub __getErrorPage()
+sub __getRecommendedCarousel()
   ' Evito pedir nuevamente el endpoint si ya fue cargado en la sesión de pantalla.
-  if m.hasLoadedErrorPage then return
+  if m.hasLoadedRecommended then return
 
   ' Si no hay API URL cacheada, la obtengo de la configuración global.
   if m.apiUrl = invalid then m.apiUrl = getConfigVariable(m.global.configVariablesKeys.API_URL)
 
-    ' Oculto mensaje previo de no resultados mientras se procesa una nueva búsqueda.
+  ' Oculto mensaje previo de no resultados mientras se procesa una nueva búsqueda.
   __showSearchNoResults(false)
 
   ' Genero requestId para trazabilidad/retry.
@@ -1249,7 +1206,7 @@ sub __getErrorPage()
     ' Método HTTP de consulta.
     method: "GET"
     ' Callback al resolver la respuesta.
-    responseMethod: "onGetErrorPageResponse"
+    responseMethod: "onGetRecommendedResponse"
     ' GET sin body.
     body: invalid
     ' Token no explícito (flujo interno existente).
@@ -1261,7 +1218,7 @@ sub __getErrorPage()
     ' Asocio el requestId de la acción.
     requestId: requestId
     ' Función ejecutora del envío HTTP.
-    run: function() as Object
+    run: function() as object
       ' Disparo request con helper estándar del proyecto.
       m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux)
       ' Retorno resultado esperado por runAction.
@@ -1286,7 +1243,7 @@ sub __loadSearchCarousels(carousels)
   if m.carouselContainer.getChildCount() > 0 then m.carouselContainer.removeChildrenIndex(m.carouselContainer.getChildCount(), 0)
   ' Posición base del contenedor para el cálculo de desplazamiento vertical al navegar.
   m.carouselContainer.translation = scaleSize([0, -63], m.scaleInfo)
-  m.searchSelectedIndicator.translation = scaleSize([68, 65], m.scaleInfo)
+  m.searchSelectedIndicator.translation = scaleSize([69.5, 65], m.scaleInfo)
   m.carouselXPosition = m.carouselContainer.translation[0]
   m.carouselYPosition = m.carouselContainer.translation[1]
 
@@ -1353,7 +1310,7 @@ sub onSearchCarouselSelectItem()
 end sub
 
 ' Construye el string de tags del título usando formato: "tag" | Tag2 | Tag3.
-function __buildCarouselTitleTagsText(titleTags as Dynamic) as String
+function __buildCarouselTitleTagsText(titleTags as dynamic) as string
   ' Si titleTags no existe o no es lista, retorno vacío para ocultar el texto.
   if titleTags = invalid then return ""
   ' Si el objeto recibido no tiene count, no es una lista válida.
@@ -1406,7 +1363,7 @@ function __buildCarouselTitleTagsText(titleTags as Dynamic) as String
   return tagsText
 end function
 
-sub __loadRelatedCarousel(carouselData)
+sub __loadRecommendedCarousel(carouselData)
   ' Si hay items válidos, configuro y muestro el carrusel.
   if carouselData <> invalid and carouselData.items <> invalid and carouselData.items.count() > 0 then
     ' Seteo id lógico del carrusel.
@@ -1446,5 +1403,45 @@ sub __configSearchScreen()
   ' Posiciono el carrusel en origen relativo del contenedor.
   m.related.translation = scaleSize([0, 0], m.scaleInfo)
   ' Alineo indicador de selección con la geometría del carrusel.
-  m.selectedIndicator.translation = scaleSize([68, 130], m.scaleInfo)
+  m.selectedIndicator.translation = scaleSize([69.5, 128], m.scaleInfo)
+end sub
+
+' Guardar el log cuandos se cambia una opción del menú
+sub __saveActionLog(actionLog as object)
+
+  if beaconTokenExpired() and m.apiUrl <> invalid then
+    m.apiLogRequestManager = sendApiRequest(m.apiLogRequestManager, urlActionLogsToken(m.apiUrl), "GET", "onActionLogTokenResponse", invalid, invalid, invalid, false, FormatJson(actionLog))
+  else
+    __sendActionLog(actionLog)
+  end if
+end sub
+
+' Obtener el beacon token
+sub onActionLogTokenResponse()
+
+  resp = ParseJson(m.apiLogRequestManager.response)
+  actionLog = ParseJson(m.apiLogRequestManager.dataAux)
+
+  setBeaconToken(resp.actionsLogToken)
+
+  now = CreateObject("roDateTime")
+  now.ToLocalTime()
+  m.global.beaconTokenExpiresIn = now.asSeconds() + ((resp.expiresIn - 60) * 1000)
+
+  m.apiLogRequestManager = clearApiRequest(m.apiLogRequestManager)
+  __sendActionLog(actionLog)
+end sub
+
+' Llamar al servicio para guardar el log
+sub __sendActionLog(actionLog as object)
+  beaconToken = getBeaconToken()
+
+  if (beaconToken <> invalid and m.beaconUrl <> invalid)
+    m.apiLogRequestManager = sendApiRequest(m.apiLogRequestManager, urlActionLogs(m.beaconUrl), "POST", "onActionLogResponse", invalid, FormatJson(actionLog), beaconToken, false)
+  end if
+end sub
+
+' Limpiar la llamada del log
+sub onActionLogResponse()
+  m.apiLogRequestManager = clearApiRequest(m.apiLogRequestManager)
 end sub

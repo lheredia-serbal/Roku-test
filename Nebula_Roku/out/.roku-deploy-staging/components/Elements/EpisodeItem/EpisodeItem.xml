@@ -5,6 +5,7 @@
   xsi:noNamespaceSchemaLocation="https://devtools.web.roku.com/schema/RokuSceneGraph.xsd">
 
   <script type="text/brightscript" uri="EpisodeItem.brs" />
+
   <script type="text/brightscript" uri="pkg:/source/Utils.brs" />
 
   <interface>
@@ -36,7 +37,7 @@
         <!-- Imagen principal del episodio. -->
         <Poster
           id="emissionImage"
-          loadDisplayMode="scaleToZoom"
+          loadDisplayMode="scaleToFin"
           uri="pkg:/images/shared/show_image_empty_1.jpg" />
 
         <!-- Ícono play superpuesto al centro de emissionImage. -->
@@ -91,7 +92,7 @@
           text=""
           wrap="true"
           maxLines="10"
-          font="font:MediumSystemFont" />
+          font="font:SmallSystemFont" />
       </LayoutGroup>
     </LayoutGroup>
   </children>

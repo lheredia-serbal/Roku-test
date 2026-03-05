@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<component
+    name="NewsItem"
+    extends="Group"
+    xsi:noNamespaceSchemaLocation="https://devtools.web.roku.com/schema/RokuSceneGraph.xsd">
+
+    <!-- Script de lógica para el slider de noticias. -->
+    <script type="text/brightscript" uri="NewsItem.brs" />
+
+    <interface>
+        <!-- Lista de items del slider (cada item puede tener title y imageURL/uri/image). -->
+        <field id="items" type="array" onChange="itemsChanged" />
+        <!-- Índice actual seleccionado para mostrar imagen/título y actualizar dots. -->
+        <field id="currentIndex" type="integer" value="0" onChange="currentIndexChanged" />
+        <!-- Título fallback si el item actual no trae title. -->
+        <field id="title" type="string" value="" onChange="titleChanged" />
+        <!-- Imagen fallback si el item actual no trae imageURL/uri/image. -->
+        <field id="imageURL" type="string" value="" onChange="imageURLChanged" />
+    </interface>
+
+    <children>
+        <!-- Poster de fondo que ocupa el 100% del ancho/alto de pantalla. -->
+        <Poster
+            id="backgroundImage"
+            width="1920"
+            height="1080"
+            loadDisplayMode="scaleToFill"
+            translation="[0, 0]" />
+
+        <!-- Capa oscura opcional para mejorar legibilidad del texto sobre la imagen. -->
+        <Rectangle
+            id="overlay"
+            width="1920"
+            height="1080"
+            color="#000000"
+            opacity="0.20"
+            translation="[0, 0]" />
+
+        <!-- Título grande anclado abajo a la izquierda con margen. -->
+        <Label
+            id="newsTitle"
+            width="1400"
+            height="260"
+            translation="[80, 760]"
+            horizAlign="left"
+            vertAlign="bottom"
+            wrap="true"
+            maxLines="3"
+            font="font:LargeBoldSystemFont" />
+
+        <!-- Contenedor horizontal para dots centrado abajo con margen inferior. -->
+        <LayoutGroup
+            id="dotsContainer"
+            translation="[960, 1010]"
+            layoutDirection="horiz"
+            horizAlignment="center"
+            vertAlignment="center"
+            itemSpacings="[14]" />
+    </children>
+</component>
