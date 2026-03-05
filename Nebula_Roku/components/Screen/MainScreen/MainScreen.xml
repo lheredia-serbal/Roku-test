@@ -65,6 +65,9 @@
       loadDisplayMode="scaleToFit"
       uri="pkg:/images/client/info_gradient.png" />
 
+    <!-- Contenedor dedicado para NewsItem en posición absoluta (0,0). -->
+    <Group id="newsContainer" translation="[0, 0]" />
+
     <!-- Program Container -->
     <ProgramSummary 
       id="programInfo" 
@@ -141,4 +144,3 @@
     
   </children>
 </component>
-

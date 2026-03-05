@@ -4,6 +4,9 @@ sub init()
   m.groupOpacityForMenu = m.top.findNode("groupOpacityForMenu")
   m.myMenu = m.top.findNode("myMenu")
 
+  ' Referencia al contenedor absoluto para el carrusel de noticias.
+  m.newsContainer = m.top.findNode("newsContainer")
+
   'carousel
   m.carouselContainer = m.top.findNode("carouselContainer")
   m.selectedIndicator = m.top.findNode("selectedIndicator")
@@ -177,6 +180,8 @@ end sub
 sub populateCarousels(data as Object)
   yPosition = 0
   previousCarousel = invalid
+  ' Referencia temporal al carrusel visual de noticias para ubicarlo siempre primero.
+  newsCarouselItem = invalid
 
   ' Cache local de carouseles visibles para mapear carouselIndex -> carouselData.id al abrir ViewAll.
   m.carouselData = []
@@ -189,6 +194,26 @@ sub populateCarousels(data as Object)
   m.yPosition = m.carouselContainer.translation[1]
 
   m.selectedIndicator.translation = [scaleValue(124, m.scaleInfo), m.scaleInfo.safeZone.y + scaleValue(148, m.scaleInfo)]
+
+  ' Asegura que el contenedor de noticias quede anclado al origen absoluto de MainScreen.
+  m.newsContainer.translation = [0, 0]
+
+  for each carouselData in data.items
+    if carouselData.style = getCarouselStyles().NEWS and newsCarouselItem = invalid then
+      ' Crea una instancia del componente NewsItem para representar el carrusel tipo noticias.
+      ' Crea el NewsItem dentro de un contenedor independiente para mantenerlo en (0,0).
+      newsCarouselItem = m.newsContainer.createChild("NewsItem")
+      ' Asigna el conjunto de items de noticias recibido del servidor.
+      newsCarouselItem.items = carouselData.items
+      ' Setea un título fallback por si los items no traen title.
+      newsCarouselItem.title = carouselData.title
+      ' Fuerza que el bloque de noticias comience arriba de todo dentro del contenedor.
+      newsCarouselItem.translation = [0, 0]
+      ' Reserva el primer bloque vertical para que los demás carruseles comiencen debajo de NewsItem.
+      yPosition = int(m.scaleInfo.height * 0.7) + scaleValue(20, m.scaleInfo)
+    end if
+  end for
+
 
   for each carouselData in data.items
     if carouselData.style <> getCarouselStyles().NEWS then 
@@ -228,15 +253,26 @@ sub populateCarousels(data as Object)
     end if
   end for
 
-  ' Una vez creados todos los carouseles, establece el foco en el primer item del primer carousel:
+  ' Una vez creados todos los carouseles, establece el foco en el primer item del primer carousel.
   if m.carouselContainer.getChildCount() > 0 then
-    firstCarousel = m.carouselContainer.getChild(0)
-    firstList = firstCarousel.findNode("carouselList")
-    if firstList <> invalid and m.autoUpgradeDialogOpen <> true then
-      firstList.setFocus(true)
-      m.selectedIndicator.size = firstCarousel.size
-      m.selectedIndicator.visible = true
-    end if
+    ' Recorre hijos para encontrar el primer nodo Carousel con lista navegable.
+    for i = 0 to m.carouselContainer.getChildCount() - 1
+      ' Obtiene el hijo actual del contenedor para validar si tiene carouselList.
+      firstCarousel = m.carouselContainer.getChild(i)
+      ' Busca la lista interna del carrusel para darle foco inicial.
+      firstList = firstCarousel.findNode("carouselList")
+      ' Si encontró una lista válida y no hay diálogo de auto-upgrade, fija foco e indicador.
+      if firstList <> invalid and m.autoUpgradeDialogOpen <> true then
+        ' Aplica el foco al primer carrusel navegable.
+        firstList.setFocus(true)
+        ' Ajusta el tamaño del indicador según el carrusel enfocado.
+        m.selectedIndicator.size = firstCarousel.size
+        ' Muestra el indicador visual de selección.
+        m.selectedIndicator.visible = true
+        ' Corta la búsqueda al encontrar el primer carrusel navegable.
+        exit for
+      end if
+    end for
   end if
 
   nowDate = CreateObject("roDateTime")
@@ -1136,6 +1172,16 @@ end sub
 sub __clearContentView()
   m.program = invalid
   m.withoutContentLayoutGroup.visible = false
+
+  ' Limpia el contenedor dedicado de noticias para recrearlo desde cero.
+  while m.newsContainer <> invalid and m.newsContainer.getChildCount() > 0
+    ' Toma el NewsItem actual para desvincular su contenido.
+    newsChild = m.newsContainer.getChild(0)
+    ' Resetea los items del NewsItem antes de removerlo.
+    newsChild.items = invalid
+    ' Remueve el NewsItem del contenedor de noticias.
+    m.newsContainer.removeChild(newsChild)
+  end while
 
   while m.carouselContainer.getChildCount() > 0
     child = m.carouselContainer.getChild(0)
