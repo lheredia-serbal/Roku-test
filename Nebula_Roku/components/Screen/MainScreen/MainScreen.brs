@@ -49,10 +49,9 @@ function onKeyEvent(key as string, press as boolean) as boolean
   if key = KeyButtons().DOWN and press and __isNewsFocused() then
     __focusFirstCarouselFromNews()
     handled = true
-  else if key = KeyButtons().UP and press and m.carouselContainer <> invalid and m.carouselContainer.isInFocusChain() and m.carouselContainer.focusedChild <> invalid and m.carouselContainer.focusedChild.focusUp = m.newsCarouselItem then
+  else if key = KeyButtons().UP and press and __isFocusedCarouselAboveNews() then
     ' Si el carrusel actual tiene como foco superior a NewsItem, vuelve al hero de noticias.
-    m.newsCarouselItem.setFocus(true)
-    __updateOverlayVisibilityByFocus()
+    __focusNewsFromFirstCarousel()
     handled = true
   end if
 
@@ -1311,6 +1310,19 @@ function __isNewsFocused() as boolean
   return m.newsCarouselItem.isInFocusChain()
 end function
 
+' Valida de forma segura si el foco actual está en el primer carrusel y su navegación UP apunta a News.
+function __isFocusedCarouselAboveNews() as boolean
+  if m.carouselContainer = invalid then return false ' Corta cuando el contenedor principal de carruseles no existe.
+  if m.carouselContainer.isInFocusChain() <> true then return false ' Corta cuando la cadena de foco no está dentro de carruseles.
+  focusedCarousel = m.carouselContainer.focusedChild ' Toma el carrusel enfocado para evaluar su destino en UP.
+  if focusedCarousel = invalid then return false ' Corta cuando no hay hijo enfocado.
+  focusUpNode = focusedCarousel.focusUp ' Lee el nodo destino de navegación hacia arriba.
+  if focusUpNode = invalid then return false ' Corta cuando no existe destino superior.
+  if m.newsCarouselItem = invalid then return false ' Corta cuando no existe referencia al NewsItem.
+  if type(focusUpNode) <> "roSGNode" then return false ' Evita excepción por comparar tipos incompatibles o valores no nodo.
+  return focusUpNode.subtype() = m.newsCarouselItem.subtype() ' Compara por subtipo para detectar NewsItem sin comparar referencias de distinto tipo.
+end function
+
 ' Mueve el foco desde NewsItem al primer carrusel navegable cuando el usuario presiona DOWN.
 sub __focusFirstCarouselFromNews()
   ' Recorre carruseles para ubicar el primer carouselList habilitado.
@@ -1319,12 +1331,32 @@ sub __focusFirstCarouselFromNews()
     carouselNode = m.carouselContainer.getChild(i)
     carouselList = carouselNode.findNode("carouselList")
     if carouselList <> invalid then
-      carouselList.setFocus(true)
-      m.selectedIndicator.size = carouselNode.size
-      __updateOverlayVisibilityByFocus()
+      m.newsContainer.translation = [0, -(carouselNode.translation[1] - m.yPosition)] ' Aplica desplazamiento vertical del hero de noticias para mantener la misma animación que el resto.
+      m.newsCarouselItem.opacity = "0.0" ' Replica la lógica de opacidad usada al navegar entre carruseles estándar con DOWN ocultando el carrusel actual (News).
+      carouselList.setFocus(true) ' Posiciona el foco en el primer carrusel navegable debajo de News.
+      m.carouselContainer.translation = [m.xPosition, -(carouselNode.translation[1] - m.yPosition)] ' Sincroniza la traslación del contenedor de carruseles con el mismo patrón de animación.
+      m.selectedIndicator.size = carouselNode.size ' Ajusta el tamaño del indicador al carrusel que tomó foco.
+      m.programInfo.visible = true ' Fuerza la visibilidad del resumen cuando se sale del carrusel de News.
+      m.selectedIndicator.visible = true ' Fuerza la visibilidad del indicador cuando el foco entra a carruseles estándar.
+      __updateOverlayVisibilityByFocus() ' Revalida el estado final de overlays según la cadena de foco actual.
       return
     end if
   end for
+end sub
+
+' Mueve el foco desde el primer carrusel no-News hacia NewsItem conservando animación y overlays esperados.
+sub __focusNewsFromFirstCarousel()
+  if m.newsCarouselItem = invalid then return ' Evita procesar si el NewsItem no existe.
+  if m.carouselContainer = invalid then return ' Evita procesar si el contenedor de carruseles no está disponible.
+  focusedCarousel = m.carouselContainer.focusedChild ' Toma referencia al carrusel actualmente enfocado para calcular desplazamientos.
+  if focusedCarousel = invalid then return ' Evita errores si no existe un hijo enfocado.
+  if focusedCarousel.focusUp <> invalid then focusedCarousel.focusUp.opacity = "1.0" ' Restaura opacidad del nodo superior replicando la navegación vertical estándar.
+  m.newsContainer.translation = [0, 0] ' Devuelve el bloque de noticias a su posición base con la misma transición visual.
+  m.carouselContainer.translation = [m.xPosition, m.yPosition] ' Reestablece el contenedor de carruseles a su origen como al inicio de Home.
+  m.newsCarouselItem.setFocus(true) ' Posiciona foco en el carrusel de News al presionar UP en el primer carrusel no-News.
+  m.programInfo.visible = false ' Oculta programInfo cuando el foco vuelve al hero de noticias.
+  m.selectedIndicator.visible = false ' Oculta selectedIndicator cuando el foco vuelve al hero de noticias.
+  __updateOverlayVisibilityByFocus() ' Mantiene centralizada la regla final de visibilidad según foco.
 end sub
 
 ' Alterna visibilidad de ProgramInfo y SelectedIndicator según foco en NewsItem.
