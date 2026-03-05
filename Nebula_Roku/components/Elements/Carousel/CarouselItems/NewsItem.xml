@@ -9,6 +9,7 @@
     <!-- Script de lógica para el slider de noticias. -->
     <script type="text/brightscript" uri="NewsItem.brs" />
     <script type="text/brightscript" uri="pkg:/source/Utils.brs" />
+    <script type="text/brightscript" uri="pkg:/source/Enums.brs" />
 
     <interface>
         <!-- Lista de items del slider (cada item puede tener title y imageURL/uri/image). -->
@@ -57,5 +58,7 @@
             horizAlignment="center"
             vertAlignment="center"
             itemSpacings="[14]" />
+
+        <Timer id="slideTimer" repeat="true" duration="0.07" />
     </children>
 </component>

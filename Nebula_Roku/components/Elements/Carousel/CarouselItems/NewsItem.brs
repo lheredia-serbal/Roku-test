@@ -18,6 +18,20 @@ sub init()
 
     m.scaleInfo = m.global.scaleInfo
 
+    ' Control de animación horizontal entre elementos de News.
+    m.slideTimer = m.top.findNode("slideTimer")
+    m.slideTotalFrames = 6
+    m.slideCurrentFrame = 0
+    m.slideOffset = 0
+    m.slideStep = 0
+    m.isSliding = false
+
+    if m.slideTimer <> invalid then
+        m.slideTimer.unobserveField("fire")
+        m.slideTimer.observeField("fire", "onSlideFrame")
+    end if
+
+
     ' Ajusta layout base a pantalla completa y dibuja contenido inicial.
     updateLayoutForResolution()
     renderCurrentItem()
@@ -99,7 +113,7 @@ sub updateLayoutForResolution()
     m.newsTitle.scale = [1.7, 1.7]
 
     ' Centra los dots cerca del borde inferior del bloque de noticias.
-    m.dotsContainer.translation = [int(screenWidth * 0.50), int(screenHeight * 0.92)]
+    m.dotsContainer.translation = [int(screenWidth * 0.50), int(screenHeight * 0.78)]
 end sub
 
 ' Dibuja contenido del item activo (imagen + título).
@@ -215,3 +229,109 @@ sub normalizeCurrentIndex()
         m.top.currentIndex = totalItems - 1
     end if
 end sub
+
+' Maneja navegación horizontal del News hero.
+function onKeyEvent(key as string, press as boolean) as boolean
+    if not press then return false
+
+    totalItems = getItemsCount()
+    if totalItems <= 0 then return false
+
+    if key = KeyButtons().RIGHT then
+        if m.top.currentIndex < (totalItems - 1) then
+            startSlideTransition(m.top.currentIndex + 1, -1)
+        end if
+        return true
+    else if key = KeyButtons().LEFT then
+        if m.top.currentIndex > 0 then
+            startSlideTransition(m.top.currentIndex - 1, 1)
+            return true
+        end if
+
+        ' En el primer elemento, no consume LEFT para permitir que MainScreen abra el menú.
+        return false
+    end if
+
+    return false
+end function
+
+' Inicia una transición horizontal y actualiza el item activo.
+sub startSlideTransition(newIndex as integer, direction as integer)
+    if m.isSliding then return
+
+    m.isSliding = true
+    m.slideCurrentFrame = 0
+    m.slideOffset = int(m.backgroundImage.width * 0.22) * direction
+
+    m.backgroundImage.translation = [m.slideOffset, 0]
+    if m.overlay <> invalid then m.overlay.translation = [m.slideOffset, 0]
+    if m.newsTitle <> invalid then
+        titleY = m.newsTitle.translation[1]
+        m.newsTitle.translation = [m.newsTitle.translation[0] + m.slideOffset, titleY]
+    end if
+    if m.dotsContainer <> invalid then
+        dotsY = m.dotsContainer.translation[1]
+        m.dotsContainer.translation = [m.dotsContainer.translation[0] + m.slideOffset, dotsY]
+    end if
+
+    m.top.currentIndex = newIndex
+
+    if m.slideTimer <> invalid then
+        m.slideTimer.control = "start"
+    else
+        finalizeSlideTransition()
+    end if
+end sub
+
+' Avanza un frame de la animación horizontal.
+sub onSlideFrame()
+    if not m.isSliding then return
+
+    m.slideCurrentFrame = m.slideCurrentFrame + 1
+
+    newOffset = __getSlideOffsetForFrame()
+
+    m.backgroundImage.translation = [newOffset, 0]
+    if m.overlay <> invalid then m.overlay.translation = [newOffset, 0]
+    if m.newsTitle <> invalid then
+        titleBase = int(m.backgroundImage.width * 0.15)
+        titleY = int(m.backgroundImage.height * 0.2)
+        m.newsTitle.translation = [titleBase + newOffset, titleY]
+    end if
+    if m.dotsContainer <> invalid then
+        dotsBase = int(m.backgroundImage.width * 0.50)
+        dotsY = int(m.backgroundImage.height * 0.86)
+        m.dotsContainer.translation = [dotsBase + newOffset, dotsY]
+    end if
+
+    if m.slideCurrentFrame >= m.slideTotalFrames then
+        finalizeSlideTransition()
+    end if
+end sub
+
+' Cierra la transición y restablece posiciones base.
+sub finalizeSlideTransition()
+    if m.slideTimer <> invalid then m.slideTimer.control = "stop"
+
+    m.isSliding = false
+    m.slideCurrentFrame = 0
+    m.slideOffset = 0
+
+    m.backgroundImage.translation = [0, 0]
+    if m.overlay <> invalid then m.overlay.translation = [0, 0]
+    m.newsTitle.translation = [int(m.backgroundImage.width * 0.15), int(m.backgroundImage.height * 0.2)]
+    m.dotsContainer.translation = [int(m.backgroundImage.width * 0.50), int(m.backgroundImage.height * 0.86)]
+end sub
+
+
+' Devuelve el desplazamiento horizontal interpolado para el frame actual (ease-out).
+function __getSlideOffsetForFrame() as integer
+    if m.slideTotalFrames <= 0 then return 0
+
+    progress = m.slideCurrentFrame / m.slideTotalFrames
+    if progress < 0 then progress = 0
+    if progress > 1 then progress = 1
+
+    easedProgress = 1 - ((1 - progress) * (1 - progress))
+    return int(m.slideOffset * (1 - easedProgress))
+end function

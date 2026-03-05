@@ -29,6 +29,8 @@ sub init()
   m.nameOrganization = m.top.findNode("nameOrganization")
 
   m.scaleInfo = m.global.scaleInfo
+  ' Indica si el foco debe volver al NewsItem tras cerrar menú.
+  m.returnFocusToNewsAfterMenu = false
 
   if m.global <> invalid then
     m.global.observeField("activeApiUrl", "onActiveApiUrlChanged")
@@ -87,9 +89,11 @@ function onKeyEvent(key as string, press as boolean) as boolean
     end if
 
     handled = true
-  
-  else if (key = KeyButtons().LEFT and m.carouselContainer.hasFocus()) then
+
+  else if key = KeyButtons().LEFT and press and ( __isNewsFocused() or (m.carouselContainer <> invalid and m.carouselContainer.isInFocusChain()) ) then
+    m.returnFocusToNewsAfterMenu = __isNewsFocused()
     m.myMenu.action = "expand"
+    m.selectedIndicator.visible = false
     handled = true
 
   else if (key = KeyButtons().BACK and m.carouselContainer <> invalid and m.carouselContainer.isInFocusChain() and m.carouselContainer.focusedChild <> invalid and  m.menuSelectedItem <> invalid and not m.isHomeSelected) then
@@ -450,6 +454,7 @@ end function
 ' Dispara la apertura del menu al llegar al limite izquierdo del carousel
 sub onOpenMenuCarousel() 
   __markLastFocus()
+  m.returnFocusToNewsAfterMenu = false
   m.myMenu.action = "expand"
   m.selectedIndicator.visible = false
 end sub
@@ -1280,7 +1285,15 @@ end sub
 
 ' Hace foco en los carruseles ya sea en el ultimo item de lso carouseles que tuvo foco o en el contenedor en si si no hay carouseles 
 sub __focusCarousels()
-  if m.autoUpgradeDialogOpen = true then return
+  if m.autoUpgradeDialogOpen = true then return 
+
+  if m.returnFocusToNewsAfterMenu and m.newsCarouselItem <> invalid then
+    m.newsCarouselItem.setFocus(true)
+    m.returnFocusToNewsAfterMenu = false
+    __updateOverlayVisibilityByFocus()
+    return
+  end if
+
   if m.carouselContainer.getChildCount() > 0 then 
     m.selectedIndicator.visible = true
     if m.lastFocus <> invalid then m.lastFocus.setFocus(true)
