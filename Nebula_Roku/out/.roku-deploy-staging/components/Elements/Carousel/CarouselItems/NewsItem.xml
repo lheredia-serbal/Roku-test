@@ -38,24 +38,6 @@
             opacity="0.20"
             translation="[0, 0]" />
 
-        <!-- Título grande anclado abajo a la izquierda con margen. -->
-        <Label
-            id="newsTitle"
-            horizAlign="left"
-            vertAlign="bottom"
-            wrap="true"
-            maxLines="3"
-            font="font:LargeBoldSystemFont" />
-
-        <!-- Contenedor horizontal para dots centrado abajo con margen inferior. -->
-        <LayoutGroup
-            id="dotsContainer"
-            translation="[960, 1010]"
-            layoutDirection="horiz"
-            horizAlignment="center"
-            vertAlignment="bottom"
-            itemSpacings="[14]" />
-
         <Timer id="slideTimer" repeat="true" duration="0.07" />
     </children>
 </component>

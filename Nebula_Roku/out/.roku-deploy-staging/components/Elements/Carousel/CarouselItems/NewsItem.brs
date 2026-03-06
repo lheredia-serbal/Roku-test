@@ -2,10 +2,6 @@
 sub init()
     ' Referencia al poster de fondo.
     m.backgroundImage = m.top.findNode("backgroundImage")
-    ' Referencia al label de título principal.
-    m.newsTitle = m.top.findNode("newsTitle")
-    ' Referencia al contenedor donde se dibujan los dots.
-    m.dotsContainer = m.top.findNode("dotsContainer")
     ' Referencia a la capa oscura que mejora legibilidad sobre la imagen.
     m.overlay = m.top.findNode("overlay")
 
@@ -35,7 +31,6 @@ sub init()
     ' Ajusta layout base a pantalla completa y dibuja contenido inicial.
     updateLayoutForResolution()
     renderCurrentItem()
-    renderDots()
 end sub
 
 ' Reacciona a cambios en la lista de items.
@@ -44,8 +39,6 @@ sub itemsChanged()
     normalizeCurrentIndex()
     ' Redibuja item actual con la nueva data.
     renderCurrentItem()
-    ' Redibuja dots según cantidad de items.
-    renderDots()
 end sub
 
 ' Reacciona al cambio de índice actual.
@@ -54,8 +47,6 @@ sub currentIndexChanged()
     normalizeCurrentIndex()
     ' Actualiza imagen/título visibles.
     renderCurrentItem()
-    ' Actualiza dot activo.
-    renderDots()
 end sub
 
 ' Reacciona al cambio del título fallback.
@@ -100,22 +91,6 @@ sub updateLayoutForResolution()
         ' Aplica el alto efectivo del bloque de noticias al overlay.
         m.overlay.height = screenHeight
     end if
-
-    ' Ajusta ancho máximo útil del título.
-    m.newsTitle.width = scaleValue(int(screenWidth * 0.72), m.scaleInfo)
-    ' Mantiene un alto cómodo para hasta 3 líneas grandes.
-    ' Incrementa el alto disponible para acompañar un título visualmente más grande.
-    m.newsTitle.height = scaleValue(int(screenHeight * 0.36), m.scaleInfo)
-    ' Posiciona el título más arriba para mejorar la composición del hero de noticias.
-    ' Desplaza el título hacia la derecha sin centrarlo para mantener jerarquía visual con el menú.
-    m.newsTitle.translation = scaleSize([120, -150], m.scaleInfo)
-    ' Escala el label para aumentar el tamaño percibido del título del NewsItem.
-    m.newsTitle.scale = [1.7, 1.7]
-
-    m.dotsContainer.width = scaleValue(screenWidth, m.scaleInfo)
-
-    ' Centra los dots cerca del borde inferior del bloque de noticias.
-    m.dotsContainer.translation = scaleSize([600, 530], m.scaleInfo)
 end sub
 
 ' Dibuja contenido del item activo (imagen + título).
@@ -123,67 +98,13 @@ sub renderCurrentItem()
     ' Obtiene item activo según currentIndex.
     currentItem = getCurrentItem()
 
-    ' Si no hay item válido, usa fallback de campos públicos.
-    if currentItem = invalid then
-        ' Setea título fallback definido externamente.
-        m.newsTitle.text = m.top.title
-        return
-    end if
-    ' Resuelve título del item.
-    titleValue = ""
-    ' Toma title si existe.
-    if currentItem.title <> invalid then titleValue = currentItem.title
-
+    ' Si no hay item válido, no hay cambios visuales internos adicionales.
+    if currentItem = invalid then return
     ' Aplica imagen final (o fallback del campo público imageURL).
     if currentItem.image <> invalid then
         ' Asigna imagen proveniente del item.
         m.backgroundImage.uri = getImageUrl(currentItem.image)
     end if
-
-    ' Aplica título final (o fallback del campo público title).
-    if titleValue <> "" then
-        ' Asigna título proveniente del item.
-        m.newsTitle.text = titleValue
-    else
-        ' Asigna título fallback si item no trae título.
-        m.newsTitle.text = m.top.title
-    end if
-end sub
-
-' Redibuja el listado de dots y marca activo en blanco.
-sub renderDots()
-    ' Limpia dots previos para reconstruir el indicador.
-    m.dotsContainer.removeChildrenIndex(m.dotsContainer.getChildCount(), 0)
-
-    ' Obtiene cantidad de items para saber cuántos dots dibujar.
-    totalItems = getItemsCount()
-
-    ' Si no hay items, no dibuja dots.
-    if totalItems <= 0 then return
-
-    ' Recorre cada posición de item para crear su dot.
-    for i = 0 to totalItems - 1
-        ' Crea un poster circular como dot reutilizando el asset redondo compartido.
-        dot = createObject("roSGNode", "Poster")
-        ' Define ancho del dot.
-        dot.width = m.dotSize
-        ' Define alto del dot.
-        dot.height = m.dotSize
-        ' Usa un asset circular para garantizar forma redonda en todos los dispositivos.
-        dot.uri = "pkg:/images/shared/ball.png"
-
-        ' Ajusta opacidad para diferenciar el dot activo de los inactivos.
-        if i = m.top.currentIndex then
-            ' Opacidad activa.
-            dot.opacity = m.activeDotOpacity
-        else
-            ' Opacidad inactiva.
-            dot.opacity = m.inactiveDotOpacity
-        end if
-
-        ' Agrega el dot al contenedor horizontal.
-        m.dotsContainer.appendChild(dot)
-    end for
 end sub
 
 ' Devuelve el item activo actual o invalid.
@@ -241,7 +162,7 @@ function onKeyEvent(key as string, press as boolean) as boolean
 
     if key = KeyButtons().RIGHT then
         if m.top.currentIndex < (totalItems - 1) then
-            startSlideTransition(m.top.currentIndex + 1, -1)
+            startSlideTransition(m.top.currentIndex + 1, 0)
         end if
         return true
     else if key = KeyButtons().LEFT then
@@ -267,14 +188,6 @@ sub startSlideTransition(newIndex as integer, direction as integer)
 
     m.backgroundImage.translation = [m.slideOffset, 0]
     if m.overlay <> invalid then m.overlay.translation = [m.slideOffset, 0]
-    if m.newsTitle <> invalid then
-        titleY = m.newsTitle.translation[1]
-        m.newsTitle.translation = [m.newsTitle.translation[0] + m.slideOffset, titleY]
-    end if
-    if m.dotsContainer <> invalid then
-        dotsY = m.dotsContainer.translation[1]
-        m.dotsContainer.translation = [m.dotsContainer.translation[0] + m.slideOffset, dotsY]
-    end if
 
     m.top.currentIndex = newIndex
 
@@ -295,16 +208,6 @@ sub onSlideFrame()
 
     m.backgroundImage.translation = [newOffset, 0]
     if m.overlay <> invalid then m.overlay.translation = [newOffset, 0]
-    if m.newsTitle <> invalid then
-        titleBase = int(m.backgroundImage.width * 0.15)
-        titleY = int(m.backgroundImage.height * 0.2)
-        m.newsTitle.translation = [titleBase + newOffset, titleY]
-    end if
-    if m.dotsContainer <> invalid then
-        dotsBase = int(m.backgroundImage.width * 0.50)
-        dotsY = int(m.backgroundImage.height * 0.86)
-        m.dotsContainer.translation = [dotsBase + newOffset, dotsY]
-    end if
 
     if m.slideCurrentFrame >= m.slideTotalFrames then
         finalizeSlideTransition()
@@ -321,8 +224,6 @@ sub finalizeSlideTransition()
 
     m.backgroundImage.translation = [0, 0]
     if m.overlay <> invalid then m.overlay.translation = [0, 0]
-    m.newsTitle.translation = [int(m.backgroundImage.width * 0.15), int(m.backgroundImage.height * 0.2)]
-    m.dotsContainer.translation = [int(m.backgroundImage.width * 0.50), int(m.backgroundImage.height * 0.86)]
 end sub
 
 
