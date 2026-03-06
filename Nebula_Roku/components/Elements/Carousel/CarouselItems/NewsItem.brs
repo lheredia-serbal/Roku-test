@@ -5,6 +5,13 @@ sub init()
     ' Referencia a la capa oscura que mejora legibilidad sobre la imagen.
     m.overlay = m.top.findNode("overlay")
 
+    ' Referencia al bloque de acción de detalle.
+    m.detailActionGroup = m.top.findNode("detailActionGroup")
+    ' Referencia al label del bloque de acción.
+    m.detailActionLabel = m.top.findNode("detailActionLabel")
+    ' Referencia al ícono del bloque de acción.
+    m.detailActionIcon = m.top.findNode("detailActionIcon")
+
     ' Opacidad por defecto para dots inactivos.
     m.inactiveDotOpacity = 0.45
     ' Opacidad para dot activo.
@@ -26,7 +33,6 @@ sub init()
         m.slideTimer.unobserveField("fire")
         m.slideTimer.observeField("fire", "onSlideFrame")
     end if
-
 
     ' Ajusta layout base a pantalla completa y dibuja contenido inicial.
     updateLayoutForResolution()
@@ -105,8 +111,50 @@ sub renderCurrentItem()
         ' Asigna imagen proveniente del item.
         m.backgroundImage.uri = getImageUrl(currentItem.image)
     end if
+
+    ' Actualiza visibilidad y contenido del CTA según redirectKey.
+    updateDetailActionCTA(currentItem)
 end sub
 
+' Actualiza el CTA de detalle/reproducción según redirectKey del item activo.
+sub updateDetailActionCTA(currentItem as dynamic)
+    ' Si no existen los nodos del CTA, no hay nada para actualizar.
+    if m.detailActionGroup = invalid or m.detailActionLabel = invalid or m.detailActionIcon = invalid then return
+
+    ' Obtiene redirectKey del item actual cuando existe.
+    redirectKey = invalid
+    if currentItem <> invalid and currentItem.redirectKey <> invalid then
+        redirectKey = currentItem.redirectKey
+    end if
+
+    ' Si redirectKey es inválido, oculta el CTA y corta el flujo.
+    if redirectKey = invalid then
+        m.detailActionGroup.visible = true
+        return
+    end if
+
+    ' Normaliza redirectKey para comparación sin sensibilidad a mayúsculas.
+    redirectKeyValue = LCase(redirectKey.ToStr())
+
+    ' Si redirectKey apunta a canal, muestra acción de reproducción.
+    if redirectKeyValue = "channelid" then
+        m.detailActionLabel.text = i18n_t(m.global.i18n, "content.contentPage.watch")
+        m.detailActionIcon.uri = "pkg:/images/shared/play.png"
+        m.detailActionGroup.visible = true
+        return
+    end if
+
+    ' Si redirectKey apunta a show, muestra acción de ver detalle.
+    if redirectKeyValue = "showid" then
+        m.detailActionLabel.text = i18n_t(m.global.i18n, "content.contentPage.seeDetail")
+        m.detailActionIcon.uri = "pkg:/images/shared/more_info.png"
+        m.detailActionGroup.visible = true
+        return
+    end if
+
+    ' Para cualquier otro redirectKey, oculta el CTA.
+    m.detailActionGroup.visible = true
+end sub
 ' Devuelve el item activo actual o invalid.
 function getCurrentItem() as dynamic
     ' Si items no es válido, no hay item activo.

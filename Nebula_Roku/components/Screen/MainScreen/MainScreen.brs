@@ -135,8 +135,8 @@ sub initData()
     
     m.groupOpacityForMenu.clippingRect = [0, 0, safeX + scaleValue(60, m.scaleInfo), height]
 
-    ' Define un ancho fijo de 550 escalado para el sombreado lateral izquierdo.
-    leftShadeWidth = scaleValue(550, m.scaleInfo)
+    ' Define un ancho fijo de 450 escalado para el sombreado lateral izquierdo.
+    leftShadeWidth = scaleValue(450, m.scaleInfo)
     ' Aplica el ancho calculado al sombreado difuminado.
     m.leftBlurShade.width = leftShadeWidth
     ' Extiende el sombreado al 100% de alto de pantalla.
