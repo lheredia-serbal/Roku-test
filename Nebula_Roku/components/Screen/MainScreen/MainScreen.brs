@@ -65,6 +65,12 @@ function onKeyEvent(key as string, press as boolean) as boolean
 
   if handled then return true
 
+  ' Cuando el foco está en NewsItem y se presiona OK, delega la acción al flujo específico de News.
+  if key = KeyButtons().OK and press and __isNewsFocused() then
+    ' Ejecuta acción de News (si corresponde) y consume el evento para evitar propagación no deseada.
+    return __handleNewsOkAction()
+  end if
+
   if key = KeyButtons().UP
     if press and m.carouselContainer <> invalid and m.carouselContainer.isInFocusChain() and m.carouselContainer.focusedChild <> invalid and m.carouselContainer.focusedChild.focusUp <> invalid then
       focusItem = m.carouselContainer.focusedChild.focusUp.findNode("carouselList")
@@ -452,6 +458,110 @@ sub onSelectItem()
     end if
   end if
 end sub
+
+' Resuelve la acción al presionar OK sobre el carrusel de News.
+function __handleNewsOkAction() as boolean
+  ' Obtiene de forma segura el item actualmente activo en News.
+  newsSelectedItem = __getCurrentNewsSelectedItem()
+  ' Si no hay item válido en News, no ejecuta ninguna acción adicional.
+  if newsSelectedItem = invalid then return true
+
+  ' Conserva la selección para reutilizar el mismo flujo de reproducción/detalle ya existente.
+  m.itemSelected = newsSelectedItem
+  ' Si redirectKey no existe, no hace nada (solo consume OK en News).
+  if m.itemSelected.redirectKey = invalid then return true
+
+  ' Si redirectKey es ChannelId, reutiliza exactamente el flujo normal hacia Player.
+  if m.itemSelected.redirectKey = "ChannelId" then
+    ' Guarda el foco en News para restaurarlo al volver desde Player y evitar loading infinito.
+    if m.newsCarouselItem <> invalid then m.lastFocus = m.newsCarouselItem
+    ' Si aplica control parental, abre PIN antes de continuar.
+    if m.itemSelected.parentalControl <> invalid and m.itemSelected.parentalControl then
+      ' Guarda referencia de foco actual para restauración posterior.
+      __markLastFocus()
+      ' Abre diálogo de PIN con callbacks existentes del flujo normal.
+      m.pinDialog = createAndShowPINDialog(m.top, i18n_t(m.global.i18n, "shared.parentalControlModal.title"), "onPinDialogLoad", [i18n_t(m.global.i18n, "button.ok"), i18n_t(m.global.i18n, "button.cancel")])
+      ' Finaliza manejando OK desde News.
+      return true
+    end if
+
+    ' Muestra loading antes de validar sesión de reproducción.
+    m.top.loading.visible = true
+    ' Recupera o crea el watchSessionId vigente.
+    watchSessionId = getWatchSessionId()
+    ' Genera identificador único para la acción de red.
+    requestId = createRequestId()
+
+    ' Define acción de validación para reproducir canal exactamente como en selección normal.
+    action = {
+      apiRequestManager: m.apiRequestManager
+      url: urlWatchValidate(m.apiUrl, watchSessionId, m.itemSelected.redirectKey, m.itemSelected.redirectId)
+      method: "GET"
+      responseMethod: "onWatchValidateResponse"
+      body: invalid
+      token: invalid
+      publicApi: false
+      dataAux: invalid
+      requestId: requestId
+      run: function() as Object
+        ' Ejecuta request reutilizando el helper estándar del proyecto.
+        m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux)
+        ' Retorna resultado exitoso para el orquestador de acciones.
+        return { success: true, error: invalid }
+      end function
+    }
+
+    ' Dispara la acción con el mismo tipo de API usado por el flujo estándar.
+    runAction(requestId, action, ApiType().CLIENTS_API_URL)
+    ' Sincroniza referencia del request manager luego de ejecutar la acción.
+    m.apiRequestManager = action.apiRequestManager
+    ' Finaliza acción de OK en News con éxito.
+    return true
+  end if
+
+  ' Para cualquier redirectKey distinto de ChannelId, redirecciona al detalle como el flujo normal.
+  m.apiRequestManager = clearApiRequest(m.apiRequestManager)
+  ' Guarda el foco actual para restauración al volver desde ProgramDetailScreen.
+  __markLastFocus()
+  ' Activa loading para mantener consistencia visual con la navegación estándar.
+  m.top.loading.visible = true
+  ' Dispara navegación a ProgramDetailScreen reutilizando el mismo payload de detalle.
+
+  m.top.detail = FormatJson({
+    carouselCode: ""
+    catchupDuration: 0
+    category: ""
+    endTime: ""
+    formattedDuration: ""
+    id: m.itemSelected.redirectId
+    image: invalid
+    imageType: 0
+    itemppositio: 0
+    key: m.itemSelected.redirectKey
+    redirectId: m.itemSelected.redirectId
+    redirectKey: m.itemSelected.redirectKey
+    startTime: ""
+    title: m.itemSelected.title
+  })
+  ' Confirma que el OK de News fue atendido por MainScreen.
+  return true
+end function
+
+' Obtiene el item activo del componente NewsItem de forma segura.
+function __getCurrentNewsSelectedItem() as dynamic
+  ' Si el componente News no existe, no hay selección posible.
+  if m.newsCarouselItem = invalid then return invalid
+  ' Lee colección de items publicada por NewsItem.
+  newsItems = m.newsCarouselItem.items
+  ' Lee índice actual del item activo en NewsItem.
+  newsCurrentIndex = m.newsCarouselItem.currentIndex
+  ' Si el arreglo es inválido o vacío, no hay item seleccionado.
+  if newsItems = invalid or newsItems.count() <= 0 then return invalid
+  ' Si el índice está fuera de rango, no hay item seleccionado válido.
+  if newsCurrentIndex < 0 or newsCurrentIndex >= newsItems.count() then return invalid
+  ' Retorna el item activo para ser procesado por la acción de OK.
+  return newsItems[newsCurrentIndex]
+end function
 
 ' Busca el índice del carrusel que actualmente tiene foco para alinear con carouselData[carouselIndex].
 function __getFocusedCarouselIndex() as dynamic

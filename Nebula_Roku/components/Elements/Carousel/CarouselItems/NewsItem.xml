@@ -25,46 +25,33 @@
         <!-- Poster de fondo que ocupa el 100% del ancho/alto de pantalla. -->
         <Poster
             id="backgroundImage"
-            width="1920"
-            height="1080"
-            loadDisplayMode="scaleToZoom"
-            translation="[0, 0]" />
+            loadDisplayMode="scaleToFill"/>
 
         <!-- Capa oscura opcional para mejorar legibilidad del texto sobre la imagen. -->
         <Rectangle
             id="overlay"
-            width="1920"
-            height="1080"
             color="#000000"
-            opacity="0.20"
-            translation="[0, 0]" />
+            opacity="0.20"/>
 
         <!-- Contenedor rectangular (más ancho que alto) para la acción de detalle. -->
         <Group 
             id="detailActionGroup" 
-            translation="[1400, 750]" 
             visible="false">
 
             <Rectangle 
                 id="detailActionBackground" 
-                width="360" 
-                height="80" 
                 color="#000000" 
                 opacity="0.60" />
 
             <Label 
                 id="detailActionLabel" 
                 text="" 
-                translation="[24, 24]" 
                 color="#FFFFFFFF" 
                 font="font:MediumBoldSystemFont" />
 
             <Poster 
                 id="detailActionIcon" 
-                uri="pkg:/images/shared/more_info.png" 
-                width="32" 
-                height="32" 
-                translation="[304, 24]" />
+                uri="pkg:/images/shared/more_info.png" />
         </Group>
 
         <Timer id="slideTimer" repeat="true" duration="0.07" />
