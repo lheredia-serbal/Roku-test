@@ -102,18 +102,20 @@ sub updateLayoutForResolution()
     end if
 
     ' Ajusta ancho máximo útil del título.
-    m.newsTitle.width = int(screenWidth * 0.72)
+    m.newsTitle.width = scaleValue(int(screenWidth * 0.72), m.scaleInfo)
     ' Mantiene un alto cómodo para hasta 3 líneas grandes.
     ' Incrementa el alto disponible para acompañar un título visualmente más grande.
-    m.newsTitle.height = int(screenHeight * 0.36)
+    m.newsTitle.height = scaleValue(int(screenHeight * 0.36), m.scaleInfo)
     ' Posiciona el título más arriba para mejorar la composición del hero de noticias.
     ' Desplaza el título hacia la derecha sin centrarlo para mantener jerarquía visual con el menú.
-    m.newsTitle.translation = [int(screenWidth * 0.15), int(screenHeight * 0.2)]
+    m.newsTitle.translation = scaleSize([120, -150], m.scaleInfo)
     ' Escala el label para aumentar el tamaño percibido del título del NewsItem.
     m.newsTitle.scale = [1.7, 1.7]
 
+    m.dotsContainer.width = scaleValue(screenWidth, m.scaleInfo)
+
     ' Centra los dots cerca del borde inferior del bloque de noticias.
-    m.dotsContainer.translation = [int(screenWidth * 0.50), int(screenHeight * 0.78)]
+    m.dotsContainer.translation = scaleSize([600, 530], m.scaleInfo)
 end sub
 
 ' Dibuja contenido del item activo (imagen + título).

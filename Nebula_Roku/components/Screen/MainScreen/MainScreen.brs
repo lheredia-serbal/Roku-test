@@ -32,6 +32,9 @@ sub init()
   ' Indica si el foco debe volver al NewsItem tras cerrar menú.
   m.returnFocusToNewsAfterMenu = false
 
+  ' Define cuánto se eleva el primer carrusel para que se vea detrás/arriba del bloque News cuando News tiene foco.
+  m.newsPeekOffset = scaleValue(230, m.scaleInfo)
+
   if m.global <> invalid then
     m.global.observeField("activeApiUrl", "onActiveApiUrlChanged")
   end if
@@ -127,8 +130,8 @@ sub initData()
     
     m.groupOpacityForMenu.clippingRect = [0, 0, safeX + scaleValue(60, m.scaleInfo), height]
 
-    ' Define un ancho fijo de 400 escalado para el sombreado lateral izquierdo.
-    leftShadeWidth = scaleValue(800, m.scaleInfo)
+    ' Define un ancho fijo de 550 escalado para el sombreado lateral izquierdo.
+    leftShadeWidth = scaleValue(550, m.scaleInfo)
     ' Aplica el ancho calculado al sombreado difuminado.
     m.leftBlurShade.width = leftShadeWidth
     ' Extiende el sombreado al 100% de alto de pantalla.
@@ -715,7 +718,7 @@ sub getProgramInfo()
 
       nowDate.ToLocalTime()
 
-      if (m.program.infoKey <> "ChannelId") or (m.program.infoKey = "ChannelId" and endTime.AsSeconds() > nowDate.AsSeconds()) then 
+      if not __isNewsFocused() and (m.program.infoKey <> "ChannelId") or (m.program.infoKey = "ChannelId" and endTime.AsSeconds() > nowDate.AsSeconds()) then 
         m.programInfo.visible = true      
         return
       end if
@@ -763,7 +766,7 @@ sub onProgramSummaryResponse()
   if (m.apiSummaryRequestManager = invalid) then 
     getProgramInfo() 
   else
-    if validateStatusCode(m.apiSummaryRequestManager.statusCode) then
+    if validateStatusCode(m.apiSummaryRequestManager.statusCode) and not __isNewsFocused() then
       m.itemfocused = invalid
       resp = ParseJson(m.apiSummaryRequestManager.response)
       if resp.data <> invalid then
@@ -1363,6 +1366,10 @@ end sub
 sub __updateOverlayVisibilityByFocus()
   ' Si el foco está en NewsItem, se ocultan overlays superiores del listado.
   if __isNewsFocused() then
+    ' Busca el primer carrusel no-News para calcular el desplazamiento visual mientras News mantiene el foco.
+    firstCarousel = __getFirstNonNewsCarousel()
+    ' Aplica elevación solo si existe al menos un carrusel no-News para mostrarlo parcialmente sobre News.
+    if firstCarousel <> invalid then m.carouselContainer.translation = [m.xPosition, m.yPosition - m.newsPeekOffset]
     m.programInfo.visible = false
     m.selectedIndicator.visible = false
   else
@@ -1373,6 +1380,16 @@ sub __updateOverlayVisibilityByFocus()
     end if
   end if
 end sub
+
+' Devuelve la primera instancia de Carousel (no-News) para usarla como referencia visual del peek sobre News.
+function __getFirstNonNewsCarousel() as dynamic
+  ' Corta si el contenedor no está listo para evitar excepciones.
+  if m.carouselContainer = invalid then return invalid
+  ' Corta si no hay hijos porque no existe ningún carrusel disponible.
+  if m.carouselContainer.getChildCount() = 0 then return invalid
+  ' Retorna el primer hijo porque populateCarousels agrega únicamente carruseles no-News en este contenedor.
+  return m.carouselContainer.getChild(0)
+end function
 
 ' Actualiza el indicador de seleccion segun el carrusel enfocado
 sub __updateSelectedIndicator()

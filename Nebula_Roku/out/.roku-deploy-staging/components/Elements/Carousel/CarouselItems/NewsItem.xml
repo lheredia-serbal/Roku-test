@@ -26,7 +26,7 @@
             id="backgroundImage"
             width="1920"
             height="1080"
-            loadDisplayMode="scaleToFill"
+            loadDisplayMode="scaleToZoom"
             translation="[0, 0]" />
 
         <!-- Capa oscura opcional para mejorar legibilidad del texto sobre la imagen. -->
@@ -41,9 +41,6 @@
         <!-- Título grande anclado abajo a la izquierda con margen. -->
         <Label
             id="newsTitle"
-            width="1400"
-            height="260"
-            translation="[80, 760]"
             horizAlign="left"
             vertAlign="bottom"
             wrap="true"
@@ -56,7 +53,7 @@
             translation="[960, 1010]"
             layoutDirection="horiz"
             horizAlignment="center"
-            vertAlignment="center"
+            vertAlignment="bottom"
             itemSpacings="[14]" />
 
         <Timer id="slideTimer" repeat="true" duration="0.07" />
