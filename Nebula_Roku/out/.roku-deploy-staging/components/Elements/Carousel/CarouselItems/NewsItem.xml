@@ -9,6 +9,7 @@
     <!-- Script de lógica para el slider de noticias. -->
     <script type="text/brightscript" uri="NewsItem.brs" />
     <script type="text/brightscript" uri="pkg:/source/Utils.brs" />
+    <script type="text/brightscript" uri="pkg:/source/Utils/i18nUtils.brs" />
     <script type="text/brightscript" uri="pkg:/source/Enums.brs" />
 
     <interface>
@@ -24,19 +25,34 @@
         <!-- Poster de fondo que ocupa el 100% del ancho/alto de pantalla. -->
         <Poster
             id="backgroundImage"
-            width="1920"
-            height="1080"
-            loadDisplayMode="scaleToZoom"
-            translation="[0, 0]" />
+            loadDisplayMode="scaleToZoom"/>
 
         <!-- Capa oscura opcional para mejorar legibilidad del texto sobre la imagen. -->
         <Rectangle
             id="overlay"
-            width="1920"
-            height="1080"
             color="#000000"
-            opacity="0.20"
-            translation="[0, 0]" />
+            opacity="0.20"/>
+
+        <!-- Contenedor rectangular (más ancho que alto) para la acción de detalle. -->
+        <Group 
+            id="detailActionGroup" 
+            visible="false">
+
+            <Rectangle 
+                id="detailActionBackground" 
+                color="#000000" 
+                opacity="0.60" />
+
+            <Label 
+                id="detailActionLabel" 
+                text="" 
+                color="#FFFFFFFF" 
+                font="font:MediumBoldSystemFont" />
+
+            <Poster 
+                id="detailActionIcon" 
+                uri="pkg:/images/shared/more_info.png" />
+        </Group>
 
         <Timer id="slideTimer" repeat="true" duration="0.07" />
     </children>

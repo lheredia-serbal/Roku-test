@@ -30,6 +30,9 @@ sub init()
   m.lastKey = invalid
   m.lastId = invalid
 
+   ' Indica si el detalle actual fue abierto desde el carrusel de News.
+  m.openFromNews = false
+
   if m.global <> invalid then
     m.global.observeField("activeApiUrl", "onActiveApiUrlChanged")
   end if
@@ -118,7 +121,16 @@ sub initData()
     if m.beaconUrl = invalid then m.beaconUrl = getConfigVariable(m.global.configVariablesKeys.BEACON_URL) 
 
     data = ParseJson(m.top.data)
-    __getProgramDetail(data.key, data.id)
+    ' Guarda redirectKey recibido desde Home para conservar contexto de navegación.
+    m.redirectKey = data.redirectKey
+    ' Marca origen News cuando el payload lo informa explícitamente.
+    m.openFromNews = (data.openFromNews <> invalid and data.openFromNews = true)
+    ' Prioriza key/id estándar y usa redirectKey/redirectId como fallback defensivo.
+    detailKey = data.key
+    if detailKey = invalid then detailKey = data.redirectKey
+    detailId = data.id
+    if detailId = invalid then detailId = data.redirectId
+    __getProgramDetail(detailKey, detailId)
   else
     _clearScreen()
   end if
@@ -381,6 +393,8 @@ sub onSelectItem()
   if m.related <> invalid and m.related.isInFocusChain() then
     itemSelected = ParseJson(m.related.selected)
     m.related.selected = invalid
+    ' Al navegar desde relacionados dejamos de usar el endpoint especial de News.
+    m.openFromNews = false
     _clearScreen()
     m.top.loading.visible = true
     __getProgramDetail(itemSelected.redirectKey, itemSelected.redirectId)
@@ -703,7 +717,14 @@ sub __loadProgramInfo(program)
   end if
 
   if m.program.image <> invalid then
-    m.programImage.uri = getImageUrl(m.program.image)
+    imageUrl = getImageUrl(m.program.image)
+
+    if imageUrl = invalid or imageUrl = "" then
+       imageUrl = getImageError()
+       m.programTitleError.text = m.program.title
+       m.programTitleContainerByError.visible = true
+    end if
+    m.programImage.uri =  imageUrl
     m.programImage.visible = true
   else
     m.programImage.visible = false
@@ -718,9 +739,17 @@ sub __loadProgramInfo(program)
   __renderCreditGroups()
   requestId = createRequestId()
   
+  ' Selecciona endpoint de relacionados según el origen de navegación.
+  relatedUrl = urlProgramRelated(m.apiUrl, m.program.key, m.program.id)
+  ' Si el detalle se abrió desde News, usa servicio específico para News.
+  newsRedirectKey = m.program.key
+  if m.redirectKey <> invalid then newsRedirectKey = m.redirectKey
+  if m.openFromNews then relatedUrl = urlProgramRelatedFromNews(m.apiUrl, newsRedirectKey, m.program.id)
+
   action = {
     apiRequestManager: m.apiRequestManager
-    url: urlProgramRelated(m.apiUrl, m.program.key, m.program.id)
+    ' Usa URL dinámica para respetar origen News vs flujo general.
+    url: relatedUrl
     method: "GET"
     responseMethod: "onGetRelatedResponse"
     body: invalid
@@ -743,7 +772,7 @@ sub __loadRelatedCarousel(carouselData)
   if carouselData.items <> invalid and carouselData.items.count() > 0 then 
     m.related.id = carouselData.id
     m.related.style = carouselData.style
-    m.related.title = carouselData.title
+    m.related.title = carouselData.title 
     m.related.code = carouselData.code
     m.related.contentType = carouselData.contentType
     m.related.imageType = carouselData.imageType
@@ -830,7 +859,7 @@ sub __configProgramDetail()
   end if
 
   m.programDetailContent.translation = scaleSize([70, 50], m.scaleInfo)
-  m.programTitleContainerByError.translation = scaleSize([160, 162], m.scaleInfo)
+  m.programTitleContainerByError.translation = scaleSize([0, 162], m.scaleInfo)
 
   m.programTitleError.width = scaleValue(200, m.scaleInfo) 
   m.programTitleError.height = scaleValue(300, m.scaleInfo)
@@ -861,6 +890,8 @@ sub _clearScreen()
   m.notFoundLayoutGroup.visible = false
   m.apiRequestManager = clearApiRequest(m.apiRequestManager) 
   m.program = invalid
+  m.redirectKey = invalid
+  m.openFromNews = false
   m.streamingAction = invalid
   m.programImage.uri = ""
   m.programImageBackground.uri = ""

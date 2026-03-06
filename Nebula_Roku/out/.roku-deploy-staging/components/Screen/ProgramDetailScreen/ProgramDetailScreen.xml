@@ -81,7 +81,7 @@
           <LayoutGroup
             id="programTitleContainerByError"
             layoutDirection="vert"
-            horizAlignment="center"
+            horizAlignment="left"
             vertAlignment="center"
             visible="false" >
             <Label 

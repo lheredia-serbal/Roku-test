@@ -57,7 +57,8 @@
                     </LayoutGroup> 
                     
                     <Poster 
-                        id="imageItem" />
+                        id="imageItem"
+                        loadDisplayMode="scaleToFill" />
                 </LayoutGroup>
                 
                 <!-- BARRA FIJA ABAJO -->

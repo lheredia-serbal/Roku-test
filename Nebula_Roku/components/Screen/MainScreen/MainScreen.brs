@@ -454,7 +454,16 @@ sub onSelectItem()
       m.apiRequestManager = clearApiRequest(m.apiRequestManager) 
       __markLastFocus()
       m.top.loading.visible = true
-      m.top.detail = FormatJson(m.itemSelected) 
+            ' Construye payload de detalle reutilizando el item seleccionado.
+      detailPayload = m.itemSelected
+      ' Garantiza redirectKey para que ProgramDetail pueda resolver el origen y navegación.
+      if detailPayload.redirectKey = invalid then detailPayload.redirectKey = detailPayload.key
+      ' Garantiza redirectId para mantener compatibilidad con flujos de detalle.
+      if detailPayload.redirectId = invalid then detailPayload.redirectId = detailPayload.id
+      ' Marca explícitamente que esta navegación no proviene del carrusel de News.
+      detailPayload.openFromNews = false
+      ' Envía payload completo a ProgramDetail.
+      m.top.detail = FormatJson(detailPayload)
     end if
   end if
 end sub
@@ -542,6 +551,7 @@ function __handleNewsOkAction() as boolean
     redirectKey: m.itemSelected.redirectKey
     startTime: ""
     title: m.itemSelected.title
+    openFromNews: true
   })
   ' Confirma que el OK de News fue atendido por MainScreen.
   return true
@@ -1506,12 +1516,21 @@ sub __updateOverlayVisibilityByFocus()
     if firstCarousel <> invalid then m.carouselContainer.translation = [m.xPosition, m.yPosition - m.newsPeekOffset]
     m.programInfo.visible = false
     m.selectedIndicator.visible = false
+    ' Cuando el foco está en News, muestra el título externo de News.
+    if m.newsTitle <> invalid then m.newsTitle.visible = true
+    ' Cuando el foco está en News, muestra el contenedor externo de dots.
+    if m.dotsContainer <> invalid then m.dotsContainer.visible = true
   else
     ' Si el foco salió de NewsItem, vuelve a mostrar overlays contextuales.
     m.programInfo.visible = true
     if m.carouselContainer <> invalid and m.carouselContainer.focusedChild <> invalid then
       m.selectedIndicator.visible = true
     end if
+
+    ' Cuando el foco no está en News, oculta el título externo de News.
+    if m.newsTitle <> invalid then m.newsTitle.visible = false
+    ' Cuando el foco no está en News, oculta el contenedor externo de dots.
+    if m.dotsContainer <> invalid then m.dotsContainer.visible = false
   end if
 end sub
 

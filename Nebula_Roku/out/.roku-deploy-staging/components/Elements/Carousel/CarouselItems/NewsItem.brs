@@ -5,6 +5,15 @@ sub init()
     ' Referencia a la capa oscura que mejora legibilidad sobre la imagen.
     m.overlay = m.top.findNode("overlay")
 
+    ' Referencia al bloque de acción de detalle.
+    m.detailActionGroup = m.top.findNode("detailActionGroup")
+    ' Referencia al label del bloque de acción.
+    m.detailActionLabel = m.top.findNode("detailActionLabel")
+    ' Referencia al ícono del bloque de acción.
+    m.detailActionIcon = m.top.findNode("detailActionIcon")
+    ' Referencia al fondo del bloque de acción.
+    m.detailActionBackground = m.top.findNode("detailActionBackground")
+
     ' Opacidad por defecto para dots inactivos.
     m.inactiveDotOpacity = 0.45
     ' Opacidad para dot activo.
@@ -26,7 +35,6 @@ sub init()
         m.slideTimer.unobserveField("fire")
         m.slideTimer.observeField("fire", "onSlideFrame")
     end if
-
 
     ' Ajusta layout base a pantalla completa y dibuja contenido inicial.
     updateLayoutForResolution()
@@ -63,35 +71,47 @@ end sub
 
 ' Ajusta tamaños/posiciones para resolución FHD/HD.
 sub updateLayoutForResolution()
-    ' Lee dimensiones del display actual.
-    screenWidth = 1920
-    ' Establece alto por defecto FHD.
-    screenHeight = 1080
-
-    ' Si hay Scene disponible, usa su tamaño real.
-    if m.top.getScene() <> invalid then
-        ' Obtiene ancho real de escena.
-        if m.top.getScene().currentDesignResolution <> invalid then
-            ' Lee resolución de diseño actual.
-            screenWidth = m.top.getScene().currentDesignResolution.width
-            ' Lee alto de diseño actual.
-            screenHeight = m.top.getScene().currentDesignResolution.height
-        end if
-    end if
+    ' Usa base 1280x720 para que el escalado lleve el fondo al tamaño real de pantalla.
+    baseScreenWidth = 1280
+    baseScreenHeight = 720
 
     ' Hace que la imagen de fondo ocupe el ancho completo del display.
-    m.backgroundImage.width = screenWidth
+    m.backgroundImage.width = scaleValue(baseScreenWidth, m.scaleInfo)
     ' Aplica el alto efectivo del bloque de noticias a la imagen de fondo.
-    m.backgroundImage.height = screenHeight
+    m.backgroundImage.height = scaleValue(baseScreenHeight, m.scaleInfo)
+    ' Mantiene el fondo anclado en el origen.
+    m.backgroundImage.translation = scaleSize([0, 0], m.scaleInfo)
 
     ' Ajusta el overlay para que cubra exactamente el bloque visible de noticias.
     if m.overlay <> invalid then
         ' Aplica ancho completo del bloque de noticias al overlay.
-        m.overlay.width = screenWidth
+        m.overlay.width = scaleValue(baseScreenWidth, m.scaleInfo)
         ' Aplica el alto efectivo del bloque de noticias al overlay.
-        m.overlay.height = screenHeight
+        m.overlay.height = scaleValue(baseScreenHeight, m.scaleInfo)
+        ' Mantiene el overlay anclado en el origen.
+        m.overlay.translation = scaleSize([0, 0], m.scaleInfo)
+    end if
+
+    if m.detailActionGroup <> invalid then
+        m.detailActionGroup.translation = scaleSize([900, 500], m.scaleInfo)
+    end if
+
+    if m.detailActionBackground <> invalid then
+        m.detailActionBackground.width = scaleValue(280, m.scaleInfo)
+        m.detailActionBackground.height = scaleValue(60, m.scaleInfo)
+    end if
+
+    if m.detailActionLabel <> invalid then
+        m.detailActionLabel.translation = scaleSize([24, 20], m.scaleInfo)
+    end if
+
+    if m.detailActionIcon <> invalid then
+        m.detailActionIcon.width = scaleValue(32, m.scaleInfo)
+        m.detailActionIcon.height = scaleValue(32, m.scaleInfo)
+        m.detailActionIcon.translation = scaleSize([240, 18], m.scaleInfo)
     end if
 end sub
+
 
 ' Dibuja contenido del item activo (imagen + título).
 sub renderCurrentItem()
@@ -105,8 +125,47 @@ sub renderCurrentItem()
         ' Asigna imagen proveniente del item.
         m.backgroundImage.uri = getImageUrl(currentItem.image)
     end if
+
+    ' Actualiza visibilidad y contenido del CTA según redirectKey.
+        updateDetailActionCTA(currentItem)
 end sub
 
+' Actualiza el CTA de detalle/reproducción según redirectKey del item activo.
+sub updateDetailActionCTA(currentItem as dynamic)
+    ' Si no existen los nodos del CTA, no hay nada para actualizar.
+    if m.detailActionGroup = invalid or m.detailActionLabel = invalid or m.detailActionIcon = invalid then return
+
+    ' Obtiene redirectKey del item actual cuando existe.
+    redirectKey = invalid
+    if currentItem <> invalid and currentItem.redirectKey <> invalid then
+        redirectKey = currentItem.redirectKey
+    end if
+
+    ' Si redirectKey es inválido, oculta el CTA y corta el flujo.
+    if redirectKey = invalid then
+        m.detailActionGroup.visible = false
+        return
+    end if
+
+    ' Normaliza redirectKey para comparación sin sensibilidad a mayúsculas.
+    redirectKeyValue = LCase(redirectKey.ToStr())
+
+    ' Si redirectKey apunta a canal, muestra acción de reproducción.
+    if redirectKeyValue = "channelid" then
+        m.detailActionLabel.text = i18n_t(m.global.i18n, "content.contentPage.watch")
+        m.detailActionIcon.uri = "pkg:/images/shared/play.png"
+        m.detailActionGroup.visible = true
+        return
+    else
+        m.detailActionLabel.text = i18n_t(m.global.i18n, "content.contentPage.seeDetail")
+        m.detailActionIcon.uri = "pkg:/images/shared/more_info.png"
+        m.detailActionGroup.visible = true
+        return
+    end if
+
+    ' Para cualquier otro redirectKey, oculta el CTA.
+    m.detailActionGroup.visible = false
+end sub
 ' Devuelve el item activo actual o invalid.
 function getCurrentItem() as dynamic
     ' Si items no es válido, no hay item activo.

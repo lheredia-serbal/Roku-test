@@ -571,35 +571,37 @@ end function
 function GetServerErrorStack(errorResponse as dynamic) as dynamic
 
     if errorResponse <> invalid and errorResponse = "" then return invalid
+
+    errorParsed = parseJson(errorResponse)
     
-    if errorResponse <> invalid and errorResponse.error <> invalid then
+    if errorParsed <> invalid and errorParsed.error <> invalid then
         ' let apiError = { detail: JSON.stringify(errorResponse), ...errorResponse.error }
         ' En TS, el spread final puede pisar detail; acá preservamos detail si ya existe.
-        apiError = errorResponse.error
+        apiError = errorParsed.error
 
         if not apiError.doesExist("detail") then
-            apiError.detail = FormatJson(errorResponse)
+            apiError.detail = errorParsed
         end if
 
         return apiError
 
-    else if errorResponse <> invalid and errorResponse.error = invalid then
+    else if errorParsed <> invalid and errorParsed.error = invalid then
         ' Construir APIError desde campos sueltos
         apiError = {}
 
-        if errorResponse.status <> invalid and errorResponse.status <> 0 then
-            apiError.status = errorResponse.status
+        if errorParsed.status <> invalid and errorParsed.status <> 0 then
+            apiError.status = errorParsed.status
         end if
 
-        if errorResponse.message <> invalid and errorResponse.message <> "" then
-            apiError.message = errorResponse.message
+        if errorParsed.message <> invalid and errorParsed.message <> "" then
+            apiError.message = errorParsed.message
         end if
 
-        if errorResponse.statusText <> invalid and errorResponse.statusText <> "" then
-            apiError.title = errorResponse.statusText
+        if errorParsed.statusText <> invalid and errorParsed.statusText <> "" then
+            apiError.title = errorParsed.statusText
         end if
 
-        apiError.detail = FormatJson(errorResponse)
+        apiError.detail = FormatJson(errorParsed)
 
         return apiError
     end if

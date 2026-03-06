@@ -25,7 +25,7 @@
         <!-- Poster de fondo que ocupa el 100% del ancho/alto de pantalla. -->
         <Poster
             id="backgroundImage"
-            loadDisplayMode="scaleToFill"/>
+            loadDisplayMode="scaleToZoom"/>
 
         <!-- Capa oscura opcional para mejorar legibilidad del texto sobre la imagen. -->
         <Rectangle
