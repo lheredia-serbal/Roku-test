@@ -24,14 +24,14 @@
       horizAlignment="left"
       vertAlignment="top"
       itemSpacings="[10]">
-      <Label 
+      <ShadowLabel 
         id="programTitle"
         height="1"
         vertAlign="center"
         font="font:MediumBoldSystemFont"
         visible="false" />
 
-      <Label 
+      <ShadowLabel 
         id="programSubtitle"
         height="1"
         vertAlign="center"
@@ -58,7 +58,7 @@
           opacity="0.0"/>
       </LayoutGroup>
 
-      <Label 
+      <ShadowLabel 
         id="programSynopsis"
         height="1"
         vertAlign="center"

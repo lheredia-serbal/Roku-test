@@ -12,7 +12,7 @@ sub init()
     m.scaleInfo = m.global.scaleInfo
 
     m.HeightToHide = 1
-    m.defaultHeight = 0
+    m.defaultHeight = 40
     m.spacings = scaleValue(10, m.scaleInfo)
 end sub
 
@@ -176,7 +176,7 @@ sub changeProgram()
         ' Sinopsis
         if showSynopsis then
             m.programSynopsis.text = program.synopsis
-            m.programSynopsis.height = m.defaultHeight
+            m.programSynopsis.height = 120
             m.programSynopsis.visible = true
         end if
 
@@ -215,7 +215,7 @@ sub __clearProgramContainer()
 
     if m.programSynopsis.visible then
         m.programSynopsis.text = ""
-        m.programSynopsis.height = m.HeightToHide
+        m.programSynopsis.height = 120
         m.programSynopsis.visible = false
     end if
 

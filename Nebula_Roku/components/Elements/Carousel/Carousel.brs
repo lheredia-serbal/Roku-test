@@ -8,7 +8,8 @@ sub init()
   
   m.scaleInfo = m.global.scaleInfo
   
-  m.carouselTitle.translation = scalePoint([70, 100], m.scaleInfo)
+  m.carouselTitle.translation = scalePoint([70, 70], m.scaleInfo)
+
   ' Alineo verticalmente los tags con el título principal del carrusel.
   if m.carouselTitleTags <> invalid then m.carouselTitleTags.translation = m.carouselTitle.translation
   m.carouselList.translation = scalePoint([-80, 130], m.scaleInfo)
@@ -25,6 +26,9 @@ sub initData()
   if m.top.items <> invalid and m.top.items.count() > 0 then
     ' Seteo el título principal del carrusel con el valor recibido.
     m.carouselTitle.text = m.top.title
+
+    m.carouselTitle.width = scaleValue(900, m.scaleInfo)
+    m.carouselTitle.height = scaleValue(48, m.scaleInfo)
     ' Seteo por defecto el texto de tags (puede ser vacío si no aplica).
     if m.carouselTitleTags <> invalid then m.carouselTitleTags.text = m.top.titleTagsText
     ' Recalculo la posición del texto de tags para que quede a la derecha del título.
@@ -320,14 +324,25 @@ sub __updateCarouselTitleTagsPosition()
   if m.carouselTitle = invalid then return
   ' Calculo separación horizontal mínima entre título y tags.
   titleTagsSpacing = scaleValue(18, m.scaleInfo)
+  titleWidth = __getCarouselTitleRenderedWidth()
   ' Calculo la posición X base usando la X del título más su ancho renderizado.
-  titleTagsX = m.carouselTitle.translation[0] + m.carouselTitle.localBoundingRect().width + titleTagsSpacing
+  titleTagsX = m.carouselTitle.translation[0] + titleWidth + titleTagsSpacing
   ' Mantengo la misma Y del título principal para que queden alineados.
   titleTagsY = m.carouselTitle.translation[1]
   ' Aplico la traducción final del label de tags.
   m.carouselTitleTags.translation = [titleTagsX, titleTagsY]
 end sub
 
+function __getCarouselTitleRenderedWidth() as float
+  if m.carouselTitle = invalid then return 0
+
+  mainTitleNode = m.carouselTitle.findNode("mainText")
+  if mainTitleNode <> invalid then
+    return mainTitleNode.localBoundingRect().width
+  end if
+
+  return m.carouselTitle.localBoundingRect().width
+end function
 
 ' Función para configurar un TargetList con su TargetSet y contenido
 sub __setupTargetList(targetSet as Object, content as Object)

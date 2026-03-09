@@ -37,10 +37,11 @@
   </interface>
 
   <children>
-    <Label 
+    <ShadowLabel 
       id="carouselTitle"
-      font="font:SmallestBoldSystemFont" 
-      />
+      horizAlign="left"
+      vertAlign="bottom"
+      font="font:SmallestBoldSystemFont"  />
 
     <!-- Label para mostrar tags concatenados a la derecha del título del carrusel. -->
     <Label

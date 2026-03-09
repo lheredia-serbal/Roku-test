@@ -1561,15 +1561,16 @@ sub __layoutNewsOverlay()
   ' Toma alto de pantalla escalado para usarlo como base de layout.
   screenHeight = m.scaleInfo.height
   ' Configura ancho máximo del título para conservar la misma jerarquía visual del hero.
-  m.newsTitle.width = scaleValue(int(screenWidth * 0.72), m.scaleInfo)
+  titleWidth = scaleValue(int(screenWidth * 0.72), m.scaleInfo)
+  m.newsTitle.width = titleWidth
   ' Configura alto máximo del título para permitir hasta tres líneas sin recorte.
-  m.newsTitle.height = scaleValue(int(screenHeight * 0.30), m.scaleInfo)
+  titleHeight = scaleValue(int(screenHeight * 0.30), m.scaleInfo)
+  m.newsTitle.height = titleHeight
   ' Posiciona el título un poco más arriba de los carruseles y encima del hero de News.
-  m.newsTitle.translation = scaleSize([150, 0], m.scaleInfo)
+  baseTitleTranslation = scaleSize([150, 0], m.scaleInfo)
+  m.newsTitle.translation = baseTitleTranslation
   ' Escala el título para mantener la presencia visual previa del NewsItem original.
   m.newsTitle.scale = [1.7, 1.7]
-  ' Ajusta ancho del contenedor de dots al 100% del ancho de la pantalla.
-  m.dotsContainer.width = screenWidth
   ' Posiciona los dots por encima del inicio de carruseles, siempre encima del hero de News.
   m.dotsContainer.translation = scaleSize([600, 550], m.scaleInfo)
 end sub
@@ -1585,7 +1586,7 @@ sub __syncNewsOverlay()
   ' Si no hay NewsItem activo, limpia título y termina.
   if m.newsCarouselItem = invalid then
     ' Borra el título externo cuando no existe carrusel de News activo.
-    m.newsTitle.text = ""
+    if m.newsTitle <> invalid then m.newsTitle.text = ""
     ' Termina porque no hay datos para renderizar.
     return
   end if
@@ -1624,7 +1625,7 @@ sub __syncNewsOverlay()
     end for
   end if
   ' Actualiza el título externo con la noticia activa o fallback del carrusel.
-  m.newsTitle.text = currentTitle
+  if m.newsTitle <> invalid then m.newsTitle.text = currentTitle
 end sub
 
 

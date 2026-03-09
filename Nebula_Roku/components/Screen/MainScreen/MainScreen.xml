@@ -77,7 +77,8 @@
     <!-- Overlay de texto e indicadores de News, separado del componente NewsItem para mejorar fluidez de animación. -->
     <Group id="newsOverlay" translation="[0, 0]">
       <!-- Título principal de la noticia activa, siempre por encima del carrusel de News. -->
-      <Label
+
+      <ShadowLabel
         id="newsTitle"
         horizAlign="left"
         vertAlign="bottom"
@@ -93,7 +94,7 @@
     </Group>
 
     <!-- Contenedor para múltiples carouseles y foco -->
-    <Group id="carousels" translation="[0, 135]">
+    <Group id="carousels" translation="[0, 155]">
       <Group id="carouselContainer" translation="[50, 20]"/>
 
       <SelectionBox id="selectedIndicator" visible="false"/>

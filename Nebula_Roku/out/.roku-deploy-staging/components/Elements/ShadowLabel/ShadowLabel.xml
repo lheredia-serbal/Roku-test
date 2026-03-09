@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<component
+  name="ShadowLabel"
+  extends="Group"
+  xsi:noNamespaceSchemaLocation="https://devtools.web.roku.com/schema/RokuSceneGraph.xsd">
+
+  <script type="text/brightscript" uri="ShadowLabel.brs" />
+
+  <interface>
+    <field id="text" type="string" value="" onChange="syncText" />
+    <field id="width" type="float" value="0" onChange="syncLayout" />
+    <field id="height" type="float" value="0" onChange="syncLayout" />
+    <field id="font" type="string" value="font:LargeBoldSystemFont" onChange="syncStyle" />
+    <field id="color" type="string" value="0xFFFFFFFF" onChange="syncStyle" />
+    <field id="shadowOffsetValue" type="array" value="[4,4]" onChange="syncLayout" />
+    <field id="horizAlign" type="string" value="left" onChange="syncStyle" />
+    <field id="vertAlign" type="string" value="bottom" onChange="syncStyle" />
+    <field id="wrap" type="boolean" value="true" onChange="syncStyle" />
+    <field id="wrapMaxLines" type="integer" value="3" onChange="syncStyle" />
+    <field id="maxLines" type="integer" value="3" onChange="syncStyle" />
+  </interface>
+
+  <children>
+    <Label id="shadowText" color="0x000000FF" />
+    <Label id="mainText" color="0xFFFFFFFF" />
+  </children>
+</component>

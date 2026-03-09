@@ -1074,14 +1074,14 @@ sub __renderCreditGroups()
       row.vertAlignment = "top"
       row.itemSpacings = [scaleValue(12, m.scaleInfo)]
 
-      lType = CreateObject("roSGNode", "Label")
+      lType = CreateObject("roSGNode", "ShadowLabel")
       lType.text = creditType + ":"
       lType.wrap = false
       lType.font = "font:SmallerSystemFont"
       lType.maxLines = 1
       lType.width = scaleValue(100, m.scaleInfo)
 
-      lNames = CreateObject("roSGNode", "Label")
+      lNames = CreateObject("roSGNode", "ShadowLabel")
       lNames.text = namesText
       lNames.wrap = true
       lNames.font = "font:SmallerSystemFont"
