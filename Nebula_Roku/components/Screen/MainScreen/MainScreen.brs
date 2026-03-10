@@ -23,6 +23,9 @@ sub init()
   m.infoGradient = m.top.findNode("infoGradient")
   m.programImageBackground = m.top.findNode("programImageBackground")
 
+  ' Referencia al poster inferior de gradiente ubicado al pie de la pantalla.
+  m.bottomGradientPoster = m.top.findNode("bottomGradientPoster")
+
   ' Without content
   m.withoutContentLayoutGroup = m.top.findNode("withoutContentLayoutGroup")
   m.withoutContentTitle = m.top.findNode("withoutContentTitle")
@@ -133,6 +136,16 @@ sub initData()
    
     m.programImageBackground.width = width
     m.programImageBackground.height = height
+
+    ' Calcula el alto del poster inferior usando escala base de 400px.
+    bottomPosterHeight = scaleValue(400, m.scaleInfo)
+    ' Asigna al poster inferior el ancho completo de pantalla.
+    m.bottomGradientPoster.width = width
+    ' Asigna al poster inferior el alto escalado previamente calculado.
+    m.bottomGradientPoster.height = bottomPosterHeight
+    ' Ubica el poster inferior al borde inferior de la pantalla.
+    m.bottomGradientPoster.translation = [0, height - bottomPosterHeight]
+    m.bottomGradientPoster.opacity = 0.7
 
     ' Define un ancho fijo de 450 escalado para el sombreado lateral izquierdo.
     leftShadeWidth = scaleValue(450, m.scaleInfo)
@@ -1562,8 +1575,6 @@ sub __layoutNewsOverlay()
   m.newsTitle.translation = baseTitleTranslation
   ' Escala el título para mantener la presencia visual previa del NewsItem original.
   m.newsTitle.scale = [1.7, 1.7]
-  ' Posiciona los dots por encima del inicio de carruseles y centrados horizontalmente.
-  __centerNewsDotsContainer()
 end sub
 
 ' Centra horizontalmente el contenedor de dots de News en la pantalla.
@@ -1571,10 +1582,7 @@ sub __centerNewsDotsContainer()
   if m.dotsContainer = invalid then return
   screenWidth = m.scaleInfo.width
   dotsY = scaleSize([600, 520], m.scaleInfo)[1]
-  dotsRect = m.dotsContainer.boundingRect()
-  dotsWidth = 0
-  if dotsRect <> invalid and dotsRect.width <> invalid then dotsWidth = dotsRect.width
-  centeredX = int((screenWidth - dotsWidth) / 2)
+  centeredX = int((screenWidth - m.dotsContainer.getChildCount() * 35) / 2)
   if centeredX < 0 then centeredX = 0
   m.dotsContainer.translation = [centeredX, dotsY]
 end sub
@@ -1633,6 +1641,9 @@ sub __syncNewsOverlay()
       ' Inserta el dot en el contenedor externo de indicadores.
       m.dotsContainer.appendChild(dot)
     end for
+
+    ' Posiciona los dots por encima del inicio de carruseles y centrados horizontalmente.
+    __centerNewsDotsContainer()
   end if
   ' Actualiza el título externo con la noticia activa o fallback del carrusel.
   if m.newsTitle <> invalid then m.newsTitle.text = currentTitle

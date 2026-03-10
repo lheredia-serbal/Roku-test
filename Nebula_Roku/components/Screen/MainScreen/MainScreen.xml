@@ -75,6 +75,12 @@
     <!-- Contenedor dedicado para NewsItem en posición absoluta (0,0). -->
     <Group id="newsContainer" translation="[0, 0]" />
 
+    <!-- Poster inferior ubicado por encima de newsContainer y por debajo de carousels. -->
+    <Poster
+      id="bottomGradientPoster"
+      loadDisplayMode="scaleToFill"
+      uri="pkg:/images/shared/gradient_bg.png" />
+
     <!-- Overlay de texto e indicadores de News, separado del componente NewsItem para mejorar fluidez de animación. -->
     <Group id="newsOverlay" translation="[0, 0]">
       <!-- Título principal de la noticia activa, siempre por encima del carrusel de News. -->
@@ -96,7 +102,7 @@
     </Group>
 
     <!-- Contenedor para múltiples carouseles y foco -->
-    <Group id="carousels" translation="[0, 140]">
+    <Group id="carousels" translation="[0, 120]">
       <Group id="carouselContainer" translation="[50, 20]"/>
 
       <SelectionBox id="selectedIndicator" visible="false"/>
