@@ -168,7 +168,7 @@ sub initData()
     m.withoutContentTitle.width = errorSafeZone
     m.withoutContentMessage.width = errorSafeZone
 
-    m.programInfo.translation = [safeX + scaleValue(60, m.scaleInfo), safeY + scaleValue(20, m.scaleInfo)]
+    m.programInfo.translation = [safeX + scaleValue(60, m.scaleInfo), safeY ]
     ' Ajusta tamaño y posición del overlay de News para mantenerlo arriba del carrusel de noticias.
     __layoutNewsOverlay()
 

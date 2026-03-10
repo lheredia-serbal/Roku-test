@@ -69,8 +69,7 @@
     <!-- Program Container -->
     <ProgramSummary 
       id="programInfo" 
-      visible="false"
-      translation="[118,50]"/>
+      visible="false"/>
 
     <!-- Contenedor dedicado para NewsItem en posición absoluta (0,0). -->
     <Group id="newsContainer" translation="[0, 0]" />
@@ -176,6 +175,5 @@
     
     <!-- Timers -->
     <Timer id="programTimer" repeat="false" duration="0.5"/>
-    
   </children>
 </component>
