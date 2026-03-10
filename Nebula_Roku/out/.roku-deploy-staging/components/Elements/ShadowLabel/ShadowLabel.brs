@@ -43,8 +43,8 @@ end sub
 sub syncLayout()
   if m.shadowText = invalid or m.mainText = invalid then return
 
-  offsetX = 2
-  offsetY = 2
+  offsetX = 1
+  offsetY = 1
   widthValue = 0
   heightValue = 0
   if m.top.width <> invalid and m.top.width > 0 then

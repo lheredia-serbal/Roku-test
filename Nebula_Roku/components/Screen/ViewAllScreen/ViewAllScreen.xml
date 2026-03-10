@@ -12,6 +12,7 @@
   <script type="text/brightscript" uri="pkg:/source/Services/Watch.brs" />
   <script type="text/brightscript" uri="pkg:/source/Services/Streamings.brs" />
   <script type="text/brightscript" uri="pkg:/source/Utils/i18nUtils.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Utils/ImageValidationUtils.brs" />
   <!-- Script de utilidades base reutilizadas por el flujo de ViewAll. -->
   <script type="text/brightscript" uri="pkg:/source/Utils.brs" />
   <!-- Script de utilidades de reintentos para manejo de acciones pendientes. -->

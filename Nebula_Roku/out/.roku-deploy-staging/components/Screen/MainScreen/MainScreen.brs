@@ -1,7 +1,5 @@
 ' Inicialización del componente (parte del ciclo de vida de Roku)
 sub init()
-  m.opacityForMenu = m.top.findNode("opacityForMenu")
-  m.groupOpacityForMenu = m.top.findNode("groupOpacityForMenu")
   m.myMenu = m.top.findNode("myMenu")
 
   ' Referencia al overlay independiente donde vive el título de News.
@@ -129,26 +127,19 @@ sub initData()
     safeY = m.scaleInfo.safeZone.y
     width = m.scaleInfo.width
     height = m.scaleInfo.height
-
-    m.opacityForMenu.width = width
-    m.opacityForMenu.height = height
    
     m.infoGradient.width = width
     m.infoGradient.height = height
    
     m.programImageBackground.width = width
     m.programImageBackground.height = height
-    
-    m.groupOpacityForMenu.clippingRect = [0, 0, safeX + scaleValue(60, m.scaleInfo), height]
 
     ' Define un ancho fijo de 450 escalado para el sombreado lateral izquierdo.
-    leftShadeWidth = scaleValue(450, m.scaleInfo)
+    leftShadeWidth = scaleValue(400, m.scaleInfo)
     ' Aplica el ancho calculado al sombreado difuminado.
     m.leftBlurShade.width = leftShadeWidth
     ' Extiende el sombreado al 100% de alto de pantalla.
     m.leftBlurShade.height = height
-    ' Posiciona el sombreado en el borde izquierdo de la pantalla.
-    m.leftBlurShade.translation = [0, 0]
 
     logoWidth = scaleValue(200, m.scaleInfo)
     logoHeight = scaleValue(100, m.scaleInfo)
@@ -1567,12 +1558,12 @@ sub __layoutNewsOverlay()
   titleHeight = scaleValue(int(screenHeight * 0.30), m.scaleInfo)
   m.newsTitle.height = titleHeight
   ' Posiciona el título un poco más arriba de los carruseles y encima del hero de News.
-  baseTitleTranslation = scaleSize([150, 0], m.scaleInfo)
+  baseTitleTranslation = scaleSize([150, -70], m.scaleInfo)
   m.newsTitle.translation = baseTitleTranslation
   ' Escala el título para mantener la presencia visual previa del NewsItem original.
   m.newsTitle.scale = [1.7, 1.7]
   ' Posiciona los dots por encima del inicio de carruseles, siempre encima del hero de News.
-  m.dotsContainer.translation = scaleSize([600, 550], m.scaleInfo)
+  m.dotsContainer.translation = scaleSize([600, 520], m.scaleInfo)
 end sub
 
 ' Sincroniza título y dots del overlay externo usando el estado actual del NewsItem.

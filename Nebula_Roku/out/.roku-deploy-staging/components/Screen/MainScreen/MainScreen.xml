@@ -12,6 +12,7 @@
   <script type="text/brightscript" uri="pkg:/source/Utils.brs" />
   <script type="text/brightscript" uri="pkg:/source/Utils/DateFunctions.brs" />
   <script type="text/brightscript" uri="pkg:/source/Utils/RetryUtils.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Utils/ImageValidationUtils.brs" />
   <script type="text/brightscript" uri="pkg:/source/CarouselConstants.brs" />
   <script type="text/brightscript" uri="pkg:/source/Enums.brs" />
 
@@ -94,7 +95,7 @@
     </Group>
 
     <!-- Contenedor para múltiples carouseles y foco -->
-    <Group id="carousels" translation="[0, 155]">
+    <Group id="carousels" translation="[0, 140]">
       <Group id="carouselContainer" translation="[50, 20]"/>
 
       <SelectionBox id="selectedIndicator" visible="false"/>
@@ -127,6 +128,7 @@
 
     <!--  Menu background -->
     <Group
+      visible="false"
       id="groupOpacityForMenu"
       translation="[0, 0]">
       <Poster
@@ -140,6 +142,7 @@
     <Poster
       id="leftBlurShade"
       translation="[0,0]"
+      opacity="0.8"
       loadDisplayMode="scaleToFill"
       uri="pkg:/images/shared/menu_contracted.png" />
 

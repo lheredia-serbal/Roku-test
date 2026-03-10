@@ -12,6 +12,7 @@
   <script type="text/brightscript" uri="pkg:/source/Enums.brs" />
   <script type="text/brightscript" uri="pkg:/source/Services/Programs.brs" />
   <script type="text/brightscript" uri="pkg:/source/Utils/RetryUtils.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Utils/ImageValidationUtils.brs" />
   <script type="text/brightscript" uri="pkg:/source/Services/DomainManager.brs" />
   <script type="text/brightscript" uri="pkg:/source/Services/ErrorManager.brs" />
   <script type="text/brightscript" uri="pkg:/source/Services/ErrorCode.brs" />
