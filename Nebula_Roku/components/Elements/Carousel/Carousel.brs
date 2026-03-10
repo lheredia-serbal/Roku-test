@@ -8,7 +8,7 @@ sub init()
   
   m.scaleInfo = m.global.scaleInfo
   
-  m.carouselTitle.translation = scalePoint([70, 70], m.scaleInfo)
+  m.carouselTitle.translation = scalePoint([70, 80], m.scaleInfo)
 
   ' Alineo verticalmente los tags con el título principal del carrusel.
   if m.carouselTitleTags <> invalid then m.carouselTitleTags.translation = m.carouselTitle.translation

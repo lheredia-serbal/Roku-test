@@ -41,7 +41,7 @@
       id="carouselTitle"
       horizAlign="left"
       vertAlign="bottom"
-      font="font:SmallestBoldSystemFont"  />
+      font="font:SmallBoldSystemFont"  />
 
     <!-- Label para mostrar tags concatenados a la derecha del título del carrusel. -->
     <Label

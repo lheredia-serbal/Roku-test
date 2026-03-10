@@ -135,7 +135,7 @@ sub initData()
     m.programImageBackground.height = height
 
     ' Define un ancho fijo de 450 escalado para el sombreado lateral izquierdo.
-    leftShadeWidth = scaleValue(400, m.scaleInfo)
+    leftShadeWidth = scaleValue(450, m.scaleInfo)
     ' Aplica el ancho calculado al sombreado difuminado.
     m.leftBlurShade.width = leftShadeWidth
     ' Extiende el sombreado al 100% de alto de pantalla.
@@ -1562,10 +1562,22 @@ sub __layoutNewsOverlay()
   m.newsTitle.translation = baseTitleTranslation
   ' Escala el título para mantener la presencia visual previa del NewsItem original.
   m.newsTitle.scale = [1.7, 1.7]
-  ' Posiciona los dots por encima del inicio de carruseles, siempre encima del hero de News.
-  m.dotsContainer.translation = scaleSize([600, 520], m.scaleInfo)
+  ' Posiciona los dots por encima del inicio de carruseles y centrados horizontalmente.
+  __centerNewsDotsContainer()
 end sub
 
+' Centra horizontalmente el contenedor de dots de News en la pantalla.
+sub __centerNewsDotsContainer()
+  if m.dotsContainer = invalid then return
+  screenWidth = m.scaleInfo.width
+  dotsY = scaleSize([600, 520], m.scaleInfo)[1]
+  dotsRect = m.dotsContainer.boundingRect()
+  dotsWidth = 0
+  if dotsRect <> invalid and dotsRect.width <> invalid then dotsWidth = dotsRect.width
+  centeredX = int((screenWidth - dotsWidth) / 2)
+  if centeredX < 0 then centeredX = 0
+  m.dotsContainer.translation = [centeredX, dotsY]
+end sub
 ' Sincroniza título y dots del overlay externo usando el estado actual del NewsItem.
 sub __syncNewsOverlay()
   ' Sale si el título externo no existe para evitar errores cuando el árbol aún no está montado.
@@ -1595,19 +1607,26 @@ sub __syncNewsOverlay()
     if currentNewsItem <> invalid and currentNewsItem.title <> invalid and currentNewsItem.title <> "" then currentTitle = currentNewsItem.title
     ' Recorre noticias para dibujar dots externos y resaltar el índice activo.
     for i = 0 to newsItems.count() - 1
-      ' Crea un dot circular reutilizando el asset compartido del proyecto.
-      dot = createObject("roSGNode", "Poster")
-      ' Define ancho del dot externo para mantener consistencia con el diseño original.
-      dot.width = 12
-      ' Define alto del dot externo para mantener consistencia con el diseño original.
-      dot.height = 12
-      ' Asigna el recurso circular usado como indicador de paginación.
-      dot.uri = "pkg:/images/shared/ball.png"
-      ' Marca dot activo con opacidad plena para indicar la noticia seleccionada.
+      ' Marca dot activo con mayor jerarquía visual (blanco, ancho y con esquinas redondeadas).
       if i = currentIndex then
+        ' Usa la imagen bar.png (con alpha) para conservar esquinas redondeadas.
+        dot = createObject("roSGNode", "Poster")
+        dot.uri = "pkg:/images/shared/ball-large.png"
+        ' Define tamaño del dot activo para enfatizar el foco horizontalmente.
+        dot.width = 80
+        dot.height = 12
+        ' Escala la barra al tamaño objetivo respetando transparencia del PNG.
+        dot.loadDisplayMode = "scaleToZoom"
         ' Opacidad máxima para el dot activo.
         dot.opacity = 1.0
       else
+        ' Crea dot circular inactivo reutilizando el asset compartido del proyecto.
+        dot = createObject("roSGNode", "Poster")
+        dot.uri = "pkg:/images/shared/ball.png"
+        dot.width = 12
+        dot.height = 12
+        ' Atenúa el blanco en dots inactivos para reducir protagonismo.
+        dot.blendColor = "0xFFFFFFA6"
         ' Opacidad reducida para dots inactivos.
         dot.opacity = 0.45
       end if
@@ -1618,7 +1637,6 @@ sub __syncNewsOverlay()
   ' Actualiza el título externo con la noticia activa o fallback del carrusel.
   if m.newsTitle <> invalid then m.newsTitle.text = currentTitle
 end sub
-
 
 ' Actualiza el indicador de seleccion segun el carrusel enfocado
 sub __updateSelectedIndicator()
