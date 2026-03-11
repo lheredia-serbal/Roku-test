@@ -198,7 +198,7 @@ sub initFocus()
     __applyTranslations()
     __validateAutoUpgradeTime()
      ' Prioriza foco inicial en NewsItem cuando existe; si no, mantiene foco en carouseles.
-    if m.newsCarouselItem <> invalid then
+    if m.newsCarouselItem <> invalid and __hasNewsContent() then
       m.newsCarouselItem.setFocus(true)
     else
       ' Si News no tiene contenido, mantiene foco en carruseles y evita ocultar el logo.
@@ -342,17 +342,20 @@ sub populateCarousels(data as Object)
         end if
 
         ' Si existe NewsItem, prioriza su foco inicial al entrar en MainScreen.
-        if m.newsCarouselItem <> invalid then
+        if m.newsCarouselItem <> invalid and __hasNewsContent() then
           m.newsCarouselItem.setFocus(true)
           __updateOverlayVisibilityByFocus()
         else
-          ' Aplica el foco al primer carrusel navegable cuando no hay NewsItem.
+          ' Aplica el foco al primer carrusel navegable cuando no hay NewsItem o News está vacío.
           firstList.setFocus(true)
           ' Ajusta el tamaño del indicador según el carrusel enfocado.
           m.selectedIndicator.size = firstCarousel.size
           ' Muestra el indicador visual de selección.
           m.selectedIndicator.visible = true
-          m.mainLogo.visible = true
+          ' Fuerza visibilidad del logo cuando no hay contenido en News al iniciar MainScreen.
+          if m.mainLogo <> invalid and not __hasNewsContent() then m.mainLogo.opacity = 1.0
+          ' Mantiene el estado interno de animación en modo visible para evitar fade-out incorrecto.
+          if not __hasNewsContent() then m.mainLogoHiddenByNewsFocus = false
           __updateOverlayVisibilityByFocus()
         end if
 
@@ -1483,6 +1486,18 @@ function __isNewsContainerFocused() as boolean
   if m.newsContainer = invalid then return false
   ' Retorna true cuando newsContainer participa en la cadena de foco activa.
   return m.newsContainer.isInFocusChain()
+end function
+
+' Indica si NewsItem tiene contenido utilizable para foco inicial y overlays.
+function __hasNewsContent() as boolean
+  ' Si no existe NewsItem, no hay contenido de News para mostrar.
+  if m.newsCarouselItem = invalid then return false
+  ' Lee la colección de items del NewsItem.
+  newsItems = m.newsCarouselItem.items
+  ' Si items es inválido o no tiene elementos, News está vacío.
+  if newsItems = invalid or newsItems.count() = 0 then return false
+  ' Retorna true cuando hay al menos un item para navegación/visualización de News.
+  return true
 end function
 
 ' Valida de forma segura si el foco actual está en el primer carrusel y su navegación UP apunta a News.

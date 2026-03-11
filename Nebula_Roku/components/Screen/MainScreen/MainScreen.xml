@@ -66,11 +66,6 @@
       loadDisplayMode="scaleToFit"
       uri="pkg:/images/client/info_gradient.png" />
 
-    <!-- Program Container -->
-    <ProgramSummary 
-      id="programInfo" 
-      visible="false"/>
-
     <!-- Contenedor dedicado para NewsItem en posición absoluta (0,0). -->
     <Group id="newsContainer" translation="[0, 0]" />
 
@@ -113,11 +108,11 @@
       <SelectionBox id="selectedIndicator" visible="false"/>
     </Group>
 
-    <!-- Program Container por encima de carousels en orden Z -->
+    <!-- Program Container -->
     <ProgramSummary 
       id="programInfo" 
       visible="false"/>
-
+      
     <!-- Contenedor para Error que no hay contenido -->
     <LayoutGroup 
       id="withoutContentLayoutGroup"
