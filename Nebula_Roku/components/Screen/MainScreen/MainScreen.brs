@@ -34,10 +34,6 @@ sub init()
   
   m.mainLogo = m.top.findNode("mainLogo")
   m.nameOrganization = m.top.findNode("nameOrganization")
-  ' Referencia a la animación que oculta el logo principal en 0.5 segundos.
-  m.mainLogoFadeOutAnimation = m.top.findNode("mainLogoFadeOutAnimation") 
-  ' Referencia a la animación que muestra el logo principal en 0.5 segundos.
-  m.mainLogoFadeInAnimation = m.top.findNode("mainLogoFadeInAnimation") 
 
   m.scaleInfo = m.global.scaleInfo
   ' Indica si el foco debe volver al NewsItem tras cerrar menú.
@@ -59,8 +55,8 @@ function onKeyEvent(key as string, press as boolean) as boolean
   end if
 
   handled = false
-    ' Si el foco está en NewsItem, permite bajar al primer carrusel navegable.
-  if key = KeyButtons().DOWN and press and __isNewsFocused() then
+  ' Si el foco está en NewsItem o en newsContainer vacío, replica la misma bajada al primer carrusel.
+  if key = KeyButtons().DOWN and press and (__isNewsFocused() or __isNewsContainerFocused()) then
     __focusFirstCarouselFromNews()
     handled = true
   else if key = KeyButtons().UP and press and __isFocusedCarouselAboveNews() then
@@ -197,6 +193,7 @@ sub initFocus()
     if m.newsCarouselItem <> invalid then
       m.newsCarouselItem.setFocus(true)
     else
+      ' Si News no tiene contenido, mantiene foco en carruseles y evita ocultar el logo.
       m.carouselContainer.setFocus(true)
     end if
     __updateOverlayVisibilityByFocus()
@@ -281,7 +278,6 @@ sub populateCarousels(data as Object)
     end if
   end for
 
-
   for each carouselData in data.items
     if carouselData.style <> getCarouselStyles().NEWS then 
       ' Crea una instancia del componente Carousel
@@ -348,6 +344,7 @@ sub populateCarousels(data as Object)
           m.selectedIndicator.size = firstCarousel.size
           ' Muestra el indicador visual de selección.
           m.selectedIndicator.visible = true
+          m.mainLogo.visible = true
           __updateOverlayVisibilityByFocus()
         end if
 
@@ -355,6 +352,14 @@ sub populateCarousels(data as Object)
         exit for
       end if
     end for
+  end if
+
+  ' Si newsContainer no cargó hijos, lo oculta y aplica la misma lógica de bajar al primer carrusel.
+  if m.newsContainer <> invalid and m.newsContainer.getChildCount() = 0 then
+    ' Oculta newsContainer cuando no existen nodos NewsItem renderizados.
+    m.newsContainer.visible = false
+    ' Ejecuta la transición/foco equivalente a presionar DOWN desde News.
+    __focusFirstCarouselFromNews()
   end if
 
   nowDate = CreateObject("roDateTime")
@@ -1464,6 +1469,14 @@ function __isNewsFocused() as boolean
   return m.newsCarouselItem.isInFocusChain()
 end function
 
+' Indica si el foco actual está dentro de newsContainer aunque no exista NewsItem navegable.
+function __isNewsContainerFocused() as boolean
+  ' Valida que el contenedor de News exista antes de consultar la cadena de foco.
+  if m.newsContainer = invalid then return false
+  ' Retorna true cuando newsContainer participa en la cadena de foco activa.
+  return m.newsContainer.isInFocusChain()
+end function
+
 ' Valida de forma segura si el foco actual está en el primer carrusel y su navegación UP apunta a News.
 function __isFocusedCarouselAboveNews() as boolean
   if m.carouselContainer = invalid then return false ' Corta cuando el contenedor principal de carruseles no existe.
@@ -1489,6 +1502,7 @@ sub __focusFirstCarouselFromNews()
       m.carouselContainer.translation = [m.xPosition, -(carouselNode.translation[1] - m.yPosition)] ' Sincroniza la traslación del contenedor de carruseles con el mismo patrón de animación.
       m.selectedIndicator.size = carouselNode.size ' Ajusta el tamaño del indicador al carrusel que tomó foco.
       __showProgramInfoWithAnimation() ' Muestra programInfo con animación de 0.5s al salir de News.
+      m.mainLogo.visible = true
       m.selectedIndicator.visible = true ' Fuerza la visibilidad del indicador cuando el foco entra a carruseles estándar.
       __updateOverlayVisibilityByFocus() ' Revalida el estado final de overlays según la cadena de foco actual.
       return
@@ -1592,19 +1606,9 @@ sub __animateMainLogoByFocus(newsFocused as boolean)
   if m.mainLogoHiddenByNewsFocus = newsFocused then return ' Evita reiniciar la misma animación cuando no hubo cambio real de estado de foco.
   m.mainLogoHiddenByNewsFocus = newsFocused ' Persiste el estado recién aplicado para que solo se anime en transiciones reales.
   if newsFocused then ' Cuando el foco está en News, el logo debe desaparecer.
-    if m.mainLogoFadeInAnimation <> invalid then m.mainLogoFadeInAnimation.control = "stop" ' Detiene cualquier fade-in previo para prevenir animaciones superpuestas.
-    if m.mainLogoFadeOutAnimation <> invalid then
-      m.mainLogoFadeOutAnimation.control = "start" ' Dispara fade-out de 0.5s para llevar la opacidad del logo a 0.
-    else
-      m.mainLogo.opacity = 0.0 ' Aplica fallback directo a opacidad 0 si la animación no existe.
-    end if
+    m.mainLogo.opacity = 0.0
   else ' Cuando el foco no está en News, el logo debe volver a mostrarse.
-    if m.mainLogoFadeOutAnimation <> invalid then m.mainLogoFadeOutAnimation.control = "stop" ' Detiene cualquier fade-out previo para prevenir animaciones superpuestas.
-    if m.mainLogoFadeInAnimation <> invalid then
-      m.mainLogoFadeInAnimation.control = "start" ' Dispara fade-in de 0.5s para llevar la opacidad del logo a 1.
-    else
-      m.mainLogo.opacity = 1.0 ' Aplica fallback directo a opacidad 1 si la animación no existe.
-    end if
+    m.mainLogo.opacity = 1.0
   end if
 end sub
 
