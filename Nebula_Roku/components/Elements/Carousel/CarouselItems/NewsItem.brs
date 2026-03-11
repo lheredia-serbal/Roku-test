@@ -15,13 +15,8 @@ sub init()
     m.detailActionIcon = m.top.findNode("detailActionIcon")
     ' Referencia al fondo del bloque de acción.
     m.detailActionBackground = m.top.findNode("detailActionBackground")
-
-    ' Opacidad por defecto para dots inactivos.
-    m.inactiveDotOpacity = 0.45
-    ' Opacidad para dot activo.
-    m.activeDotOpacity = 1.0
-    ' Tamaño de cada dot.
-    m.dotSize = 12
+    ' Referencia a los bordes
+    m.borderDetailAction = m.top.findNode("borderDetailAction")
 
     ' Guarda escala global de la app para cálculo responsive.
     m.scaleInfo = m.global.scaleInfo
@@ -137,23 +132,28 @@ sub updateLayoutForResolution()
         m.overlay.translation = scaleSize([0, 0], m.scaleInfo)
     end if
 
+    if m.borderDetailAction <> invalid then
+        m.borderDetailAction.size = scaleSize([238, 58], m.scaleInfo)
+    end if
+
     if m.detailActionGroup <> invalid then
-        m.detailActionGroup.translation = scaleSize([900, 420], m.scaleInfo)
+        m.detailActionGroup.translation = scaleSize([900, 440], m.scaleInfo)
     end if
 
     if m.detailActionBackground <> invalid then
-        m.detailActionBackground.width = scaleValue(280, m.scaleInfo)
+        m.detailActionBackground.width = scaleValue(240, m.scaleInfo)
         m.detailActionBackground.height = scaleValue(60, m.scaleInfo)
+        m.detailActionBackground.color = m.global.colors.PRIMARY
     end if
 
     if m.detailActionLabel <> invalid then
-        m.detailActionLabel.translation = scaleSize([24, 20], m.scaleInfo)
+        m.detailActionLabel.translation = scaleSize([24, 24], m.scaleInfo)
     end if
 
     if m.detailActionIcon <> invalid then
-        m.detailActionIcon.width = scaleValue(32, m.scaleInfo)
-        m.detailActionIcon.height = scaleValue(32, m.scaleInfo)
-        m.detailActionIcon.translation = scaleSize([240, 18], m.scaleInfo)
+        m.detailActionIcon.width = scaleValue(23, m.scaleInfo)
+        m.detailActionIcon.height = scaleValue(23, m.scaleInfo)
+        m.detailActionIcon.translation = scaleSize([190, 20], m.scaleInfo)
     end if
 end sub
 
@@ -199,7 +199,7 @@ sub updateDetailActionCTA(currentItem as dynamic)
 
     ' Si redirectKey apunta a canal, muestra acción de reproducción.
     if redirectKeyValue = "channelid" then
-        m.detailActionLabel.text = i18n_t(m.global.i18n, "content.contentPage.watch")
+        m.detailActionLabel.text = i18n_t(m.global.i18n, "content.contentPage.watchNow")
         m.detailActionIcon.uri = "pkg:/images/shared/play.png"
         m.detailActionGroup.visible = true
         return

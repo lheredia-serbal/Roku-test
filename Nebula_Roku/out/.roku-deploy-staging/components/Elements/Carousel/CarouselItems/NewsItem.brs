@@ -1,7 +1,9 @@
 ' Inicializa referencias y renderiza el estado inicial del componente.
 sub init()
-    ' Referencia al poster de fondo.
+    ' Referencia al poster de fondo principal.
     m.backgroundImage = m.top.findNode("backgroundImage")
+    ' Referencia al poster secundario usado para el item entrante en la animación.
+    m.incomingBackgroundImage = m.top.findNode("incomingBackgroundImage")
     ' Referencia a la capa oscura que mejora legibilidad sobre la imagen.
     m.overlay = m.top.findNode("overlay")
 
@@ -13,31 +15,52 @@ sub init()
     m.detailActionIcon = m.top.findNode("detailActionIcon")
     ' Referencia al fondo del bloque de acción.
     m.detailActionBackground = m.top.findNode("detailActionBackground")
+    ' Referencia a los bordes
+    m.borderDetailAction = m.top.findNode("borderDetailAction")
 
-    ' Opacidad por defecto para dots inactivos.
-    m.inactiveDotOpacity = 0.45
-    ' Opacidad para dot activo.
-    m.activeDotOpacity = 1.0
-    ' Tamaño de cada dot.
-    m.dotSize = 12
-
+    ' Guarda escala global de la app para cálculo responsive.
     m.scaleInfo = m.global.scaleInfo
 
     ' Control de animación horizontal entre elementos de News.
     m.slideTimer = m.top.findNode("slideTimer")
-    m.slideTotalFrames = 6
+    ' Define 10 frames para slide principal: 10 * 0.05s = 0.5 segundos.
+    m.slideTotalFrames = 10
+    ' Define frames para el achique previo al cambio de item.
+    m.shrinkTotalFrames = 2
+    ' Define frames para el regreso de tamaño al finalizar el cambio de item.
+    m.expandTotalFrames = 2
+    ' Inicializa frame actual de la animación.
     m.slideCurrentFrame = 0
-    m.slideOffset = 0
-    m.slideStep = 0
+    ' Inicializa dirección horizontal del slide (1 derecha / -1 izquierda).
+    m.slideDirection = 0
+    ' Inicializa posición inicial del item entrante.
+    m.incomingStartX = 0
+    ' Inicializa posición final del item saliente.
+    m.outgoingEndX = 0
+    ' Inicializa estado de animación en reposo.
     m.isSliding = false
+    ' Inicializa fase de animación compuesta (shrink -> slide -> expand).
+    m.slidePhase = "idle"
+    ' Guarda la escala base del contenedor para poder restaurarla al finalizar.
+    m.baseScale = [1.0, 1.0]
+    ' Define escala mínima del efecto de achique previo al slide.
+    m.shrinkScale = 0.96
+    ' Guarda el ancho del slider para compensación visual durante escala.
+    m.slideWidth = 0
+    ' Guarda el alto del slider para compensación visual durante escala.
+    m.slideHeight = 0
 
+    ' Registra callback del timer para avanzar frame a frame.
     if m.slideTimer <> invalid then
+        ' Elimina observador previo para evitar dobles disparos.
         m.slideTimer.unobserveField("fire")
+        ' Asocia el evento fire al handler de animación.
         m.slideTimer.observeField("fire", "onSlideFrame")
     end if
 
     ' Ajusta layout base a pantalla completa y dibuja contenido inicial.
     updateLayoutForResolution()
+    ' Renderiza el primer item disponible.
     renderCurrentItem()
 end sub
 
@@ -53,7 +76,9 @@ end sub
 sub currentIndexChanged()
     ' Garantiza que el índice esté en rango.
     normalizeCurrentIndex()
-    ' Actualiza imagen/título visibles.
+    ' Si hay animación en curso, evita re-render inmediato para no romper el slide dual.
+    if m.isSliding then return
+    ' Actualiza imagen/título visibles cuando no hay animación.
     renderCurrentItem()
 end sub
 
@@ -82,6 +107,21 @@ sub updateLayoutForResolution()
     ' Mantiene el fondo anclado en el origen.
     m.backgroundImage.translation = scaleSize([0, 0], m.scaleInfo)
 
+    ' Hace que la imagen entrante tenga el mismo tamaño que el fondo principal.
+    if m.incomingBackgroundImage <> invalid then
+        ' Copia el ancho escalado para el item entrante.
+        m.incomingBackgroundImage.width = scaleValue(baseScreenWidth, m.scaleInfo)
+        ' Copia el alto escalado para el item entrante.
+        m.incomingBackgroundImage.height = scaleValue(baseScreenHeight, m.scaleInfo)
+        ' Mantiene el item entrante anclado al origen en reposo.
+        m.incomingBackgroundImage.translation = scaleSize([0, 0], m.scaleInfo)
+    end if
+
+    ' Guarda ancho efectivo del bloque de news para animar escala centrada.
+    m.slideWidth = m.backgroundImage.width
+    ' Guarda alto efectivo del bloque de news para animar escala centrada.
+    m.slideHeight = m.backgroundImage.height
+
     ' Ajusta el overlay para que cubra exactamente el bloque visible de noticias.
     if m.overlay <> invalid then
         ' Aplica ancho completo del bloque de noticias al overlay.
@@ -92,23 +132,28 @@ sub updateLayoutForResolution()
         m.overlay.translation = scaleSize([0, 0], m.scaleInfo)
     end if
 
+    if m.borderDetailAction <> invalid then
+        m.borderDetailAction.size = scaleSize([238, 58], m.scaleInfo)
+    end if
+
     if m.detailActionGroup <> invalid then
-        m.detailActionGroup.translation = scaleSize([900, 500], m.scaleInfo)
+        m.detailActionGroup.translation = scaleSize([900, 440], m.scaleInfo)
     end if
 
     if m.detailActionBackground <> invalid then
-        m.detailActionBackground.width = scaleValue(280, m.scaleInfo)
+        m.detailActionBackground.width = scaleValue(240, m.scaleInfo)
         m.detailActionBackground.height = scaleValue(60, m.scaleInfo)
+        m.detailActionBackground.color = m.global.colors.PRIMARY
     end if
 
     if m.detailActionLabel <> invalid then
-        m.detailActionLabel.translation = scaleSize([24, 20], m.scaleInfo)
+        m.detailActionLabel.translation = scaleSize([24, 24], m.scaleInfo)
     end if
 
     if m.detailActionIcon <> invalid then
-        m.detailActionIcon.width = scaleValue(32, m.scaleInfo)
-        m.detailActionIcon.height = scaleValue(32, m.scaleInfo)
-        m.detailActionIcon.translation = scaleSize([240, 18], m.scaleInfo)
+        m.detailActionIcon.width = scaleValue(23, m.scaleInfo)
+        m.detailActionIcon.height = scaleValue(23, m.scaleInfo)
+        m.detailActionIcon.translation = scaleSize([190, 20], m.scaleInfo)
     end if
 end sub
 
@@ -120,14 +165,16 @@ sub renderCurrentItem()
 
     ' Si no hay item válido, no hay cambios visuales internos adicionales.
     if currentItem = invalid then return
-    ' Aplica imagen final (o fallback del campo público imageURL).
-    if currentItem.image <> invalid then
+    ' Resuelve uri de imagen para el item actual.
+    currentImageUri = getItemImageUri(currentItem)
+    ' Si existe una imagen válida, la aplica al fondo principal.
+    if currentImageUri <> invalid then
         ' Asigna imagen proveniente del item.
-        m.backgroundImage.uri = getImageUrl(currentItem.image)
+        m.backgroundImage.uri = currentImageUri
     end if
 
     ' Actualiza visibilidad y contenido del CTA según redirectKey.
-        updateDetailActionCTA(currentItem)
+    updateDetailActionCTA(currentItem)
 end sub
 
 ' Actualiza el CTA de detalle/reproducción según redirectKey del item activo.
@@ -152,7 +199,7 @@ sub updateDetailActionCTA(currentItem as dynamic)
 
     ' Si redirectKey apunta a canal, muestra acción de reproducción.
     if redirectKeyValue = "channelid" then
-        m.detailActionLabel.text = i18n_t(m.global.i18n, "content.contentPage.watch")
+        m.detailActionLabel.text = i18n_t(m.global.i18n, "content.contentPage.watchNow")
         m.detailActionIcon.uri = "pkg:/images/shared/play.png"
         m.detailActionGroup.visible = true
         return
@@ -166,6 +213,7 @@ sub updateDetailActionCTA(currentItem as dynamic)
     ' Para cualquier otro redirectKey, oculta el CTA.
     m.detailActionGroup.visible = false
 end sub
+
 ' Devuelve el item activo actual o invalid.
 function getCurrentItem() as dynamic
     ' Si items no es válido, no hay item activo.
@@ -196,7 +244,7 @@ sub normalizeCurrentIndex()
         ' Resetea índice sin items.
         m.top.currentIndex = 0
         return
-    end if
+   end if
 
     ' Si índice es negativo, lo corrige al primero.
     if m.top.currentIndex < 0 then
@@ -221,12 +269,14 @@ function onKeyEvent(key as string, press as boolean) as boolean
 
     if key = KeyButtons().RIGHT then
         if m.top.currentIndex < (totalItems - 1) then
-            startSlideTransition(m.top.currentIndex + 1, 0)
+            ' Al ir a la derecha, el actual sale a la izquierda y el siguiente entra desde la derecha.
+            startSlideTransition(m.top.currentIndex + 1, 1)
         end if
         return true
     else if key = KeyButtons().LEFT then
         if m.top.currentIndex > 0 then
-            startSlideTransition(m.top.currentIndex - 1, 1)
+            ' Al ir a la izquierda, el actual sale a la derecha y el anterior entra desde la izquierda.
+            startSlideTransition(m.top.currentIndex - 1, -1)
             return true
         end if
 
@@ -239,17 +289,54 @@ end function
 
 ' Inicia una transición horizontal y actualiza el item activo.
 sub startSlideTransition(newIndex as integer, direction as integer)
+    ' Evita iniciar otra transición mientras una está en curso.
     if m.isSliding then return
 
+    ' Obtiene el item que será mostrado al finalizar el slide.
+    incomingItem = m.top.items[newIndex]
+    ' Resuelve uri del item entrante.
+    incomingImageUri = getItemImageUri(incomingItem)
+    ' Si no hay imagen entrante, evita una animación inconsistente.
+    if incomingImageUri = invalid then return
+
+    ' Marca que la animación comenzó.
     m.isSliding = true
+    ' Inicializa fase de achique previa al slide.
+    m.slidePhase = "shrink"
+    ' Reinicia contador de frame.
     m.slideCurrentFrame = 0
-    m.slideOffset = int(m.backgroundImage.width * 0.22) * direction
+    ' Guarda dirección solicitada del slide.
+    m.slideDirection = direction
+    ' Calcula ancho de referencia para desplazar un panel completo.
+    slideWidth = m.backgroundImage.width
 
-    m.backgroundImage.translation = [m.slideOffset, 0]
-    if m.overlay <> invalid then m.overlay.translation = [m.slideOffset, 0]
+    ' Define dónde comienza el panel entrante según la dirección.
+    if direction = 1 then
+        ' Para RIGHT: item entrante inicia fuera de pantalla por la derecha.
+        m.incomingStartX = slideWidth
+        ' Para RIGHT: item saliente termina fuera de pantalla por la izquierda.
+        m.outgoingEndX = -slideWidth
+    else
+        ' Para LEFT: item entrante inicia fuera de pantalla por la izquierda.
+        m.incomingStartX = -slideWidth
+        ' Para LEFT: item saliente termina fuera de pantalla por la derecha.
+        m.outgoingEndX = slideWidth
+    end if
 
-    m.top.currentIndex = newIndex
+    ' Carga imagen entrante en el poster secundario.
+    if m.incomingBackgroundImage <> invalid then
+        ' Asigna la uri del item entrante.
+        m.incomingBackgroundImage.uri = incomingImageUri
+        ' Posiciona el poster entrante fuera de pantalla para iniciar el slide.
+        m.incomingBackgroundImage.translation = [m.incomingStartX, 0]
+        ' Hace visible el poster entrante durante la animación.
+        m.incomingBackgroundImage.visible = true
+    end if
 
+    ' Asegura que el poster saliente comience en el centro.
+    m.backgroundImage.translation = [0, 0]
+
+    ' Inicia timer de animación compuesta.
     if m.slideTimer <> invalid then
         m.slideTimer.control = "start"
     else
@@ -259,41 +346,166 @@ end sub
 
 ' Avanza un frame de la animación horizontal.
 sub onSlideFrame()
+    ' Si no hay animación activa, ignora evento de timer.
     if not m.isSliding then return
 
+    ' Incrementa el frame actual.
     m.slideCurrentFrame = m.slideCurrentFrame + 1
 
-    newOffset = __getSlideOffsetForFrame()
+    ' Ejecuta la animación correspondiente a la fase actual.
+    if m.slidePhase = "shrink" then
+        ' Anima achique previo al cambio de item.
+        __animateShrinkFrame()
+    else if m.slidePhase = "slide" then
+        ' Anima desplazamiento horizontal entre item saliente y entrante.
+        __animateSlideFrame()
+    else if m.slidePhase = "expand" then
+        ' Anima regreso al tamaño original al terminar el cambio.
+        __animateExpandFrame()
+    end if
+end sub
 
-    m.backgroundImage.translation = [newOffset, 0]
-    if m.overlay <> invalid then m.overlay.translation = [newOffset, 0]
+' Anima un frame de la fase de achique previo.
+sub __animateShrinkFrame()
+    ' Calcula progreso normalizado del achique.
+    progress = __getPhaseProgress(m.shrinkTotalFrames)
+    ' Interpola escala entre 1.0 y shrinkScale.
+    currentScale = 1 - ((1 - m.shrinkScale) * progress)
+    ' Aplica escala actual con compensación centrada.
+    __applyScaleWithCenterCompensation(currentScale)
 
+    ' Si terminó el achique, cambia a fase de slide y resetea frame.
+    if m.slideCurrentFrame >= m.shrinkTotalFrames then
+        ' Cambia fase activa a slide principal.
+        m.slidePhase = "slide"
+        ' Reinicia contador para la fase de slide.
+        m.slideCurrentFrame = 0
+        ' Actualiza índice al arrancar el slide para sincronizar dots/título externos.
+        m.top.currentIndex = __getTargetIndex()
+    end if
+end sub
+
+' Anima un frame de la fase de slide horizontal.
+sub __animateSlideFrame()
+    ' Calcula progreso normalizado de 0 a 1 del slide.
+    progress = __getPhaseProgress(m.slideTotalFrames)
+    ' Interpola posición X del item saliente hacia su destino final.
+    outgoingX = int(m.outgoingEndX * progress)
+    ' Interpola posición X del item entrante desde fuera de pantalla hasta 0.
+    incomingX = int(m.incomingStartX * (1 - progress))
+
+    ' Aplica desplazamiento al item saliente.
+    m.backgroundImage.translation = [outgoingX, 0]
+    ' Aplica desplazamiento al item entrante.
+    if m.incomingBackgroundImage <> invalid then m.incomingBackgroundImage.translation = [incomingX, 0]
+
+    ' Si llegó al último frame del slide, consolida imagen y pasa a expand.
     if m.slideCurrentFrame >= m.slideTotalFrames then
+        ' Obtiene item ya seleccionado para consolidar la imagen final.
+        currentItem = getCurrentItem()
+        ' Resuelve uri final del item seleccionado.
+        finalImageUri = getItemImageUri(currentItem)
+        ' Si hay uri válida, la aplica al poster principal.
+        if finalImageUri <> invalid then m.backgroundImage.uri = finalImageUri
+        ' Restablece posición base del poster principal.
+        m.backgroundImage.translation = [0, 0]
+        ' Oculta poster entrante luego del cambio de item.
+        if m.incomingBackgroundImage <> invalid then m.incomingBackgroundImage.visible = false
+        ' Reinicia traslación del poster entrante.
+        if m.incomingBackgroundImage <> invalid then m.incomingBackgroundImage.translation = [0, 0]
+        ' Cambia fase activa a regreso de escala.
+        m.slidePhase = "expand"
+        ' Reinicia contador para la fase de expand.
+        m.slideCurrentFrame = 0
+    end if
+end sub
+
+' Anima un frame de la fase de regreso de escala.
+sub __animateExpandFrame()
+    ' Calcula progreso normalizado de la fase de expand.
+    progress = __getPhaseProgress(m.expandTotalFrames)
+    ' Interpola escala entre shrinkScale y 1.0.
+    currentScale = m.shrinkScale + ((1 - m.shrinkScale) * progress)
+    ' Aplica escala actual con compensación centrada.
+    __applyScaleWithCenterCompensation(currentScale)
+
+    ' Si finaliza el expand, cierra y restablece estados.
+    if m.slideCurrentFrame >= m.expandTotalFrames then
         finalizeSlideTransition()
     end if
 end sub
 
 ' Cierra la transición y restablece posiciones base.
 sub finalizeSlideTransition()
+    ' Detiene timer para evitar nuevos ticks.
     if m.slideTimer <> invalid then m.slideTimer.control = "stop"
 
-    m.isSliding = false
-    m.slideCurrentFrame = 0
-    m.slideOffset = 0
+    ' Asegura escala base al finalizar la animación compuesta.
+    __applyScaleWithCenterCompensation(1)
 
+    ' Devuelve poster principal al origen.
     m.backgroundImage.translation = [0, 0]
-    if m.overlay <> invalid then m.overlay.translation = [0, 0]
+    ' Oculta y resetea poster entrante tras finalizar animación.
+    if m.incomingBackgroundImage <> invalid then
+        ' Esconde el poster secundario al terminar.
+        m.incomingBackgroundImage.visible = false
+        ' Limpia su traslación para próximas animaciones.
+        m.incomingBackgroundImage.translation = [0, 0]
+    end if
+
+    ' Restablece estado interno de animación.
+    m.isSliding = false
+    ' Restablece fase a idle.
+    m.slidePhase = "idle"
+    ' Restablece frame actual a cero.
+    m.slideCurrentFrame = 0
 end sub
 
+' Devuelve progreso de una fase entre 0 y 1 con easing suave.
+function __getPhaseProgress(totalFrames as integer) as float
+    ' Si no hay frames configurados, considera progreso completado.
+    if totalFrames <= 0 then return 1
 
-' Devuelve el desplazamiento horizontal interpolado para el frame actual (ease-out).
-function __getSlideOffsetForFrame() as integer
-    if m.slideTotalFrames <= 0 then return 0
-
-    progress = m.slideCurrentFrame / m.slideTotalFrames
+    ' Calcula progreso lineal del frame actual.
+    progress = m.slideCurrentFrame / totalFrames
+    ' Asegura límite inferior de progreso.
     if progress < 0 then progress = 0
+    ' Asegura límite superior de progreso.
     if progress > 1 then progress = 1
 
-    easedProgress = 1 - ((1 - progress) * (1 - progress))
-    return int(m.slideOffset * (1 - easedProgress))
+    ' Aplica curva ease-in-out para movimiento más fluido.
+    return progress * progress * (3 - (2 * progress))
+end function
+
+' Aplica escala uniforme al grupo y compensa traslación para mantener centro visual.
+sub __applyScaleWithCenterCompensation(scaleValueCurrent as float)
+    ' Aplica escala uniforme al contenedor de News.
+    m.top.scale = [scaleValueCurrent, scaleValueCurrent]
+
+    ' Calcula desplazamiento horizontal para mantener centrado al escalar.
+    offsetX = int((m.slideWidth * (1 - scaleValueCurrent)) / 2)
+    ' Calcula desplazamiento vertical para mantener centrado al escalar.
+    offsetY = int((m.slideHeight * (1 - scaleValueCurrent)) / 2)
+    ' Compensa traslación del grupo mientras cambia la escala.
+    m.top.translation = [offsetX, offsetY]
+end sub
+
+' Obtiene índice objetivo en función de la dirección de slide.
+function __getTargetIndex() as integer
+    ' Obtiene índice actual al momento de confirmar cambio.
+    currentIndex = m.top.currentIndex
+    ' Si dirección es hacia la derecha visual (tecla RIGHT), avanza uno.
+    if m.slideDirection = 1 then return currentIndex + 1
+    ' Si dirección es hacia la izquierda visual (tecla LEFT), retrocede uno.
+    return currentIndex - 1
+end function
+
+' Obtiene la uri de imagen renderizable para un item de News.
+function getItemImageUri(item as dynamic) as dynamic
+    ' Si el item es inválido, no hay uri para devolver.
+    if item = invalid then return invalid
+    ' Si el item trae imagen, transforma al formato final de CDN.
+    if item.image <> invalid then return getImageUrl(item.image)
+    ' Si no trae imagen, no hay uri para renderizar.
+    return invalid
 end function

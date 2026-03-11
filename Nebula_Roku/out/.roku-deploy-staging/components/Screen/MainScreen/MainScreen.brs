@@ -20,16 +20,31 @@ sub init()
   'Program summary
   m.programTimer = m.top.findNode("programTimer")
   m.programInfo = m.top.findNode("programInfo")
+
+  ' Referencia al timer que confirma cuándo ocultar newsContainer tras 0.5s.
+  m.newsFadeOutTimer = m.top.findNode("newsFadeOutTimer")
+  ' Observa el disparo del timer para completar invisibilidad de News al finalizar la animación.
+  if m.newsFadeOutTimer <> invalid then m.newsFadeOutTimer.observeField("fire", "onNewsFadeOutFinished")
+  
+  ' Referencia a la animación que sincroniza fade de News y ProgramInfo en 0.5s.
+  m.newsToProgramAnimation = m.top.findNode("newsToProgramAnimation")
   m.infoGradient = m.top.findNode("infoGradient")
   m.programImageBackground = m.top.findNode("programImageBackground")
+
+  ' Referencia al poster inferior de gradiente ubicado al pie de la pantalla.
+  m.bottomGradientPoster = m.top.findNode("bottomGradientPoster")
 
   ' Without content
   m.withoutContentLayoutGroup = m.top.findNode("withoutContentLayoutGroup")
   m.withoutContentTitle = m.top.findNode("withoutContentTitle")
   m.withoutContentMessage = m.top.findNode("withoutContentMessage")
   
-  m.logo = m.top.findNode("mainLogo")
+  m.mainLogo = m.top.findNode("mainLogo")
   m.nameOrganization = m.top.findNode("nameOrganization")
+  ' Referencia a la animación que oculta el logo principal en 0.5 segundos.
+  m.mainLogoFadeOutAnimation = m.top.findNode("mainLogoFadeOutAnimation") 
+  ' Referencia a la animación que muestra el logo principal en 0.5 segundos.
+  m.mainLogoFadeInAnimation = m.top.findNode("mainLogoFadeInAnimation") 
 
   m.scaleInfo = m.global.scaleInfo
   ' Indica si el foco debe volver al NewsItem tras cerrar menú.
@@ -134,8 +149,18 @@ sub initData()
     m.programImageBackground.width = width
     m.programImageBackground.height = height
 
+    ' Calcula el alto del poster inferior usando escala base de 400px.
+    bottomPosterHeight = scaleValue(400, m.scaleInfo)
+    ' Asigna al poster inferior el ancho completo de pantalla.
+    m.bottomGradientPoster.width = width
+    ' Asigna al poster inferior el alto escalado previamente calculado.
+    m.bottomGradientPoster.height = bottomPosterHeight
+    ' Ubica el poster inferior al borde inferior de la pantalla.
+    m.bottomGradientPoster.translation = [0, height - bottomPosterHeight]
+    m.bottomGradientPoster.opacity = 0.7
+
     ' Define un ancho fijo de 450 escalado para el sombreado lateral izquierdo.
-    leftShadeWidth = scaleValue(400, m.scaleInfo)
+    leftShadeWidth = scaleValue(450, m.scaleInfo)
     ' Aplica el ancho calculado al sombreado difuminado.
     m.leftBlurShade.width = leftShadeWidth
     ' Extiende el sombreado al 100% de alto de pantalla.
@@ -143,11 +168,11 @@ sub initData()
 
     logoWidth = scaleValue(200, m.scaleInfo)
     logoHeight = scaleValue(100, m.scaleInfo)
-    m.logo.width = logoWidth
-    m.logo.height = logoHeight
-    m.logo.loadWidth = logoWidth
-    m.logo.loadHeight = logoHeight
-    m.logo.translation = [(width - scaleValue(250, m.scaleInfo)), scaleValue(30, m.scaleInfo)]
+    m.mainLogo.width = logoWidth
+    m.mainLogo.height = logoHeight
+    m.mainLogo.loadWidth = logoWidth
+    m.mainLogo.loadHeight = logoHeight
+    m.mainLogo.translation = [(width - scaleValue(250, m.scaleInfo)), scaleValue(30, m.scaleInfo)]
     m.nameOrganization.translation = [(width - safeX - scaleValue(200, m.scaleInfo)), scaleValue(130, m.scaleInfo)]
     m.withoutContentLayoutGroup.translation = [(width / 2), (height / 2)]
     
@@ -155,7 +180,7 @@ sub initData()
     m.withoutContentTitle.width = errorSafeZone
     m.withoutContentMessage.width = errorSafeZone
 
-    m.programInfo.translation = [safeX + scaleValue(60, m.scaleInfo), safeY + scaleValue(20, m.scaleInfo)]
+    m.programInfo.translation = [safeX + scaleValue(60, m.scaleInfo), safeY ]
     ' Ajusta tamaño y posición del overlay de News para mantenerlo arriba del carrusel de noticias.
     __layoutNewsOverlay()
 
@@ -163,7 +188,7 @@ sub initData()
     if m.apiUrl = invalid then m.apiUrl = getConfigVariable(m.global.configVariablesKeys.API_URL) 
     if m.beaconUrl = invalid then m.beaconUrl = getConfigVariable(m.global.configVariablesKeys.BEACON_URL) 
     if m.productName = invalid then m.productName = getConfigVariable(m.global.configVariablesKeys.PRODUCT_NAME) 
-    if m.logoDisplayType = invalid then m.logoDisplayType = getConfigVariable(m.global.configVariablesKeys.LOGO_DISPLAY_TYPE) 
+    if m.mainLogoDisplayType = invalid then m.mainLogoDisplayType = getConfigVariable(m.global.configVariablesKeys.LOGO_DISPLAY_TYPE) 
 
     m.myMenu.ObserveField("selectedItem", "onSelectMenuItem")
     __getMenu()
@@ -591,7 +616,7 @@ sub onFocusItem()
     newFocus = ParseJson(m.carouselContainer.focusedChild.focused)
     if (m.itemfocused = invalid) or (m.itemfocused <> invalid and (newFocus.key <> m.itemfocused.key or newFocus.id <> m.itemfocused.id or newFocus.redirectKey <> m.itemfocused.redirectKey or newFocus.redirectId <> m.itemfocused.redirectId)) then
       
-      m.programInfo.visible = false
+      __hideProgramInfoWithAnimation()
       m.programImageBackground.uri = ""
       m.itemfocused = newFocus
       m.carouselContainer.focusedChild.focused = invalid
@@ -843,7 +868,7 @@ sub getProgramInfo()
       nowDate.ToLocalTime()
 
       if not __isNewsFocused() and (m.program.infoKey <> "ChannelId") or (m.program.infoKey = "ChannelId" and endTime.AsSeconds() > nowDate.AsSeconds()) then 
-        m.programInfo.visible = true      
+        __showProgramInfoWithAnimation()   
         return
       end if
     end if
@@ -907,7 +932,7 @@ sub onProgramSummaryResponse()
         m.programInfo.program = FormatJson(m.program)
         if m.carouselContainer.focusedChild <> invalid then m.carouselContainer.focusedChild.updateNode = FormatJson(m.program)
 
-        m.programInfo.visible = true
+        __showProgramInfoWithAnimation()
       else
         __clearProgramInfo()
         printError("ProgramSumary Emty:", m.apiSummaryRequestManager.response)
@@ -1344,7 +1369,7 @@ end sub
 ' Limpia el componente con la infromacion del programa y cancela el timer de busqueda
 sub __clearProgramInfo()
   m.programInfo.program = invalid
-  m.programInfo.visible = false
+  __hideProgramInfoImmediately()
   m.programImageBackground.uri = ""
   m.itemfocused = invalid
   clearTimer(m.programTimer)
@@ -1469,12 +1494,11 @@ sub __focusFirstCarouselFromNews()
     carouselNode = m.carouselContainer.getChild(i)
     carouselList = carouselNode.findNode("carouselList")
     if carouselList <> invalid then
-      m.newsContainer.translation = [0, -(carouselNode.translation[1] - m.yPosition)] ' Aplica desplazamiento vertical del hero de noticias para mantener la misma animación que el resto.
-      m.newsCarouselItem.opacity = "0.0" ' Replica la lógica de opacidad usada al navegar entre carruseles estándar con DOWN ocultando el carrusel actual (News).
+      'm.newsContainer.translation = [0, -(carouselNode.translation[1] - m.yPosition)] ' Aplica desplazamiento vertical del hero de noticias para mantener la misma animación que el resto.
       carouselList.setFocus(true) ' Posiciona el foco en el primer carrusel navegable debajo de News.
       m.carouselContainer.translation = [m.xPosition, -(carouselNode.translation[1] - m.yPosition)] ' Sincroniza la traslación del contenedor de carruseles con el mismo patrón de animación.
       m.selectedIndicator.size = carouselNode.size ' Ajusta el tamaño del indicador al carrusel que tomó foco.
-      m.programInfo.visible = true ' Fuerza la visibilidad del resumen cuando se sale del carrusel de News.
+      __showProgramInfoWithAnimation() ' Muestra programInfo con animación de 0.5s al salir de News.
       m.selectedIndicator.visible = true ' Fuerza la visibilidad del indicador cuando el foco entra a carruseles estándar.
       __updateOverlayVisibilityByFocus() ' Revalida el estado final de overlays según la cadena de foco actual.
       return
@@ -1492,20 +1516,99 @@ sub __focusNewsFromFirstCarousel()
   m.newsContainer.translation = [0, 0] ' Devuelve el bloque de noticias a su posición base con la misma transición visual.
   m.carouselContainer.translation = [m.xPosition, m.yPosition] ' Reestablece el contenedor de carruseles a su origen como al inicio de Home.
   m.newsCarouselItem.setFocus(true) ' Posiciona foco en el carrusel de News al presionar UP en el primer carrusel no-News.
-  m.programInfo.visible = false ' Oculta programInfo cuando el foco vuelve al hero de noticias.
+  __hideProgramInfoWithAnimation() ' Oculta programInfo con animación de 0.5s al volver al hero de noticias.
   m.selectedIndicator.visible = false ' Oculta selectedIndicator cuando el foco vuelve al hero de noticias.
   __updateOverlayVisibilityByFocus() ' Mantiene centralizada la regla final de visibilidad según foco.
 end sub
 
+' Oculta News y ProgramInfo sin animación para inicialización o limpieza de estado.
+sub __hideProgramInfoImmediately()
+  ' Sale temprano si newsContainer no está disponible.
+  if m.newsContainer = invalid then return
+  ' Sale temprano si programInfo no está disponible.
+  if m.programInfo = invalid then return
+  ' Detiene animación en curso para evitar estados intermedios.
+  if m.newsToProgramAnimation <> invalid then m.newsToProgramAnimation.control = "stop"
+  ' Cancela timer pendiente porque News no debe ocultarse fuera de la transición.
+  if m.newsFadeOutTimer <> invalid then m.newsFadeOutTimer.control = "stop"
+  ' Restablece opacidad base del contenedor News.
+  m.newsContainer.opacity = 1.0
+  ' Restablece opacidad base de programInfo.
+  m.programInfo.opacity = 0.0
+  ' Oculta programInfo inmediatamente.
+  m.programInfo.visible = false
+end sub
+
+' Muestra programInfo y oculta News con animación de 0.5 segundos.
+sub __showProgramInfoWithAnimation()
+  ' Sale temprano si newsContainer no está disponible.
+  if m.newsContainer = invalid then return
+  ' Sale temprano si programInfo no está disponible.
+  if m.programInfo = invalid then return
+  ' Hace visible programInfo antes de iniciar interpolación.
+  m.programInfo.visible = true
+  ' Configura opacidades iniciales para animar de News a ProgramInfo.
+  m.newsContainer.opacity = 1.0
+  ' Configura opacidad inicial de programInfo en transparente.
+  m.programInfo.opacity = 0.0
+  ' Si existe animación declarada en XML, la reproduce en 0.5s.
+  if m.newsToProgramAnimation <> invalid then
+    ' Reinicia animación para garantizar que siempre empiece desde el frame inicial.
+    m.newsToProgramAnimation.control = "stop"
+    ' Inicia transición de opacidades entre News y ProgramInfo.
+    m.newsToProgramAnimation.control = "start"
+    ' Reinicia el timer que ocultará newsContainer al completar los 0.5s de transición.
+    if m.newsFadeOutTimer <> invalid then m.newsFadeOutTimer.control = "stop"
+    ' Inicia cuenta de 0.5s para marcar newsContainer como invisible al terminar el fade-out.
+    if m.newsFadeOutTimer <> invalid then m.newsFadeOutTimer.control = "start"
+  else
+    ' Fallback sin animación si el nodo de animación no existe.
+    m.newsContainer.opacity = 0.0
+    ' Fallback sin animación mostrando programInfo completamente.
+    m.programInfo.opacity = 1.0
+  end if
+end sub
+
+' Oculta programInfo y restaura News con animación de 0.5 segundos.
+sub __hideProgramInfoWithAnimation()
+  ' Sale temprano si newsContainer no está disponible.
+  if m.newsContainer = invalid then return
+  ' Sale temprano si programInfo no está disponible.
+  if m.programInfo = invalid then return
+  ' Si existe animación declarada en XML, la reutiliza en sentido inverso manual.
+  if m.newsToProgramAnimation <> invalid then
+    ' Detiene animación previa para evitar superposición de transiciones.
+    m.newsToProgramAnimation.control = "stop"
+  end if
+  ' Restaura visibilidad base de News inmediatamente.
+  m.newsContainer.opacity = 1.0
+  ' Cancela timer pendiente porque News ya no debe ocultarse al finalizar transición previa.
+  if m.newsFadeOutTimer <> invalid then m.newsFadeOutTimer.control = "stop"
+  ' Restablece opacidad de programInfo a transparente.
+  m.programInfo.opacity = 0.0
+  ' Oculta programInfo al finalizar restauración visual.
+  m.programInfo.visible = false
+end sub
+
+' Completa el ocultamiento lógico de News cuando termina la animación de 0.5 segundos.
+sub onNewsFadeOutFinished()
+  ' Sale temprano si newsContainer no está disponible.
+  if m.newsContainer = invalid then return
+  ' Marca newsContainer como invisible al finalizar la transición solicitada.
+  m.newsContainer.visible = false
+end sub
+
 ' Alterna visibilidad de ProgramInfo y SelectedIndicator según foco en NewsItem.
 sub __updateOverlayVisibilityByFocus()
+  newsFocused = __isNewsFocused() ' Guarda el estado actual de foco para reutilizar la misma decisión visual en overlays y logo.
+  __animateMainLogoByFocus(newsFocused) ' Ejecuta la animación del logo según si el foco está o no en el carrusel de News.
   ' Si el foco está en NewsItem, se ocultan overlays superiores del listado.
-  if __isNewsFocused() then
+  if newsFocused then
     ' Busca el primer carrusel no-News para calcular el desplazamiento visual mientras News mantiene el foco.
     firstCarousel = __getFirstNonNewsCarousel()
     ' Aplica elevación solo si existe al menos un carrusel no-News para mostrarlo parcialmente sobre News.
     if firstCarousel <> invalid then m.carouselContainer.translation = [m.xPosition, m.yPosition - m.newsPeekOffset]
-    m.programInfo.visible = false
+     __hideProgramInfoWithAnimation()
     m.selectedIndicator.visible = false
     ' Cuando el foco está en News, muestra el título externo de News.
     if m.newsTitle <> invalid then m.newsTitle.visible = true
@@ -1513,7 +1616,7 @@ sub __updateOverlayVisibilityByFocus()
     if m.dotsContainer <> invalid then m.dotsContainer.visible = true
   else
     ' Si el foco salió de NewsItem, vuelve a mostrar overlays contextuales.
-    m.programInfo.visible = true
+    __showProgramInfoWithAnimation()
     if m.carouselContainer <> invalid and m.carouselContainer.focusedChild <> invalid then
       m.selectedIndicator.visible = true
     end if
@@ -1522,6 +1625,28 @@ sub __updateOverlayVisibilityByFocus()
     if m.newsTitle <> invalid then m.newsTitle.visible = false
     ' Cuando el foco no está en News, oculta el contenedor externo de dots.
     if m.dotsContainer <> invalid then m.dotsContainer.visible = false
+  end if
+end sub
+
+' Anima la opacidad del logo principal según si el foco está en el carrusel de News.
+sub __animateMainLogoByFocus(newsFocused as boolean)
+  if m.mainLogo = invalid then return ' Evita errores si el nodo del logo no está disponible en el árbol.
+  if m.mainLogoHiddenByNewsFocus = newsFocused then return ' Evita reiniciar la misma animación cuando no hubo cambio real de estado de foco.
+  m.mainLogoHiddenByNewsFocus = newsFocused ' Persiste el estado recién aplicado para que solo se anime en transiciones reales.
+  if newsFocused then ' Cuando el foco está en News, el logo debe desaparecer.
+    if m.mainLogoFadeInAnimation <> invalid then m.mainLogoFadeInAnimation.control = "stop" ' Detiene cualquier fade-in previo para prevenir animaciones superpuestas.
+    if m.mainLogoFadeOutAnimation <> invalid then
+      m.mainLogoFadeOutAnimation.control = "start" ' Dispara fade-out de 0.5s para llevar la opacidad del logo a 0.
+    else
+      m.mainLogo.opacity = 0.0 ' Aplica fallback directo a opacidad 0 si la animación no existe.
+    end if
+  else ' Cuando el foco no está en News, el logo debe volver a mostrarse.
+    if m.mainLogoFadeOutAnimation <> invalid then m.mainLogoFadeOutAnimation.control = "stop" ' Detiene cualquier fade-out previo para prevenir animaciones superpuestas.
+    if m.mainLogoFadeInAnimation <> invalid then
+      m.mainLogoFadeInAnimation.control = "start" ' Dispara fade-in de 0.5s para llevar la opacidad del logo a 1.
+    else
+      m.mainLogo.opacity = 1.0 ' Aplica fallback directo a opacidad 1 si la animación no existe.
+    end if
   end if
 end sub
 
@@ -1558,14 +1683,21 @@ sub __layoutNewsOverlay()
   titleHeight = scaleValue(int(screenHeight * 0.30), m.scaleInfo)
   m.newsTitle.height = titleHeight
   ' Posiciona el título un poco más arriba de los carruseles y encima del hero de News.
-  baseTitleTranslation = scaleSize([150, -70], m.scaleInfo)
+  baseTitleTranslation = scaleSize([125, -50], m.scaleInfo)
   m.newsTitle.translation = baseTitleTranslation
   ' Escala el título para mantener la presencia visual previa del NewsItem original.
   m.newsTitle.scale = [1.7, 1.7]
-  ' Posiciona los dots por encima del inicio de carruseles, siempre encima del hero de News.
-  m.dotsContainer.translation = scaleSize([600, 520], m.scaleInfo)
 end sub
 
+' Centra horizontalmente el contenedor de dots de News en la pantalla.
+sub __centerNewsDotsContainer()
+  if m.dotsContainer = invalid then return
+  screenWidth = m.scaleInfo.width
+  dotsY = scaleSize([600, 550], m.scaleInfo)[1]
+  centeredX = int((screenWidth - m.dotsContainer.getChildCount() * 35) / 2)
+  if centeredX < 0 then centeredX = 0
+  m.dotsContainer.translation = [centeredX, dotsY]
+end sub
 ' Sincroniza título y dots del overlay externo usando el estado actual del NewsItem.
 sub __syncNewsOverlay()
   ' Sale si el título externo no existe para evitar errores cuando el árbol aún no está montado.
@@ -1595,30 +1727,39 @@ sub __syncNewsOverlay()
     if currentNewsItem <> invalid and currentNewsItem.title <> invalid and currentNewsItem.title <> "" then currentTitle = currentNewsItem.title
     ' Recorre noticias para dibujar dots externos y resaltar el índice activo.
     for i = 0 to newsItems.count() - 1
-      ' Crea un dot circular reutilizando el asset compartido del proyecto.
-      dot = createObject("roSGNode", "Poster")
-      ' Define ancho del dot externo para mantener consistencia con el diseño original.
-      dot.width = 12
-      ' Define alto del dot externo para mantener consistencia con el diseño original.
-      dot.height = 12
-      ' Asigna el recurso circular usado como indicador de paginación.
-      dot.uri = "pkg:/images/shared/ball.png"
-      ' Marca dot activo con opacidad plena para indicar la noticia seleccionada.
+      ' Marca dot activo con mayor jerarquía visual (blanco, ancho y con esquinas redondeadas).
       if i = currentIndex then
+        ' Usa la imagen bar.png (con alpha) para conservar esquinas redondeadas.
+        dot = createObject("roSGNode", "Poster")
+        dot.uri = "pkg:/images/shared/ball-large.png"
+        ' Define tamaño del dot activo para enfatizar el foco horizontalmente.
+        dot.width = 70
+        dot.height = 12
+        ' Escala la barra al tamaño objetivo respetando transparencia del PNG.
+        dot.loadDisplayMode = "scaleToZoom"
         ' Opacidad máxima para el dot activo.
         dot.opacity = 1.0
       else
+        ' Crea dot circular inactivo reutilizando el asset compartido del proyecto.
+        dot = createObject("roSGNode", "Poster")
+        dot.uri = "pkg:/images/shared/ball.png"
+        dot.width = 12
+        dot.height = 12
+        ' Atenúa el blanco en dots inactivos para reducir protagonismo.
+        dot.blendColor = "0xFFFFFFA6"
         ' Opacidad reducida para dots inactivos.
         dot.opacity = 0.45
       end if
       ' Inserta el dot en el contenedor externo de indicadores.
       m.dotsContainer.appendChild(dot)
     end for
+
+    ' Posiciona los dots por encima del inicio de carruseles y centrados horizontalmente.
+    __centerNewsDotsContainer()
   end if
   ' Actualiza el título externo con la noticia activa o fallback del carrusel.
   if m.newsTitle <> invalid then m.newsTitle.text = currentTitle
 end sub
-
 
 ' Actualiza el indicador de seleccion segun el carrusel enfocado
 sub __updateSelectedIndicator()
@@ -1947,63 +2088,63 @@ sub __loadOrganizationLogo()
   organization = m.global.organization
 
   ' Validar el tipo de logo a mostrar
-  if m.logoDisplayType <> invalid then
+  if m.mainLogoDisplayType <> invalid then
 
     ' El logo viene en la organización
-    if m.logoDisplayType = LogoDisplayType().ORGANIZATION then
+    if m.mainLogoDisplayType = LogoDisplayType().ORGANIZATION then
       m.nameOrganization.visible = false
       if organization <> invalid and organization.image <> invalid then
-        m.logo.uri = getImageUrl(organization.image)
+        m.mainLogo.uri = getImageUrl(organization.image)
       else
-        m.logo.visible = false
+        m.mainLogo.visible = false
       end if
 
     ' El logo viene de la organización padre
-    else if m.logoDisplayType = LogoDisplayType().PARENT_ORGANIZATION then
+    else if m.mainLogoDisplayType = LogoDisplayType().PARENT_ORGANIZATION then
       m.nameOrganization.visible = false
       if organization <> invalid and organization.parent <> invalid and organization.parent.image <> invalid then
-        m.logo.uri = getImageUrl(organization.parent.image)
+        m.mainLogo.uri = getImageUrl(organization.parent.image)
       else
-        m.logo.visible = false
+        m.mainLogo.visible = false
       end if
 
     ' El logo lo obtiene de la carpeta local
-    else if m.logoDisplayType = LogoDisplayType().RESOURCE then
+    else if m.mainLogoDisplayType = LogoDisplayType().RESOURCE then
       m.nameOrganization.visible = false
-      m.logo.uri = "pkg:/images/client/header_icon.png"
+      m.mainLogo.uri = "pkg:/images/client/header_icon.png"
 
     ' El logo lo obtiene desde la carpeta local y mostrar el nombre de la organización
-    else if m.logoDisplayType = LogoDisplayType().RESOURCE_AND_ORGANIZATION_NAME then
+    else if m.mainLogoDisplayType = LogoDisplayType().RESOURCE_AND_ORGANIZATION_NAME then
   
       if organization <> invalid and organization.name <> invalid then
         m.nameOrganization.text = organization.name
         m.nameOrganization.visible = true
       end if
 
-      m.logo.uri = "pkg:/images/client/header_icon.png"
+      m.mainLogo.uri = "pkg:/images/client/header_icon.png"
 
     ' No mostrar nada
-    else if m.logoDisplayType = LogoDisplayType().NONE then
+    else if m.mainLogoDisplayType = LogoDisplayType().NONE then
       m.nameOrganization.visible = false
-      m.logo.visible = false
+      m.mainLogo.visible = false
     else 
 
       ' Por defecto mostrar la imágen de la organización o local
       'm.nameOrganization.visible = false
 
       if organization.image <> invalid then
-        m.logo.uri = getImageUrl(organization.image)
+        m.mainLogo.uri = getImageUrl(organization.image)
       else
-        m.logo.uri = "pkg:/images/client/header_icon.png"
+        m.mainLogo.uri = "pkg:/images/client/header_icon.png"
       end if
     end if
       
   else
     ' Por defecto mostrar la imágen de la organización o local
     if organization <> invalid and organization.image <> invalid then
-      m.logo.uri = getImageUrl(organization.image)
+      m.mainLogo.uri = getImageUrl(organization.image)
     else 
-      m.logo.uri = "pkg:/images/client/header_icon.png"
+      m.mainLogo.uri = "pkg:/images/client/header_icon.png"
     end if
   end if
 end sub

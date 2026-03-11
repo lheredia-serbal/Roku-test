@@ -45,15 +45,16 @@
             visible="false">
 
             <Rectangle 
-                id="detailActionBackground" 
-                color="#000000" 
-                opacity="0.60" />
+                id="detailActionBackground"
+                color="#000000" />
+
+            <SelectionBox id="borderDetailAction" color="#FFFFFF" visible="true" />
 
             <Label 
                 id="detailActionLabel" 
                 text="" 
                 color="#FFFFFFFF" 
-                font="font:MediumBoldSystemFont" />
+                font="font:SmallestBoldSystemFont" />
 
             <Poster 
                 id="detailActionIcon" 

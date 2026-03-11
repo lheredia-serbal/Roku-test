@@ -27,6 +27,12 @@
             id="backgroundImage"
             loadDisplayMode="scaleToZoom"/>
 
+        <!-- Poster temporal para animar el ingreso del siguiente/anterior item durante el slide. -->
+        <Poster
+            id="incomingBackgroundImage"
+            visible="false"
+            loadDisplayMode="scaleToZoom"/>
+
         <!-- Capa oscura opcional para mejorar legibilidad del texto sobre la imagen. -->
         <Rectangle
             id="overlay"
@@ -39,21 +45,23 @@
             visible="false">
 
             <Rectangle 
-                id="detailActionBackground" 
-                color="#000000" 
-                opacity="0.60" />
+                id="detailActionBackground"
+                color="#000000" />
+
+            <SelectionBox id="borderDetailAction" color="#FFFFFF" visible="true" />
 
             <Label 
                 id="detailActionLabel" 
                 text="" 
                 color="#FFFFFFFF" 
-                font="font:MediumBoldSystemFont" />
+                font="font:SmallestBoldSystemFont" />
 
             <Poster 
                 id="detailActionIcon" 
                 uri="pkg:/images/shared/more_info.png" />
         </Group>
 
-        <Timer id="slideTimer" repeat="true" duration="0.07" />
+        <!-- Timer de animación configurado para 20 frames * 0.04s = 0.8 segundos. -->
+        <Timer id="slideTimer" repeat="true" duration="0.05" />
     </children>
 </component>

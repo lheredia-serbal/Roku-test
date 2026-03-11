@@ -69,11 +69,16 @@
     <!-- Program Container -->
     <ProgramSummary 
       id="programInfo" 
-      visible="false"
-      translation="[118,50]"/>
+      visible="false"/>
 
     <!-- Contenedor dedicado para NewsItem en posición absoluta (0,0). -->
     <Group id="newsContainer" translation="[0, 0]" />
+
+    <!-- Poster inferior ubicado por encima de newsContainer y por debajo de carousels. -->
+    <Poster
+      id="bottomGradientPoster"
+      loadDisplayMode="scaleToFill"
+      uri="pkg:/images/shared/gradient_bg.png" />
 
     <!-- Overlay de texto e indicadores de News, separado del componente NewsItem para mejorar fluidez de animación. -->
     <Group id="newsOverlay" translation="[0, 0]">
@@ -91,11 +96,12 @@
       <LayoutGroup
         id="dotsContainer"
         layoutDirection="horiz"
+        horizAlign="center"
         itemSpacings="[14]" />
     </Group>
 
     <!-- Contenedor para múltiples carouseles y foco -->
-    <Group id="carousels" translation="[0, 140]">
+    <Group id="carousels" translation="[0, 120]">
       <Group id="carouselContainer" translation="[50, 20]"/>
 
       <SelectionBox id="selectedIndicator" visible="false"/>
@@ -156,8 +162,35 @@
       height="100"
       loadWidth="200"
       loadHeight="100"
+      visible="false"
       translation="[0, 0]"
       loadDisplayMode="scaleToFit"/>
+
+    <!-- Animación para desvanecer el logo principal cuando el foco está en News. -->
+    <Animation
+      id="mainLogoFadeOutAnimation"
+      duration="0.5"
+      repeat="false"
+      optional="true"
+      easeFunction="linear">
+      <FloatFieldInterpolator
+        fieldToInterp="mainLogo.opacity"
+        key="[0.0, 1.0]"
+        keyValue="[1.0, 0.0]" />
+    </Animation>
+
+    <!-- Animación para mostrar el logo principal cuando el foco sale de News. -->
+    <Animation
+      id="mainLogoFadeInAnimation"
+      duration="0.5"
+      repeat="false"
+      optional="true"
+      easeFunction="linear">
+      <FloatFieldInterpolator
+        fieldToInterp="mainLogo.opacity"
+        key="[0.0, 1.0]"
+        keyValue="[0.0, 1.0]" />
+    </Animation>
     
     <Label
         id="nameOrganization"
@@ -169,6 +202,12 @@
     
     <!-- Timers -->
     <Timer id="programTimer" repeat="false" duration="0.5"/>
-    
+     <!-- Animación para ocultar News y mostrar ProgramInfo en 0.5s. -->
+    <Animation id="newsToProgramAnimation" duration="0.2" repeat="false">
+      <!-- Interpola opacidad de News de visible a invisible. -->
+      <FloatFieldInterpolator key="[0.0, 1.0]" keyValue="[1.0, 0.0]" fieldToInterp="newsContainer.opacity" />
+      <!-- Interpola opacidad de ProgramInfo de invisible a visible. -->
+      <FloatFieldInterpolator key="[0.0, 1.0]" keyValue="[0.0, 1.0]" fieldToInterp="programInfo.opacity" />
+    </Animation>
   </children>
 </component>

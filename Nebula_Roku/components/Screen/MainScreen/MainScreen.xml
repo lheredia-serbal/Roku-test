@@ -144,14 +144,6 @@
         uri="pkg:/images/client/info_gradient.png" />
     </Group>
 
-     <!-- Sombreado difuminado del borde izquierdo para reforzar la separación visual del menú. -->
-    <Poster
-      id="leftBlurShade"
-      translation="[0,0]"
-      opacity="0.8"
-      loadDisplayMode="scaleToFill"
-      uri="pkg:/images/shared/menu_contracted.png" />
-
     <!--  Menu contairner -->
     <Menu id="myMenu" />
 
@@ -162,8 +154,35 @@
       height="100"
       loadWidth="200"
       loadHeight="100"
+      visible="false"
       translation="[0, 0]"
       loadDisplayMode="scaleToFit"/>
+
+    <!-- Animación para desvanecer el logo principal cuando el foco está en News. -->
+    <Animation
+      id="mainLogoFadeOutAnimation"
+      duration="0.5"
+      repeat="false"
+      optional="true"
+      easeFunction="linear">
+      <FloatFieldInterpolator
+        fieldToInterp="mainLogo.opacity"
+        key="[0.0, 1.0]"
+        keyValue="[1.0, 0.0]" />
+    </Animation>
+
+    <!-- Animación para mostrar el logo principal cuando el foco sale de News. -->
+    <Animation
+      id="mainLogoFadeInAnimation"
+      duration="0.5"
+      repeat="false"
+      optional="true"
+      easeFunction="linear">
+      <FloatFieldInterpolator
+        fieldToInterp="mainLogo.opacity"
+        key="[0.0, 1.0]"
+        keyValue="[0.0, 1.0]" />
+    </Animation>
     
     <Label
         id="nameOrganization"
@@ -175,5 +194,12 @@
     
     <!-- Timers -->
     <Timer id="programTimer" repeat="false" duration="0.5"/>
+     <!-- Animación para ocultar News y mostrar ProgramInfo en 0.5s. -->
+    <Animation id="newsToProgramAnimation" duration="0.2" repeat="false">
+      <!-- Interpola opacidad de News de visible a invisible. -->
+      <FloatFieldInterpolator key="[0.0, 1.0]" keyValue="[1.0, 0.0]" fieldToInterp="newsContainer.opacity" />
+      <!-- Interpola opacidad de ProgramInfo de invisible a visible. -->
+      <FloatFieldInterpolator key="[0.0, 1.0]" keyValue="[0.0, 1.0]" fieldToInterp="programInfo.opacity" />
+    </Animation>
   </children>
 </component>

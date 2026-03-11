@@ -111,7 +111,7 @@ sub currRectChanged()
     m.programTitle.width = (imageWidth - m.padding)
     m.programTitle.height = (imageHeight - m.padding)
 
-    m.progressContainer.translation = [m.padding , scaledCurrRect.height - scaleValue(8, m.scaleInfo)]
+    m.progressContainer.translation = [m.padding , scaledCurrRect.height - scaleValue(15, m.scaleInfo)]
 end sub
 
 ' Define el estilo de foco del componente y como se comporta al tener o no el foco
