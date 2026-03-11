@@ -12,6 +12,12 @@ sub init()
 
   'carousel
   m.carouselContainer = m.top.findNode("carouselContainer")
+  ' Referencia a la animación que suaviza la transición vertical de carouselContainer.
+  m.carouselContainerMoveAnimation = m.top.findNode("carouselContainerMoveAnimation")
+  ' Referencia al interpolador que recibe origen/destino de translation para carouselContainer.
+  m.carouselContainerMoveInterpolator = m.top.findNode("carouselContainerMoveInterpolator")
+  ' Observa el estado de la animación para restaurar overlays cuando termine la transición.
+  if m.carouselContainerMoveAnimation <> invalid then m.carouselContainerMoveAnimation.observeField("state", "onCarouselContainerMoveAnimationStateChanged")
   m.selectedIndicator = m.top.findNode("selectedIndicator")
 
   'Program summary
@@ -79,6 +85,7 @@ function onKeyEvent(key as string, press as boolean) as boolean
       if focusItem <> invalid then 
         m.carouselContainer.focusedChild.focusUp.opacity = "1.0"
         focusItem.setFocus(true)
+        __setCarouselContainerTranslationWithAnimation([m.xPosition, -(m.carouselContainer.focusedChild.translation[1] - m.yPosition)]) ' Mueve carouselContainer con transición animada de 0.5s.
         m.carouselContainer.translation = [m.xPosition, -(m.carouselContainer.focusedChild.translation[1] - m.yPosition)] ' Mover hacia arriba
         m.selectedIndicator.size = m.carouselContainer.focusedChild.size
       end if
@@ -91,6 +98,7 @@ function onKeyEvent(key as string, press as boolean) as boolean
       if focusItem <> invalid then 
         m.carouselContainer.focusedChild.opacity = "0.0"
         focusItem.setFocus(true)
+        __setCarouselContainerTranslationWithAnimation([m.xPosition, -(m.carouselContainer.focusedChild.translation[1] - m.yPosition)]) ' Mueve carouselContainer con transición animada de 0.5s.
         m.carouselContainer.translation = [m.xPosition, -(m.carouselContainer.focusedChild.translation[1] - m.yPosition)]
         m.selectedIndicator.size = m.carouselContainer.focusedChild.size ' Mover hacia arriba
       end if
@@ -1499,6 +1507,7 @@ sub __focusFirstCarouselFromNews()
     carouselList = carouselNode.findNode("carouselList")
     if carouselList <> invalid then
       carouselList.setFocus(true) ' Posiciona el foco en el primer carrusel navegable debajo de News.
+      __setCarouselContainerTranslationWithAnimation([m.xPosition, -(carouselNode.translation[1] - m.yPosition)]) ' Sincroniza la traslación del contenedor de carruseles con animación de 0.5s.
       m.carouselContainer.translation = [m.xPosition, -(carouselNode.translation[1] - m.yPosition)] ' Sincroniza la traslación del contenedor de carruseles con el mismo patrón de animación.
       m.selectedIndicator.size = carouselNode.size ' Ajusta el tamaño del indicador al carrusel que tomó foco.
       __showProgramInfoWithAnimation() ' Muestra programInfo con animación de 0.5s al salir de News.
@@ -1518,11 +1527,62 @@ sub __focusNewsFromFirstCarousel()
   if focusedCarousel = invalid then return ' Evita errores si no existe un hijo enfocado.
   if focusedCarousel.focusUp <> invalid then focusedCarousel.focusUp.opacity = "1.0" ' Restaura opacidad del nodo superior replicando la navegación vertical estándar.
   m.newsContainer.translation = [0, 0] ' Devuelve el bloque de noticias a su posición base con la misma transición visual.
-  m.carouselContainer.translation = [m.xPosition, m.yPosition] ' Reestablece el contenedor de carruseles a su origen como al inicio de Home.
+  __setCarouselContainerTranslationWithAnimation([m.xPosition, m.yPosition]) ' Reestablece el contenedor de carruseles a su origen con animación de 0.5s.
   m.newsCarouselItem.setFocus(true) ' Posiciona foco en el carrusel de News al presionar UP en el primer carrusel no-News.
   __hideProgramInfoWithAnimation() ' Oculta programInfo con animación de 0.5s al volver al hero de noticias.
   m.selectedIndicator.visible = false ' Oculta selectedIndicator cuando el foco vuelve al hero de noticias.
   __updateOverlayVisibilityByFocus() ' Mantiene centralizada la regla final de visibilidad según foco.
+end sub
+
+' Aplica translation sobre carouselContainer usando animación de 0.5 segundos cuando está disponible.
+sub __setCarouselContainerTranslationWithAnimation(targetTranslation as object)
+  ' Sale temprano si el contenedor principal de carruseles no existe.
+  if m.carouselContainer = invalid then return
+
+  ' Corrige target inválido usando el valor actual para evitar errores de interpolación.
+  if targetTranslation = invalid or targetTranslation.count() < 2 then
+    targetTranslation = m.carouselContainer.translation
+  end if
+
+  ' Captura translation actual como punto de inicio de la transición.
+  currentTranslation = m.carouselContainer.translation
+  ' Corrige translation actual inválido con un fallback seguro.
+  if currentTranslation = invalid or currentTranslation.count() < 2 then
+    currentTranslation = [m.xPosition, m.yPosition]
+  end if
+
+  ' Evita animar cuando origen y destino son idénticos.
+  if currentTranslation[0] = targetTranslation[0] and currentTranslation[1] = targetTranslation[1] then return
+
+  ' Aplica movimiento inmediato cuando la animación o el interpolador no existen.
+  if m.carouselContainerMoveAnimation = invalid or m.carouselContainerMoveInterpolator = invalid then
+    m.isCarouselContainerAnimating = false ' Marca que no hay transición activa cuando se aplica movimiento inmediato.
+    m.carouselContainer.translation = targetTranslation
+    return
+  end if
+
+  ' Marca que inicia transición para ocultar selectedIndicator durante el desplazamiento.
+  m.isCarouselContainerAnimating = true
+  ' Oculta selectedIndicator mientras carouselContainer está en movimiento.
+  if m.selectedIndicator <> invalid then m.selectedIndicator.visible = false
+  ' Configura el origen y destino de la interpolación vectorial.
+  m.carouselContainerMoveInterpolator.keyValue = [currentTranslation, targetTranslation]
+  ' Reinicia estado previo para permitir relanzar la misma animación consecutivamente.
+  m.carouselContainerMoveAnimation.control = "stop"
+  ' Ejecuta la transición suave de 0.5 segundos sobre carouselContainer.translation.
+  m.carouselContainerMoveAnimation.control = "start"
+end sub
+
+' Sincroniza visibilidad de selectedIndicator al terminar la animación de carouselContainer.
+sub onCarouselContainerMoveAnimationStateChanged()
+  ' Sale temprano si no existe referencia a la animación observada.
+  if m.carouselContainerMoveAnimation = invalid then return
+  ' Sale temprano mientras la animación siga corriendo para mantener indicator oculto.
+  if m.carouselContainerMoveAnimation.state = "running" then return
+  ' Marca fin de transición para permitir recuperar overlays normales.
+  m.isCarouselContainerAnimating = false
+  ' Recalcula overlays al finalizar la transición de carouselContainer.
+  __updateOverlayVisibilityByFocus()
 end sub
 
 ' Oculta News y ProgramInfo sin animación para inicialización o limpieza de estado.
@@ -1589,7 +1649,10 @@ sub __updateOverlayVisibilityByFocus()
   else
     ' Si el foco salió de NewsItem, vuelve a mostrar overlays contextuales.
     __showProgramInfoWithAnimation()
-    if m.carouselContainer <> invalid and m.carouselContainer.focusedChild <> invalid then
+    ' Si carouselContainer está animando, mantiene oculto selectedIndicator hasta terminar transición.
+    if m.isCarouselContainerAnimating = true then
+      m.selectedIndicator.visible = false
+    else if m.carouselContainer <> invalid and m.carouselContainer.focusedChild <> invalid then
       m.selectedIndicator.visible = true
     end if
 
