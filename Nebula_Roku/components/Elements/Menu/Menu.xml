@@ -35,7 +35,7 @@
             horizAlignment="left"
             vertAlignment="center"
             opacity="0.0"
-            itemSpacings="[10]" >
+            itemSpacings="[20]" >
             <Group>
                 <Poster 
                     id="avatarImage"

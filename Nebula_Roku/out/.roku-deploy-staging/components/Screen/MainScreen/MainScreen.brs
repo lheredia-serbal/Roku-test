@@ -10,9 +10,6 @@ sub init()
   ' Referencia al contenedor absoluto para el carrusel de noticias.
   m.newsContainer = m.top.findNode("newsContainer")
 
-  ' Referencia al sombreado difuminado izquierdo que se dibuja detrás del menú.
-  m.leftBlurShade = m.top.findNode("leftBlurShade")
-
   'carousel
   m.carouselContainer = m.top.findNode("carouselContainer")
   m.selectedIndicator = m.top.findNode("selectedIndicator")
@@ -21,15 +18,11 @@ sub init()
   m.programTimer = m.top.findNode("programTimer")
   m.programInfo = m.top.findNode("programInfo")
 
-  ' Referencia al timer que confirma cuándo ocultar newsContainer tras 0.5s.
-  m.newsFadeOutTimer = m.top.findNode("newsFadeOutTimer")
-  ' Observa el disparo del timer para completar invisibilidad de News al finalizar la animación.
-  if m.newsFadeOutTimer <> invalid then m.newsFadeOutTimer.observeField("fire", "onNewsFadeOutFinished")
-  
-  ' Referencia a la animación que sincroniza fade de News y ProgramInfo en 0.5s.
-  m.newsToProgramAnimation = m.top.findNode("newsToProgramAnimation")
   m.infoGradient = m.top.findNode("infoGradient")
   m.programImageBackground = m.top.findNode("programImageBackground")
+
+  ' Referencia al fondo de noticias a pantalla completa.
+  m.newsBackgroundPoster = m.top.findNode("newsBackgroundPoster")
 
   ' Referencia al poster inferior de gradiente ubicado al pie de la pantalla.
   m.bottomGradientPoster = m.top.findNode("bottomGradientPoster")
@@ -149,6 +142,11 @@ sub initData()
     m.programImageBackground.width = width
     m.programImageBackground.height = height
 
+    ' Ajusta fondo de noticias para cubrir toda la pantalla.
+    m.newsBackgroundPoster.width = width
+    m.newsBackgroundPoster.height = height
+    m.newsBackgroundPoster.translation = [0, 0]
+
     ' Calcula el alto del poster inferior usando escala base de 400px.
     bottomPosterHeight = scaleValue(400, m.scaleInfo)
     ' Asigna al poster inferior el ancho completo de pantalla.
@@ -158,13 +156,6 @@ sub initData()
     ' Ubica el poster inferior al borde inferior de la pantalla.
     m.bottomGradientPoster.translation = [0, height - bottomPosterHeight]
     m.bottomGradientPoster.opacity = 0.7
-
-    ' Define un ancho fijo de 450 escalado para el sombreado lateral izquierdo.
-    leftShadeWidth = scaleValue(450, m.scaleInfo)
-    ' Aplica el ancho calculado al sombreado difuminado.
-    m.leftBlurShade.width = leftShadeWidth
-    ' Extiende el sombreado al 100% de alto de pantalla.
-    m.leftBlurShade.height = height
 
     logoWidth = scaleValue(200, m.scaleInfo)
     logoHeight = scaleValue(100, m.scaleInfo)
@@ -1494,7 +1485,6 @@ sub __focusFirstCarouselFromNews()
     carouselNode = m.carouselContainer.getChild(i)
     carouselList = carouselNode.findNode("carouselList")
     if carouselList <> invalid then
-      'm.newsContainer.translation = [0, -(carouselNode.translation[1] - m.yPosition)] ' Aplica desplazamiento vertical del hero de noticias para mantener la misma animación que el resto.
       carouselList.setFocus(true) ' Posiciona el foco en el primer carrusel navegable debajo de News.
       m.carouselContainer.translation = [m.xPosition, -(carouselNode.translation[1] - m.yPosition)] ' Sincroniza la traslación del contenedor de carruseles con el mismo patrón de animación.
       m.selectedIndicator.size = carouselNode.size ' Ajusta el tamaño del indicador al carrusel que tomó foco.
@@ -1527,11 +1517,8 @@ sub __hideProgramInfoImmediately()
   if m.newsContainer = invalid then return
   ' Sale temprano si programInfo no está disponible.
   if m.programInfo = invalid then return
-  ' Detiene animación en curso para evitar estados intermedios.
-  if m.newsToProgramAnimation <> invalid then m.newsToProgramAnimation.control = "stop"
-  ' Cancela timer pendiente porque News no debe ocultarse fuera de la transición.
-  if m.newsFadeOutTimer <> invalid then m.newsFadeOutTimer.control = "stop"
   ' Restablece opacidad base del contenedor News.
+  m.newsContainer.visible = true
   m.newsContainer.opacity = 1.0
   ' Restablece opacidad base de programInfo.
   m.programInfo.opacity = 0.0
@@ -1545,63 +1532,34 @@ sub __showProgramInfoWithAnimation()
   if m.newsContainer = invalid then return
   ' Sale temprano si programInfo no está disponible.
   if m.programInfo = invalid then return
-  ' Hace visible programInfo antes de iniciar interpolación.
-  m.programInfo.visible = true
+  m.newsContainer.visible = false
   ' Configura opacidades iniciales para animar de News a ProgramInfo.
   m.newsContainer.opacity = 1.0
-  ' Configura opacidad inicial de programInfo en transparente.
-  m.programInfo.opacity = 0.0
-  ' Si existe animación declarada en XML, la reproduce en 0.5s.
-  if m.newsToProgramAnimation <> invalid then
-    ' Reinicia animación para garantizar que siempre empiece desde el frame inicial.
-    m.newsToProgramAnimation.control = "stop"
-    ' Inicia transición de opacidades entre News y ProgramInfo.
-    m.newsToProgramAnimation.control = "start"
-    ' Reinicia el timer que ocultará newsContainer al completar los 0.5s de transición.
-    if m.newsFadeOutTimer <> invalid then m.newsFadeOutTimer.control = "stop"
-    ' Inicia cuenta de 0.5s para marcar newsContainer como invisible al terminar el fade-out.
-    if m.newsFadeOutTimer <> invalid then m.newsFadeOutTimer.control = "start"
-  else
-    ' Fallback sin animación si el nodo de animación no existe.
-    m.newsContainer.opacity = 0.0
-    ' Fallback sin animación mostrando programInfo completamente.
-    m.programInfo.opacity = 1.0
-  end if
+  m.programInfo.visible = true
+  m.programInfo.opacity = 1.0
 end sub
 
-' Oculta programInfo y restaura News con animación de 0.5 segundos.
+' Oculta programInfo y restaura News
 sub __hideProgramInfoWithAnimation()
   ' Sale temprano si newsContainer no está disponible.
   if m.newsContainer = invalid then return
   ' Sale temprano si programInfo no está disponible.
   if m.programInfo = invalid then return
-  ' Si existe animación declarada en XML, la reutiliza en sentido inverso manual.
-  if m.newsToProgramAnimation <> invalid then
-    ' Detiene animación previa para evitar superposición de transiciones.
-    m.newsToProgramAnimation.control = "stop"
-  end if
   ' Restaura visibilidad base de News inmediatamente.
+  m.newsContainer.visible = true
   m.newsContainer.opacity = 1.0
-  ' Cancela timer pendiente porque News ya no debe ocultarse al finalizar transición previa.
-  if m.newsFadeOutTimer <> invalid then m.newsFadeOutTimer.control = "stop"
   ' Restablece opacidad de programInfo a transparente.
   m.programInfo.opacity = 0.0
   ' Oculta programInfo al finalizar restauración visual.
   m.programInfo.visible = false
 end sub
 
-' Completa el ocultamiento lógico de News cuando termina la animación de 0.5 segundos.
-sub onNewsFadeOutFinished()
-  ' Sale temprano si newsContainer no está disponible.
-  if m.newsContainer = invalid then return
-  ' Marca newsContainer como invisible al finalizar la transición solicitada.
-  m.newsContainer.visible = false
-end sub
-
 ' Alterna visibilidad de ProgramInfo y SelectedIndicator según foco en NewsItem.
 sub __updateOverlayVisibilityByFocus()
   newsFocused = __isNewsFocused() ' Guarda el estado actual de foco para reutilizar la misma decisión visual en overlays y logo.
   __animateMainLogoByFocus(newsFocused) ' Ejecuta la animación del logo según si el foco está o no en el carrusel de News.
+  ' Muestra el fondo dedicado de News solo cuando el foco está en el carrusel de noticias.
+  if m.newsBackgroundPoster <> invalid then m.newsBackgroundPoster.visible = newsFocused
   ' Si el foco está en NewsItem, se ocultan overlays superiores del listado.
   if newsFocused then
     ' Busca el primer carrusel no-News para calcular el desplazamiento visual mientras News mantiene el foco.

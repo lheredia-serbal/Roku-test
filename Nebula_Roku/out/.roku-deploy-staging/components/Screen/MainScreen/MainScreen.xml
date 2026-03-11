@@ -74,6 +74,12 @@
     <!-- Contenedor dedicado para NewsItem en posición absoluta (0,0). -->
     <Group id="newsContainer" translation="[0, 0]" />
 
+    <!-- Fondo de noticias a pantalla completa, por encima de News y por debajo de carousels/menu. -->
+    <Poster
+      id="newsBackgroundPoster"
+      loadDisplayMode="scaleToFill"
+      uri="pkg:/images/shared/news_gradient.png" />
+
     <!-- Poster inferior ubicado por encima de newsContainer y por debajo de carousels. -->
     <Poster
       id="bottomGradientPoster"
@@ -144,14 +150,6 @@
         uri="pkg:/images/client/info_gradient.png" />
     </Group>
 
-     <!-- Sombreado difuminado del borde izquierdo para reforzar la separación visual del menú. -->
-    <Poster
-      id="leftBlurShade"
-      translation="[0,0]"
-      opacity="0.8"
-      loadDisplayMode="scaleToFill"
-      uri="pkg:/images/shared/menu_contracted.png" />
-
     <!--  Menu contairner -->
     <Menu id="myMenu" />
 
@@ -202,12 +200,5 @@
     
     <!-- Timers -->
     <Timer id="programTimer" repeat="false" duration="0.5"/>
-     <!-- Animación para ocultar News y mostrar ProgramInfo en 0.5s. -->
-    <Animation id="newsToProgramAnimation" duration="0.2" repeat="false">
-      <!-- Interpola opacidad de News de visible a invisible. -->
-      <FloatFieldInterpolator key="[0.0, 1.0]" keyValue="[1.0, 0.0]" fieldToInterp="newsContainer.opacity" />
-      <!-- Interpola opacidad de ProgramInfo de invisible a visible. -->
-      <FloatFieldInterpolator key="[0.0, 1.0]" keyValue="[0.0, 1.0]" fieldToInterp="programInfo.opacity" />
-    </Animation>
   </children>
 </component>

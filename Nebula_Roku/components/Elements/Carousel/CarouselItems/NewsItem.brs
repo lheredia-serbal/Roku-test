@@ -25,10 +25,6 @@ sub init()
     m.slideTimer = m.top.findNode("slideTimer")
     ' Define 10 frames para slide principal: 10 * 0.05s = 0.5 segundos.
     m.slideTotalFrames = 10
-    ' Define frames para el achique previo al cambio de item.
-    m.shrinkTotalFrames = 2
-    ' Define frames para el regreso de tamaño al finalizar el cambio de item.
-    m.expandTotalFrames = 2
     ' Inicializa frame actual de la animación.
     m.slideCurrentFrame = 0
     ' Inicializa dirección horizontal del slide (1 derecha / -1 izquierda).
@@ -39,16 +35,6 @@ sub init()
     m.outgoingEndX = 0
     ' Inicializa estado de animación en reposo.
     m.isSliding = false
-    ' Inicializa fase de animación compuesta (shrink -> slide -> expand).
-    m.slidePhase = "idle"
-    ' Guarda la escala base del contenedor para poder restaurarla al finalizar.
-    m.baseScale = [1.0, 1.0]
-    ' Define escala mínima del efecto de achique previo al slide.
-    m.shrinkScale = 0.96
-    ' Guarda el ancho del slider para compensación visual durante escala.
-    m.slideWidth = 0
-    ' Guarda el alto del slider para compensación visual durante escala.
-    m.slideHeight = 0
 
     ' Registra callback del timer para avanzar frame a frame.
     if m.slideTimer <> invalid then
@@ -117,11 +103,6 @@ sub updateLayoutForResolution()
         m.incomingBackgroundImage.translation = scaleSize([0, 0], m.scaleInfo)
     end if
 
-    ' Guarda ancho efectivo del bloque de news para animar escala centrada.
-    m.slideWidth = m.backgroundImage.width
-    ' Guarda alto efectivo del bloque de news para animar escala centrada.
-    m.slideHeight = m.backgroundImage.height
-
     ' Ajusta el overlay para que cubra exactamente el bloque visible de noticias.
     if m.overlay <> invalid then
         ' Aplica ancho completo del bloque de noticias al overlay.
@@ -137,7 +118,7 @@ sub updateLayoutForResolution()
     end if
 
     if m.detailActionGroup <> invalid then
-        m.detailActionGroup.translation = scaleSize([900, 440], m.scaleInfo)
+        m.detailActionGroup.translation = scaleSize([950, 440], m.scaleInfo)
     end if
 
     if m.detailActionBackground <> invalid then
@@ -301,12 +282,16 @@ sub startSlideTransition(newIndex as integer, direction as integer)
 
     ' Marca que la animación comenzó.
     m.isSliding = true
-    ' Inicializa fase de achique previa al slide.
-    m.slidePhase = "shrink"
     ' Reinicia contador de frame.
     m.slideCurrentFrame = 0
     ' Guarda dirección solicitada del slide.
     m.slideDirection = direction
+    ' Actualiza índice al arrancar el slide para sincronizar dots/título externos.
+    m.top.currentIndex = __getTargetIndex()
+    ' Obtiene el item actualizado para sincronizar inmediatamente el CTA durante el slide.
+    currentItem = getCurrentItem()
+    ' Refresca visibilidad/contenido del detailActionGroup con el nuevo item activo.
+    updateDetailActionCTA(currentItem)
     ' Calcula ancho de referencia para desplazar un panel completo.
     slideWidth = m.backgroundImage.width
 
@@ -336,7 +321,7 @@ sub startSlideTransition(newIndex as integer, direction as integer)
     ' Asegura que el poster saliente comience en el centro.
     m.backgroundImage.translation = [0, 0]
 
-    ' Inicia timer de animación compuesta.
+    ' Inicia timer de animación slide.
     if m.slideTimer <> invalid then
         m.slideTimer.control = "start"
     else
@@ -352,37 +337,9 @@ sub onSlideFrame()
     ' Incrementa el frame actual.
     m.slideCurrentFrame = m.slideCurrentFrame + 1
 
-    ' Ejecuta la animación correspondiente a la fase actual.
-    if m.slidePhase = "shrink" then
-        ' Anima achique previo al cambio de item.
-        __animateShrinkFrame()
-    else if m.slidePhase = "slide" then
-        ' Anima desplazamiento horizontal entre item saliente y entrante.
-        __animateSlideFrame()
-    else if m.slidePhase = "expand" then
-        ' Anima regreso al tamaño original al terminar el cambio.
-        __animateExpandFrame()
-    end if
-end sub
+    ' Anima desplazamiento horizontal entre item saliente y entrante.
+    __animateSlideFrame()
 
-' Anima un frame de la fase de achique previo.
-sub __animateShrinkFrame()
-    ' Calcula progreso normalizado del achique.
-    progress = __getPhaseProgress(m.shrinkTotalFrames)
-    ' Interpola escala entre 1.0 y shrinkScale.
-    currentScale = 1 - ((1 - m.shrinkScale) * progress)
-    ' Aplica escala actual con compensación centrada.
-    __applyScaleWithCenterCompensation(currentScale)
-
-    ' Si terminó el achique, cambia a fase de slide y resetea frame.
-    if m.slideCurrentFrame >= m.shrinkTotalFrames then
-        ' Cambia fase activa a slide principal.
-        m.slidePhase = "slide"
-        ' Reinicia contador para la fase de slide.
-        m.slideCurrentFrame = 0
-        ' Actualiza índice al arrancar el slide para sincronizar dots/título externos.
-        m.top.currentIndex = __getTargetIndex()
-    end if
 end sub
 
 ' Anima un frame de la fase de slide horizontal.
@@ -399,7 +356,7 @@ sub __animateSlideFrame()
     ' Aplica desplazamiento al item entrante.
     if m.incomingBackgroundImage <> invalid then m.incomingBackgroundImage.translation = [incomingX, 0]
 
-    ' Si llegó al último frame del slide, consolida imagen y pasa a expand.
+    ' Si llegó al último frame del slide, consolida imagen y finaliza transición.
     if m.slideCurrentFrame >= m.slideTotalFrames then
         ' Obtiene item ya seleccionado para consolidar la imagen final.
         currentItem = getCurrentItem()
@@ -413,24 +370,7 @@ sub __animateSlideFrame()
         if m.incomingBackgroundImage <> invalid then m.incomingBackgroundImage.visible = false
         ' Reinicia traslación del poster entrante.
         if m.incomingBackgroundImage <> invalid then m.incomingBackgroundImage.translation = [0, 0]
-        ' Cambia fase activa a regreso de escala.
-        m.slidePhase = "expand"
-        ' Reinicia contador para la fase de expand.
-        m.slideCurrentFrame = 0
-    end if
-end sub
-
-' Anima un frame de la fase de regreso de escala.
-sub __animateExpandFrame()
-    ' Calcula progreso normalizado de la fase de expand.
-    progress = __getPhaseProgress(m.expandTotalFrames)
-    ' Interpola escala entre shrinkScale y 1.0.
-    currentScale = m.shrinkScale + ((1 - m.shrinkScale) * progress)
-    ' Aplica escala actual con compensación centrada.
-    __applyScaleWithCenterCompensation(currentScale)
-
-    ' Si finaliza el expand, cierra y restablece estados.
-    if m.slideCurrentFrame >= m.expandTotalFrames then
+        ' Finaliza transición al completar el desplazamiento horizontal.
         finalizeSlideTransition()
     end if
 end sub
@@ -439,9 +379,6 @@ end sub
 sub finalizeSlideTransition()
     ' Detiene timer para evitar nuevos ticks.
     if m.slideTimer <> invalid then m.slideTimer.control = "stop"
-
-    ' Asegura escala base al finalizar la animación compuesta.
-    __applyScaleWithCenterCompensation(1)
 
     ' Devuelve poster principal al origen.
     m.backgroundImage.translation = [0, 0]
@@ -455,8 +392,6 @@ sub finalizeSlideTransition()
 
     ' Restablece estado interno de animación.
     m.isSliding = false
-    ' Restablece fase a idle.
-    m.slidePhase = "idle"
     ' Restablece frame actual a cero.
     m.slideCurrentFrame = 0
 end sub
@@ -476,19 +411,6 @@ function __getPhaseProgress(totalFrames as integer) as float
     ' Aplica curva ease-in-out para movimiento más fluido.
     return progress * progress * (3 - (2 * progress))
 end function
-
-' Aplica escala uniforme al grupo y compensa traslación para mantener centro visual.
-sub __applyScaleWithCenterCompensation(scaleValueCurrent as float)
-    ' Aplica escala uniforme al contenedor de News.
-    m.top.scale = [scaleValueCurrent, scaleValueCurrent]
-
-    ' Calcula desplazamiento horizontal para mantener centrado al escalar.
-    offsetX = int((m.slideWidth * (1 - scaleValueCurrent)) / 2)
-    ' Calcula desplazamiento vertical para mantener centrado al escalar.
-    offsetY = int((m.slideHeight * (1 - scaleValueCurrent)) / 2)
-    ' Compensa traslación del grupo mientras cambia la escala.
-    m.top.translation = [offsetX, offsetY]
-end sub
 
 ' Obtiene índice objetivo en función de la dirección de slide.
 function __getTargetIndex() as integer
