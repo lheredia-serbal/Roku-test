@@ -25,11 +25,11 @@ sub onDataChange()
   payload = ParseJson(m.top.data)
   if payload = invalid then return
   m.viewAllPayload = payload
-   ' Aplicamos layout visual
   __applyLayout()
   ' Disparamos el consumo del servicio de ViewAll.
   __getViewAllCarousel() 
 
+  ' Guardamos el log de ingreso
   actionLog = getActionLog({
     actionCode: ActionLogCode().OPEN_PAGE,
     pageUrl: "View All"
@@ -106,66 +106,86 @@ sub __applyLayout()
   safeY = m.scaleInfo.safeZone.y 
   width = m.scaleInfo.width
   height = m.scaleInfo.height
-  m.xPosition = safeX + scaleValue(0, m.scaleInfo) ' Guardamos X base del contenedor para reutilizarla al navegar entre filas.
-  m.yPosition = safeY + scaleValue(20, m.scaleInfo) ' Guardamos Y base del contenedor para recalcular desplazamiento vertical al cambiar de carrusel.
+  ' Guardamos X base del contenedor para reutilizarla al navegar entre filas.
+  m.xPosition = safeX + scaleValue(0, m.scaleInfo) 
+  ' Guardamos Y base del contenedor para recalcular desplazamiento vertical al cambiar de carrusel.
+  m.yPosition = safeY + scaleValue(20, m.scaleInfo) 
   m.infoGradient.width = width
   m.infoGradient.height = height
   m.programImageBackground.width = width
   m.programImageBackground.height = height
   m.programInfo.translation = [safeX + scaleValue(40, m.scaleInfo), safeY + scaleValue(20, m.scaleInfo)]
-  m.carouselContainer.translation = [0, m.yPosition] ' Aplicamos posición inicial del bloque de carruseles usando los valores cacheados.
+  ' Aplicamos posición inicial del bloque de carruseles usando los valores cacheados.
+  m.carouselContainer.translation = [0, m.yPosition] 
   m.selectedIndicator.translation = [safeX + scaleValue(5, m.scaleInfo), safeY + scaleValue(148, m.scaleInfo)]
 end sub
 
 ' Procesa navegación vertical para mover foco entre filas de carruseles en ViewAll.
 function onKeyEvent(key as string, press as boolean) as boolean
-  handled = false ' Inicializamos bandera de manejo del evento.
-  if key = KeyButtons().UP then ' Interceptamos flecha arriba para subir de fila cuando corresponda.
-    if press and m.carouselContainer <> invalid and m.carouselContainer.isInFocusChain() and m.carouselContainer.focusedChild <> invalid and m.carouselContainer.focusedChild.focusUp <> invalid then ' Validamos que exista una fila superior navegable.
-      focusItem = m.carouselContainer.focusedChild.focusUp.findNode("carouselList") ' Obtenemos la lista interna del carrusel de arriba para transferir foco.
-      if focusItem <> invalid then ' Confirmamos que la lista destino sea válida.
-        m.carouselContainer.focusedChild.focusUp.opacity = "1.0" ' Aseguramos visibilidad completa del carrusel destino antes de enfocar.
-        focusItem.setFocus(true) ' Movemos el foco real al carrusel superior.
-        m.carouselContainer.translation = [0, -(m.carouselContainer.focusedChild.translation[1] - m.yPosition)] ' Ajustamos desplazamiento del contenedor para mantener visible la fila enfocada.
-        m.selectedIndicator.size = m.carouselContainer.focusedChild.size ' Sincronizamos el indicador con el tamaño del carrusel recién enfocado.
+  handled = false
+  if key = KeyButtons().UP then
+    ' Validamos que exista una fila superior navegable.
+    if press and m.carouselContainer <> invalid and m.carouselContainer.isInFocusChain() and m.carouselContainer.focusedChild <> invalid and m.carouselContainer.focusedChild.focusUp <> invalid then 
+      ' Obtenemos la lista interna del carrusel de arriba para transferir foco.
+      focusItem = m.carouselContainer.focusedChild.focusUp.findNode("carouselList") 
+      ' Confirmamos que la lista destino sea válida.
+      if focusItem <> invalid then 
+        ' Aseguramos visibilidad completa del carrusel destino antes de enfocar.
+        m.carouselContainer.focusedChild.focusUp.opacity = "1.0" 
+        ' Movemos el foco real al carrusel superior.
+        focusItem.setFocus(true) 
+        ' Ajustamos desplazamiento del contenedor para mantener visible la fila enfocada.
+        m.carouselContainer.translation = [0, -(m.carouselContainer.focusedChild.translation[1] - m.yPosition)] 
+        ' Sincronizamos el indicador con el tamaño del carrusel recién enfocado.
+        m.selectedIndicator.size = m.carouselContainer.focusedChild.size 
       end if
     end if
-    handled = true ' Marcamos como manejada la flecha arriba para evitar burbujeo al padre.
-  else if key = KeyButtons().DOWN then ' Interceptamos flecha abajo para bajar de fila cuando corresponda.
-    if press and m.carouselContainer <> invalid and m.carouselContainer.isInFocusChain() and m.carouselContainer.focusedChild <> invalid and m.carouselContainer.focusedChild.focusDown <> invalid then ' Validamos que exista una fila inferior navegable.
-      focusItem = m.carouselContainer.focusedChild.focusDown.findNode("carouselList") ' Obtenemos la lista interna del carrusel de abajo para transferir foco.
-      if focusItem <> invalid then ' Confirmamos que la lista destino sea válida.
-        m.carouselContainer.focusedChild.opacity = "0.0" ' Atenuamos la fila saliente para evitar superposición visual durante el desplazamiento.
-        focusItem.setFocus(true) ' Movemos el foco real al carrusel inferior.
-        m.carouselContainer.translation = [0, -(m.carouselContainer.focusedChild.translation[1] - m.yPosition)] ' Ajustamos desplazamiento del contenedor para mantener visible la fila enfocada.
-        m.selectedIndicator.size = m.carouselContainer.focusedChild.size ' Sincronizamos el indicador con el tamaño del carrusel recién enfocado.
+    handled = true 
+  else if key = KeyButtons().DOWN then
+    ' Validamos que exista una fila inferior navegable.
+    if press and m.carouselContainer <> invalid and m.carouselContainer.isInFocusChain() and m.carouselContainer.focusedChild <> invalid and m.carouselContainer.focusedChild.focusDown <> invalid then
+      ' Obtenemos la lista interna del carrusel de abajo para transferir foco.
+      focusItem = m.carouselContainer.focusedChild.focusDown.findNode("carouselList") 
+      ' Confirmamos que la lista destino sea válida.
+      if focusItem <> invalid then 
+        ' Atenuamos la fila saliente para evitar superposición visual durante el desplazamiento.
+        m.carouselContainer.focusedChild.opacity = "0.0" 
+        ' Movemos el foco real al carrusel inferior.
+        focusItem.setFocus(true) 
+        ' Ajustamos desplazamiento del contenedor para mantener visible la fila enfocada.
+        m.carouselContainer.translation = [0, -(m.carouselContainer.focusedChild.translation[1] - m.yPosition)] 
+        ' Sincronizamos el indicador con el tamaño del carrusel recién enfocado.
+        m.selectedIndicator.size = m.carouselContainer.focusedChild.size 
       end if
     end if
-    handled = true ' Marcamos como manejada la flecha abajo para evitar burbujeo al padre.
+    handled = true
   end if
-  return handled ' Devolvemos si el evento fue procesado por ViewAll.
+  return handled
 end function
 
 ' Solicita el detalle del carrusel seleccionado en la vista "Ver todos".
 sub __getViewAllCarousel()
+   ' Validamos carouselId porque es requerido en ambos flujos de servicio.
   if m.viewAllPayload = invalid then return
-  if m.viewAllPayload.carouselId = invalid then return ' Validamos carouselId porque es requerido en ambos flujos de servicio.
+  if m.viewAllPayload.carouselId = invalid then return
   ' Obtenemos API base si aún no está cacheada.
   if m.apiUrl = invalid then m.apiUrl = getConfigVariable(m.global.configVariablesKeys.API_URL) 
   ' Abortamos si no hay URL de API disponible.
   if m.apiUrl = invalid then return 
   ' Mostramos loading durante la llamada.
   if m.top.loading <> invalid and not m.top.loading.visible then m.top.loading.visible = true 
- requestConfig = __getViewAllRequestConfig() ' Resolvemos configuración del request para reutilizar lógica entre ViewAll y SearchById.
-  if requestConfig = invalid then return ' Cortamos si no se pudo construir la configuración del servicio.
+  ' Resolvemos configuración del request para reutilizar lógica entre ViewAll y SearchById.
+  requestConfig = __getViewAllRequestConfig() 
+  ' Cortamos si no se pudo construir la configuración del servicio.
+  if requestConfig = invalid then return 
   ' Creamos id único para registrar acción pendiente.
   requestId = createRequestId() 
   action = {
     apiRequestManager: m.apiRequestManager
-    url: requestConfig.url ' Reutilizamos URL resuelta según el payload recibido.
-    method: requestConfig.method ' Reutilizamos método HTTP según el flujo activo.
+    url: requestConfig.url
+    method: requestConfig.method
     responseMethod: "onViewAllCarouselResponse"
-    body: requestConfig.body ' Reutilizamos body cuando se usa endpoint SearchById.
+    body: requestConfig.body
     token: invalid
     publicApi: false
     requestId: requestId
@@ -180,31 +200,42 @@ sub __getViewAllCarousel()
   m.apiRequestManager = action.apiRequestManager
 end sub
 
-function __hasValidContentViewId() as boolean ' Evalúa si el payload trae contentViewId utilizable.
-  if m.viewAllPayload = invalid or m.viewAllPayload.contentViewId = invalid then return false ' Validamos existencia del campo contentViewId.
-  contentViewId = m.viewAllPayload.contentViewId.toStr().trim() ' Normalizamos el valor recibido para evitar espacios.
-  return contentViewId <> "" ' Consideramos válido solo cuando el string no está vacío.
-end function ' Finaliza validación de contentViewId.
+' Evalúa si el payload trae contentViewId utilizable.
+function __hasValidContentViewId() as boolean 
+  ' Validamos existencia del campo contentViewId.
+  if m.viewAllPayload = invalid or m.viewAllPayload.contentViewId = invalid then return false
+  ' Normalizamos el valor recibido para evitar espacios.
+  contentViewId = m.viewAllPayload.contentViewId.toStr().trim() 
+  ' Consideramos válido solo cuando el string no está vacío.
+  return contentViewId <> "" 
+end function
 
-function __getViewAllRequestConfig() as Object ' Construye la configuración HTTP reutilizable según el payload.
-  if __hasValidContentViewId() then return { ' Si llega contentViewId válido, priorizamos el flujo SearchById.
-    url: urlSearchById(m.apiUrl, m.viewAllPayload.carouselId) ' Armamos URL del servicio SearchById con carouselId.
-    method: "POST" ' Definimos método POST para búsquedas por texto.
-    body: __buildSearchBody(m.viewAllPayload.contentViewId) ' Reutilizamos el mismo body del endpoint Search.
-  } ' Cerramos configuración de SearchById.
-  if m.viewAllPayload.menuSelectedItemId = invalid then return invalid ' Evitamos llamar ViewAll tradicional sin menuSelectedItemId.
-  return { ' Mantenemos el flujo original para ViewAll cuando no aplica SearchById.
-    url: urlViewAllCarousels(m.apiUrl, m.viewAllPayload.menuSelectedItemId, m.viewAllPayload.carouselId) ' Conservamos endpoint clásico de ViewAll.
-    method: "GET" ' Conservamos método GET original de ViewAll.
-    body: invalid ' Indicamos que el flujo clásico no necesita body.
-  } ' Cerramos configuración del flujo ViewAll clásico.
-end function ' Finaliza construcción de configuración de request.
+' Construye la configuración HTTP reutilizable según el payload.
+function __getViewAllRequestConfig() as Object 
+  ' Si llega contentViewId válido, priorizamos el flujo SearchById.
+  if __hasValidContentViewId() then return { 
+    url: urlSearchById(m.apiUrl, m.viewAllPayload.carouselId) 
+    method: "POST"
+    body: __buildSearchBody(m.viewAllPayload.contentViewId)
+  }
+  ' Evitamos llamar ViewAll tradicional sin menuSelectedItemId.
+  if m.viewAllPayload.menuSelectedItemId = invalid then return invalid 
+  ' Mantenemos el flujo original para ViewAll cuando no aplica SearchById.
+  return { 
+    url: urlViewAllCarousels(m.apiUrl, m.viewAllPayload.menuSelectedItemId, m.viewAllPayload.carouselId) 
+    method: "GET" 
+    body: invalid
+  }
+end function
 
-function __buildSearchBody(searchText as Dynamic) as string ' Genera body JSON compartido para búsquedas.
-  safeSearchText = "" ' Inicializamos valor por defecto para evitar valores inválidos en el body.
-  if searchText <> invalid then safeSearchText = searchText.toStr().trim() ' Convertimos a string y limpiamos espacios del texto de búsqueda.
-  return FormatJson({ searchText: safeSearchText }) ' Devolvemos el mismo formato de body usado por urlSearch.
-end function ' Finaliza construcción del body de búsqueda.
+' Genera body JSON compartido para búsquedas.
+function __buildSearchBody(searchText as Dynamic) as string 
+  safeSearchText = "" 
+  ' Convertimos a string y limpiamos espacios del texto de búsqueda.
+  if searchText <> invalid then safeSearchText = searchText.toStr().trim() 
+  ' Devolvemos el mismo formato de body usado por urlSearch.
+  return FormatJson({ searchText: safeSearchText }) 
+end function
 
 ' Procesa la respuesta del servicio de ViewAll.
 sub onViewAllCarouselResponse()
@@ -218,8 +249,15 @@ sub onViewAllCarouselResponse()
     ' Quitamos la acción del pool pendiente.
     removePendingAction(m.apiRequestManager.requestId) 
     resp = ParseJson(m.apiRequestManager.response)
-    ' Validamos que existan items para pintar.
-    if resp <> invalid and resp.data <> invalid and resp.data.carousels <> invalid and resp.data.carousels.count() > 0 then 
+    viewAllItems = invalid 
+    ' Priorizamos data.carousels cuando viene en la respuesta.
+    if resp <> invalid and resp.data <> invalid and resp.data.carousels <> invalid and resp.data.carousels.count() > 0 then viewAllItems = resp.data.carousels 
+    ' Usamos data.items como fallback cuando carousels no existe.
+    if viewAllItems = invalid and resp <> invalid and resp.data <> invalid and resp.data.items <> invalid and resp.data.items.count() > 0 then viewAllItems = resp.data.items 
+    ' Reutilizamos la misma lógica de resolución para evitar duplicación.
+    viewAllItems = __getViewAllSourceItems(resp.data) 
+    ' Validamos que exista una colección de items para pintar.
+    if viewAllItems.count() > 0 then 
       m.carousel = resp.data
       ' Renderizamos carrusel con datos de ViewAll.
       __populateViewAllCarousel(resp.data) 
@@ -261,10 +299,8 @@ sub __populateViewAllCarousel(data as Object)
   previousCarousel = invalid
   ' Limpiamos carruseles previos antes de repintar contenido.
   __clearViewAllCarousel() 
-  sourceItems = []
-  ' Usamos directamente data.carousels cuando ya es una lista de carruseles.
-  if data <> invalid and data.carousels <> invalid and data.carousels.count() > 0 and data.carousels[0].style <> invalid then sourceItems = data.carousels 
-  if sourceItems.count() = 0 and data <> invalid and data.carousels <> invalid and data.carousels.count() > 0 then sourceItems = [data]
+  ' Reutilizamos la misma normalización de estructura para carousels/items.
+  sourceItems = __getViewAllSourceItems(data) 
   ' Recorremos cada carrusel para crearlo igual que MainScreen.
   for each carouselData in sourceItems 
     ' Calculamos cuántos ítems entran en pantalla sin scroll horizontal.
@@ -331,6 +367,24 @@ sub __populateViewAllCarousel(data as Object)
   end if
 end sub
 
+' Normaliza la colección de carruseles soportando data.carousels o data.items.
+function __getViewAllSourceItems(data as Dynamic) as Object
+  sourceItems = []
+  ' Priorizamos data.carousels cuando ya viene como lista de carruseles.
+  if data <> invalid and data.carousels <> invalid and data.carousels.count() > 0 and data.carousels[0] <> invalid and data.carousels[0].style <> invalid then sourceItems = data.carousels 
+  ' Usamos data.items cuando expone la misma estructura bajo otro campo.
+  if sourceItems.count() = 0 and data <> invalid and data.items <> invalid and data.items.count() > 0 and data.items[0] <> invalid and data.items[0].style <> invalid then sourceItems = data.items 
+  ' Detectamos payload envuelto donde data representa un único carrusel.
+  if sourceItems.count() = 0 and data <> invalid and data.style <> invalid then 
+    ' Mantenemos compatibilidad con envoltura basada en data.carousels.
+    if data.carousels <> invalid and data.carousels.count() > 0 then sourceItems = [data] 
+    ' Mantenemos compatibilidad con envoltura basada en data.items.
+    if sourceItems.count() = 0 and data.items <> invalid and data.items.count() > 0 then sourceItems = [data] 
+  end if
+  ' Devolvemos siempre una lista para evitar chequeos duplicados.
+  return sourceItems 
+end function
+
 ' Construye el string de tags del título usando formato: "tag" | Tag2 | Tag3.
 function __buildCarouselTitleTagsText(titleTags as Dynamic) as String
   ' Si titleTags no existe o no es lista, retornamos vacío para ocultar el texto.
@@ -338,14 +392,11 @@ function __buildCarouselTitleTagsText(titleTags as Dynamic) as String
   ' Si el objeto no implementa ifArray, lo tratamos como estructura inválida.
   if GetInterface(titleTags, "ifArray") = invalid then return ""
 
-  ' Inicializamos acumulador de tags válidos ya formateados.
   formattedTags = []
 
-  ' Recorremos cada entrada recibida para construir el resultado final.
   for each titleTag in titleTags
     ' Cortamos el proceso al llegar al máximo de 5 tags.
     if formattedTags.count() >= 5 then exit for
-    ' Ignoramos elementos inválidos para evitar errores de acceso.
     if titleTag = invalid then continue for
     ' Si no existe atributo tag, el elemento no es utilizable.
     if titleTag.tag = invalid then continue for
@@ -442,7 +493,7 @@ sub getProgramInfo()
   if m.itemfocused = invalid then return
   ' Reutilizamos cache si ya tenemos ese summary.
   if m.program <> invalid and m.program.infoKey = m.itemfocused.redirectKey and m.program.infoId = m.itemfocused.redirectId then 
-     ' Mostramos summary sin golpear API nuevamente.
+     ' Mostramos summary sin usar la API nuevamente.
     m.programInfo.visible = true
     return
   end if

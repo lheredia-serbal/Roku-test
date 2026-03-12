@@ -166,6 +166,21 @@
         key="[0.0, 1.0]"
         keyValue="[[0.0, 0.0], [0.0, 0.0]]" />
     </Animation>
+
+    <!-- Animación reutilizable para transicionar opacidad del nodo superior del carrusel en 0.5 segundos. -->
+    <Animation
+      id="focusUpOpacityAnimation"
+      duration="0.5"
+      repeat="false"
+      optional="true"
+      easeFunction="linear">
+      <!-- Interpolador de opacidad cuyo destino se configura dinámicamente en MainScreen.brs. -->
+      <FloatFieldInterpolator
+        id="focusUpOpacityInterpolator"
+        fieldToInterp=""
+        key="[0.0, 1.0]"
+        keyValue="[1.0, 1.0]" />
+    </Animation>
     
     <Label
         id="nameOrganization"
