@@ -229,7 +229,9 @@ end sub
 
 ' Inicializa el foco del componente seteando los valores necesarios
 sub initFocus()
-  if m.top.onFocus then 
+  if m.dialog <> invalid and m.dialog.visible then return
+
+  if m.top.onFocus and m.lastFocus = invalid then 
     __applyTranslations()
     __validateAutoUpgradeTime()
      ' Prioriza foco inicial en NewsItem cuando existe; si no, mantiene foco en carouseles.
@@ -240,9 +242,8 @@ sub initFocus()
       m.carouselContainer.setFocus(true)
     end if
     __updateOverlayVisibilityByFocus()
-  end if 
-  if m.dialog <> invalid and m.dialog.visible then return
-  if m.top.onFocus and m.lastFocus <> invalid then
+  
+  else
     __validateVariables()
     if m.lastRefreshDate <> invalid then
       nowDate = CreateObject("roDateTime")
@@ -259,7 +260,7 @@ sub initFocus()
       end if
     end if
 
-    m.lastFocus.setFocus(true)
+    if m.lastFocus <> invalid then m.lastFocus.setFocus(true)
     m.top.loading.visible = false
   end if
 end sub

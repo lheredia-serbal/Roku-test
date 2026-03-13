@@ -51,27 +51,31 @@
   </interface>
 
   <children>
+
+    <!-- Input de busqueda -->
     <TextEditBox
       id="searchInput" />
 
-    <Timer id="searchDebounceTimer" repeat="false" duration="2" />
-
+    <!-- Carrusel de recomendados -->
     <Group id="relatedContainer" visible="false">
       <Carousel id="related" />
       <SelectionBox id="selectedIndicator" visible="false" />
     </Group>
 
+    <!-- Carrusel de busqueda -->
     <Group id="searchCarousels" visible="false" translation="[0, 135]">
       <Group id="carouselContainer" translation="[50, 20]" />
       <SelectionBox id="searchSelectedIndicator" visible="false" />
     </Group>
 
+    <!-- Label cuano no hay resultados -->
     <Label
       id="noResultsLabel"
       visible="false"
       horizAlign="center"
       font="font:MediumSystemFont" />
 
+    <!-- Teclado cuando se hace foco en el buscador -->
     <Rectangle
       id="searchKeyboardBackground"
       color="0x000000FF"
@@ -129,5 +133,7 @@
         key="[0.0, 1.0]"
         keyValue="[1.0, 0.0]" />
     </Animation>
+
+    <Timer id="searchDebounceTimer" repeat="false" duration="2" />
   </children>
 </component>

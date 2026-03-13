@@ -66,11 +66,6 @@
       loadDisplayMode="scaleToFit"
       uri="pkg:/images/client/info_gradient.png" />
 
-    <!-- Program Container -->
-    <ProgramSummary 
-      id="programInfo" 
-      visible="false"/>
-
     <!-- Contenedor dedicado para NewsItem en posición absoluta (0,0). -->
     <Group id="newsContainer" translation="[0, 0]" />
 
@@ -113,6 +108,11 @@
       <SelectionBox id="selectedIndicator" visible="false"/>
     </Group>
 
+    <!-- Program Container -->
+    <ProgramSummary 
+      id="programInfo" 
+      visible="false"/>
+      
     <!-- Contenedor para Error que no hay contenido -->
     <LayoutGroup 
       id="withoutContentLayoutGroup"
@@ -138,18 +138,6 @@
         font="font:SmallSystemFont" />
     </LayoutGroup>
 
-    <!--  Menu background -->
-    <Group
-      visible="false"
-      id="groupOpacityForMenu"
-      translation="[0, 0]">
-      <Poster
-        id="opacityForMenu"
-        opacity="0.7"
-        translation="[0,0]"
-        uri="pkg:/images/client/info_gradient.png" />
-    </Group>
-
     <!--  Menu contairner -->
     <Menu id="myMenu" />
 
@@ -164,30 +152,34 @@
       translation="[0, 0]"
       loadDisplayMode="scaleToFit"/>
 
-    <!-- Animación para desvanecer el logo principal cuando el foco está en News. -->
+    <!-- Animación para desplazar carouselContainer en 0.5 segundos al navegar desde News hacia abajo. -->
     <Animation
-      id="mainLogoFadeOutAnimation"
-      duration="0.5"
+      id="carouselContainerMoveAnimation"
+      duration="0.2"
       repeat="false"
       optional="true"
       easeFunction="linear">
-      <FloatFieldInterpolator
-        fieldToInterp="mainLogo.opacity"
+      <!-- Interpolador vectorial que actualiza translation de carouselContainer. -->
+      <Vector2DFieldInterpolator
+        id="carouselContainerMoveInterpolator"
+        fieldToInterp="carouselContainer.translation"
         key="[0.0, 1.0]"
-        keyValue="[1.0, 0.0]" />
+        keyValue="[[0.0, 0.0], [0.0, 0.0]]" />
     </Animation>
 
-    <!-- Animación para mostrar el logo principal cuando el foco sale de News. -->
+    <!-- Animación reutilizable para transicionar opacidad del nodo superior del carrusel en 0.5 segundos. -->
     <Animation
-      id="mainLogoFadeInAnimation"
+      id="focusUpOpacityAnimation"
       duration="0.5"
       repeat="false"
       optional="true"
       easeFunction="linear">
+      <!-- Interpolador de opacidad cuyo destino se configura dinámicamente en MainScreen.brs. -->
       <FloatFieldInterpolator
-        fieldToInterp="mainLogo.opacity"
+        id="focusUpOpacityInterpolator"
+        fieldToInterp=""
         key="[0.0, 1.0]"
-        keyValue="[0.0, 1.0]" />
+        keyValue="[1.0, 1.0]" />
     </Animation>
     
     <Label

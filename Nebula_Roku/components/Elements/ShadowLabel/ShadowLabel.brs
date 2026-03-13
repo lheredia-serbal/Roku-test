@@ -1,3 +1,5 @@
+' ****** Funciones Públicas ******
+
 sub init()
   m.shadowText = m.top.findNode("shadowText")
   m.mainText = m.top.findNode("mainText")
@@ -10,6 +12,7 @@ sub init()
   syncLayout()
 end sub
 
+' Setear los textos
 sub syncText()
   if m.shadowText = invalid or m.mainText = invalid then return
   m.shadowText.text = m.top.text
@@ -17,6 +20,7 @@ sub syncText()
   syncLayout()
 end sub
 
+' Setear los estilos
 sub syncStyle()
   if m.shadowText = invalid or m.mainText = invalid then return
 
@@ -40,6 +44,7 @@ sub syncStyle()
   m.shadowText.maxLines = maxLinesValue
 end sub
 
+' Setear el alto, ancho y ubicación
 sub syncLayout()
   if m.shadowText = invalid or m.mainText = invalid then return
 
@@ -68,11 +73,9 @@ sub syncLayout()
   m.shadowText.translation = [offsetX, offsetY]
 end sub
 
-function __getWrapMaxLines() as integer
-  if m.top.wrapMaxLines <> invalid and m.top.wrapMaxLines > 0 then
-    return m.top.wrapMaxLines
-  end if
+' ****** Funciones Privadas ******
 
+function __getWrapMaxLines() as integer
   if m.top.maxLines <> invalid and m.top.maxLines > 0 then
     return m.top.maxLines
   end if

@@ -13,11 +13,9 @@
     <field id="height" type="float" value="0" onChange="syncLayout" />
     <field id="font" type="string" value="font:LargeBoldSystemFont" onChange="syncStyle" />
     <field id="color" type="string" value="0xFFFFFFFF" onChange="syncStyle" />
-    <field id="shadowOffsetValue" type="array" value="[4,4]" onChange="syncLayout" />
     <field id="horizAlign" type="string" value="left" onChange="syncStyle" />
     <field id="vertAlign" type="string" value="bottom" onChange="syncStyle" />
     <field id="wrap" type="boolean" value="true" onChange="syncStyle" />
-    <field id="wrapMaxLines" type="integer" value="3" onChange="syncStyle" />
     <field id="maxLines" type="integer" value="3" onChange="syncStyle" />
   </interface>
 

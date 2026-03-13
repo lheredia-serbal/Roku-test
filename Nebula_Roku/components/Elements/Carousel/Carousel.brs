@@ -8,7 +8,7 @@ sub init()
   
   m.scaleInfo = m.global.scaleInfo
   
-  m.carouselTitle.translation = scalePoint([70, 80], m.scaleInfo)
+  m.carouselTitle.translation = scalePoint([70, 75], m.scaleInfo)
 
   ' Alineo verticalmente los tags con el título principal del carrusel.
   if m.carouselTitleTags <> invalid then m.carouselTitleTags.translation = m.carouselTitle.translation
@@ -25,14 +25,11 @@ end sub
 sub initData()
   if m.top.items <> invalid and m.top.items.count() > 0 then
     ' Seteo el título principal del carrusel con el valor recibido.
+    if m.carouselTitleTags <> invalid then m.carouselTitleTags.text = m.top.titleTagsText
     m.carouselTitle.text = m.top.title
 
     m.carouselTitle.width = scaleValue(900, m.scaleInfo)
     m.carouselTitle.height = scaleValue(48, m.scaleInfo)
-    ' Seteo por defecto el texto de tags (puede ser vacío si no aplica).
-    if m.carouselTitleTags <> invalid then m.carouselTitleTags.text = m.top.titleTagsText
-    ' Recalculo la posición del texto de tags para que quede a la derecha del título.
-    __updateCarouselTitleTagsPosition()
     m.items = m.top.items
     __populateList()
   else 
@@ -63,21 +60,21 @@ sub initSyle()
     m.targetRects = createTargetRects(m.targetItems, m.xInitial, (m.top.size[0] + m.separator), m.top.size[0], m.top.size[1])
 
   else if m.top.style = getCarouselStyles().LANDSCAPE_STANDARD then ' carouselLandscapeStandard
-    m.top.size = scaleSize([464, 261], m.scaleInfo)
+    m.top.size = scaleSize([450, 253], m.scaleInfo)
     __defaultConfig()
     m.top.height = (m.top.size[1] + m.labelSpace)
     m.targetItems = 5
     m.styleItem = "BasicItem"
-    m.xInitial = scaleValue(-837, m.scaleInfo)
+    m.xInitial = scaleValue(-808, m.scaleInfo)
     m.targetRects = createTargetRects(m.targetItems, m.xInitial, (m.top.size[0] + m.separator), m.top.size[0], m.top.size[1])
 
   else if m.top.style = getCarouselStyles().LANDSCAPE_FEATURED then ' carouselLandscapeFeatured
-    m.top.size = scaleSize([560, 315], m.scaleInfo)
+    m.top.size = scaleSize([450, 253], m.scaleInfo)
     __defaultConfig()
     m.top.height = (m.top.size[1] + m.labelSpace)
     m.targetItems = 4
     m.styleItem = "BasicItem"
-    m.xInitial = scaleValue(-1029, m.scaleInfo)
+    m.xInitial = scaleValue(-808, m.scaleInfo)
     m.targetRects = createTargetRects(m.targetItems, m.xInitial, (m.top.size[0] + m.separator), m.top.size[0], m.top.size[1])
 
   else if m.top.style = getCarouselStyles().SQUARE_STANDARD then ' carouselSquareStandard
@@ -315,34 +312,6 @@ sub __populateList()
   
   __setupTargetList(focusedTargetSet, contentRoot)
 end sub
-  
-' Reposiciona el label de tags para que inicie al final del título principal.
-sub __updateCarouselTitleTagsPosition()
-  ' Si no existe el label de tags, no hay nada para posicionar.
-  if m.carouselTitleTags = invalid then return
-  ' Si no existe el label principal, tampoco puedo calcular el offset horizontal.
-  if m.carouselTitle = invalid then return
-  ' Calculo separación horizontal mínima entre título y tags.
-  titleTagsSpacing = scaleValue(18, m.scaleInfo)
-  titleWidth = __getCarouselTitleRenderedWidth()
-  ' Calculo la posición X base usando la X del título más su ancho renderizado.
-  titleTagsX = m.carouselTitle.translation[0] + titleWidth + titleTagsSpacing
-  ' Mantengo la misma Y del título principal para que queden alineados.
-  titleTagsY = m.carouselTitle.translation[1]
-  ' Aplico la traducción final del label de tags.
-  m.carouselTitleTags.translation = [titleTagsX, titleTagsY]
-end sub
-
-function __getCarouselTitleRenderedWidth() as float
-  if m.carouselTitle = invalid then return 0
-
-  mainTitleNode = m.carouselTitle.findNode("mainText")
-  if mainTitleNode <> invalid then
-    return mainTitleNode.localBoundingRect().width
-  end if
-
-  return m.carouselTitle.localBoundingRect().width
-end function
 
 ' Función para configurar un TargetList con su TargetSet y contenido
 sub __setupTargetList(targetSet as Object, content as Object)

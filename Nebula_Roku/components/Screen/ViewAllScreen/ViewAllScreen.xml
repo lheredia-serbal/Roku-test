@@ -58,8 +58,7 @@
     <!-- Componente de resumen de programa mostrado en la zona superior. -->
     <ProgramSummary
       id="programInfo"
-      visible="false"
-      translation="[50,50]"/>
+      visible="false"/>
 
     <!-- Contenedor de listado inferior para el listado de programas de ViewAll. -->
     <Group id="carousels" translation="[50, 135]">

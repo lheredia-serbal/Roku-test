@@ -155,7 +155,7 @@
     <!-- Animación para desplazar carouselContainer en 0.5 segundos al navegar desde News hacia abajo. -->
     <Animation
       id="carouselContainerMoveAnimation"
-      duration="0.3"
+      duration="0.2"
       repeat="false"
       optional="true"
       easeFunction="linear">
