@@ -12,6 +12,15 @@ sub init()
   m.logo = m.top.findNode("logo")
   m.email = m.top.findNode("email")
 
+  m.loginMethodTitle = m.top.findNode("loginMethodTitle")
+  m.loginMethodSwitch = m.top.findNode("loginMethodSwitch") 
+  m.loginMethodSwitchSelected = m.top.findNode("loginMethodSwitchSelected")
+  m.loginMethodPhone = m.top.findNode("loginMethodPhone")
+  m.loginMethodKeyboard = m.top.findNode("loginMethodKeyboard")
+  m.qrContainer = m.top.findNode("qrContainer")
+  m.qrCodePoster = m.top.findNode("qrCodePoster")
+  m.qrShortUrlLabel = m.top.findNode("qrShortUrlLabel")
+
   m.scaleInfo = m.global.scaleInfo
 
   m.keyboard.showTextEditBox = false
@@ -26,6 +35,20 @@ sub init()
   m.userField.hintTextColor = m.global.colors.LIGHT_GRAY
   m.passwordField.hintTextColor = m.global.colors.LIGHT_GRAY
 
+  m.loginMethodTitle.width = scaleValue(910, m.scaleInfo)
+  m.loginMethodTitle.height = scaleValue(55, m.scaleInfo)
+  m.loginMethodSwitch.width = scaleValue(700, m.scaleInfo)
+  m.loginMethodSwitch.height = scaleValue(72, m.scaleInfo)
+  m.loginMethodSwitchSelected.width = scaleValue(350, m.scaleInfo)
+  m.loginMethodSwitchSelected.height = scaleValue(60, m.scaleInfo)
+  m.loginMethodSwitchSelected.translation = scaleSize([6, 6], m.scaleInfo)
+  m.loginMethodPhone.width = scaleValue(350, m.scaleInfo)
+  m.loginMethodPhone.height = scaleValue(72, m.scaleInfo)
+  m.loginMethodPhone.translation = [0, 0]
+  m.loginMethodKeyboard.width = scaleValue(350, m.scaleInfo)
+  m.loginMethodKeyboard.height = scaleValue(72, m.scaleInfo)
+  m.loginMethodKeyboard.translation = scaleSize([350, 0], m.scaleInfo)
+
   m.mainContainer.translation = scaleSize([180, 120], m.scaleInfo)
   m.email.width = scaleValue(300, m.scaleInfo)
   m.userField.width = scaleValue(910, m.scaleInfo)
@@ -37,6 +60,13 @@ sub init()
 
   m.prevButton.size = scaleSize([150, 40], m.scaleInfo)
   m.nextButton.size = scaleSize([150, 40], m.scaleInfo)
+
+  m.qrContainer.width = scaleValue(360, m.scaleInfo)
+  m.qrContainer.height = scaleValue(420, m.scaleInfo)
+  m.qrCodePoster.width = scaleValue(300, m.scaleInfo)
+  m.qrCodePoster.height = scaleValue(300, m.scaleInfo)
+  m.qrShortUrlLabel.translation = [0, scaleValue(320, m.scaleInfo)]
+  m.qrShortUrlLabel.width = scaleValue(360, m.scaleInfo)
 
   if m.global <> invalid then
     m.global.observeField("activeApiUrl", "onActiveApiUrlChanged")
@@ -100,6 +130,11 @@ sub initFocus()
 
     m.buttonContainer.translation = [((width - scaleValue(380, m.scaleInfo)) / 2), 0]
     m.logo.translation = [(width - scaleValue(280, m.scaleInfo)), scaleValue(30, m.scaleInfo)]
+
+    ' Sincroniza las variables remotas para mostrar/ocultar el bloque QR
+    __loadQrLoginConfig()
+    ' Centra el módulo QR al lado derecho del formulario de login
+    m.qrContainer.translation = [width - scaleValue(440, m.scaleInfo), scaleValue(160, m.scaleInfo)]
     
     m.keyboard.ObserveField("textEditBox", "onTextBoxManagment")
     __focusKeyboard()
@@ -216,6 +251,9 @@ sub __applyTranslations()
     if m.global.i18n = invalid then return
 
     m.email.text = i18n_t(m.global.i18n, "loginPage.titleUser")
+    m.loginMethodTitle.text = i18n_t(m.global.i18n, "loginPage.titleQR")
+    m.loginMethodPhone.text = i18n_t(m.global.i18n, "loginPage.optionPhone")
+    m.loginMethodKeyboard.text = i18n_t(m.global.i18n, "loginPage.optionKeyboard")
     m.passwordLabel.text = i18n_t(m.global.i18n, "loginPage.password")
     m.prevButton.text = i18n_t(m.global.i18n, "button.previous")
     m.nextButton.text = i18n_t(m.global.i18n, "button.next")
@@ -410,6 +448,39 @@ end sub
 
 sub onActiveApiUrlChanged()
   __syncApiUrlFromGlobal()
+  ' Actualiza los datos del QR cuando cambia el dominio activo
+  __loadQrLoginConfig()
+end sub
+
+' Carga la configuración de login por código y actualiza el estado del módulo QR
+sub __loadQrLoginConfig()
+  ' Lee si el login por código está habilitado desde variables de configuración
+  enableLoginByCode = getConfigVariable(m.global.configVariablesKeys.ENABLE_LOGIN_BY_CODE)
+  ' Lee la URL remota de la imagen QR
+  loginByCodeUrlQr = getConfigVariable(m.global.configVariablesKeys.LOGIN_BY_CODE_URL_QR)
+  ' Lee la URL corta que se muestra como alternativa manual
+  loginByCodeUrlShort = getConfigVariable(m.global.configVariablesKeys.LOGIN_BY_CODE_URL_SHORT)
+
+  ' Normaliza el flag remoto para soportar distintos formatos (true/"true"/1)
+  isEnabled = (enableLoginByCode = 1)
+  ' Valida que exista una URL QR utilizable
+  hasQrUrl = (loginByCodeUrlQr <> invalid and loginByCodeUrlQr <> "")
+
+  ' Muestra el contenedor solo cuando la funcionalidad está habilitada y completa
+  m.qrContainer.visible = (isEnabled and hasQrUrl)
+
+  if m.qrContainer.visible then
+    ' Asigna la URL remota del código QR al poster
+    m.qrCodePoster.uri = loginByCodeUrlQr
+
+    if loginByCodeUrlShort <> invalid and loginByCodeUrlShort <> "" then
+      ' Combina el mensaje guía con la URL corta configurable
+      m.qrShortUrlLabel.text = m.qrShortUrlLabel.text + ": " + loginByCodeUrlShort
+    end if
+  else
+    ' Limpia la URL para evitar mostrar contenido obsoleto
+    m.qrCodePoster.uri = ""
+  end if
 end sub
 
 sub __syncApiUrlFromGlobal()

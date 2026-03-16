@@ -8,7 +8,6 @@
   <script type="text/brightscript" uri="LoginScreen.brs"/>
   <script type="text/brightscript" uri="pkg:/source/Utils/i18nUtils.brs" />
   <script type="text/brightscript" uri="pkg:/source/Utils/RetryUtils.brs" />
-  <script type="text/brightscript" uri="pkg:/source/Utils/ImageValidationUtils.brs" />
   <script type="text/brightscript" uri="pkg:/source/Utils.brs" />
   <script type="text/brightscript" uri="pkg:/source/Storage.brs" />
   <script type="text/brightscript" uri="pkg:/source/ResultCodes.brs" />
@@ -40,6 +39,39 @@
       horizAlignment="custom"
       vertAlignment="top"
       itemSpacings="[15]" >
+
+      <!-- Título principal para elegir el método de inicio de sesión -->
+      <Label
+        id="loginMethodTitle"
+        font="font:LargeBoldSystemFont"
+        horizAlign="center" />
+
+      <!-- Contenedor visual del switch de método de login -->
+      <Rectangle
+        id="loginMethodSwitch"
+        horizAlign="center"
+        color="#233A6AFF"
+        blendColor="#233A6AFF">
+        <!-- Segmento resaltado para la opción activa (izquierda) -->
+        <Rectangle
+          id="loginMethodSwitchSelected"
+          horizAlign="center"
+          color="#2FA5E3FF"
+          blendColor="#2FA5E3FF" />
+        <!-- Texto de la opción de acceso con teléfono -->
+        <Label
+          id="loginMethodPhone"
+          font="font:MediumBoldSystemFont"
+          horizAlign="center"
+          vertAlign="center" />
+        <!-- Texto de la opción de acceso con teclado -->
+        <Label
+          id="loginMethodKeyboard"
+          font="font:MediumBoldSystemFont"
+          horizAlign="center"
+          vertAlign="center" />
+      </Rectangle>
+
       <!-- Label de Usuario -->
       <Label 
         id="email"
@@ -87,5 +119,18 @@
       id="logo"
       loadDisplayMode="scaleToFit"
       uri="pkg:/images/client/logo.png" />
+
+    <!-- Contenedor visual para login por QR -->
+    <Group id="qrContainer" visible="false">
+      <!-- Imagen del código QR remoto -->
+      <Poster
+        id="qrCodePoster"
+        loadDisplayMode="scaleToFit" />
+      <!-- Texto con la URL corta para ingresar manualmente -->
+      <Label
+        id="qrShortUrlLabel"
+        horizAlign="center"
+        font="font:SmallSystemFont" />
+    </Group>
   </children>
 </component>

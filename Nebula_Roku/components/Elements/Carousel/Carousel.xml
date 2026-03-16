@@ -41,14 +41,13 @@
       id="carouselTitle"
       horizAlign="left"
       vertAlign="bottom"
-      font="font:SmallBoldSystemFont"  />
+      font="font:SmallBoldSystemFont" />
 
     <!-- Label para mostrar tags concatenados a la derecha del título del carrusel. -->
     <Label
       id="carouselTitleTags"
       font="font:SmallestBoldSystemFont"
-      color="0xFFA500FF"
-      />
+      color="0xFFA500FF" />
 
       <QvTargetList 
         id="carouselList"

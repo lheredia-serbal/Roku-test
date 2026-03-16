@@ -11,7 +11,6 @@ sub init()
   m.carouselTitle.translation = scalePoint([70, 75], m.scaleInfo)
 
   ' Alineo verticalmente los tags con el título principal del carrusel.
-  if m.carouselTitleTags <> invalid then m.carouselTitleTags.translation = m.carouselTitle.translation
   m.carouselList.translation = scalePoint([-80, 130], m.scaleInfo)
 
   m.labelSpace = scaleValue(40, m.scaleInfo)
@@ -25,15 +24,36 @@ end sub
 sub initData()
   if m.top.items <> invalid and m.top.items.count() > 0 then
     ' Seteo el título principal del carrusel con el valor recibido.
-    if m.carouselTitleTags <> invalid then m.carouselTitleTags.text = m.top.titleTagsText
     m.carouselTitle.text = m.top.title
 
-    m.carouselTitle.width = scaleValue(900, m.scaleInfo)
+    ' Ajusto el ancho del título según su texto renderizado para que el row horizontal calcule bien.
+    titleWidth = __syncCarouselTitleWidth()
     m.carouselTitle.height = scaleValue(48, m.scaleInfo)
+    ' Seteo por defecto el texto de tags (puede ser vacío si no aplica).
+
+    if m.carouselTitleTags <> invalid then m.carouselTitleTags.text = m.top.titleTagsText
     m.items = m.top.items
     __populateList()
   else 
     __clearList()
+  end if
+end sub
+
+' Calcula y aplica el ancho del título con base en su texto renderizado.
+sub __syncCarouselTitleWidth()
+  ' Obtengo el ancho real del texto ya renderizado en el label.
+  titleBounds = m.carouselTitle.boundingRect()
+  ' Inicializo el ancho con cero para decidir si uso valor real o fallback por caracteres.
+  titleWidth = 0
+  ' Si todavía no hay ancho renderizado (primer frame), calculo fallback por cantidad de caracteres.
+  if titleWidth = 0 then titleWidth = (len(m.top.title) * scaleValue(12, m.scaleInfo))
+  ' Aplico un mínimo para que el label no colapse visualmente.
+  if titleWidth < scaleValue(20, m.scaleInfo) then titleWidth = scaleValue(20, m.scaleInfo)
+  ' Seteo el ancho final para que el layout horizontal ubique tags pegados al título.
+  m.carouselTitle.width = titleWidth
+  ' Solo cuando titleWidth tiene valor, posiciono los tags en X según ancho del título y Y fija solicitada.
+  if titleWidth > 0 and m.carouselTitleTags <> invalid then 
+    m.carouselTitleTags.translation = scaleSize([titleWidth - 140, 103], m.scaleInfo)
   end if
 end sub
 
@@ -311,23 +331,6 @@ sub __populateList()
   focusedTargetSet = createObject("roSGNode", "TargetSet")
   
   __setupTargetList(focusedTargetSet, contentRoot)
-end sub
-  
-' Reposiciona el label de tags para que inicie al final del título principal.
-sub __updateCarouselTitleTagsPosition()
-  ' Si no existe el label de tags, no hay nada para posicionar.
-  if m.carouselTitleTags = invalid then return
-  ' Si no existe el label principal, tampoco puedo calcular el offset horizontal.
-  if m.carouselTitle = invalid then return
-  ' Calculo separación horizontal mínima entre título y tags.
-  titleTagsSpacing = scaleValue(18, m.scaleInfo)
-  titleWidth = __getCarouselTitleRenderedWidth()
-  ' Calculo la posición X base usando la X del título más su ancho renderizado.
-  titleTagsX = m.carouselTitle.translation[0] + titleWidth + titleTagsSpacing
-  ' Mantengo la misma Y del título principal para que queden alineados.
-  titleTagsY = m.carouselTitle.translation[1]
-  ' Aplico la traducción final del label de tags.
-  m.carouselTitleTags.translation = [titleTagsX, titleTagsY]
 end sub
 
 function __getCarouselTitleRenderedWidth() as float

@@ -76,6 +76,9 @@
     "enterYourUser": "Insira seu usuário",
     "password": "Senha: ",
     "enterYourPassword": "Coloque sua senha",
+    "titleQR": "Escolha como iniciar sessão",
+    "optionKeyboard":"Usar teclado",
+    "optionPhone": "Usar telefone",
     "errorForm": {
       "unAuthorized": "Usuário ou senha incorretos",
       "notConfirmed": "Conta não confirmada",

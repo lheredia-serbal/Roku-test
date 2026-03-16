@@ -797,3 +797,9 @@ sub ensureRandomSeed()
   Rnd(-1)
   m.global.randomSeeded = true
 end sub
+
+' Handler base para centralizar el manejo futuro de fallas de carga en posters.
+' Actualmente solo imprime un log informativo.
+sub onPosterImageLoadFailed(context = "" as String, uri = "" as String)
+    printLog("Poster load failed [" + context + "]: " + uri)
+end sub

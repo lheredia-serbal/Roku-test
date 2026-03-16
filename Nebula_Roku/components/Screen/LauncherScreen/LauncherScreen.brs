@@ -125,7 +125,7 @@ sub onClientsApiHealthResponse()
     m.apiUrl = baseUrl
     m.clientsHealthRequestManager = clearApiRequest(m.clientsHealthRequestManager)
     __hideCdnErrorDialog()
-    __valdiateInternetConnection()
+    __validateInternetConnection()
   else
     printError("ClientsApiUrl health: ", m.clientsHealthRequestManager.errorResponse)
     m.clientsHealthRequestManager = clearApiRequest(m.clientsHealthRequestManager)
@@ -168,6 +168,7 @@ end sub
 ' Procesa la respuesta al obtener las variables de la plataforma
 sub onPlatformResponse() ' invoked when EpisodesScreen content is changed
   if validateStatusCode(m.apiRequestManager.statusCode) then    
+    __initHiddenImageValidationPoster()
     addAndSetFields(m.global, {variables: ParseJson(m.apiRequestManager.response).data} )
     m.apiRequestManager = clearApiRequest(m.apiRequestManager) 
     
@@ -222,7 +223,7 @@ sub onDialogClosed(_event)
 
   if option = 0 then
     ' Disparar Reintentar
-    __valdiateInternetConnection()
+    __validateInternetConnection()
   else
     ' Disparar Salir
     m.top.forceExit = true
@@ -325,7 +326,7 @@ sub onAutoUpgradeAvailableDialogClosed(_event)
 end sub
 
 ' Realiza la peticion para validar la conexion a internet
-sub __valdiateInternetConnection()
+sub __validateInternetConnection()
   apiUrl = getActiveApiUrl()
   if apiUrl = invalid then
     __showCdnErrorDialog()
@@ -333,3 +334,131 @@ sub __valdiateInternetConnection()
   end if
   m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlHealth(apiUrl), "GET", "onValdiateConnectionResponse", invalid, invalid, invalid, true)
 end sub
+
+' Crea un Poster solo lógico (no visible) para validar la carga de una imagen.
+sub __initHiddenImageValidationPoster()
+  domainManagerState = __getDomainManagerState()
+
+  checks = []
+
+  for each item in domainManagerState._resources
+    if shouldValidateImageUrl(item) then
+      checks.push(item)
+    end if
+  end for
+
+  for each item in checks
+    if item <> invalid and hasUseHttpAction(item) then
+      if item.primary <> invalid then
+        item.primary = replaceHttpsScheme(item.primary)
+      end if
+
+      if item.secondary <> invalid then
+        item.secondary = replaceHttpsScheme(item.secondary)
+      end if
+    end if
+  end for
+
+   if m.hiddenImageValidationPoster <> invalid then
+    m.hiddenImageValidationPoster.unobserveField("loadStatus")
+    if m.hiddenImageValidationPoster.getParent() <> invalid then
+      m.hiddenImageValidationPoster.getParent().removeChild(m.hiddenImageValidationPoster)
+    end if
+    m.hiddenImageValidationPoster = invalid
+  end if
+
+  m.hiddenImageValidationPoster = CreateObject("roSGNode", "Poster")
+  if m.hiddenImageValidationPoster = invalid then return
+
+  m.hiddenImageValidationPoster.visible = true
+  m.hiddenImageValidationPoster.opacity = 0.0
+  m.hiddenImageValidationPoster.width = 1
+  m.hiddenImageValidationPoster.height = 1
+  m.hiddenImageValidationPoster.translation = [-9999, -9999]
+
+  imageValidationUri = "https://nebuladev.qvixsolutions.com/assets/resources/img/ContentNews/44_f00ed63a618d4f528bc32edda87b6461.jpg"
+  if domainManagerState <> invalid and domainManagerState._currentConfig = "Secondary" then
+    imageValidationUri = "https://nebuladev.qvixsolutions.com/assets/resources/img/ContentNews/44_f00ed63a618d4f528bc32edda87b6461.jpg"
+  end if
+
+  m.hiddenImageValidationPoster.uri = imageValidationUri
+  m.hiddenImageValidationPoster.observeField("loadStatus", "onHiddenImageValidationPosterLoadStatusChanged")
+  m.top.appendChild(m.hiddenImageValidationPoster)
+
+  if domainManagerState <> invalid and domainManagerState._currentConfig <> invalid then
+    printLog("Hidden poster init with DomainManager config: " + domainManagerState._currentConfig)
+  end if
+  printLog("Hidden poster uri: " + imageValidationUri)
+end sub
+
+' Observa el resultado de carga de la imagen del poster lógico.
+sub onHiddenImageValidationPosterLoadStatusChanged()
+  if m.hiddenImageValidationPoster = invalid then return
+
+  status = m.hiddenImageValidationPoster.loadStatus
+  printLog("Hidden poster loadStatus: " + status + " uri=" + m.hiddenImageValidationPoster.uri)
+end sub
+
+function shouldValidateImageUrl(item as Object) as Boolean
+  if item = invalid then return false
+
+  hasPrimaryToCheck = false
+  if getHealthCheckPrimary(item) <> "" then
+    hasPrimaryToCheck = true
+  else if item.primary <> invalid and item.primary <> "" then
+    hasPrimaryToCheck = true
+  end if
+
+  if hasPrimaryToCheck = false then return false
+  if item.on_failure = invalid then return false
+  if item.on_failure.actions = invalid then return false
+  if item.on_failure.actions.Count() = 0 then return false
+
+  for each actionInfo in item.on_failure.actions
+    if LCase(actionInfo.when) = "tls_error" and LCase(actionInfo.action) = "use_http" then
+      return true
+    end if
+  end for
+
+  return false
+end function
+
+function hasUseHttpAction(item as Object) as Boolean
+  if item = invalid then return false
+  if item.on_failure = invalid then return false
+  if item.on_failure.actions = invalid then return false
+
+  for each actionInfo in item.on_failure.actions
+    if LCase(actionInfo.action) = "use_http" then
+      return true
+    end if
+  end for
+
+  return false
+end function
+
+function replaceHttpsScheme(url as String) as String
+  if Left(url, 5) = "https" then
+    return "http" + Mid(url, 6)
+  end if
+
+  return url
+end function
+
+function getHealthCheckPrimary(item as Object) as String
+  if item = invalid then return ""
+  if item.health_check = invalid then return ""
+  if type(item.health_check) <> "roAssociativeArray" then return ""
+  if item.health_check.target = invalid then return ""
+  if item.health_check.target.primary = invalid then return ""
+  return item.health_check.target.primary
+end function
+
+function getHealthCheckSecondary(item as Object) as String
+  if item = invalid then return ""
+  if item.health_check = invalid then return ""
+  if type(item.health_check) <> "roAssociativeArray" then return ""
+  if item.health_check.target = invalid then return ""
+  if item.health_check.target.secondary = invalid then return ""
+  return item.health_check.target.secondary
+end function

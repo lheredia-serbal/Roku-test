@@ -9,7 +9,6 @@
   <script type="text/brightscript" uri="pkg:/source/Utils.brs" />
   <script type="text/brightscript" uri="pkg:/source/Utils/i18nUtils.brs" />
   <script type="text/brightscript" uri="pkg:/source/Utils/RetryUtils.brs" />
-  <script type="text/brightscript" uri="pkg:/source/Utils/ImageValidationUtils.brs" />
 
   <script type="text/brightscript" uri="pkg:/source/Enums.brs" />
   <script type="text/brightscript" uri="pkg:/source/StreamingConstants.brs" />
@@ -52,10 +51,6 @@
 
   <children>
 
-    <!-- Input de busqueda -->
-    <TextEditBox
-      id="searchInput" />
-
     <!-- Carrusel de recomendados -->
     <Group id="relatedContainer" visible="false">
       <Carousel id="related" />
@@ -67,6 +62,20 @@
       <Group id="carouselContainer" translation="[50, 20]" />
       <SelectionBox id="searchSelectedIndicator" visible="false" />
     </Group>
+
+    <!-- Input de busqueda -->
+    <TextEditBox
+      id="searchInput" />
+
+    <!-- Animación vertical reutilizada para desplazar carouselContainer con la misma suavidad que HomeScreen. -->
+    <Animation id="carouselContainerMoveAnimation" duration="0.5" repeat="false" easeFunction="linear" optional="true"> <!-- Define transición de 0.5s para navegación UP/DOWN entre carruseles. -->
+      <Vector2DFieldInterpolator id="carouselContainerMoveInterpolator" fieldToInterp="carouselContainer.translation" key="[0.0, 1.0]" /> <!-- Interpolador que anima translation del contenedor de carruseles. -->
+    </Animation>
+
+    <!-- Animación de opacidad para restaurar/atenuar filas durante el desplazamiento vertical. -->
+    <Animation id="focusUpOpacityAnimation" duration="0.5" repeat="false" easeFunction="linear" optional="true"> <!-- Replica la duración de HomeScreen al cambiar opacidad de carruseles. -->
+      <FloatFieldInterpolator id="focusUpOpacityInterpolator" key="[0.0, 1.0]" /> <!-- Interpolador dinámico apuntado al nodo de carrusel objetivo. -->
+    </Animation>
 
     <!-- Label cuano no hay resultados -->
     <Label

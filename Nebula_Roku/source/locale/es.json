@@ -73,6 +73,9 @@
   },
   "loginPage": {
     "titleUser": "Usuario: ",
+    "titleQR": "Elige cómo iniciar sesión",
+    "optionKeyboard": "Usar teclado",
+    "optionPhone": "Usar teléfono",
     "enterYourUser": "Ingresa tu usuario",
     "password": "Contraseña: ",
     "enterYourPassword": "Ingresa tu contraseña",

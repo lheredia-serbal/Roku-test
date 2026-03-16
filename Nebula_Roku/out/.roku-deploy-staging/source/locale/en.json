@@ -76,6 +76,9 @@
     "enterYourUser": "Enter your user",
     "password": "Password: ",
     "enterYourPassword": "Enter your password",
+    "titleQR": "Choose how to sign in",
+    "optionKeyboard": "Use keyboard",
+    "optionPhone": "Use phone",
     "errorForm": {
       "unAuthorized": "Incorrect user or password",
       "notConfirmed": "unconfirmed account",

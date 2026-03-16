@@ -483,8 +483,6 @@ sub setConfigResponse(response as Object, mode as String)
         end for
     end if
 
-    validateImagesUrl(state)
-
     __syncDomainManagerState(state)
 end sub
 
