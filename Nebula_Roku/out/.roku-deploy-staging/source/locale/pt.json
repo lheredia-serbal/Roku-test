@@ -15,7 +15,8 @@
     "save": "Aceitar",
     "yes": "SIM",
     "continueSee": "Continuar assistindo",
-    "exit": "Sair"
+    "exit": "Sair",
+    "validateRegisterCode": "Validar"
   },
   "time": {
     "endsInHoursMin": "Termina em {{hours}}h {{minutes}}m",
@@ -79,6 +80,10 @@
     "titleQR": "Escolha como iniciar sessão",
     "optionKeyboard":"Usar teclado",
     "optionPhone": "Usar telefone",
+    "qrStepsTitle": "Siga estas etapas no seu computador ou dispositivo móvel",
+    "qrStep1Description": "Escaneie o código QR com a câmera do seu telefone ou visite:",
+    "qrStep2Description": "Digite ou confirme o código de login:",
+    "qrStep3Description": "Faça login. Sua TV estará pronta para assistir!",
     "errorForm": {
       "unAuthorized": "Usuário ou senha incorretos",
       "notConfirmed": "Conta não confirmada",

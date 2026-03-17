@@ -15,7 +15,8 @@
     "save": "Save",
     "yes": "YES",
     "continueSee": "Continue watching",
-    "exit": "Exit"
+    "exit": "Exit",
+    "validateRegisterCode": "Validate"
   },
   "time": {
     "endsInHoursMin": "Ends in {{hours}}h {{minutes}}m",
@@ -79,6 +80,10 @@
     "titleQR": "Choose how to sign in",
     "optionKeyboard": "Use keyboard",
     "optionPhone": "Use phone",
+    "qrStepsTitle": "Follow these steps on your computer or mobile device",
+    "qrStep1Description": "Scan the QR code with your phone's camera or visit:",
+    "qrStep2Description": "Enter or confirm the login code:",
+    "qrStep3Description": "Sign in. Your TV will be ready to watch!",
     "errorForm": {
       "unAuthorized": "Incorrect user or password",
       "notConfirmed": "unconfirmed account",

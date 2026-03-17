@@ -37,8 +37,7 @@
       id="mainContainer" 
       layoutDirection="vert"
       horizAlignment="custom"
-      vertAlignment="top"
-      itemSpacings="[15]" >
+      vertAlignment="top">
 
       <!-- Título principal para elegir el método de inicio de sesión -->
       <Label
@@ -49,69 +48,71 @@
       <!-- Contenedor visual del switch de método de login -->
       <Rectangle
         id="loginMethodSwitch"
-        horizAlign="center"
         color="#233A6AFF"
         blendColor="#233A6AFF">
         <!-- Segmento resaltado para la opción activa (izquierda) -->
         <Rectangle
           id="loginMethodSwitchSelected"
-          horizAlign="center"
           color="#2FA5E3FF"
           blendColor="#2FA5E3FF" />
         <!-- Texto de la opción de acceso con teléfono -->
         <Label
           id="loginMethodPhone"
+          focusable="true"
           font="font:MediumBoldSystemFont"
           horizAlign="center"
           vertAlign="center" />
         <!-- Texto de la opción de acceso con teclado -->
         <Label
           id="loginMethodKeyboard"
+          focusable="true"
           font="font:MediumBoldSystemFont"
           horizAlign="center"
           vertAlign="center" />
       </Rectangle>
 
-      <!-- Label de Usuario -->
-      <Label 
-        id="email"
-        font="font:SmallSystemFont"
-        horizAlign="left" />
+      <Group id="credentialsContainer">
+        <!-- Label de Usuario -->
+        <Label
+          id="email"
+          font="font:SmallSystemFont"
+          horizAlign="left" />
 
-      <!-- Campo de entrada para usuario -->
-      <TextEditBox
-        id="userField"/>
+        <!-- Campo de entrada para usuario -->
+        <TextEditBox
+          id="userField"/>
 
-      <!-- Label de Contraseña -->
-      <Label 
-        id="passwordLabel"
-        font="font:SmallSystemFont"
-        horizAlign="left" />
+        <!-- Label de Contraseña -->
+        <Label 
+          id="passwordLabel"
+          font="font:SmallSystemFont"
+          horizAlign="left" />
 
-      <!-- Campo de entrada para contraseña -->
-      <TextEditBox
-        id="passwordField"
-        secureMode="true"/>
+        <!-- Campo de entrada para contraseña -->
+        <TextEditBox
+          id="passwordField"
+          secureMode="true"/>
 
-      <Group id="buttonContainer">
-        <LayoutGroup
-          layoutDirection="horiz"
-          horizAlignment="center"
-          vertAlignment="top"
-          itemSpacings="[20]"> 
-          <!-- Botón de Ingresar -->
-          <QvButton 
-            id="prevButton"
-            focusable="true"
-            disable="true" />
-          <QvButton 
-            id="nextButton"
-            focusable="true" />
-        </LayoutGroup>
+        <Group id="buttonContainer">
+          <LayoutGroup
+            layoutDirection="horiz"
+            horizAlignment="center"
+            vertAlignment="top"
+            itemSpacings="[20]"> 
+            <!-- Botón de Ingresar -->
+            <QvButton 
+              id="prevButton"
+              focusable="true"
+              disable="true" />
+            <QvButton 
+              id="nextButton"
+              focusable="true" />
+          </LayoutGroup>
 
+        </Group>
+
+        <Keyboard id="keyboard" />
       </Group>
-
-      <Keyboard id="keyboard" />
     </LayoutGroup>
 
     <!-- Logo -->
@@ -120,17 +121,35 @@
       loadDisplayMode="scaleToFit"
       uri="pkg:/images/client/logo.png" />
 
-    <!-- Contenedor visual para login por QR -->
     <Group id="qrContainer" visible="false">
-      <!-- Imagen del código QR remoto -->
-      <Poster
-        id="qrCodePoster"
-        loadDisplayMode="scaleToFit" />
-      <!-- Texto con la URL corta para ingresar manualmente -->
+      <!-- Título de pasos para completar el login desde otro dispositivo -->
       <Label
-        id="qrShortUrlLabel"
-        horizAlign="center"
-        font="font:SmallSystemFont" />
+        id="phoneInstructionsTitle"
+        font="font:LargeBoldSystemFont" />
+
+      <!-- Paso 1 -->
+      <Label id="step1Badge" font="font:MediumBoldSystemFont" horizAlign="center" />
+      <Label id="step1Text" font="font:MediumSystemFont" />
+      <Label id="qrShortUrlLabel" font="font:MediumBoldSystemFont" />
+
+      <!-- Paso 2 -->
+      <Label id="step2Badge" font="font:MediumBoldSystemFont" horizAlign="center" />
+      <Label id="step2Text" font="font:MediumSystemFont" />
+      <Label id="activationCodeLabel" font="font:LargeBoldSystemFont" />
+
+      <!-- Paso 3 -->
+      <Label id="step3Badge" font="font:MediumBoldSystemFont" horizAlign="center" />
+      <Label id="step3Text" font="font:MediumSystemFont" />
+
+      <!-- Fondo para el QR y su imagen remota -->
+      <Rectangle id="qrCodeBackground" color="#F2F2F2FF">
+        <Poster
+          id="qrCodePoster"
+          loadDisplayMode="scaleToFit" />
+      </Rectangle>
+
+      <!-- Botón para validar el proceso de activación -->
+      <QvButton id="validatePhoneButton" focusable="true" />
     </Group>
   </children>
 </component>

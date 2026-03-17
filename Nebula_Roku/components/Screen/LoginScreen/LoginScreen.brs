@@ -2,6 +2,7 @@
 sub init()
   m.top.finished = false 
   m.mainContainer = m.top.findNode("mainContainer")
+  m.credentialsContainer = m.top.findNode("credentialsContainer")
   m.userField = m.top.findNode("userField")
   m.passwordField = m.top.findNode("passwordField")
   m.passwordLabel = m.top.findNode("passwordLabel")
@@ -18,8 +19,21 @@ sub init()
   m.loginMethodPhone = m.top.findNode("loginMethodPhone")
   m.loginMethodKeyboard = m.top.findNode("loginMethodKeyboard")
   m.qrContainer = m.top.findNode("qrContainer")
-  m.qrCodePoster = m.top.findNode("qrCodePoster")
+  m.phoneInstructionsTitle = m.top.findNode("phoneInstructionsTitle")
+  m.step1Badge = m.top.findNode("step1Badge")
+  m.step1Text = m.top.findNode("step1Text")
   m.qrShortUrlLabel = m.top.findNode("qrShortUrlLabel")
+  m.step2Badge = m.top.findNode("step2Badge")
+  m.step2Text = m.top.findNode("step2Text")
+  m.activationCodeLabel = m.top.findNode("activationCodeLabel")
+  m.step3Badge = m.top.findNode("step3Badge")
+  m.step3Text = m.top.findNode("step3Text")
+  m.qrCodeBackground = m.top.findNode("qrCodeBackground")
+  m.qrCodePoster = m.top.findNode("qrCodePoster")
+  m.validatePhoneButton = m.top.findNode("validatePhoneButton")
+
+  m.scaleInfo = m.global.scaleInfo
+  m.isPhoneQrEnabled = false
 
   m.scaleInfo = m.global.scaleInfo
 
@@ -35,21 +49,23 @@ sub init()
   m.userField.hintTextColor = m.global.colors.LIGHT_GRAY
   m.passwordField.hintTextColor = m.global.colors.LIGHT_GRAY
 
-  m.loginMethodTitle.width = scaleValue(910, m.scaleInfo)
+  m.loginMethodTitle.width = scaleValue(900, m.scaleInfo)
   m.loginMethodTitle.height = scaleValue(55, m.scaleInfo)
-  m.loginMethodSwitch.width = scaleValue(700, m.scaleInfo)
+  m.loginMethodSwitch.width = scaleValue(500, m.scaleInfo)
   m.loginMethodSwitch.height = scaleValue(72, m.scaleInfo)
-  m.loginMethodSwitchSelected.width = scaleValue(350, m.scaleInfo)
+  m.loginMethodSwitchSelected.width = scaleValue(250, m.scaleInfo)
   m.loginMethodSwitchSelected.height = scaleValue(60, m.scaleInfo)
   m.loginMethodSwitchSelected.translation = scaleSize([6, 6], m.scaleInfo)
-  m.loginMethodPhone.width = scaleValue(350, m.scaleInfo)
+  m.loginMethodPhone.width = scaleValue(250, m.scaleInfo)
   m.loginMethodPhone.height = scaleValue(72, m.scaleInfo)
   m.loginMethodPhone.translation = [0, 0]
-  m.loginMethodKeyboard.width = scaleValue(350, m.scaleInfo)
+  m.loginMethodKeyboard.width = scaleValue(250, m.scaleInfo)
   m.loginMethodKeyboard.height = scaleValue(72, m.scaleInfo)
-  m.loginMethodKeyboard.translation = scaleSize([350, 0], m.scaleInfo)
+  m.loginMethodKeyboard.translation = scaleSize([250, 0], m.scaleInfo)
+  ' Centra horizontalmente el switch respecto al ancho del formulario principal
+  m.loginMethodSwitch.translation = [int((scaleValue(910, m.scaleInfo) - m.loginMethodSwitch.width) / 2), 0]
 
-  m.mainContainer.translation = scaleSize([180, 120], m.scaleInfo)
+  m.mainContainer.translation = scaleSize([180, 70], m.scaleInfo)
   m.email.width = scaleValue(300, m.scaleInfo)
   m.userField.width = scaleValue(910, m.scaleInfo)
   m.passwordLabel.width = scaleValue(300, m.scaleInfo)
@@ -61,16 +77,63 @@ sub init()
   m.prevButton.size = scaleSize([150, 40], m.scaleInfo)
   m.nextButton.size = scaleSize([150, 40], m.scaleInfo)
 
-  m.qrContainer.width = scaleValue(360, m.scaleInfo)
-  m.qrContainer.height = scaleValue(420, m.scaleInfo)
-  m.qrCodePoster.width = scaleValue(300, m.scaleInfo)
-  m.qrCodePoster.height = scaleValue(300, m.scaleInfo)
-  m.qrShortUrlLabel.translation = [0, scaleValue(320, m.scaleInfo)]
-  m.qrShortUrlLabel.width = scaleValue(360, m.scaleInfo)
+  m.qrContainer.width = scaleValue(1600, m.scaleInfo)
+  m.qrContainer.height = scaleValue(760, m.scaleInfo)
+  m.phoneInstructionsTitle.width = scaleValue(1120, m.scaleInfo)
+  m.phoneInstructionsTitle.translation = scaleSize([0, 0], m.scaleInfo)
+
+  m.step1Badge.width = scaleValue(56, m.scaleInfo)
+  m.step1Badge.height = scaleValue(56, m.scaleInfo)
+  m.step1Badge.translation = scaleSize([0, 50], m.scaleInfo)
+  m.step1Text.width = scaleValue(980, m.scaleInfo)
+  m.step1Text.translation = scaleSize([78, 50], m.scaleInfo)
+  m.qrShortUrlLabel.width = scaleValue(980, m.scaleInfo)
+  m.qrShortUrlLabel.translation = scaleSize([78, 176], m.scaleInfo)
+
+  m.step2Badge.width = scaleValue(56, m.scaleInfo)
+  m.step2Badge.height = scaleValue(56, m.scaleInfo)
+  m.step2Badge.translation = scaleSize([0, 120], m.scaleInfo)
+  m.step2Text.width = scaleValue(980, m.scaleInfo)
+  m.step2Text.translation = scaleSize([78, 120], m.scaleInfo)
+  m.activationCodeLabel.width = scaleValue(980, m.scaleInfo)
+  m.activationCodeLabel.translation = scaleSize([78, 150], m.scaleInfo)
+
+  m.step3Badge.width = scaleValue(56, m.scaleInfo)
+  m.step3Badge.height = scaleValue(56, m.scaleInfo)
+  m.step3Badge.translation = scaleSize([0, 190], m.scaleInfo)
+  m.step3Text.width = scaleValue(980, m.scaleInfo)
+  m.step3Text.translation = scaleSize([78, 190], m.scaleInfo)
+
+  m.qrCodeBackground.width = scaleValue(250, m.scaleInfo)
+  m.qrCodeBackground.height = scaleValue(250, m.scaleInfo)
+  m.qrCodeBackground.translation = scaleSize([850, 40], m.scaleInfo)
+  m.qrCodePoster.width = scaleValue(250, m.scaleInfo)
+  m.qrCodePoster.height = scaleValue(250, m.scaleInfo)
+  m.qrCodePoster.translation = scaleSize([25, 25], m.scaleInfo)
+
+  m.validatePhoneButton.size = scaleSize([220, 62], m.scaleInfo)
+  m.validatePhoneButton.translation = scaleSize([400, 350], m.scaleInfo)
+
+  ' Escucha cambios de foco del método Teléfono para alternar visibilidad del formulario
+  if m.loginMethodPhone <> invalid then m.loginMethodPhone.observeField("hasFocus", "onLoginMethodFocusChanged")
+  ' Escucha cambios de foco del método Teclado para restaurar visibilidad del formulario
+  if m.loginMethodKeyboard <> invalid then m.loginMethodKeyboard.observeField("hasFocus", "onLoginMethodFocusChanged")
 
   if m.global <> invalid then
     m.global.observeField("activeApiUrl", "onActiveApiUrlChanged")
   end if
+end sub
+
+sub onLoginMethodFocusChanged()
+  ' Evita errores si los contenedores aún no están disponibles
+  if m.credentialsContainer = invalid or m.qrContainer = invalid then return
+
+  ' Determina si la opción Teléfono es la que actualmente tiene foco
+  isPhoneFocused = m.loginMethodPhone <> invalid and m.loginMethodPhone.isInFocusChain()
+  ' Oculta credenciales cuando Teléfono está enfocado y las muestra en cualquier otro caso
+  m.credentialsContainer.visible = not isPhoneFocused
+  ' Dibuja el bloque visual de pasos/QR únicamente cuando Teléfono está enfocado y hay datos válidos
+  m.qrContainer.visible = true ' = (isPhoneFocused and m.isPhoneQrEnabled)
 end sub
 
 ' Funcion que interpreta los eventos de teclado y retorna true si fue porcesada por este componente. Sino es porcesado por el
@@ -133,11 +196,15 @@ sub initFocus()
 
     ' Sincroniza las variables remotas para mostrar/ocultar el bloque QR
     __loadQrLoginConfig()
-    ' Centra el módulo QR al lado derecho del formulario de login
-    m.qrContainer.translation = [width - scaleValue(440, m.scaleInfo), scaleValue(160, m.scaleInfo)]
+    ' Ubica el módulo de pasos/QR debajo del switch para el flujo por teléfono
+    m.qrContainer.translation = [scaleValue(110, m.scaleInfo), scaleValue(250, m.scaleInfo)]
     
     m.keyboard.ObserveField("textEditBox", "onTextBoxManagment")
-    __focusKeyboard()
+    ' Al iniciar, el foco debe quedar en la opción de login por teléfono
+    m.loginMethodPhone.setFocus(true)
+    ' Aplica de inmediato la visibilidad del formulario según el foco inicial
+    onLoginMethodFocusChanged()
+    
   end if
 end sub 
 
@@ -259,6 +326,19 @@ sub __applyTranslations()
     m.nextButton.text = i18n_t(m.global.i18n, "button.next")
     m.userField.hintText = i18n_t(m.global.i18n, "loginPage.enterYourUser")
     m.passwordField.hintText = i18n_t(m.global.i18n, "loginPage.enterYourPassword")
+
+    m.phoneInstructionsTitle.text = i18n_t(m.global.i18n, "loginPage.qrStepsTitle")
+    m.step1Badge.text = "1"
+    m.step1Badge.color = "#FFFFFFFF"
+    m.step1Text.text = i18n_t(m.global.i18n, "loginPage.qrStep1Description")
+    m.step2Badge.text = "2"
+    m.step2Badge.color = "#FFFFFFFF"
+    m.step2Text.text = i18n_t(m.global.i18n, "loginPage.qrStep2Description") 
+    m.activationCodeLabel.text = "TMRALL"
+    m.step3Badge.text = "3"
+    m.step3Badge.color = "#FFFFFFFF"
+    m.step3Text.text = i18n_t(m.global.i18n, "loginPage.qrStep3Description") 
+    m.validatePhoneButton.text = i18n_t(m.global.i18n, "button.validateRegisterCode") 
 end sub
 
 
@@ -466,21 +546,26 @@ sub __loadQrLoginConfig()
   ' Valida que exista una URL QR utilizable
   hasQrUrl = (loginByCodeUrlQr <> invalid and loginByCodeUrlQr <> "")
 
-  ' Muestra el contenedor solo cuando la funcionalidad está habilitada y completa
-  m.qrContainer.visible = (isEnabled and hasQrUrl)
+    ' Conserva el estado para que la visibilidad final dependa también del foco del selector
+  m.isPhoneQrEnabled = (isEnabled and hasQrUrl)
 
-  if m.qrContainer.visible then
+  if m.isPhoneQrEnabled then
     ' Asigna la URL remota del código QR al poster
     m.qrCodePoster.uri = loginByCodeUrlQr
 
     if loginByCodeUrlShort <> invalid and loginByCodeUrlShort <> "" then
-      ' Combina el mensaje guía con la URL corta configurable
-      m.qrShortUrlLabel.text = m.qrShortUrlLabel.text + ": " + loginByCodeUrlShort
+      ' Muestra la URL corta en la línea destacada del paso 1
+      m.qrShortUrlLabel.text = loginByCodeUrlShort
+    else
+      m.qrShortUrlLabel.text = ""
     end if
   else
     ' Limpia la URL para evitar mostrar contenido obsoleto
     m.qrCodePoster.uri = ""
+    m.qrShortUrlLabel.text = ""
   end if
+
+  onLoginMethodFocusChanged()
 end sub
 
 sub __syncApiUrlFromGlobal()

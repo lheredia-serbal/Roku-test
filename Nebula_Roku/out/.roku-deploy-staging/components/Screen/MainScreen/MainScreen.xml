@@ -96,7 +96,6 @@
       <LayoutGroup
         id="dotsContainer"
         layoutDirection="horiz"
-        horizAlign="center"
         itemSpacings="[14]" />
     </Group>
 

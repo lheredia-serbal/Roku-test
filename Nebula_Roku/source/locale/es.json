@@ -15,7 +15,8 @@
     "save": "Guardar",
     "yes": "SI",
     "continueSee": "Continuar viendo",
-    "exit": "Salir"
+    "exit": "Salir",
+    "validateRegisterCode": "Validar"
   },
   "time": {
     "endsInHoursMin": "Termina en {{hours}}h {{minutes}}m",
@@ -79,6 +80,10 @@
     "enterYourUser": "Ingresa tu usuario",
     "password": "Contraseña: ",
     "enterYourPassword": "Ingresa tu contraseña",
+    "qrStepsTitle": "Sigue estos pasos en tu computadora o dispositivo móvil",
+    "qrStep1Description": "Escanea el código QR con la cámara de tu teléfono o visita:",
+    "qrStep2Description": "Ingresa o confirma el código de inicio de sesión:",
+    "qrStep3Description": "Inicia sesión. ¡Tu TV estará lista para ver!",
     "errorForm": {
       "unAuthorized": "Usuario o contraseña incorrecta",
       "notConfirmed": "Cuenta no confirmada",
