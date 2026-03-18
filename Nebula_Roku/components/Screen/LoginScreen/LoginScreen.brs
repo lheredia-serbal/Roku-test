@@ -14,18 +14,22 @@ sub init()
   m.email = m.top.findNode("email")
 
   m.loginMethodTitle = m.top.findNode("loginMethodTitle")
+  m.loginMethodSwitchLayout = m.top.findNode("loginMethodSwitchLayout")
   m.loginMethodSwitch = m.top.findNode("loginMethodSwitch") 
   m.loginMethodSwitchSelected = m.top.findNode("loginMethodSwitchSelected")
   m.loginMethodPhone = m.top.findNode("loginMethodPhone")
   m.loginMethodKeyboard = m.top.findNode("loginMethodKeyboard")
   m.qrContainer = m.top.findNode("qrContainer")
   m.phoneInstructionsTitle = m.top.findNode("phoneInstructionsTitle")
+  m.step1BadgePoster = m.top.findNode("step1BadgePoster")
   m.step1Badge = m.top.findNode("step1Badge")
   m.step1Text = m.top.findNode("step1Text")
   m.qrShortUrlLabel = m.top.findNode("qrShortUrlLabel")
+  m.step2BadgePoster = m.top.findNode("step2BadgePoster")
   m.step2Badge = m.top.findNode("step2Badge")
   m.step2Text = m.top.findNode("step2Text")
   m.activationCodeLabel = m.top.findNode("activationCodeLabel")
+  m.step3BadgePoster = m.top.findNode("step3BadgePoster")
   m.step3Badge = m.top.findNode("step3Badge")
   m.step3Text = m.top.findNode("step3Text")
   m.qrCodeBackground = m.top.findNode("qrCodeBackground")
@@ -51,19 +55,26 @@ sub init()
 
   m.loginMethodTitle.width = scaleValue(900, m.scaleInfo)
   m.loginMethodTitle.height = scaleValue(55, m.scaleInfo)
-  m.loginMethodSwitch.width = scaleValue(500, m.scaleInfo)
-  m.loginMethodSwitch.height = scaleValue(72, m.scaleInfo)
-  m.loginMethodSwitchSelected.width = scaleValue(250, m.scaleInfo)
-  m.loginMethodSwitchSelected.height = scaleValue(60, m.scaleInfo)
-  m.loginMethodSwitchSelected.translation = scaleSize([6, 6], m.scaleInfo)
-  m.loginMethodPhone.width = scaleValue(250, m.scaleInfo)
-  m.loginMethodPhone.height = scaleValue(72, m.scaleInfo)
-  m.loginMethodPhone.translation = [0, 0]
-  m.loginMethodKeyboard.width = scaleValue(250, m.scaleInfo)
-  m.loginMethodKeyboard.height = scaleValue(72, m.scaleInfo)
-  m.loginMethodKeyboard.translation = scaleSize([250, 0], m.scaleInfo)
-  ' Centra horizontalmente el switch respecto al ancho del formulario principal
-  m.loginMethodSwitch.translation = [int((scaleValue(910, m.scaleInfo) - m.loginMethodSwitch.width) / 2), 0]
+  m.loginMethodSwitchLayout.translation = [150, 0] ' Agregado: posiciona el layout group centrado en el formulario
+  m.loginMethodSwitch.width = scaleValue(359, m.scaleInfo)
+  m.loginMethodSwitch.height = scaleValue(45, m.scaleInfo)
+  m.loginMethodSwitch.translation = [260, 0] 
+  m.loginMethodSwitchSelected.width = scaleValue(180, m.scaleInfo)
+  m.loginMethodSwitchSelected.height = scaleValue(35, m.scaleInfo)
+  m.loginMethodSwitchSelected.translation = scaleSize([0, 0], m.scaleInfo) ' Agregado: selección activa posicionada dentro del layout group
+  m.loginMethodPhone.width = scaleValue(180, m.scaleInfo)
+  m.loginMethodPhone.height = scaleValue(45, m.scaleInfo)
+  m.loginMethodPhone.translation = [0, 4] ' Agregado: label de teléfono alineado en la mitad izquierda del switch
+  m.loginMethodKeyboard.width = scaleValue(180, m.scaleInfo)
+  m.loginMethodKeyboard.height = scaleValue(45, m.scaleInfo)
+  m.loginMethodKeyboard.translation = scaleSize([180, 4], m.scaleInfo) ' Agregado: label de teclado alineado en la mitad derecha del switch
+  m.loginSwitchSelectedLeftX = scaleValue(6, m.scaleInfo) ' Agregado: posición X del selector cuando Teléfono está activo
+  m.loginSwitchSelectedRightX = scaleValue(180, m.scaleInfo) ' Agregado: posición X del selector cuando Teclado está activo
+  m.loginSwitchSelectedY = scaleValue(6, m.scaleInfo) ' Agregado: posición Y fija del selector activo
+  m.loginMethodSwitchHasInitialized = false ' Agregado: controla animación inicial del selector para evitar transición al cargar
+  m.lastLoginMethodFocus = "phone" ' Agregado: recuerda el último foco entre Phone/Keyboard para retorno desde Validate
+  m.loginSwitchSelectedActiveUri = "pkg:/images/client/login-select.png" ' Agregado: uri del estado seleccionado del switch
+  m.loginSwitchSelectedUnselectUri = "pkg:/images/shared/login-unselect.png" ' Agregado: uri del estado no seleccionado cuando Validate tiene foco
 
   m.mainContainer.translation = scaleSize([180, 70], m.scaleInfo)
   m.email.width = scaleValue(300, m.scaleInfo)
@@ -77,47 +88,57 @@ sub init()
   m.prevButton.size = scaleSize([150, 40], m.scaleInfo)
   m.nextButton.size = scaleSize([150, 40], m.scaleInfo)
 
-  m.qrContainer.width = scaleValue(1600, m.scaleInfo)
-  m.qrContainer.height = scaleValue(760, m.scaleInfo)
   m.phoneInstructionsTitle.width = scaleValue(1120, m.scaleInfo)
   m.phoneInstructionsTitle.translation = scaleSize([0, 0], m.scaleInfo)
 
-  m.step1Badge.width = scaleValue(56, m.scaleInfo)
-  m.step1Badge.height = scaleValue(56, m.scaleInfo)
-  m.step1Badge.translation = scaleSize([0, 50], m.scaleInfo)
+  stepWidth = 40
+  stepHeight = 40
+  stepX = 60
+  stepY = 60
+
+  m.step1BadgePoster.width = scaleValue(stepWidth, m.scaleInfo)
+  m.step1BadgePoster.height = scaleValue(stepHeight, m.scaleInfo)
+  m.step1BadgePoster.translation = scaleSize([0, stepY], m.scaleInfo)
+  m.step1Badge.width = scaleValue(stepWidth, m.scaleInfo)
+  m.step1Badge.height = scaleValue(stepHeight, m.scaleInfo)
+  m.step1Badge.translation = scaleSize([0, stepY], m.scaleInfo)
   m.step1Text.width = scaleValue(980, m.scaleInfo)
-  m.step1Text.translation = scaleSize([78, 50], m.scaleInfo)
+  m.step1Text.translation = scaleSize([stepX, stepY - 5], m.scaleInfo)
   m.qrShortUrlLabel.width = scaleValue(980, m.scaleInfo)
-  m.qrShortUrlLabel.translation = scaleSize([78, 176], m.scaleInfo)
+  m.qrShortUrlLabel.translation = scaleSize([stepX, stepY + 25], m.scaleInfo)
 
-  m.step2Badge.width = scaleValue(56, m.scaleInfo)
-  m.step2Badge.height = scaleValue(56, m.scaleInfo)
-  m.step2Badge.translation = scaleSize([0, 120], m.scaleInfo)
+  m.step2BadgePoster.width = scaleValue(stepWidth, m.scaleInfo)
+  m.step2BadgePoster.height = scaleValue(stepHeight, m.scaleInfo)
+  m.step2BadgePoster.translation = scaleSize([0, stepY + 80], m.scaleInfo)
+  m.step2Badge.width = scaleValue(stepWidth, m.scaleInfo)
+  m.step2Badge.height = scaleValue(40, m.scaleInfo)
+  m.step2Badge.translation = scaleSize([0, stepY + 80], m.scaleInfo)
   m.step2Text.width = scaleValue(980, m.scaleInfo)
-  m.step2Text.translation = scaleSize([78, 120], m.scaleInfo)
+  m.step2Text.translation = scaleSize([stepX, stepY + 75], m.scaleInfo)
   m.activationCodeLabel.width = scaleValue(980, m.scaleInfo)
-  m.activationCodeLabel.translation = scaleSize([78, 150], m.scaleInfo)
+  m.activationCodeLabel.translation = scaleSize([stepX, stepY + 110], m.scaleInfo)
 
-  m.step3Badge.width = scaleValue(56, m.scaleInfo)
-  m.step3Badge.height = scaleValue(56, m.scaleInfo)
-  m.step3Badge.translation = scaleSize([0, 190], m.scaleInfo)
+  m.step3BadgePoster.width = scaleValue(stepWidth, m.scaleInfo)
+  m.step3BadgePoster.height = scaleValue(stepHeight, m.scaleInfo)
+  m.step3BadgePoster.translation = scaleSize([0, stepY + 160], m.scaleInfo)
+  m.step3Badge.width = scaleValue(stepWidth, m.scaleInfo)
+  m.step3Badge.height = scaleValue(40, m.scaleInfo)
+  m.step3Badge.translation = scaleSize([0, stepY + 160], m.scaleInfo)
   m.step3Text.width = scaleValue(980, m.scaleInfo)
-  m.step3Text.translation = scaleSize([78, 190], m.scaleInfo)
+  m.step3Text.translation = scaleSize([stepX, stepY + 160], m.scaleInfo)
 
-  m.qrCodeBackground.width = scaleValue(250, m.scaleInfo)
-  m.qrCodeBackground.height = scaleValue(250, m.scaleInfo)
-  m.qrCodeBackground.translation = scaleSize([850, 40], m.scaleInfo)
-  m.qrCodePoster.width = scaleValue(250, m.scaleInfo)
-  m.qrCodePoster.height = scaleValue(250, m.scaleInfo)
-  m.qrCodePoster.translation = scaleSize([25, 25], m.scaleInfo)
+  m.qrCodeBackground.width = scaleValue(300, m.scaleInfo)
+  m.qrCodeBackground.height = scaleValue(300, m.scaleInfo)
+  m.qrCodeBackground.translation = scaleSize([750, 0], m.scaleInfo)
+  m.qrCodePoster.width = scaleValue(260, m.scaleInfo)
+  m.qrCodePoster.height = scaleValue(260, m.scaleInfo)
+  m.qrCodePoster.translation = scaleSize([20, 20], m.scaleInfo)
 
-  m.validatePhoneButton.size = scaleSize([220, 62], m.scaleInfo)
-  m.validatePhoneButton.translation = scaleSize([400, 350], m.scaleInfo)
+  m.validatePhoneButton.size = scaleSize([150, 40], m.scaleInfo)
+  m.validatePhoneButton.translation = scaleSize([450, 350], m.scaleInfo)
 
   ' Escucha cambios de foco del método Teléfono para alternar visibilidad del formulario
   if m.loginMethodPhone <> invalid then m.loginMethodPhone.observeField("hasFocus", "onLoginMethodFocusChanged")
-  ' Escucha cambios de foco del método Teclado para restaurar visibilidad del formulario
-  if m.loginMethodKeyboard <> invalid then m.loginMethodKeyboard.observeField("hasFocus", "onLoginMethodFocusChanged")
 
   if m.global <> invalid then
     m.global.observeField("activeApiUrl", "onActiveApiUrlChanged")
@@ -130,10 +151,25 @@ sub onLoginMethodFocusChanged()
 
   ' Determina si la opción Teléfono es la que actualmente tiene foco
   isPhoneFocused = m.loginMethodPhone <> invalid and m.loginMethodPhone.isInFocusChain()
-  ' Oculta credenciales cuando Teléfono está enfocado y las muestra en cualquier otro caso
-  m.credentialsContainer.visible = not isPhoneFocused
-  ' Dibuja el bloque visual de pasos/QR únicamente cuando Teléfono está enfocado y hay datos válidos
-  m.qrContainer.visible = true ' = (isPhoneFocused and m.isPhoneQrEnabled)
+  m.lastLoginMethodFocus = "keyboard" ' Agregado: guarda foco actual para retorno desde Validate
+  if isPhoneFocused then m.lastLoginMethodFocus = "phone" ' Agregado: marca Phone como último foco cuando corresponde
+  m.loginMethodSwitchSelected.uri = m.loginSwitchSelectedActiveUri ' Agregado: asegura uri seleccionada cuando foco está en Phone/Keyboard
+  __animateLoginMethodSwitchSelected(isPhoneFocused, m.loginMethodSwitchHasInitialized) ' Agregado: anima selector en cambios de foco izquierda/derecha
+  m.loginMethodSwitchHasInitialized = true ' Agregado: habilita animaciones luego de la primera sincronización
+  ' Muestra credenciales únicamente cuando el foco está en la opción Teclado
+  m.credentialsContainer.visible = not isPhoneFocused ' Agregado: credenciales visibles con foco en Keyboard
+  ' Muestra QR únicamente cuando el foco está en la opción Teléfono
+  m.qrContainer.visible = isPhoneFocused ' Agregado: qrContainer visible con foco en Phone, sin animación
+end sub
+
+' Actualiza la imagen del selector según si el foco está en Validate o en el switch de método
+sub onValidatePhoneButtonFocusChanged()
+  if m.loginMethodSwitchSelected = invalid then return
+  if m.validatePhoneButton <> invalid and m.validatePhoneButton.isInFocusChain() then
+    m.loginMethodSwitchSelected.uri = m.loginSwitchSelectedActiveUri ' Agregado: restaurar estado seleccionado al salir de Validate
+  else
+    m.loginMethodSwitchSelected.uri = m.loginSwitchSelectedUnselectUri ' Agregado: mostrar estado unselect cuando Validate tiene foco 
+  end if
 end sub
 
 ' Funcion que interpreta los eventos de teclado y retorna true si fue porcesada por este componente. Sino es porcesado por el
@@ -145,34 +181,65 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
 
   handled = false
 
-  if m.keyboard.isInFocusChain() and key = KeyButtons().UP then
-    if not press then 
+  if not press then 
+    if m.keyboard.isInFocusChain() and key = KeyButtons().UP then
       m.nextButton.setFocus(true)
-    end if
-    handled = true
-  else if m.prevButton.isInFocusChain() and key = KeyButtons().RIGHT then
-    if not press then 
+      handled = true
+    else if m.prevButton.isInFocusChain() and key = KeyButtons().RIGHT then
       m.nextButton.setFocus(true)
-    end if
-    handled = true
-  else if m.prevButton.isInFocusChain() and key = KeyButtons().DOWN then
-    if not press then 
+      handled = true
+    else if m.prevButton.isInFocusChain() and key = KeyButtons().DOWN then
       __focusKeyboard()
-    end if 
-    handled = true
-  else if m.prevButton.isInFocusChain() and key = KeyButtons().OK then
-    if not press then __prevButtonPressed()
-    handled = true
-  else if m.nextButton.isInFocusChain() and key = KeyButtons().LEFT then
-    if not press and m.inputFocus = "password" then  
-      m.prevButton.setFocus(true)
+      handled = true
+    else if m.prevButton.isInFocusChain() and key = KeyButtons().UP then
+      __focusLoginMethod()
+      handled = true
+    else if m.prevButton.isInFocusChain() and key = KeyButtons().OK then
+      __prevButtonPressed()
+      handled = true
+    else if m.nextButton.isInFocusChain() and key = KeyButtons().LEFT then
+      if m.inputFocus = "password" then  
+        m.prevButton.setFocus(true)
+      end if
+      handled = true
+    else if m.nextButton.isInFocusChain() and key = KeyButtons().DOWN then
+      __focusKeyboard()
+      handled = true
+    else if m.nextButton.isInFocusChain() and key = KeyButtons().UP then
+      __focusLoginMethod()
+      handled = true
+    else if m.nextButton.isInFocusChain() and key = KeyButtons().OK then
+      __nextButtonPressed()
+      handled = true
+    else if m.loginMethodPhone <> invalid and m.loginMethodPhone.isInFocusChain() and key = KeyButtons().RIGHT then
+      m.loginMethodKeyboard.setFocus(true) ' Agregado: mueve foco a la opción Teclado con botón derecha
+      __animateLoginMethodSwitchSelected(false, true) ' Agregado: fuerza animación hacia la derecha al enfocar Teclado
+      onLoginMethodFocusChanged()
+      handled = true
+    else if m.loginMethodKeyboard <> invalid and m.loginMethodKeyboard.isInFocusChain() and key = KeyButtons().LEFT then
+      m.loginMethodPhone.setFocus(true) ' Agregado: retorna foco a Teléfono con botón izquierda
+      __animateLoginMethodSwitchSelected(true, true) ' Agregado: fuerza animación hacia la izquierda al volver a Teléfono
+      onLoginMethodFocusChanged()
+      handled = true
+    else if m.loginMethodPhone <> invalid and m.loginMethodPhone.isInFocusChain() and key = KeyButtons().DOWN then
+      m.lastLoginMethodFocus = "phone" ' Agregado: registra Phone como último foco antes de bajar a Validate
+      if m.loginMethodPhone.isInFocusChain() then
+        m.validatePhoneButton.setFocus(true) ' Agregado: mueve foco al botón Validate con tecla abajo
+      else
+        __focusKeyboard()
+      end if
+      handled = true
+    else if m.loginMethodKeyboard <> invalid and m.loginMethodKeyboard.isInFocusChain() and key = KeyButtons().DOWN then
+      m.lastLoginMethodFocus = "keyboard" ' Agregado: registra Keyboard como último foco antes de bajar a Validate
+      if m.loginMethodPhone.isInFocusChain() then
+        m.validatePhoneButton.setFocus(true) ' Agregado: mueve foco al botón Validate con tecla abajo
+      else
+        __focusKeyboard()
+      end if
+      handled = true
+    else if m.validatePhoneButton <> invalid and m.validatePhoneButton.isInFocusChain() and key = KeyButtons().UP then
+      __focusLoginMethod()
     end if
-    handled = true
-  else if m.nextButton.isInFocusChain() and key = KeyButtons().DOWN then
-    __focusKeyboard()
-    handled = true
-  else if m.nextButton.isInFocusChain() and key = KeyButtons().OK then
-    if not press then __nextButtonPressed()
     handled = true
   end if
 
@@ -191,17 +258,18 @@ sub initFocus()
 
     width = m.scaleInfo.width
 
-    m.buttonContainer.translation = [((width - scaleValue(380, m.scaleInfo)) / 2), 0]
+    m.buttonContainer.translation = [((width - scaleValue(380, m.scaleInfo)) / 2), 400]
     m.logo.translation = [(width - scaleValue(280, m.scaleInfo)), scaleValue(30, m.scaleInfo)]
 
     ' Sincroniza las variables remotas para mostrar/ocultar el bloque QR
     __loadQrLoginConfig()
     ' Ubica el módulo de pasos/QR debajo del switch para el flujo por teléfono
-    m.qrContainer.translation = [scaleValue(110, m.scaleInfo), scaleValue(250, m.scaleInfo)]
+    m.qrContainer.translation = [scaleValue(110, m.scaleInfo), scaleValue(220, m.scaleInfo)]
     
     m.keyboard.ObserveField("textEditBox", "onTextBoxManagment")
     ' Al iniciar, el foco debe quedar en la opción de login por teléfono
     m.loginMethodPhone.setFocus(true)
+    __animateLoginMethodSwitchSelected(true, false) ' Agregado: posiciona el selector en Teléfono sin animación al entrar
     ' Aplica de inmediato la visibilidad del formulario según el foco inicial
     onLoginMethodFocusChanged()
     
@@ -341,6 +409,36 @@ sub __applyTranslations()
     m.validatePhoneButton.text = i18n_t(m.global.i18n, "button.validateRegisterCode") 
 end sub
 
+' Anima (o posiciona) el selector visual del switch de login según la opción activa
+sub __animateLoginMethodSwitchSelected(isPhoneSelected as Boolean, withAnimation as Boolean)
+  if m.loginMethodSwitchSelected = invalid then return
+
+  targetX = m.loginSwitchSelectedRightX
+  if isPhoneSelected then targetX = m.loginSwitchSelectedLeftX
+
+  targetPosition = [targetX, m.loginSwitchSelectedY]
+
+  if not withAnimation then
+    m.loginMethodSwitchSelected.translation = targetPosition ' Agregado: posiciona selector sin animación
+    return
+  end if
+
+  if m.loginMethodSwitchAnimation = invalid then
+    m.loginMethodSwitchAnimation = CreateObject("roSGNode", "Animation") ' Agregado: animación reutilizable para mover el selector
+    m.loginMethodSwitchAnimation.duration = 0.18 ' Agregado: duración corta para feedback fluido
+    m.loginMethodSwitchAnimation.repeat = false ' Agregado: solo una transición por interacción
+    m.loginMethodSwitchInterpolator = CreateObject("roSGNode", "Vector2DFieldInterpolator") ' Agregado: interpolador para translation
+    m.loginMethodSwitchInterpolator.key = [0.0, 1.0] ' Agregado: claves de inicio y fin de la animación
+    m.loginMethodSwitchInterpolator.fieldToInterp = "loginMethodSwitchSelected.translation" ' Agregado: campo objetivo del interpolador
+    m.loginMethodSwitchAnimation.appendChild(m.loginMethodSwitchInterpolator) ' Agregado: conecta interpolador a la animación
+    m.top.appendChild(m.loginMethodSwitchAnimation) ' Agregado: adjunta la animación al árbol SG
+  end if
+
+  currentPosition = m.loginMethodSwitchSelected.translation
+  m.loginMethodSwitchInterpolator.keyValue = [currentPosition, targetPosition] ' Agregado: define origen y destino del desplazamiento
+  m.loginMethodSwitchAnimation.control = "stop" ' Agregado: reinicia animación previa antes de arrancar la nueva
+  m.loginMethodSwitchAnimation.control = "start" ' Agregado: ejecuta el desplazamiento animado
+end sub
 
 ' Valdia y realiza las acciones pertinentes al precionar el boton Previus de la pantalla 
 sub __prevButtonPressed()
@@ -450,6 +548,16 @@ sub __focusKeyboard()
   m.keyboard.setFocus(true)
 end sub
 
+sub __focusLoginMethod()
+  if m.lastLoginMethodFocus = "keyboard" then ' Agregado: retorna al último foco en Keyboard cuando aplica
+    m.loginMethodKeyboard.setFocus(true)
+    __animateLoginMethodSwitchSelected(false, true) ' Agregado: sincroniza selector al volver a Keyboard
+  else
+    m.loginMethodPhone.setFocus(true) ' Agregado: retorna por defecto a Phone
+    __animateLoginMethodSwitchSelected(true, true) ' Agregado: sincroniza selector al volver a Phone
+  end if
+end sub
+
 ' Guardar el log cuandos se cambia una opción del menú 
 sub __saveActionLog(actionLog as object)
 
@@ -550,20 +658,23 @@ sub __loadQrLoginConfig()
   m.isPhoneQrEnabled = (isEnabled and hasQrUrl)
 
   if m.isPhoneQrEnabled then
-    ' Asigna la URL remota del código QR al poster
-    m.qrCodePoster.uri = loginByCodeUrlQr
+    ' Asigna un QR dinámico con el texto solicitado para validación visual
+    m.qrCodePoster.uri = "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=test" ' Agregado: QR con contenido "test"
 
     if loginByCodeUrlShort <> invalid and loginByCodeUrlShort <> "" then
       ' Muestra la URL corta en la línea destacada del paso 1
       m.qrShortUrlLabel.text = loginByCodeUrlShort
     else
-      m.qrShortUrlLabel.text = ""
+      m.qrShortUrlLabel.text = "test" ' Agregado: fallback visible coherente con el QR de prueba
     end if
   else
-    ' Limpia la URL para evitar mostrar contenido obsoleto
-    m.qrCodePoster.uri = ""
-    m.qrShortUrlLabel.text = ""
+    ' Fuerza carga de QR de prueba aunque la configuración remota no esté disponible
+    m.isPhoneQrEnabled = true ' Agregado: habilita QR para mostrar el código de prueba
+    m.qrCodePoster.uri = "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=test" ' Agregado: QR con contenido "test"
+    m.qrShortUrlLabel.text = "test" ' Agregado: texto auxiliar del QR de prueba
   end if
+
+  m.qrShortUrlLabel.text = "https://nebuladev.qvixsolutions.com/activate"
 
   onLoginMethodFocusChanged()
 end sub

@@ -40,38 +40,42 @@
       vertAlignment="top">
 
       <!-- Título principal para elegir el método de inicio de sesión -->
-      <Label
+      <ShadowLabel
         id="loginMethodTitle"
         font="font:LargeBoldSystemFont"
-        horizAlign="center" />
+        horizAlign="center" 
+        vertAlign="top"/>
 
-      <!-- Contenedor visual del switch de método de login -->
-      <Rectangle
-        id="loginMethodSwitch"
-        color="#233A6AFF"
-        blendColor="#233A6AFF">
-        <!-- Segmento resaltado para la opción activa (izquierda) -->
-        <Rectangle
-          id="loginMethodSwitchSelected"
-          color="#2FA5E3FF"
-          blendColor="#2FA5E3FF" />
-        <!-- Texto de la opción de acceso con teléfono -->
-        <Label
-          id="loginMethodPhone"
-          focusable="true"
-          font="font:MediumBoldSystemFont"
-          horizAlign="center"
-          vertAlign="center" />
-        <!-- Texto de la opción de acceso con teclado -->
-        <Label
-          id="loginMethodKeyboard"
-          focusable="true"
-          font="font:MediumBoldSystemFont"
-          horizAlign="center"
-          vertAlign="center" />
-      </Rectangle>
+      <LayoutGroup id="loginMethodSwitchLayout" layoutDirection="vert" horizAlignment="custom" vertAlignment="top">
 
-      <Group id="credentialsContainer">
+        <!-- Contenedor visual del switch de método de login -->
+        <Poster
+          id="loginMethodSwitch"
+          loadDisplayMode="stretch"
+          loadDisplayMode="scaleToFill"
+          uri="pkg:/images/client/login-select-background.png" > 
+          <Poster
+            id="loginMethodSwitchSelected"
+            loadDisplayMode="stretch"
+            loadDisplayMode="scaleToFill"
+            uri="pkg:/images/client/login-select.png" />
+
+          <ShadowLabel
+            id="loginMethodPhone"
+            focusable="true"
+            font="font:SmallestBoldSystemFont"
+            horizAlign="center"
+            vertAlign="center" />
+          <ShadowLabel
+            id="loginMethodKeyboard"
+            focusable="true"
+            font="font:SmallestBoldSystemFont"
+            horizAlign="center"
+            vertAlign="center" />
+         </Poster>
+      </LayoutGroup>
+
+      <LayoutGroup id="credentialsContainer" layoutDirection="vert" horizAlignment="custom" vertAlignment="top">
         <!-- Label de Usuario -->
         <Label
           id="email"
@@ -93,6 +97,8 @@
           id="passwordField"
           secureMode="true"/>
 
+        
+
         <Group id="buttonContainer">
           <LayoutGroup
             layoutDirection="horiz"
@@ -112,7 +118,7 @@
         </Group>
 
         <Keyboard id="keyboard" />
-      </Group>
+      </LayoutGroup>
     </LayoutGroup>
 
     <!-- Logo -->
@@ -125,21 +131,24 @@
       <!-- Título de pasos para completar el login desde otro dispositivo -->
       <Label
         id="phoneInstructionsTitle"
-        font="font:LargeBoldSystemFont" />
+        font="font:MediumBoldSystemFont" />
 
       <!-- Paso 1 -->
-      <Label id="step1Badge" font="font:MediumBoldSystemFont" horizAlign="center" />
-      <Label id="step1Text" font="font:MediumSystemFont" />
-      <Label id="qrShortUrlLabel" font="font:MediumBoldSystemFont" />
+      <Poster id="step1BadgePoster" loadDisplayMode="scaleToFit" uri="pkg:/images/shared/ball_gray.png" />
+      <ShadowLabel id="step1Badge" font="font:SmallestBoldSystemFont" horizAlign="center" vertAlign="center"/>
+      <ShadowLabel id="step1Text" font="font:SmallSystemFont"  />
+      <ShadowLabel id="qrShortUrlLabel" font="font:SmallBoldSystemFont" />
 
       <!-- Paso 2 -->
-      <Label id="step2Badge" font="font:MediumBoldSystemFont" horizAlign="center" />
-      <Label id="step2Text" font="font:MediumSystemFont" />
-      <Label id="activationCodeLabel" font="font:LargeBoldSystemFont" />
+      <Poster id="step2BadgePoster" loadDisplayMode="scaleToFit" uri="pkg:/images/shared/ball_gray.png" />
+      <ShadowLabel id="step2Badge" font="font:SmallestBoldSystemFont" horizAlign="center" vertAlign="center" />
+      <ShadowLabel id="step2Text" font="font:SmallSystemFont" />
+      <ShadowLabel id="activationCodeLabel" font="font:LargeBoldSystemFont" />
 
       <!-- Paso 3 -->
-      <Label id="step3Badge" font="font:MediumBoldSystemFont" horizAlign="center" />
-      <Label id="step3Text" font="font:MediumSystemFont" />
+      <Poster id="step3BadgePoster" loadDisplayMode="scaleToFit" uri="pkg:/images/shared/ball_gray.png" />
+      <ShadowLabel id="step3Badge" font="font:SmallestBoldSystemFont" horizAlign="center" vertAlign="center" />
+      <ShadowLabel id="step3Text" font="font:SmallSystemFont" />
 
       <!-- Fondo para el QR y su imagen remota -->
       <Rectangle id="qrCodeBackground" color="#F2F2F2FF">
