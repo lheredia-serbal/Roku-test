@@ -394,17 +394,9 @@ sub __applyTranslations()
     m.nextButton.text = i18n_t(m.global.i18n, "button.next")
     m.userField.hintText = i18n_t(m.global.i18n, "loginPage.enterYourUser")
     m.passwordField.hintText = i18n_t(m.global.i18n, "loginPage.enterYourPassword")
-
     m.phoneInstructionsTitle.text = i18n_t(m.global.i18n, "loginPage.qrStepsTitle")
-    m.step1Badge.text = "1"
-    m.step1Badge.color = "#FFFFFFFF"
     m.step1Text.text = i18n_t(m.global.i18n, "loginPage.qrStep1Description")
-    m.step2Badge.text = "2"
-    m.step2Badge.color = "#FFFFFFFF"
     m.step2Text.text = i18n_t(m.global.i18n, "loginPage.qrStep2Description") 
-    m.activationCodeLabel.text = "TMRALL"
-    m.step3Badge.text = "3"
-    m.step3Badge.color = "#FFFFFFFF"
     m.step3Text.text = i18n_t(m.global.i18n, "loginPage.qrStep3Description") 
     m.validatePhoneButton.text = i18n_t(m.global.i18n, "button.validateRegisterCode") 
 end sub
@@ -651,30 +643,10 @@ sub __loadQrLoginConfig()
 
   ' Normaliza el flag remoto para soportar distintos formatos (true/"true"/1)
   isEnabled = (enableLoginByCode = 1)
-  ' Valida que exista una URL QR utilizable
-  hasQrUrl = (loginByCodeUrlQr <> invalid and loginByCodeUrlQr <> "")
 
-    ' Conserva el estado para que la visibilidad final dependa también del foco del selector
-  m.isPhoneQrEnabled = (isEnabled and hasQrUrl)
+  if isEnabled then __loadInstallationByDevice() ' Agregado: consulta Installations cuando el login por código está habilitado
 
-  if m.isPhoneQrEnabled then
-    ' Asigna un QR dinámico con el texto solicitado para validación visual
-    m.qrCodePoster.uri = "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=test" ' Agregado: QR con contenido "test"
-
-    if loginByCodeUrlShort <> invalid and loginByCodeUrlShort <> "" then
-      ' Muestra la URL corta en la línea destacada del paso 1
-      m.qrShortUrlLabel.text = loginByCodeUrlShort
-    else
-      m.qrShortUrlLabel.text = "test" ' Agregado: fallback visible coherente con el QR de prueba
-    end if
-  else
-    ' Fuerza carga de QR de prueba aunque la configuración remota no esté disponible
-    m.isPhoneQrEnabled = true ' Agregado: habilita QR para mostrar el código de prueba
-    m.qrCodePoster.uri = "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=test" ' Agregado: QR con contenido "test"
-    m.qrShortUrlLabel.text = "test" ' Agregado: texto auxiliar del QR de prueba
-  end if
-
-  m.qrShortUrlLabel.text = "https://nebuladev.qvixsolutions.com/activate"
+  m.qrShortUrlLabel.text = loginByCodeUrlQr
 
   onLoginMethodFocusChanged()
 end sub
@@ -682,5 +654,89 @@ end sub
 sub __syncApiUrlFromGlobal()
   if m.global.activeApiUrl <> invalid and m.global.activeApiUrl <> "" then
     m.apiUrl = m.global.activeApiUrl
+  end if
+end sub
+
+sub __loadInstallationByDevice()
+  if m.apiUrl = invalid then m.apiUrl = getConfigVariable(m.global.configVariablesKeys.API_URL) 
+  if m.apiUrl = invalid or m.apiUrl = "" then return ' Agregado: evita la llamada si todavía no existe apiUrl activa
+  if m.global = invalid or m.global.device = invalid then return ' Agregado: evita la llamada si todavía no existe información del dispositivo
+
+  requestId = createRequestId() ' Agregado: genera un identificador para reutilizar la lógica estándar de requests del componente
+
+  action = { ' Agregado: encapsula la llamada usando el mismo patrón de acciones del LoginComponent
+    apiRequestManager: m.apiInstallationRequestManager ' Agregado: usa un request manager dedicado para no interferir con otros servicios del login
+    url: urlInstallation(m.apiUrl) ' Agregado: arma la URL del servicio Installation con la apiUrl activa
+    method: "POST" ' Agregado: envía la información del dispositivo al endpoint de instalaciones
+    responseMethod: "onLoadInstallationByDeviceResponse" ' Agregado: define el callback que imprimirá la respuesta del servicio
+    body: FormatJson(m.global.device) ' Agregado: envía m.global.device como payload del servicio solicitado
+    token: invalid ' Agregado: no fuerza un token manual para esta llamada
+    publicApi: true ' Agregado: ejecuta la llamada como pública desde el flujo de login
+    requestId: requestId ' Agregado: conserva el requestId dentro de la acción para reintentos
+    dataAux: invalid ' Agregado: no requiere datos auxiliares para procesar la respuesta
+    run: function() as Object ' Agregado: reutiliza sendApiRequest igual que el resto del componente
+      m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux) ' Agregado: dispara la petición HTTP del servicio Installation
+      return { success: true, error: invalid } ' Agregado: devuelve el resultado esperado por runAction
+    end function ' Agregado: cierra el bloque ejecutor de la acción
+  } ' Agregado: cierra la definición de la acción para Installations
+
+  runAction(requestId, action, ApiType().CLIENTS_API_URL) ' Agregado: reutiliza la lógica de ejecución y reintento estándar del componente
+  m.apiInstallationRequestManager = action.apiRequestManager ' Agregado: sincroniza el manager local luego de lanzar la acción
+end sub
+
+sub onLoadInstallationByDeviceResponse()
+
+  if m.apiInstallationRequestManager = invalid then
+    __loadInstallationByDevice()
+    return
+  else 
+    if validateStatusCode(m.apiInstallationRequestManager.statusCode) then
+
+      removePendingAction(m.apiInstallationRequestManager.requestId)
+
+      data = ParseJson(m.apiInstallationRequestManager.response)
+
+      registerCode = data.data.formattedRegisterCode
+      m.activationCodeLabel.text = registerCode
+
+      ' Lee la URL remota de la imagen QR
+      loginByCodeUrlQr = getConfigVariable(m.global.configVariablesKeys.LOGIN_BY_CODE_URL_QR)
+
+      activationCode = loginByCodeUrlQr.replace("[RegistrationCode]", registerCode)
+      m.qrCodePoster.uri = "https://api.qrserver.com/v1/create-qr-code/?size=256x260&data=" + activationCode 
+      m.qrShortUrlLabel.text = activationCode
+
+    else 
+      if m.apiInstallationRequestManager.serverError then
+        statusCode = m.apiInstallationRequestManager.statusCode
+        setCdnErrorCodeFromStatus(statusCode, ApiType().CLIENTS_API_URL)
+        changeStatusAction(m.apiInstallationRequestManager.requestId, "error")
+        retryAll()
+      else
+        removePendingAction(m.apiInstallationRequestManager.requestId)
+        if m.resultCodes = invalid then m.resultCodes = getResultCodes()
+        m.top.loading.visible = false
+
+        error = ParseJson(m.apiInstallationRequestManager.errorResponse)
+
+        errorAPI = ""
+
+        if error.code = m.resultCodes.UNAUTHORIZED then
+          errorAPI = i18n_t(m.global.i18n, "loginPage.errorForm.unAuthorized")
+        else if error.code = m.resultCodes.NOT_CONFIRMED then
+          errorAPI = i18n_t(m.global.i18n, "loginPage.errorForm.notConfirmed")
+        else if error.code = m.resultCodes.NOT_ACTIVATED then
+          errorAPI = i18n_t(m.global.i18n, "loginPage.errorForm.notActivated")
+        else if error.code = m.resultCodes.REQUESTTIMEOUT then
+          errorAPI = i18n_t(m.global.i18n, "shared.errorComponent.connection")
+        else 
+          errorAPI = i18n_t(m.global.i18n, "loginPage.errorForm.unhandled")
+        end if
+          
+        m.apiInstallationRequestManager = clearApiRequest(m.apiInstallationRequestManager)
+        __showDialog(errorAPI)
+      end if
+    end if 
+    m.apiInstallationRequestManager = clearApiRequest(m.apiInstallationRequestManager)
   end if
 end sub

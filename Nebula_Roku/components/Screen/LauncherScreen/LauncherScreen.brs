@@ -376,7 +376,7 @@ sub __initHiddenImageValidationPoster()
   m.hiddenImageValidationPoster.height = 1
   m.hiddenImageValidationPoster.translation = [-9999, -9999]
 
-  imageValidationUri = "https://nebuladev.qvixsolutions.com/assets/resources/img/ContentNews/44_f00ed63a618d4f528bc32edda87b6461.jpg"
+  imageValidationUri =  "https://nebuladev.qvixsolutions.com/assets/resources/img/ContentNews/44_f00ed63a618d4f528bc32edda87b6461.jpg"
   if domainManagerState <> invalid and domainManagerState._currentConfig = "Secondary" then
     imageValidationUri = "https://nebuladev.qvixsolutions.com/assets/resources/img/ContentNews/44_f00ed63a618d4f528bc32edda87b6461.jpg"
   end if
