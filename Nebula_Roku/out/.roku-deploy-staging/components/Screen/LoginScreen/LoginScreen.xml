@@ -21,6 +21,7 @@
   <script type="text/brightscript" uri="pkg:/source/Services/Auth.brs" />
   <script type="text/brightscript" uri="pkg:/source/Services/ActionLogs.brs" />
   <script type="text/brightscript" uri="pkg:/source/Services/Health.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Services/Installation.brs" />
 
   <interface>
     <!-- Paramentros de Entrada -->
@@ -135,19 +136,19 @@
 
       <!-- Paso 1 -->
       <Poster id="step1BadgePoster" loadDisplayMode="scaleToFit" uri="pkg:/images/shared/ball_gray.png" />
-      <ShadowLabel id="step1Badge" font="font:SmallestBoldSystemFont" horizAlign="center" vertAlign="center"/>
+      <ShadowLabel id="step1Badge" font="font:SmallestBoldSystemFont" horizAlign="center" vertAlign="center" text="1"/>
       <ShadowLabel id="step1Text" font="font:SmallSystemFont"  />
       <ShadowLabel id="qrShortUrlLabel" font="font:SmallBoldSystemFont" />
 
       <!-- Paso 2 -->
       <Poster id="step2BadgePoster" loadDisplayMode="scaleToFit" uri="pkg:/images/shared/ball_gray.png" />
-      <ShadowLabel id="step2Badge" font="font:SmallestBoldSystemFont" horizAlign="center" vertAlign="center" />
+      <ShadowLabel id="step2Badge" font="font:SmallestBoldSystemFont" horizAlign="center" vertAlign="center" text="2" />
       <ShadowLabel id="step2Text" font="font:SmallSystemFont" />
       <ShadowLabel id="activationCodeLabel" font="font:LargeBoldSystemFont" />
 
       <!-- Paso 3 -->
       <Poster id="step3BadgePoster" loadDisplayMode="scaleToFit" uri="pkg:/images/shared/ball_gray.png" />
-      <ShadowLabel id="step3Badge" font="font:SmallestBoldSystemFont" horizAlign="center" vertAlign="center" />
+      <ShadowLabel id="step3Badge" font="font:SmallestBoldSystemFont" horizAlign="center" vertAlign="center" text="3" />
       <ShadowLabel id="step3Text" font="font:SmallSystemFont" />
 
       <!-- Fondo para el QR y su imagen remota -->

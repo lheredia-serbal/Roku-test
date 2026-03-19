@@ -4,10 +4,13 @@ function urlAuthRegenerateSession(apiUrl)
 end function
 
 function urlAuthCredentialsLogin(apiUrl)
-    return apiUrl + "/"+ m.global.apiVersions.V2 +"/Auth/CredentialsLogin"
+    return apiUrl + "/"+ m.global.apiVersions.V2 + "/Auth/CredentialsLogin"
 end function
 
 function urlAuthProfile(apiUrl, profileId)
-    return apiUrl + "/"+ m.global.apiVersions.V2 +"/Auth/Profile/" + profileId.ToStr()
+    return apiUrl + "/"+ m.global.apiVersions.V2 + "/Auth/Profile/" + profileId.ToStr()
 end function
 
+function urlRegisterCode(apiUrl)
+    return apiUrl + "/" + m.global.apiVersions.V3 + "/Auth/RegisterCodeLogin"
+end function

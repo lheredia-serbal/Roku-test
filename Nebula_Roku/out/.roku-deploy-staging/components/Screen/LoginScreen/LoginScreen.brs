@@ -35,6 +35,14 @@ sub init()
   m.qrCodeBackground = m.top.findNode("qrCodeBackground")
   m.qrCodePoster = m.top.findNode("qrCodePoster")
   m.validatePhoneButton = m.top.findNode("validatePhoneButton")
+ m.validateRegisterCodeTimer = CreateObject("roSGNode", "Timer") ' Agregado: crea el timer que validará el código de registro periódicamente
+  m.validateRegisterCodeTimer.duration = 10 ' Agregado: configura el intervalo del timer en 10 segundos
+  m.validateRegisterCodeTimer.repeat = true ' Agregado: permite ejecutar la validación de forma recurrente
+  m.validateRegisterCodeTimer.observeField("fire", "onValidateRegisterCodeTimerFire") ' Agregado: enlaza el evento del timer con el callback del componente
+  m.top.appendChild(m.validateRegisterCodeTimer) ' Agregado: agrega el timer al árbol SceneGraph para habilitar su ejecución
+  m.validateRegisterCodeTimerExecutions = 0 ' Agregado: cuenta cuántas ejecuciones reales realizó el timer para cortar el polling al llegar a 10
+  m.validateRegisterCodeTimerMaxExecutions = 10 ' Agregado: define el máximo de ejecuciones permitidas para el timer
+  m.validateRegisterCodeTimerPausedByButton = false ' Agregado: recuerda si el timer fue pausado manualmente desde el botón Validate
 
   m.scaleInfo = m.global.scaleInfo
   m.isPhoneQrEnabled = false
@@ -101,7 +109,7 @@ sub init()
   m.step1BadgePoster.translation = scaleSize([0, stepY], m.scaleInfo)
   m.step1Badge.width = scaleValue(stepWidth, m.scaleInfo)
   m.step1Badge.height = scaleValue(stepHeight, m.scaleInfo)
-  m.step1Badge.translation = scaleSize([0, stepY], m.scaleInfo)
+  m.step1Badge.translation = scaleSize([0, stepY + 3], m.scaleInfo)
   m.step1Text.width = scaleValue(980, m.scaleInfo)
   m.step1Text.translation = scaleSize([stepX, stepY - 5], m.scaleInfo)
   m.qrShortUrlLabel.width = scaleValue(980, m.scaleInfo)
@@ -112,7 +120,7 @@ sub init()
   m.step2BadgePoster.translation = scaleSize([0, stepY + 80], m.scaleInfo)
   m.step2Badge.width = scaleValue(stepWidth, m.scaleInfo)
   m.step2Badge.height = scaleValue(40, m.scaleInfo)
-  m.step2Badge.translation = scaleSize([0, stepY + 80], m.scaleInfo)
+  m.step2Badge.translation = scaleSize([0, stepY + 83], m.scaleInfo)
   m.step2Text.width = scaleValue(980, m.scaleInfo)
   m.step2Text.translation = scaleSize([stepX, stepY + 75], m.scaleInfo)
   m.activationCodeLabel.width = scaleValue(980, m.scaleInfo)
@@ -123,7 +131,7 @@ sub init()
   m.step3BadgePoster.translation = scaleSize([0, stepY + 160], m.scaleInfo)
   m.step3Badge.width = scaleValue(stepWidth, m.scaleInfo)
   m.step3Badge.height = scaleValue(40, m.scaleInfo)
-  m.step3Badge.translation = scaleSize([0, stepY + 160], m.scaleInfo)
+  m.step3Badge.translation = scaleSize([0, stepY + 163], m.scaleInfo)
   m.step3Text.width = scaleValue(980, m.scaleInfo)
   m.step3Text.translation = scaleSize([stepX, stepY + 160], m.scaleInfo)
 
@@ -239,8 +247,12 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
       handled = true
     else if m.validatePhoneButton <> invalid and m.validatePhoneButton.isInFocusChain() and key = KeyButtons().UP then
       __focusLoginMethod()
-    end if
-    handled = true
+      handled = true    
+    else if m.validatePhoneButton <> invalid and m.validatePhoneButton.isInFocusChain() and key = KeyButtons().OK then ' Agregado: captura OK sobre Validate para priorizar la validación manual
+      __pauseValidateRegisterCodeTimerForButton() ' Agregado: pausa el timer para priorizar la validación manual desde el botón
+      validateRegisterCodeLogin() ' Agregado: dispara la validación manual cuando el usuario presiona OK en Validate
+      handled = true ' Agregado: marca como resuelta la pulsación manual del botón Validate
+  end if
   end if
 
   return handled
@@ -262,6 +274,7 @@ sub initFocus()
     m.logo.translation = [(width - scaleValue(280, m.scaleInfo)), scaleValue(30, m.scaleInfo)]
 
     ' Sincroniza las variables remotas para mostrar/ocultar el bloque QR
+     m.validateRegisterCodeTimerExecutions = 0 ' Agregado: reinicia el contador del polling al entrar nuevamente a la pantalla
     __loadQrLoginConfig()
     ' Ubica el módulo de pasos/QR debajo del switch para el flujo por teléfono
     m.qrContainer.translation = [scaleValue(110, m.scaleInfo), scaleValue(220, m.scaleInfo)]
@@ -289,9 +302,6 @@ sub onLoginResponse()
 
       removePendingAction(m.apiRequestManager.requestId)
 
-      actionLog = getActionLog({ actionCode: ActionLogCode().LOGIN_BY_CREDENTIALS })
-      __saveActionLog(actionLog)
-
       resp = ParseJson(m.apiRequestManager.response)
       
       addAndSetFields(m.global, {device: resp.device, organization: resp.organization, contact: resp.contact, variables: resp.variables} )
@@ -300,6 +310,10 @@ sub onLoginResponse()
 
       SetDevice(resp.device)
       saveTokens(resp)
+
+      actionLog = getActionLog({ actionCode: ActionLogCode().LOGIN_BY_CREDENTIALS })
+      __saveActionLog(actionLog)
+
       m.apiRequestManager = clearApiRequest(m.apiRequestManager)
 
       m.keyboard.unobserveField("textEditBox")
@@ -343,6 +357,8 @@ end sub
 ' Notifica que finalizo las tareas de la pantalla
 sub onFinished()
   if m.top.finished then 
+    __stopValidateRegisterCodeTimer() ' Agregado: detiene el polling cuando la pantalla termina su flujo
+    m.validateRegisterCodeTimerExecutions = 0 ' Agregado: reinicia el contador del polling al finalizar la pantalla
     m.sendLoginPost = false
     m.inputFocus = "user"
     m.prevButton.disable = true
@@ -394,17 +410,9 @@ sub __applyTranslations()
     m.nextButton.text = i18n_t(m.global.i18n, "button.next")
     m.userField.hintText = i18n_t(m.global.i18n, "loginPage.enterYourUser")
     m.passwordField.hintText = i18n_t(m.global.i18n, "loginPage.enterYourPassword")
-
     m.phoneInstructionsTitle.text = i18n_t(m.global.i18n, "loginPage.qrStepsTitle")
-    m.step1Badge.text = "1"
-    m.step1Badge.color = "#FFFFFFFF"
     m.step1Text.text = i18n_t(m.global.i18n, "loginPage.qrStep1Description")
-    m.step2Badge.text = "2"
-    m.step2Badge.color = "#FFFFFFFF"
     m.step2Text.text = i18n_t(m.global.i18n, "loginPage.qrStep2Description") 
-    m.activationCodeLabel.text = "TMRALL"
-    m.step3Badge.text = "3"
-    m.step3Badge.color = "#FFFFFFFF"
     m.step3Text.text = i18n_t(m.global.i18n, "loginPage.qrStep3Description") 
     m.validatePhoneButton.text = i18n_t(m.global.i18n, "button.validateRegisterCode") 
 end sub
@@ -640,6 +648,13 @@ sub onActiveApiUrlChanged()
   __loadQrLoginConfig()
 end sub
 
+sub onValidateRegisterCodeTimerFire() ' Agregado: callback del timer de validación periódica
+  if m.apiRegisterCodeRequestManager <> invalid then return ' Agregado: evita disparar otra validación si ya hay una petición en curso
+  if m.validateRegisterCodeTimerExecutions >= m.validateRegisterCodeTimerMaxExecutions then __stopValidateRegisterCodeTimer() : return ' Agregado: corta el timer cuando ya alcanzó el máximo de 10 ejecuciones
+  m.validateRegisterCodeTimerExecutions = m.validateRegisterCodeTimerExecutions + 1 ' Agregado: registra una nueva ejecución real provocada por el timer
+  validateRegisterCodeLogin() ' Agregado: ejecuta la validación del código de registro cada vez que dispara el timer
+end sub ' Agregado: cierre del callback del timer de validación
+
 ' Carga la configuración de login por código y actualiza el estado del módulo QR
 sub __loadQrLoginConfig()
   ' Lee si el login por código está habilitado desde variables de configuración
@@ -651,30 +666,12 @@ sub __loadQrLoginConfig()
 
   ' Normaliza el flag remoto para soportar distintos formatos (true/"true"/1)
   isEnabled = (enableLoginByCode = 1)
-  ' Valida que exista una URL QR utilizable
-  hasQrUrl = (loginByCodeUrlQr <> invalid and loginByCodeUrlQr <> "")
 
-    ' Conserva el estado para que la visibilidad final dependa también del foco del selector
-  m.isPhoneQrEnabled = (isEnabled and hasQrUrl)
+  if isEnabled then __loadInstallationByDevice() ' Agregado: consulta Installations cuando el login por código está habilitado
 
-  if m.isPhoneQrEnabled then
-    ' Asigna un QR dinámico con el texto solicitado para validación visual
-    m.qrCodePoster.uri = "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=test" ' Agregado: QR con contenido "test"
+  m.qrShortUrlLabel.text = loginByCodeUrlShort
 
-    if loginByCodeUrlShort <> invalid and loginByCodeUrlShort <> "" then
-      ' Muestra la URL corta en la línea destacada del paso 1
-      m.qrShortUrlLabel.text = loginByCodeUrlShort
-    else
-      m.qrShortUrlLabel.text = "test" ' Agregado: fallback visible coherente con el QR de prueba
-    end if
-  else
-    ' Fuerza carga de QR de prueba aunque la configuración remota no esté disponible
-    m.isPhoneQrEnabled = true ' Agregado: habilita QR para mostrar el código de prueba
-    m.qrCodePoster.uri = "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=test" ' Agregado: QR con contenido "test"
-    m.qrShortUrlLabel.text = "test" ' Agregado: texto auxiliar del QR de prueba
-  end if
-
-  m.qrShortUrlLabel.text = "https://nebuladev.qvixsolutions.com/activate"
+  if isEnabled then __startValidateRegisterCodeTimer() else __stopValidateRegisterCodeTimer() ' Agregado: activa o detiene el polling según la configuración remota
 
   onLoginMethodFocusChanged()
 end sub
@@ -682,5 +679,178 @@ end sub
 sub __syncApiUrlFromGlobal()
   if m.global.activeApiUrl <> invalid and m.global.activeApiUrl <> "" then
     m.apiUrl = m.global.activeApiUrl
+  end if
+end sub
+
+sub __startValidateRegisterCodeTimer() ' Agregado: helper para iniciar el timer de polling
+  if m.validateRegisterCodeTimer = invalid then return ' Agregado: evita errores si el timer todavía no fue creado
+  if m.validateRegisterCodeTimerExecutions >= m.validateRegisterCodeTimerMaxExecutions then return ' Agregado: impide reiniciar el timer si ya alcanzó su máximo de ejecuciones
+  m.validateRegisterCodeTimerPausedByButton = false ' Agregado: limpia el estado de pausa manual antes de reiniciar el timer
+  m.validateRegisterCodeTimer.control = "stop" ' Agregado: reinicia el timer antes de volver a arrancarlo
+  m.validateRegisterCodeTimer.control = "start" ' Agregado: inicia el polling periódico del servicio RegisterCodeLogin
+end sub ' Agregado: cierre del helper que inicia el timer
+
+sub __stopValidateRegisterCodeTimer() ' Agregado: helper para detener el timer de polling
+  if m.validateRegisterCodeTimer = invalid then return ' Agregado: evita errores si el timer todavía no fue creado
+  m.validateRegisterCodeTimerPausedByButton = false ' Agregado: limpia el estado de pausa manual al detener el polling
+  m.validateRegisterCodeTimer.control = "stop" ' Agregado: detiene el polling cuando el flujo QR no está habilitado
+end sub ' Agregado: cierre del helper que detiene el timer
+
+sub __pauseValidateRegisterCodeTimerForButton() ' Agregado: helper para pausar el timer cuando el usuario prioriza el botón Validate
+  if m.validateRegisterCodeTimer = invalid then return ' Agregado: evita errores si el timer todavía no fue creado
+  m.validateRegisterCodeTimerPausedByButton = true ' Agregado: marca que la pausa provino del botón manual
+  m.validateRegisterCodeTimer.control = "stop" ' Agregado: pausa el timer para dar prioridad a la validación manual
+end sub ' Agregado: cierre del helper que pausa el timer por prioridad manual
+
+sub validateRegisterCodeLogin() ' Agregado: ejecuta el servicio RegisterCodeLogin con el payload solicitado
+  __initData() ' Agregado: asegura que los datos base del request estén cargados antes de llamar al servicio
+  if m.apiUrl = invalid or m.apiUrl = "" then return ' Agregado: evita ejecutar la llamada sin una apiUrl válida
+  if m.global = invalid or m.global.device = invalid then return ' Agregado: evita ejecutar la llamada sin la información del dispositivo
+  if m.apiRegisterCodeRequestManager <> invalid then return ' Agregado: previene llamadas concurrentes si la validación anterior sigue en curso
+
+  requestId = createRequestId() ' Agregado: genera un identificador para reutilizar la lógica estándar de requests del componente
+  registerCodeLoginPayload = { ' Agregado: arma el payload solicitado para el servicio RegisterCodeLogin
+    productCode: m.productCode ' Agregado: envía el productCode configurado para la app
+    platformCode: m.platformCode ' Agregado: envía el platformCode configurado para la app
+    environment: m.enviroment ' Agregado: envía el environment configurado para la app
+    device: m.global.device ' Agregado: envía la información actual del dispositivo
+  } ' Agregado: cierra la definición del payload del servicio
+
+  action = { ' Agregado: encapsula la llamada siguiendo el mismo patrón del resto del componente
+    apiRequestManager: m.apiRegisterCodeRequestManager ' Agregado: utiliza un request manager dedicado para el polling del código
+    url: urlRegisterCode(m.apiUrl) ' Agregado: construye la URL del servicio RegisterCodeLogin
+    method: "POST" ' Agregado: ejecuta el servicio con método POST
+    responseMethod: "onValidateRegisterCodeLoginResponse" ' Agregado: define el callback que imprimirá la respuesta del servicio
+    body: FormatJson(registerCodeLoginPayload) ' Agregado: serializa el payload solicitado para el request
+    token: invalid ' Agregado: mantiene el comportamiento de request pública para este flujo
+    publicApi: true ' Agregado: ejecuta la llamada como pública desde la pantalla de login
+    requestId: requestId ' Agregado: conserva el requestId para retry y limpieza posterior
+    dataAux: invalid ' Agregado: no requiere datos auxiliares para procesar la respuesta
+    run: function() as Object ' Agregado: reutiliza sendApiRequest igual que los demás servicios del componente
+      m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux) ' Agregado: dispara la petición HTTP del servicio RegisterCodeLogin
+      return { success: true, error: invalid } ' Agregado: devuelve el resultado esperado por runAction
+    end function ' Agregado: cierra el ejecutor de la acción
+  } ' Agregado: cierra la definición de la acción del polling
+
+  runAction(requestId, action, ApiType().AUTH_API_URL) ' Agregado: reutiliza la lógica estándar de ejecución y reintentos del componente
+  m.apiRegisterCodeRequestManager = action.apiRequestManager ' Agregado: sincroniza el manager local luego de lanzar la acción
+end sub ' Agregado: cierre del método que llama RegisterCodeLogin
+
+sub onValidateRegisterCodeLoginResponse() ' Agregado: procesa e imprime la respuesta del polling de RegisterCodeLogin
+  if m.apiRegisterCodeRequestManager = invalid then return ' Agregado: evita procesar respuestas cuando el manager ya fue limpiado
+  if validateStatusCode(m.apiRegisterCodeRequestManager.statusCode) then ' Agregado: procesa el flujo exitoso de RegisterCodeLogin
+    __stopValidateRegisterCodeTimer() ' Agregado: corta el timer para evitar nuevas ejecuciones luego del login exitoso
+    removePendingAction(m.apiRegisterCodeRequestManager.requestId) ' Agregado: limpia la acción pendiente cuando la respuesta es exitosa
+    print "[LoginScreen] validateRegisterCodeLogin response:"; m.apiRegisterCodeRequestManager.response ' Agregado: imprime la respuesta exitosa del servicio solicitado
+    m.apiRequestManager = m.apiRegisterCodeRequestManager ' Agregado: reutiliza la respuesta exitosa en el helper compartido de finalización de login
+    __finishLoginWithApiResponse() ' Agregado: completa el login con la respuesta del RegisterCodeLogin exitoso
+    m.apiRegisterCodeRequestManager = clearApiRequest(m.apiRegisterCodeRequestManager) ' Agregado: libera el manager dedicado luego de finalizar el login
+    m.apiRequestManager = clearApiRequest(m.apiRequestManager) ' Agregado: limpia el manager general reutilizado para cerrar el flujo exitoso
+  else ' Agregado: conserva el flujo previo cuando RegisterCodeLogin no autentica exitosamente
+    print "[LoginScreen] validateRegisterCodeLogin response:"; m.apiRegisterCodeRequestManager.response ' Agregado: imprime la respuesta no exitosa del servicio solicitado
+    m.apiRegisterCodeRequestManager = clearApiRequest(m.apiRegisterCodeRequestManager) ' Agregado: libera el manager luego de imprimir la respuesta fallida
+    if m.validateRegisterCodeTimerPausedByButton and m.validateRegisterCodeTimerExecutions < m.validateRegisterCodeTimerMaxExecutions then __startValidateRegisterCodeTimer() ' Agregado: reanuda el timer luego de priorizar la validación manual si todavía quedan ejecuciones disponibles
+  end if
+end sub ' Agregado: cierre del callback que imprime la respuesta de RegisterCodeLogin
+
+sub __finishLoginWithApiResponse() ' Agregado: centraliza la finalización del login usando la respuesta HTTP disponible en m.apiRequestManager
+  resp = ParseJson(m.apiRequestManager.response) ' Agregado: parsea la respuesta del servicio que autenticó al usuario
+
+  addAndSetFields(m.global, {device: resp.device, organization: resp.organization, contact: resp.contact, variables: resp.variables} ) ' Agregado: guarda en global los datos devueltos por el login exitoso
+
+  saveNextUpdateVariables() ' Agregado: persiste la programación de actualización de variables remotas
+
+  SetDevice(resp.device) ' Agregado: actualiza el dispositivo persistido localmente
+  saveTokens(resp) ' Agregado: guarda los tokens entregados por la autenticación
+
+  actionLog = getActionLog({ actionCode: ActionLogCode().LOGIN_BY_CREDENTIALS }) ' Agregado: prepara el log de acción para el ingreso exitoso
+  __saveActionLog(actionLog) ' Agregado: envía el log del login exitoso
+
+  m.top.finished = true ' Agregado: cierra la pantalla al completar correctamente el login
+end sub ' Agregado: cierre del helper de finalización del login
+
+sub __loadInstallationByDevice()
+  if m.apiUrl = invalid then m.apiUrl = getConfigVariable(m.global.configVariablesKeys.API_URL) 
+  if m.apiUrl = invalid or m.apiUrl = "" then return ' Agregado: evita la llamada si todavía no existe apiUrl activa
+  if m.global = invalid or m.global.device = invalid then return ' Agregado: evita la llamada si todavía no existe información del dispositivo
+
+  requestId = createRequestId() ' Agregado: genera un identificador para reutilizar la lógica estándar de requests del componente
+
+  action = { ' Agregado: encapsula la llamada usando el mismo patrón de acciones del LoginComponent
+    apiRequestManager: m.apiInstallationRequestManager ' Agregado: usa un request manager dedicado para no interferir con otros servicios del login
+    url: urlInstallation(m.apiUrl) ' Agregado: arma la URL del servicio Installation con la apiUrl activa
+    method: "POST" ' Agregado: envía la información del dispositivo al endpoint de instalaciones
+    responseMethod: "onLoadInstallationByDeviceResponse" ' Agregado: define el callback que imprimirá la respuesta del servicio
+    body: FormatJson(m.global.device) ' Agregado: envía m.global.device como payload del servicio solicitado
+    token: invalid ' Agregado: no fuerza un token manual para esta llamada
+    publicApi: true ' Agregado: ejecuta la llamada como pública desde el flujo de login
+    requestId: requestId ' Agregado: conserva el requestId dentro de la acción para reintentos
+    dataAux: invalid ' Agregado: no requiere datos auxiliares para procesar la respuesta
+    run: function() as Object ' Agregado: reutiliza sendApiRequest igual que el resto del componente
+      m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux) ' Agregado: dispara la petición HTTP del servicio Installation
+      return { success: true, error: invalid } ' Agregado: devuelve el resultado esperado por runAction
+    end function ' Agregado: cierra el bloque ejecutor de la acción
+  } ' Agregado: cierra la definición de la acción para Installations
+
+  runAction(requestId, action, ApiType().CLIENTS_API_URL) ' Agregado: reutiliza la lógica de ejecución y reintento estándar del componente
+  m.apiInstallationRequestManager = action.apiRequestManager ' Agregado: sincroniza el manager local luego de lanzar la acción
+end sub
+
+sub onLoadInstallationByDeviceResponse()
+
+  if m.apiInstallationRequestManager = invalid then
+    __loadInstallationByDevice()
+    return
+  else 
+    if validateStatusCode(m.apiInstallationRequestManager.statusCode) then
+
+      removePendingAction(m.apiInstallationRequestManager.requestId)
+
+      data = ParseJson(m.apiInstallationRequestManager.response)
+
+      registerCode = data.data.formattedRegisterCode
+      m.activationCodeLabel.text = registerCode
+
+      addAndSetFields(m.global, {device: data.data} ) ' Agregado: actualiza la variable global device con la data devuelta por Installations
+      if data.data.token <> invalid and data.data.token <> "" then  setDeviceToken(data.data.token)
+
+      ' Lee la URL remota de la imagen QR
+      loginByCodeUrlQr = getConfigVariable(m.global.configVariablesKeys.LOGIN_BY_CODE_URL_QR)
+
+      activationCode = loginByCodeUrlQr.replace("[RegistrationCode]", registerCode)
+      m.qrCodePoster.uri = "https://api.qrserver.com/v1/create-qr-code/?size=256x260&data=" + activationCode 
+
+    else 
+      if m.apiInstallationRequestManager.serverError then
+        statusCode = m.apiInstallationRequestManager.statusCode
+        setCdnErrorCodeFromStatus(statusCode, ApiType().CLIENTS_API_URL)
+        changeStatusAction(m.apiInstallationRequestManager.requestId, "error")
+        retryAll()
+      else
+        removePendingAction(m.apiInstallationRequestManager.requestId)
+        if m.resultCodes = invalid then m.resultCodes = getResultCodes()
+        m.top.loading.visible = false
+
+        error = ParseJson(m.apiInstallationRequestManager.errorResponse)
+
+        errorAPI = ""
+
+        if error.code = m.resultCodes.UNAUTHORIZED then
+          errorAPI = i18n_t(m.global.i18n, "loginPage.errorForm.unAuthorized")
+        else if error.code = m.resultCodes.NOT_CONFIRMED then
+          errorAPI = i18n_t(m.global.i18n, "loginPage.errorForm.notConfirmed")
+        else if error.code = m.resultCodes.NOT_ACTIVATED then
+          errorAPI = i18n_t(m.global.i18n, "loginPage.errorForm.notActivated")
+        else if error.code = m.resultCodes.REQUESTTIMEOUT then
+          errorAPI = i18n_t(m.global.i18n, "shared.errorComponent.connection")
+        else 
+          errorAPI = i18n_t(m.global.i18n, "loginPage.errorForm.unhandled")
+        end if
+          
+        m.apiInstallationRequestManager = clearApiRequest(m.apiInstallationRequestManager)
+        __showDialog(errorAPI)
+      end if
+    end if 
+    m.apiInstallationRequestManager = clearApiRequest(m.apiInstallationRequestManager)
   end if
 end sub

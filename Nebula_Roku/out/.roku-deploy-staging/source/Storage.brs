@@ -289,10 +289,10 @@ End Sub
 
 
 
-' sub clearDeviceData()
-'     sec = CreateObject("roRegistrySection", "SessionData")
-'     for each item in  ["DeviceId", "Token", "DeviceDescription", "DeviceTypeId", "DeviceGUID", "DeviceAlias"] 
-'         sec.Delete(item)
-'     end for
-'     sec.Flush()
-' end sub
+'sub clearDeviceData()
+    'sec = CreateObject("roRegistrySection", "SessionData")
+    'for each item in  ["DeviceId", "Token", "DeviceDescription", "DeviceTypeId", "DeviceGUID", "DeviceAlias"] 
+    '     sec.Delete(item)
+    'end for
+    'sec.Flush()
+'end sub
