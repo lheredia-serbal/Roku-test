@@ -79,6 +79,7 @@ sub init()
 
   ' Setear los estilos del selector
   m.loginMethodSwitch.blendColor = m.global.colors.PLAYER_TIMEBAR_NOT_FOCUCED
+  m.loginMethodSwitchSelected.blendColor = m.global.colors.PRIMARY
   m.loginMethodTitle.width = scaleValue(900, m.scaleInfo)
   m.loginMethodTitle.height = scaleValue(55, m.scaleInfo)
   m.loginMethodSwitchLayout.translation = [150, 0]
@@ -398,7 +399,11 @@ sub onLoadInstallationByDeviceResponse()
       activationCode = loginByCodeUrlQr.replace("[RegistrationCode]", registerCode)
       m.qrCodePoster.uri = "https://api.qrserver.com/v1/create-qr-code/?size=256x260&data=" + activationCode 
 
+      __showLoginMethod(true)
+
     else 
+      m.LoginQrisEnabled = false
+
       if m.apiInstallationRequestManager.serverError then
         statusCode = m.apiInstallationRequestManager.statusCode
         setCdnErrorCodeFromStatus(statusCode, ApiType().CLIENTS_API_URL)
@@ -408,27 +413,9 @@ sub onLoadInstallationByDeviceResponse()
         removePendingAction(m.apiInstallationRequestManager.requestId)
         if m.resultCodes = invalid then m.resultCodes = getResultCodes()
         m.top.loading.visible = false
-
-        error = ParseJson(m.apiInstallationRequestManager.errorResponse)
-
-        errorAPI = ""
-
-        if error.code = m.resultCodes.UNAUTHORIZED then
-          errorAPI = i18n_t(m.global.i18n, "loginPage.errorForm.unAuthorized")
-        else if error.code = m.resultCodes.NOT_CONFIRMED then
-          errorAPI = i18n_t(m.global.i18n, "loginPage.errorForm.notConfirmed")
-        else if error.code = m.resultCodes.NOT_ACTIVATED then
-          errorAPI = i18n_t(m.global.i18n, "loginPage.errorForm.notActivated")
-        else if error.code = m.resultCodes.REQUESTTIMEOUT then
-          errorAPI = i18n_t(m.global.i18n, "shared.errorComponent.connection")
-        else 
-          errorAPI = i18n_t(m.global.i18n, "loginPage.errorForm.unhandled")
-        end if
-          
-        m.apiInstallationRequestManager = clearApiRequest(m.apiInstallationRequestManager)
-        __showDialog(errorAPI)
       end if
     end if 
+    onLoginMethodFocusChanged()
     m.apiInstallationRequestManager = clearApiRequest(m.apiInstallationRequestManager)
   end if
 end sub
@@ -451,7 +438,13 @@ sub onLoginMethodFocusChanged()
     ' Muestra QR únicamente cuando el foco está en la opción Teléfono
     m.qrContainer.visible = isPhoneFocused
   else
+    m.credentialsContainer.visible = true
     m.qrContainer.visible = false
+    m.loginMethodSwitch.visible = false
+    m.loginMethodTitle.visible = false
+
+    'Envía el foco al teclado cuando el flujo QR queda deshabilitado
+    __focusKeyboard()
   end if
 end sub
 
@@ -756,23 +749,28 @@ sub __loadQrLoginConfig()
 
   m.LoginQrisEnabled = (enableLoginByCode = 1)
 
-  ' Oculta el switch de método cuando el login por código no está habilitado
-  m.loginMethodSwitchLayout.visible = m.LoginQrisEnabled 
-  m.qrContainer.visible = m.LoginQrisEnabled
-  m.loginMethodTitle.visible = m.LoginQrisEnabled
-
-  onLoginMethodFocusChanged()
-
   if m.LoginQrisEnabled then 
-    ' Lee la URL remota de la imagen QR
+    ' Consulta Installations cuando el login por código está habilitado
+    __loadInstallationByDevice()
+  else 
+    __showLoginMethod(false)
+  end if
+end sub
+
+' Determinar si debe mostrar el método de login de QR
+sub __showLoginMethod(showQr as boolean)
+
+  if showQr then
+
+    m.loginMethodSwitchLayout.visible = true
+    m.qrContainer.visible = true
+    m.loginMethodTitle.visible = true
+    m.credentialsContainer.visible = false
 
     loginByCodeUrlQr = getConfigVariable(m.global.configVariablesKeys.LOGIN_BY_CODE_URL_QR)
 
     ' Lee la URL corta que se muestra como alternativa manual
     loginByCodeUrlShort = getConfigVariable(m.global.configVariablesKeys.LOGIN_BY_CODE_URL_SHORT)
-
-    ' Consulta Installations cuando el login por código está habilitado
-    __loadInstallationByDevice()
 
     m.qrShortUrlLabel.text = loginByCodeUrlShort
 
@@ -781,10 +779,12 @@ sub __loadQrLoginConfig()
 
     ' Al iniciar, el foco debe quedar en la opción de login por teléfono
     m.loginMethodPhone.setFocus(true)
-  else 
-    ' Detiene el polling según la configuración remota
-    __stopValidateRegisterCodeTimer()
-
+  else
+    ' Oculta el switch de método cuando el login por código no está habilitado
+    m.loginMethodSwitchLayout.visible = false
+    m.qrContainer.visible = false
+    m.loginMethodTitle.visible = false
+    m.credentialsContainer = true
     'Envía el foco al teclado cuando el flujo QR queda deshabilitado
     __focusKeyboard()
   end if
