@@ -98,7 +98,7 @@
           id="passwordField"
           secureMode="true"/>
 
-        
+        <Poster height="60" />
 
         <Group id="buttonContainer">
           <LayoutGroup

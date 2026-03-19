@@ -45,7 +45,6 @@ sub init()
   m.validateRegisterCodeTimerPausedByButton = false ' Agregado: recuerda si el timer fue pausado manualmente desde el botón Validate
 
   m.scaleInfo = m.global.scaleInfo
-  m.isPhoneQrEnabled = false
 
   m.scaleInfo = m.global.scaleInfo
 
@@ -57,6 +56,8 @@ sub init()
 
   m.userField.maxTextLength = 255
   m.passwordField.maxTextLength = 255
+
+  m.LoginQrisEnabled = false
 
   m.userField.hintTextColor = m.global.colors.LIGHT_GRAY
   m.passwordField.hintTextColor = m.global.colors.LIGHT_GRAY
@@ -154,6 +155,8 @@ sub init()
 end sub
 
 sub onLoginMethodFocusChanged()
+
+  if (m.LoginQrisEnabled) then
   ' Evita errores si los contenedores aún no están disponibles
   if m.credentialsContainer = invalid or m.qrContainer = invalid then return
 
@@ -168,6 +171,9 @@ sub onLoginMethodFocusChanged()
   m.credentialsContainer.visible = not isPhoneFocused ' Agregado: credenciales visibles con foco en Keyboard
   ' Muestra QR únicamente cuando el foco está en la opción Teléfono
   m.qrContainer.visible = isPhoneFocused ' Agregado: qrContainer visible con foco en Phone, sin animación
+  else
+    m.qrContainer.visible = false
+  end if
 end sub
 
 ' Actualiza la imagen del selector según si el foco está en Validate o en el switch de método
@@ -199,7 +205,7 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
     else if m.prevButton.isInFocusChain() and key = KeyButtons().DOWN then
       __focusKeyboard()
       handled = true
-    else if m.prevButton.isInFocusChain() and key = KeyButtons().UP then
+    else if m.prevButton.isInFocusChain() and key = KeyButtons().UP and m.LoginQrisEnabled then
       __focusLoginMethod()
       handled = true
     else if m.prevButton.isInFocusChain() and key = KeyButtons().OK then
@@ -213,7 +219,7 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
     else if m.nextButton.isInFocusChain() and key = KeyButtons().DOWN then
       __focusKeyboard()
       handled = true
-    else if m.nextButton.isInFocusChain() and key = KeyButtons().UP then
+    else if m.nextButton.isInFocusChain() and key = KeyButtons().UP and m.LoginQrisEnabled then
       __focusLoginMethod()
       handled = true
     else if m.nextButton.isInFocusChain() and key = KeyButtons().OK then
@@ -252,7 +258,7 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
       __pauseValidateRegisterCodeTimerForButton() ' Agregado: pausa el timer para priorizar la validación manual desde el botón
       validateRegisterCodeLogin() ' Agregado: dispara la validación manual cuando el usuario presiona OK en Validate
       handled = true ' Agregado: marca como resuelta la pulsación manual del botón Validate
-  end if
+    end if
   end if
 
   return handled
@@ -280,8 +286,6 @@ sub initFocus()
     m.qrContainer.translation = [scaleValue(110, m.scaleInfo), scaleValue(220, m.scaleInfo)]
     
     m.keyboard.ObserveField("textEditBox", "onTextBoxManagment")
-    ' Al iniciar, el foco debe quedar en la opción de login por teléfono
-    m.loginMethodPhone.setFocus(true)
     __animateLoginMethodSwitchSelected(true, false) ' Agregado: posiciona el selector en Teléfono sin animación al entrar
     ' Aplica de inmediato la visibilidad del formulario según el foco inicial
     onLoginMethodFocusChanged()
@@ -659,21 +663,41 @@ end sub ' Agregado: cierre del callback del timer de validación
 sub __loadQrLoginConfig()
   ' Lee si el login por código está habilitado desde variables de configuración
   enableLoginByCode = getConfigVariable(m.global.configVariablesKeys.ENABLE_LOGIN_BY_CODE)
-  ' Lee la URL remota de la imagen QR
-  loginByCodeUrlQr = getConfigVariable(m.global.configVariablesKeys.LOGIN_BY_CODE_URL_QR)
-  ' Lee la URL corta que se muestra como alternativa manual
-  loginByCodeUrlShort = getConfigVariable(m.global.configVariablesKeys.LOGIN_BY_CODE_URL_SHORT)
 
-  ' Normaliza el flag remoto para soportar distintos formatos (true/"true"/1)
-  isEnabled = (enableLoginByCode = 1)
+  m.LoginQrisEnabled = (enableLoginByCode = 0)
 
-  if isEnabled then __loadInstallationByDevice() ' Agregado: consulta Installations cuando el login por código está habilitado
-
-  m.qrShortUrlLabel.text = loginByCodeUrlShort
-
-  if isEnabled then __startValidateRegisterCodeTimer() else __stopValidateRegisterCodeTimer() ' Agregado: activa o detiene el polling según la configuración remota
+  ' Oculta el switch de método cuando el login por código no está habilitado
+  m.loginMethodSwitchLayout.visible = m.LoginQrisEnabled 
+  m.qrContainer.visible = m.LoginQrisEnabled
+  m.loginMethodTitle.visible = m.LoginQrisEnabled
 
   onLoginMethodFocusChanged()
+
+  if m.LoginQrisEnabled then 
+    ' Lee la URL remota de la imagen QR
+
+    loginByCodeUrlQr = getConfigVariable(m.global.configVariablesKeys.LOGIN_BY_CODE_URL_QR)
+
+    ' Lee la URL corta que se muestra como alternativa manual
+    loginByCodeUrlShort = getConfigVariable(m.global.configVariablesKeys.LOGIN_BY_CODE_URL_SHORT)
+
+    ' Consulta Installations cuando el login por código está habilitado
+    __loadInstallationByDevice()
+
+    m.qrShortUrlLabel.text = loginByCodeUrlShort
+
+    ' Activa el polling según la configuración remota
+    __startValidateRegisterCodeTimer()
+
+    ' Al iniciar, el foco debe quedar en la opción de login por teléfono
+    m.loginMethodPhone.setFocus(true)
+  else 
+    ' Detiene el polling según la configuración remota
+    __stopValidateRegisterCodeTimer()
+
+    'Envía el foco al teclado cuando el flujo QR queda deshabilitado
+    __focusKeyboard()
+  end if
 end sub
 
 sub __syncApiUrlFromGlobal()

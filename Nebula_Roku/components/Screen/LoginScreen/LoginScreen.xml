@@ -93,12 +93,14 @@
           font="font:SmallSystemFont"
           horizAlign="left" />
 
+        <Poster height="30" />
+
         <!-- Campo de entrada para contraseña -->
         <TextEditBox
           id="passwordField"
           secureMode="true"/>
 
-        
+        <Poster height="60" />
 
         <Group id="buttonContainer">
           <LayoutGroup
