@@ -1,4 +1,5 @@
-' Inicialización del componente (parte del ciclo de vida de Roku)
+' ****** Funciones Públicas ******
+
 sub init()
   m.top.finished = false 
   m.mainContainer = m.top.findNode("mainContainer")
@@ -35,67 +36,82 @@ sub init()
   m.qrCodeBackground = m.top.findNode("qrCodeBackground")
   m.qrCodePoster = m.top.findNode("qrCodePoster")
   m.validatePhoneButton = m.top.findNode("validatePhoneButton")
- m.validateRegisterCodeTimer = CreateObject("roSGNode", "Timer") ' Agregado: crea el timer que validará el código de registro periódicamente
-  m.validateRegisterCodeTimer.duration = 10 ' Agregado: configura el intervalo del timer en 10 segundos
-  m.validateRegisterCodeTimer.repeat = true ' Agregado: permite ejecutar la validación de forma recurrente
-  m.validateRegisterCodeTimer.observeField("fire", "onValidateRegisterCodeTimerFire") ' Agregado: enlaza el evento del timer con el callback del componente
-  m.top.appendChild(m.validateRegisterCodeTimer) ' Agregado: agrega el timer al árbol SceneGraph para habilitar su ejecución
-  m.validateRegisterCodeTimerExecutions = 0 ' Agregado: cuenta cuántas ejecuciones reales realizó el timer para cortar el polling al llegar a 10
-  m.validateRegisterCodeTimerMaxExecutions = 10 ' Agregado: define el máximo de ejecuciones permitidas para el timer
-  m.validateRegisterCodeTimerPausedByButton = false ' Agregado: recuerda si el timer fue pausado manualmente desde el botón Validate
+  ' Crea el timer que validará el código de registro periódicamente
+  m.validateRegisterCodeTimer = CreateObject("roSGNode", "Timer") 
+  ' Configura el intervalo del timer en 10 segundos
+  m.validateRegisterCodeTimer.duration = 10 
+  m.validateRegisterCodeTimer.repeat = true
+  ' Enlaza el evento del timer con el callback del componente
+  m.validateRegisterCodeTimer.observeField("fire", "onValidateRegisterCodeTimerFire") 
+  ' Agrega el timer al árbol SceneGraph para habilitar su ejecución
+  m.top.appendChild(m.validateRegisterCodeTimer) 
+  ' Cuenta cuántas ejecuciones reales realizó el timer para cortar el polling al llegar a 20
+  m.validateRegisterCodeTimerExecutions = 0 
+  m.validateRegisterCodeTimerMaxExecutions = 20
+  ' Recuerda si el timer fue pausado manualmente desde el botón Validate
+  m.validateRegisterCodeTimerPausedByButton = false 
 
   m.scaleInfo = m.global.scaleInfo
 
-  m.scaleInfo = m.global.scaleInfo
+  m.mainContainer.translation = scaleSize([180, 70], m.scaleInfo)
 
+  ' Configurar el máximo de carácteres que se puede ingresa
   m.keyboard.showTextEditBox = false
   m.keyboard.textEditBox.maxTextLength = 255
+  m.userField.maxTextLength = 255
+  m.passwordField.maxTextLength = 255
   
   m.passwordLabel.opacity = 0.0
   m.passwordField.opacity = 0.0
 
-  m.userField.maxTextLength = 255
-  m.passwordField.maxTextLength = 255
-
+  ' Bandera que indica si 
   m.LoginQrisEnabled = false
 
-  m.userField.hintTextColor = m.global.colors.LIGHT_GRAY
-  m.passwordField.hintTextColor = m.global.colors.LIGHT_GRAY
+  ' Setear los estilos de los text inputs
+  m.email.width = scaleValue(300, m.scaleInfo)
+  m.passwordLabel.width = scaleValue(300, m.scaleInfo)
 
+  m.userField.hintTextColor = m.global.colors.LIGHT_GRAY
+  m.userField.width = scaleValue(910, m.scaleInfo)
+
+  m.passwordField.hintTextColor = m.global.colors.LIGHT_GRAY
+  m.passwordField.width = scaleValue(910, m.scaleInfo)
+
+  ' Setear los estilos del selector
+  m.loginMethodSwitch.blendColor = m.global.colors.PLAYER_TIMEBAR_NOT_FOCUCED
   m.loginMethodTitle.width = scaleValue(900, m.scaleInfo)
   m.loginMethodTitle.height = scaleValue(55, m.scaleInfo)
-  m.loginMethodSwitchLayout.translation = [150, 0] ' Agregado: posiciona el layout group centrado en el formulario
-  m.loginMethodSwitch.width = scaleValue(359, m.scaleInfo)
+  m.loginMethodSwitchLayout.translation = [150, 0]
+  m.loginMethodSwitch.width = scaleValue(370, m.scaleInfo)
   m.loginMethodSwitch.height = scaleValue(45, m.scaleInfo)
   m.loginMethodSwitch.translation = [260, 0] 
   m.loginMethodSwitchSelected.width = scaleValue(180, m.scaleInfo)
-  m.loginMethodSwitchSelected.height = scaleValue(35, m.scaleInfo)
-  m.loginMethodSwitchSelected.translation = scaleSize([0, 0], m.scaleInfo) ' Agregado: selección activa posicionada dentro del layout group
+  m.loginMethodSwitchSelected.height = scaleValue(33, m.scaleInfo)
+  m.loginMethodSwitchSelected.translation = scaleSize([0, 0], m.scaleInfo)
   m.loginMethodPhone.width = scaleValue(180, m.scaleInfo)
   m.loginMethodPhone.height = scaleValue(45, m.scaleInfo)
-  m.loginMethodPhone.translation = [0, 4] ' Agregado: label de teléfono alineado en la mitad izquierda del switch
+  m.loginMethodPhone.translation = [0, 2]
   m.loginMethodKeyboard.width = scaleValue(180, m.scaleInfo)
   m.loginMethodKeyboard.height = scaleValue(45, m.scaleInfo)
-  m.loginMethodKeyboard.translation = scaleSize([180, 4], m.scaleInfo) ' Agregado: label de teclado alineado en la mitad derecha del switch
-  m.loginSwitchSelectedLeftX = scaleValue(6, m.scaleInfo) ' Agregado: posición X del selector cuando Teléfono está activo
-  m.loginSwitchSelectedRightX = scaleValue(180, m.scaleInfo) ' Agregado: posición X del selector cuando Teclado está activo
-  m.loginSwitchSelectedY = scaleValue(6, m.scaleInfo) ' Agregado: posición Y fija del selector activo
-  m.loginMethodSwitchHasInitialized = false ' Agregado: controla animación inicial del selector para evitar transición al cargar
-  m.lastLoginMethodFocus = "phone" ' Agregado: recuerda el último foco entre Phone/Keyboard para retorno desde Validate
-  m.loginSwitchSelectedActiveUri = "pkg:/images/client/login-select.png" ' Agregado: uri del estado seleccionado del switch
-  m.loginSwitchSelectedUnselectUri = "pkg:/images/shared/login-unselect.png" ' Agregado: uri del estado no seleccionado cuando Validate tiene foco
-
-  m.mainContainer.translation = scaleSize([180, 70], m.scaleInfo)
-  m.email.width = scaleValue(300, m.scaleInfo)
-  m.userField.width = scaleValue(910, m.scaleInfo)
-  m.passwordLabel.width = scaleValue(300, m.scaleInfo)
-  m.passwordField.width = scaleValue(910, m.scaleInfo)
+  m.loginMethodKeyboard.translation = scaleSize([180, 2], m.scaleInfo)
+  m.loginSwitchSelectedLeftX = scaleValue(8, m.scaleInfo)
+  m.loginSwitchSelectedRightX = scaleValue(180, m.scaleInfo)
+  m.loginSwitchSelectedY = scaleValue(6, m.scaleInfo)
+  m.loginMethodSwitchHasInitialized = false
+  m.lastLoginMethodFocus = "phone"
+  
+  ' Setear la ubicación del teclado
   m.keyboard.translation = scaleSize([-15,0], m.scaleInfo)
+
+  ' Setear el logo
   m.logo.width = scaleValue(200, m.scaleInfo)
   m.logo.height = scaleValue(100, m.scaleInfo)
 
+  ' Setear los botones anterior y sigueinte
   m.prevButton.size = scaleSize([150, 40], m.scaleInfo)
   m.nextButton.size = scaleSize([150, 40], m.scaleInfo)
+
+  ' Setear el formulario de QR
 
   m.phoneInstructionsTitle.width = scaleValue(1120, m.scaleInfo)
   m.phoneInstructionsTitle.translation = scaleSize([0, 0], m.scaleInfo)
@@ -154,115 +170,14 @@ sub init()
   end if
 end sub
 
-sub onLoginMethodFocusChanged()
-
-  if (m.LoginQrisEnabled) then
-  ' Evita errores si los contenedores aún no están disponibles
-  if m.credentialsContainer = invalid or m.qrContainer = invalid then return
-
-  ' Determina si la opción Teléfono es la que actualmente tiene foco
-  isPhoneFocused = m.loginMethodPhone <> invalid and m.loginMethodPhone.isInFocusChain()
-  m.lastLoginMethodFocus = "keyboard" ' Agregado: guarda foco actual para retorno desde Validate
-  if isPhoneFocused then m.lastLoginMethodFocus = "phone" ' Agregado: marca Phone como último foco cuando corresponde
-  m.loginMethodSwitchSelected.uri = m.loginSwitchSelectedActiveUri ' Agregado: asegura uri seleccionada cuando foco está en Phone/Keyboard
-  __animateLoginMethodSwitchSelected(isPhoneFocused, m.loginMethodSwitchHasInitialized) ' Agregado: anima selector en cambios de foco izquierda/derecha
-  m.loginMethodSwitchHasInitialized = true ' Agregado: habilita animaciones luego de la primera sincronización
-  ' Muestra credenciales únicamente cuando el foco está en la opción Teclado
-  m.credentialsContainer.visible = not isPhoneFocused ' Agregado: credenciales visibles con foco en Keyboard
-  ' Muestra QR únicamente cuando el foco está en la opción Teléfono
-  m.qrContainer.visible = isPhoneFocused ' Agregado: qrContainer visible con foco en Phone, sin animación
-  else
-    m.qrContainer.visible = false
-  end if
-end sub
-
 ' Actualiza la imagen del selector según si el foco está en Validate o en el switch de método
-sub onValidatePhoneButtonFocusChanged()
-  if m.loginMethodSwitchSelected = invalid then return
-  if m.validatePhoneButton <> invalid and m.validatePhoneButton.isInFocusChain() then
-    m.loginMethodSwitchSelected.uri = m.loginSwitchSelectedActiveUri ' Agregado: restaurar estado seleccionado al salir de Validate
+sub changeLoginSwitchColor(enabled)
+  if enabled  then
+    m.loginMethodSwitchSelected.blendColor = m.global.colors.PRIMARY
   else
-    m.loginMethodSwitchSelected.uri = m.loginSwitchSelectedUnselectUri ' Agregado: mostrar estado unselect cuando Validate tiene foco 
+    m.loginMethodSwitchSelected.blendColor = m.global.colors.LIGHT_GRAY
   end if
 end sub
-
-' Funcion que interpreta los eventos de teclado y retorna true si fue porcesada por este componente. Sino es porcesado por el
-' entonces sigue con el siguente metodo onKeyEvent del compoente superior
-function onKeyEvent(key as String, press as Boolean) as Boolean
-  if m.top.loading.visible <> false and key <> KeyButtons().BACK then 
-    return true
-  end if
-
-  handled = false
-
-  if not press then 
-    if m.keyboard.isInFocusChain() and key = KeyButtons().UP then
-      m.nextButton.setFocus(true)
-      handled = true
-    else if m.prevButton.isInFocusChain() and key = KeyButtons().RIGHT then
-      m.nextButton.setFocus(true)
-      handled = true
-    else if m.prevButton.isInFocusChain() and key = KeyButtons().DOWN then
-      __focusKeyboard()
-      handled = true
-    else if m.prevButton.isInFocusChain() and key = KeyButtons().UP and m.LoginQrisEnabled then
-      __focusLoginMethod()
-      handled = true
-    else if m.prevButton.isInFocusChain() and key = KeyButtons().OK then
-      __prevButtonPressed()
-      handled = true
-    else if m.nextButton.isInFocusChain() and key = KeyButtons().LEFT then
-      if m.inputFocus = "password" then  
-        m.prevButton.setFocus(true)
-      end if
-      handled = true
-    else if m.nextButton.isInFocusChain() and key = KeyButtons().DOWN then
-      __focusKeyboard()
-      handled = true
-    else if m.nextButton.isInFocusChain() and key = KeyButtons().UP and m.LoginQrisEnabled then
-      __focusLoginMethod()
-      handled = true
-    else if m.nextButton.isInFocusChain() and key = KeyButtons().OK then
-      __nextButtonPressed()
-      handled = true
-    else if m.loginMethodPhone <> invalid and m.loginMethodPhone.isInFocusChain() and key = KeyButtons().RIGHT then
-      m.loginMethodKeyboard.setFocus(true) ' Agregado: mueve foco a la opción Teclado con botón derecha
-      __animateLoginMethodSwitchSelected(false, true) ' Agregado: fuerza animación hacia la derecha al enfocar Teclado
-      onLoginMethodFocusChanged()
-      handled = true
-    else if m.loginMethodKeyboard <> invalid and m.loginMethodKeyboard.isInFocusChain() and key = KeyButtons().LEFT then
-      m.loginMethodPhone.setFocus(true) ' Agregado: retorna foco a Teléfono con botón izquierda
-      __animateLoginMethodSwitchSelected(true, true) ' Agregado: fuerza animación hacia la izquierda al volver a Teléfono
-      onLoginMethodFocusChanged()
-      handled = true
-    else if m.loginMethodPhone <> invalid and m.loginMethodPhone.isInFocusChain() and key = KeyButtons().DOWN then
-      m.lastLoginMethodFocus = "phone" ' Agregado: registra Phone como último foco antes de bajar a Validate
-      if m.loginMethodPhone.isInFocusChain() then
-        m.validatePhoneButton.setFocus(true) ' Agregado: mueve foco al botón Validate con tecla abajo
-      else
-        __focusKeyboard()
-      end if
-      handled = true
-    else if m.loginMethodKeyboard <> invalid and m.loginMethodKeyboard.isInFocusChain() and key = KeyButtons().DOWN then
-      m.lastLoginMethodFocus = "keyboard" ' Agregado: registra Keyboard como último foco antes de bajar a Validate
-      if m.loginMethodPhone.isInFocusChain() then
-        m.validatePhoneButton.setFocus(true) ' Agregado: mueve foco al botón Validate con tecla abajo
-      else
-        __focusKeyboard()
-      end if
-      handled = true
-    else if m.validatePhoneButton <> invalid and m.validatePhoneButton.isInFocusChain() and key = KeyButtons().UP then
-      __focusLoginMethod()
-      handled = true    
-    else if m.validatePhoneButton <> invalid and m.validatePhoneButton.isInFocusChain() and key = KeyButtons().OK then ' Agregado: captura OK sobre Validate para priorizar la validación manual
-      __pauseValidateRegisterCodeTimerForButton() ' Agregado: pausa el timer para priorizar la validación manual desde el botón
-      validateRegisterCodeLogin() ' Agregado: dispara la validación manual cuando el usuario presiona OK en Validate
-      handled = true ' Agregado: marca como resuelta la pulsación manual del botón Validate
-    end if
-  end if
-
-  return handled
-end function
 
 ' Inicializa el foco del componente seteando los valores necesarios
 sub initFocus()
@@ -279,19 +194,266 @@ sub initFocus()
     m.buttonContainer.translation = [((width - scaleValue(380, m.scaleInfo)) / 2), 400]
     m.logo.translation = [(width - scaleValue(280, m.scaleInfo)), scaleValue(30, m.scaleInfo)]
 
-    ' Sincroniza las variables remotas para mostrar/ocultar el bloque QR
-     m.validateRegisterCodeTimerExecutions = 0 ' Agregado: reinicia el contador del polling al entrar nuevamente a la pantalla
+    ' Reinicia el contador del polling al entrar nuevamente a la pantalla
+    m.validateRegisterCodeTimerExecutions = 0 
     __loadQrLoginConfig()
     ' Ubica el módulo de pasos/QR debajo del switch para el flujo por teléfono
     m.qrContainer.translation = [scaleValue(110, m.scaleInfo), scaleValue(220, m.scaleInfo)]
     
     m.keyboard.ObserveField("textEditBox", "onTextBoxManagment")
-    __animateLoginMethodSwitchSelected(true, false) ' Agregado: posiciona el selector en Teléfono sin animación al entrar
+    ' Posiciona el selector en Teléfono sin animación al entrar
+    __animateLoginMethodSwitchSelected(true, false) 
     ' Aplica de inmediato la visibilidad del formulario según el foco inicial
     onLoginMethodFocusChanged()
-    
   end if
 end sub 
+
+' Limpiar la llamada del log
+sub onActionLogResponse() 
+  m.apiLogRequestManager = clearApiRequest(m.apiLogRequestManager)
+end sub
+
+' Obtener el beacon token
+sub onActionLogTokenResponse() 
+
+  resp = ParseJson(m.apiLogRequestManager.response)
+  actionLog = ParseJson(m.apiLogRequestManager.dataAux)
+
+  setBeaconToken(resp.actionsLogToken)
+
+  now = CreateObject("roDateTime")
+  now.ToLocalTime()
+  m.global.beaconTokenExpiresIn = now.asSeconds() + ((resp.expiresIn - 60) * 1000)
+
+  m.apiLogRequestManager = clearApiRequest(m.apiLogRequestManager) 
+  __sendActionLog(actionLog)
+end sub
+
+sub onActiveApiUrlChanged()
+  __syncApiUrlFromGlobal()
+  ' Actualiza los datos del QR cuando cambia el dominio activo
+  __loadQrLoginConfig()
+end sub
+
+' Procesa el evento de cierre del dialogo y realiza la accion pertinente
+sub onDialogClosed(_event)
+  ' Eliminar el diálogo cuando el usuario cierra la ventana
+  m.dialog.visible = false
+  m.dialog.unobserveField("buttonSelected")
+  m.top.removeChild(m.dialog)
+  m.dialog = invalid
+  m.sendLoginPost = false
+  __focusKeyboard()
+end sub
+
+' Notifica que finalizo las tareas de la pantalla
+sub onFinished()
+  if m.top.finished then 
+    __stopValidateRegisterCodeTimer() ' Agregado: detiene el polling cuando la pantalla termina su flujo
+    m.validateRegisterCodeTimerExecutions = 0 ' Agregado: reinicia el contador del polling al finalizar la pantalla
+    m.sendLoginPost = false
+    m.inputFocus = "user"
+    m.prevButton.disable = true
+
+    m.keyboard.text = ""
+    m.inputFocus = "user"
+    m.userField.text = invalid
+    m.passwordField.text = invalid
+    m.passwordLabel.opacity = 0.0
+    m.passwordField.opacity = 0.0
+    m.prevButton.disable = true
+  end if 
+end sub 
+
+' Funcion que interpreta los eventos de teclado y retorna true si fue porcesada por este componente. Sino es porcesado por el
+' entonces sigue con el siguente metodo onKeyEvent del compoente superior
+function onKeyEvent(key as String, press as Boolean) as Boolean
+  if m.top.loading.visible <> false and key <> KeyButtons().BACK then 
+    return true
+  end if
+
+  handled = false
+
+  if not press then
+    ' Foco en siguiente y se presiona arriba
+    if m.keyboard.isInFocusChain() and key = KeyButtons().UP then
+      m.nextButton.setFocus(true)
+      handled = true
+    ' Foco en siguiente y se presiona derecha
+    else if m.prevButton.isInFocusChain() and key = KeyButtons().RIGHT then
+      m.nextButton.setFocus(true)
+      handled = true
+    ' Foco en anterior y se presiona abajo
+    else if m.prevButton.isInFocusChain() and key = KeyButtons().DOWN then
+      __focusKeyboard()
+      handled = true
+    ' Foco en anterior y se presiona arriba
+    else if m.prevButton.isInFocusChain() and key = KeyButtons().UP and m.LoginQrisEnabled then
+      __focusLoginMethod()
+      changeLoginSwitchColor(true)
+      handled = true
+    ' Foco en anterior y se presiona OK
+    else if m.prevButton.isInFocusChain() and key = KeyButtons().OK then
+      __prevButtonPressed()
+      handled = true
+    ' Foco en siguiente y se presiona izquierda
+    else if m.nextButton.isInFocusChain() and key = KeyButtons().LEFT then
+      if m.inputFocus = "password" then  
+        m.prevButton.setFocus(true)
+      end if
+      handled = true
+    ' Foco en siguiente y se presiona abajo
+    else if m.nextButton.isInFocusChain() and key = KeyButtons().DOWN then
+      __focusKeyboard()
+      handled = true
+    ' Foco en siguiente y se presiona arriba
+    else if m.nextButton.isInFocusChain() and key = KeyButtons().UP and m.LoginQrisEnabled then      
+      __focusLoginMethod()
+      changeLoginSwitchColor(true)
+      handled = true
+    ' Foco en siguiente y se presiona Ok
+    else if m.nextButton.isInFocusChain() and key = KeyButtons().OK then
+      __nextButtonPressed()
+      handled = true
+    ' Foco en login por QR y se presiona derecha
+    else if m.loginMethodPhone <> invalid and m.loginMethodPhone.isInFocusChain() and key = KeyButtons().RIGHT then
+      ' Mueve foco a la opción Teclado con botón derecha
+      m.loginMethodKeyboard.setFocus(true)
+      ' Fuerza animación hacia la derecha al enfocar Teclado
+      __animateLoginMethodSwitchSelected(false, true) 
+      onLoginMethodFocusChanged()
+      handled = true
+    ' Foco en login por usuario y se presiona izquierda
+    else if m.loginMethodKeyboard <> invalid and m.loginMethodKeyboard.isInFocusChain() and key = KeyButtons().LEFT then
+      ' Retorna foco a Teléfono con botón izquierda
+      m.loginMethodPhone.setFocus(true) 
+      ' Fuerza animación hacia la izquierda al volver a Teléfono
+      __animateLoginMethodSwitchSelected(true, true) 
+      onLoginMethodFocusChanged()
+      handled = true
+    ' Foco en login por QR y se presiona abajo
+    else if m.loginMethodPhone <> invalid and m.loginMethodPhone.isInFocusChain() and key = KeyButtons().DOWN then
+      ' Registra Phone como último foco antes de bajar a Validate
+      m.lastLoginMethodFocus = "phone" 
+      if m.loginMethodPhone.isInFocusChain() then
+        ' Mueve foco al botón Validate con tecla abajo
+        m.validatePhoneButton.setFocus(true) 
+      else
+        __focusKeyboard()
+      end if
+      changeLoginSwitchColor(false)
+      handled = true
+    ' Foco en login por usuario y se presiona abajo
+    else if m.loginMethodKeyboard <> invalid and m.loginMethodKeyboard.isInFocusChain() and key = KeyButtons().DOWN then
+      ' Registra Keyboard como último foco antes de bajar a Validate
+      m.lastLoginMethodFocus = "keyboard" 
+      if m.loginMethodPhone.isInFocusChain() then
+        ' Mueve foco al botón Validate con tecla abajo
+        m.validatePhoneButton.setFocus(true) 
+      else
+        __focusKeyboard()
+      end if
+      changeLoginSwitchColor(false)
+      handled = true
+    ' Foco en el botón validar y se presiona arriba
+    else if m.validatePhoneButton <> invalid and m.validatePhoneButton.isInFocusChain() and key = KeyButtons().UP then
+      __focusLoginMethod()
+      changeLoginSwitchColor(true)
+      handled = true
+    ' Foco en el botón validar y se presiona OK
+    else if m.validatePhoneButton <> invalid and m.validatePhoneButton.isInFocusChain() and key = KeyButtons().OK then 
+      ' Pausa el timer para priorizar la validación manual desde el botón
+      __pauseValidateRegisterCodeTimerForButton() 
+      validateRegisterCodeLogin()
+      handled = true
+    end if
+  end if
+
+  return handled
+end function
+
+' Recibir la respuesta del servicio que inserta la instalación
+sub onLoadInstallationByDeviceResponse()
+
+  if m.apiInstallationRequestManager = invalid then
+    __loadInstallationByDevice()
+    return
+  else 
+    if validateStatusCode(m.apiInstallationRequestManager.statusCode) then
+
+      removePendingAction(m.apiInstallationRequestManager.requestId)
+
+      data = ParseJson(m.apiInstallationRequestManager.response)
+
+      registerCode = data.data.formattedRegisterCode
+      m.activationCodeLabel.text = registerCode
+
+      ' Actualiza la variable global device con la data devuelta por Installations
+      addAndSetFields(m.global, {device: data.data} ) 
+      if data.data.token <> invalid and data.data.token <> "" then  setDeviceToken(data.data.token)
+
+      ' Lee la URL remota de la imagen QR
+      loginByCodeUrlQr = getConfigVariable(m.global.configVariablesKeys.LOGIN_BY_CODE_URL_QR)
+
+      activationCode = loginByCodeUrlQr.replace("[RegistrationCode]", registerCode)
+      m.qrCodePoster.uri = "https://api.qrserver.com/v1/create-qr-code/?size=256x260&data=" + activationCode 
+
+    else 
+      if m.apiInstallationRequestManager.serverError then
+        statusCode = m.apiInstallationRequestManager.statusCode
+        setCdnErrorCodeFromStatus(statusCode, ApiType().CLIENTS_API_URL)
+        changeStatusAction(m.apiInstallationRequestManager.requestId, "error")
+        retryAll()
+      else
+        removePendingAction(m.apiInstallationRequestManager.requestId)
+        if m.resultCodes = invalid then m.resultCodes = getResultCodes()
+        m.top.loading.visible = false
+
+        error = ParseJson(m.apiInstallationRequestManager.errorResponse)
+
+        errorAPI = ""
+
+        if error.code = m.resultCodes.UNAUTHORIZED then
+          errorAPI = i18n_t(m.global.i18n, "loginPage.errorForm.unAuthorized")
+        else if error.code = m.resultCodes.NOT_CONFIRMED then
+          errorAPI = i18n_t(m.global.i18n, "loginPage.errorForm.notConfirmed")
+        else if error.code = m.resultCodes.NOT_ACTIVATED then
+          errorAPI = i18n_t(m.global.i18n, "loginPage.errorForm.notActivated")
+        else if error.code = m.resultCodes.REQUESTTIMEOUT then
+          errorAPI = i18n_t(m.global.i18n, "shared.errorComponent.connection")
+        else 
+          errorAPI = i18n_t(m.global.i18n, "loginPage.errorForm.unhandled")
+        end if
+          
+        m.apiInstallationRequestManager = clearApiRequest(m.apiInstallationRequestManager)
+        __showDialog(errorAPI)
+      end if
+    end if 
+    m.apiInstallationRequestManager = clearApiRequest(m.apiInstallationRequestManager)
+  end if
+end sub
+
+' Ocultar o mostrar el formuarlio de Login por QR
+sub onLoginMethodFocusChanged()
+
+  if (m.LoginQrisEnabled) then
+    ' Determina si la opción Teléfono es la que actualmente tiene foco
+    isPhoneFocused = m.loginMethodPhone <> invalid and m.loginMethodPhone.isInFocusChain()
+    ' Guarda foco actual para retorno desde Validate
+    m.lastLoginMethodFocus = "keyboard" 
+    if isPhoneFocused then m.lastLoginMethodFocus = "phone"
+    ' Anima selector en cambios de foco izquierda/derecha
+    __animateLoginMethodSwitchSelected(isPhoneFocused, m.loginMethodSwitchHasInitialized) 
+    ' Habilita animaciones luego de la primera sincronización
+    m.loginMethodSwitchHasInitialized = true 
+    ' Muestra credenciales únicamente cuando el foco está en la opción Teclado
+    m.credentialsContainer.visible = not isPhoneFocused
+    ' Muestra QR únicamente cuando el foco está en la opción Teléfono
+    m.qrContainer.visible = isPhoneFocused
+  else
+    m.qrContainer.visible = false
+  end if
+end sub
 
 ' Procesa la respuesta al tratar de loguear al usuario a traves de credenciales
 sub onLoginResponse()
@@ -358,36 +520,6 @@ sub onLoginResponse()
   end if
 end sub
 
-' Notifica que finalizo las tareas de la pantalla
-sub onFinished()
-  if m.top.finished then 
-    __stopValidateRegisterCodeTimer() ' Agregado: detiene el polling cuando la pantalla termina su flujo
-    m.validateRegisterCodeTimerExecutions = 0 ' Agregado: reinicia el contador del polling al finalizar la pantalla
-    m.sendLoginPost = false
-    m.inputFocus = "user"
-    m.prevButton.disable = true
-
-    m.keyboard.text = ""
-    m.inputFocus = "user"
-    m.userField.text = invalid
-    m.passwordField.text = invalid
-    m.passwordLabel.opacity = 0.0
-    m.passwordField.opacity = 0.0
-    m.prevButton.disable = true
-  end if 
-end sub 
-
-' Procesa el evento de cierre del dialogo y realiza la accion pertinente
-sub onDialogClosed(_event)
-  ' Eliminar el diálogo cuando el usuario cierra la ventana
-  m.dialog.visible = false
-  m.dialog.unobserveField("buttonSelected")
-  m.top.removeChild(m.dialog)
-  m.dialog = invalid
-  m.sendLoginPost = false
-  __focusKeyboard()
-end sub
-
 ' Administrar el uso de los Inputs anidando el input posicionado en pantalla con el que usa internamente el teclado.
 sub onTextBoxManagment()
   if m.inputFocus = "user" then 
@@ -399,6 +531,117 @@ sub onTextBoxManagment()
     m.passwordField.text = m.keyboard.textEditBox.text
     m.passwordField.active = m.keyboard.textEditBox.active
   end if
+end sub
+
+' Procesa e imprime la respuesta del polling de RegisterCodeLogin
+sub onValidateRegisterCodeLoginResponse() 
+  if m.apiRegisterCodeRequestManager = invalid then return
+  ' Procesa el flujo exitoso de RegisterCodeLogin
+  if validateStatusCode(m.apiRegisterCodeRequestManager.statusCode) then 
+    ' Corta el timer para evitar nuevas ejecuciones luego del login exitoso
+    __stopValidateRegisterCodeTimer() 
+    ' Limpia la acción pendiente cuando la respuesta es exitosa
+    removePendingAction(m.apiRegisterCodeRequestManager.requestId) 
+    ' Completa el login con la respuesta del RegisterCodeLogin exitoso
+    __finishLoginWithApiResponse() 
+    ' Libera el manager dedicado luego de finalizar el login
+    m.apiRegisterCodeRequestManager = clearApiRequest(m.apiRegisterCodeRequestManager) 
+  else
+    m.apiRegisterCodeRequestManager = clearApiRequest(m.apiRegisterCodeRequestManager)
+    if m.validateRegisterCodeTimerPausedByButton and m.validateRegisterCodeTimerExecutions < m.validateRegisterCodeTimerMaxExecutions then 
+      ' Reanuda el timer luego de priorizar la validación manual si todavía quedan ejecuciones disponibles
+      __startValidateRegisterCodeTimer() 
+    end if
+  end if
+end sub
+
+' Callback del timer de validación periódica
+sub onValidateRegisterCodeTimerFire() 
+  ' Evita disparar otra validación si ya hay una petición en curso
+  if m.apiRegisterCodeRequestManager <> invalid then return 
+  ' Corta el timer cuando ya alcanzó el máximo de 10 ejecuciones
+  if m.validateRegisterCodeTimerExecutions >= m.validateRegisterCodeTimerMaxExecutions then __stopValidateRegisterCodeTimer() : return 
+  ' Registra una nueva ejecución real provocada por el timer
+  m.validateRegisterCodeTimerExecutions = m.validateRegisterCodeTimerExecutions + 1 
+  ' Ejecuta la validación del código de registro cada vez que dispara el timer
+  validateRegisterCodeLogin() 
+end sub
+
+' Ejecuta el servicio RegisterCodeLogin con el payload solicitado
+sub validateRegisterCodeLogin() 
+  ' Asegura que los datos base del request estén cargados antes de llamar al servicio
+  __initData() 
+  if m.apiUrl = invalid or m.apiUrl = "" then return
+  if m.global = invalid or m.global.device = invalid then return
+  ' Previene llamadas concurrentes si la validación anterior sigue en curso
+  if m.apiRegisterCodeRequestManager <> invalid then return 
+
+  ' Genera un identificador para reutilizar la lógica estándar de requests del componente
+  requestId = createRequestId() 
+  registerCodeLoginPayload = {
+    productCode: m.productCode 
+    platformCode: m.platformCode
+    environment: m.enviroment
+    device: m.global.device
+  }
+
+  action = {
+    apiRequestManager: m.apiRegisterCodeRequestManager 
+    url: urlRegisterCode(m.apiUrl)
+    method: "POST"
+    responseMethod: "onValidateRegisterCodeLoginResponse" 
+    body: FormatJson(registerCodeLoginPayload)
+    token: invalid
+    publicApi: true
+    requestId: requestId 
+    dataAux: invalid 
+    run: function() as Object 
+      m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux) 
+      return { success: true, error: invalid } 
+    end function
+  }
+
+  runAction(requestId, action, ApiType().AUTH_API_URL) 
+  m.apiRegisterCodeRequestManager = action.apiRequestManager
+end sub
+
+' ****** Funciones privadas ******
+
+' Anima (o posiciona) el selector visual del switch de login según la opción activa
+sub __animateLoginMethodSwitchSelected(isPhoneSelected as Boolean, withAnimation as Boolean)
+  if m.loginMethodSwitchSelected = invalid then return
+
+  targetX = m.loginSwitchSelectedRightX
+  if isPhoneSelected then targetX = m.loginSwitchSelectedLeftX
+
+  targetPosition = [targetX, m.loginSwitchSelectedY]
+
+  if not withAnimation then
+    m.loginMethodSwitchSelected.translation = targetPosition
+    return
+  end if
+
+  if m.loginMethodSwitchAnimation = invalid then
+    m.loginMethodSwitchAnimation = CreateObject("roSGNode", "Animation") 
+    m.loginMethodSwitchAnimation.duration = 0.18
+    ' Solo una transición por interacción
+    m.loginMethodSwitchAnimation.repeat = false 
+    m.loginMethodSwitchInterpolator = CreateObject("roSGNode", "Vector2DFieldInterpolator")
+    m.loginMethodSwitchInterpolator.key = [0.0, 1.0]
+     ' Campo objetivo del interpolador
+    m.loginMethodSwitchInterpolator.fieldToInterp = "loginMethodSwitchSelected.translation"
+    ' Conecta interpolador a la animación
+    m.loginMethodSwitchAnimation.appendChild(m.loginMethodSwitchInterpolator) 
+    m.top.appendChild(m.loginMethodSwitchAnimation)
+  end if
+
+  currentPosition = m.loginMethodSwitchSelected.translation
+  ' Define origen y destino del desplazamiento
+  m.loginMethodSwitchInterpolator.keyValue = [currentPosition, targetPosition] 
+  ' Reinicia animación previa antes de arrancar la nueva
+  m.loginMethodSwitchAnimation.control = "stop" 
+  ' Ejecuta el desplazamiento animado
+  m.loginMethodSwitchAnimation.control = "start" 
 end sub
 
 ' Aplicar las traducciones en el componente
@@ -421,80 +664,51 @@ sub __applyTranslations()
     m.validatePhoneButton.text = i18n_t(m.global.i18n, "button.validateRegisterCode") 
 end sub
 
-' Anima (o posiciona) el selector visual del switch de login según la opción activa
-sub __animateLoginMethodSwitchSelected(isPhoneSelected as Boolean, withAnimation as Boolean)
-  if m.loginMethodSwitchSelected = invalid then return
+' Centraliza la finalización del login usando la respuesta HTTP disponible en m.apiRequestManager
+sub __finishLoginWithApiResponse() 
+  resp = ParseJson(m.apiRequestManager.response)
 
-  targetX = m.loginSwitchSelectedRightX
-  if isPhoneSelected then targetX = m.loginSwitchSelectedLeftX
+  ' Guarda en global los datos devueltos por el login exitoso
+  addAndSetFields(m.global, {device: resp.device, organization: resp.organization, contact: resp.contact, variables: resp.variables} ) 
 
-  targetPosition = [targetX, m.loginSwitchSelectedY]
+  ' Persiste la programación de actualización de variables remotas
+  saveNextUpdateVariables() 
 
-  if not withAnimation then
-    m.loginMethodSwitchSelected.translation = targetPosition ' Agregado: posiciona selector sin animación
-    return
-  end if
+  ' Actualiza el dispositivo persistido localmente
+  SetDevice(resp.device) 
+  ' Guarda los tokens entregados por la autenticación
+  saveTokens(resp) 
 
-  if m.loginMethodSwitchAnimation = invalid then
-    m.loginMethodSwitchAnimation = CreateObject("roSGNode", "Animation") ' Agregado: animación reutilizable para mover el selector
-    m.loginMethodSwitchAnimation.duration = 0.18 ' Agregado: duración corta para feedback fluido
-    m.loginMethodSwitchAnimation.repeat = false ' Agregado: solo una transición por interacción
-    m.loginMethodSwitchInterpolator = CreateObject("roSGNode", "Vector2DFieldInterpolator") ' Agregado: interpolador para translation
-    m.loginMethodSwitchInterpolator.key = [0.0, 1.0] ' Agregado: claves de inicio y fin de la animación
-    m.loginMethodSwitchInterpolator.fieldToInterp = "loginMethodSwitchSelected.translation" ' Agregado: campo objetivo del interpolador
-    m.loginMethodSwitchAnimation.appendChild(m.loginMethodSwitchInterpolator) ' Agregado: conecta interpolador a la animación
-    m.top.appendChild(m.loginMethodSwitchAnimation) ' Agregado: adjunta la animación al árbol SG
-  end if
+  ' Envianvía el log del login exitoso
+  actionLog = getActionLog({ actionCode: ActionLogCode().LOGIN_BY_CREDENTIALS }) 
+  __saveActionLog(actionLog) 
 
-  currentPosition = m.loginMethodSwitchSelected.translation
-  m.loginMethodSwitchInterpolator.keyValue = [currentPosition, targetPosition] ' Agregado: define origen y destino del desplazamiento
-  m.loginMethodSwitchAnimation.control = "stop" ' Agregado: reinicia animación previa antes de arrancar la nueva
-  m.loginMethodSwitchAnimation.control = "start" ' Agregado: ejecuta el desplazamiento animado
+  ' Cierra la pantalla al completar correctamente el login
+  m.top.finished = true 
 end sub
 
-' Valdia y realiza las acciones pertinentes al precionar el boton Previus de la pantalla 
-sub __prevButtonPressed()
-  if m.inputFocus = "password" then
-    m.keyboard.text = m.userField.text
-    m.inputFocus = "user"
-    m.passwordField.text = invalid
-    m.nextButton.setFocus(true)
-    m.passwordLabel.opacity = 0.0
-    m.passwordField.opacity = 0.0
-    m.prevButton.disable = true
-  end if  
+' Entrega el foco al Teclado y actualiza la posicion del cursor.
+sub __focusKeyboard()
+  if m.inputFocus = "user" then 
+    m.keyboard.textEditBox.cursorPosition = m.userField.text.Len()
+  else
+    m.keyboard.textEditBox.cursorPosition = m.passwordField.text.Len()
+  end if
+  m.keyboard.setFocus(true)
 end sub
 
-' Valdia y realiza las acciones pertinentes al precionar el boton Next de la pantalla 
-sub __nextButtonPressed()
-  if m.inputFocus = "user" then
-    if m.userField.text <> invalid and m.userField.text <> "" then 
-      m.passwordLabel.opacity = 1.0
-      m.passwordField.opacity = 1.0
-      m.prevButton.disable = false
-      m.inputFocus = "password"
-      m.keyboard.text = invalid
-    else
-      __showDialog(i18n_t(m.global.i18n, "loginPage.errorForm.userRequired"))
-    end if
-  else if m.inputFocus = "password" then
-    if m.passwordField.text <> invalid and m.passwordField.text <> "" then 
-      if m.sendLoginPost = false then
-        m.sendLoginPost = true
-        user = m.userField.text
-        password = m.passwordField.text
-        __initData()
-        
-        if user = "" or password = "" then      
-          m.sendLoginPost = false
-          __showDialog(i18n_t(m.global.i18n, "loginPage.errorForm.invalidAccount"))
-          return
-        end if
-        __login(user, password)
-      end if
-    else
-      __showDialog(i18n_t(m.global.i18n, "loginPage.errorForm.passwordRequired"))
-    end if 
+' Setear el foco en la opción de login seleccionada
+sub __focusLoginMethod()
+  ' Retorna al último foco en Keyboard cuando aplica
+  if m.lastLoginMethodFocus = "keyboard" then 
+    m.loginMethodKeyboard.setFocus(true)
+    ' Sincroniza selector al volver a Keyboard
+    __animateLoginMethodSwitchSelected(false, true) 
+  else
+    ' Retorna por defecto a Phone
+    m.loginMethodPhone.setFocus(true) 
+    ' Sincroniza selector al volver a Phone
+    __animateLoginMethodSwitchSelected(true, true) 
   end if
 end sub
 
@@ -505,6 +719,75 @@ sub __initData()
   if m.enviroment = invalid then m.enviroment = getConfigVariable(m.global.configVariablesKeys.ENVIRONMENT) 
   if m.apiUrl = invalid then m.apiUrl = getConfigVariable(m.global.configVariablesKeys.API_URL) 
   if m.beaconUrl = invalid then m.beaconUrl = getConfigVariable(m.global.configVariablesKeys.BEACON_URL) 
+end sub
+
+' Llama al servicio para registrar la instalación
+sub __loadInstallationByDevice()
+  if m.apiUrl = invalid then m.apiUrl = getConfigVariable(m.global.configVariablesKeys.API_URL) 
+  if m.apiUrl = invalid or m.apiUrl = "" then return
+  if m.global = invalid or m.global.device = invalid then return
+
+  requestId = createRequestId()
+
+  action = {
+    apiRequestManager: m.apiInstallationRequestManager
+    url: urlInstallation(m.apiUrl)
+    method: "POST"
+    responseMethod: "onLoadInstallationByDeviceResponse"
+    body: FormatJson(m.global.device)
+    token: invalid
+    publicApi: true
+    requestId: requestId
+    dataAux: invalid
+    run: function() as Object
+      m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux) 
+      return { success: true, error: invalid }
+    end function
+  }
+
+  runAction(requestId, action, ApiType().CLIENTS_API_URL) ' Agregado: reutiliza la lógica de ejecución y reintento estándar del componente
+  m.apiInstallationRequestManager = action.apiRequestManager ' Agregado: sincroniza el manager local luego de lanzar la acción
+end sub
+
+' Carga la configuración de login por código y actualiza el estado del módulo QR
+sub __loadQrLoginConfig()
+  ' Lee si el login por código está habilitado desde variables de configuración
+  enableLoginByCode = getConfigVariable(m.global.configVariablesKeys.ENABLE_LOGIN_BY_CODE)
+
+  m.LoginQrisEnabled = (enableLoginByCode = 1)
+
+  ' Oculta el switch de método cuando el login por código no está habilitado
+  m.loginMethodSwitchLayout.visible = m.LoginQrisEnabled 
+  m.qrContainer.visible = m.LoginQrisEnabled
+  m.loginMethodTitle.visible = m.LoginQrisEnabled
+
+  onLoginMethodFocusChanged()
+
+  if m.LoginQrisEnabled then 
+    ' Lee la URL remota de la imagen QR
+
+    loginByCodeUrlQr = getConfigVariable(m.global.configVariablesKeys.LOGIN_BY_CODE_URL_QR)
+
+    ' Lee la URL corta que se muestra como alternativa manual
+    loginByCodeUrlShort = getConfigVariable(m.global.configVariablesKeys.LOGIN_BY_CODE_URL_SHORT)
+
+    ' Consulta Installations cuando el login por código está habilitado
+    __loadInstallationByDevice()
+
+    m.qrShortUrlLabel.text = loginByCodeUrlShort
+
+    ' Activa el polling según la configuración remota
+    __startValidateRegisterCodeTimer()
+
+    ' Al iniciar, el foco debe quedar en la opción de login por teléfono
+    m.loginMethodPhone.setFocus(true)
+  else 
+    ' Detiene el polling según la configuración remota
+    __stopValidateRegisterCodeTimer()
+
+    'Envía el foco al teclado cuando el flujo QR queda deshabilitado
+    __focusKeyboard()
+  end if
 end sub
 
 ' Realiza la peticion de logueo del usuario con las credenciales cargadas y los datos propios de la aplicaicon, 
@@ -545,29 +828,59 @@ sub __login(user as String, password as String)
   end if 
 end sub
 
-' Muestra el modal con el mensaje de error pasado por parametro.
-sub __showDialog(errorAPI as String)
-  m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.unhandled"), errorAPI, "onDialogClosed")
+' Valida y realiza las acciones pertinentes al precionar el boton Next de la pantalla 
+sub __nextButtonPressed()
+  if m.inputFocus = "user" then
+    if m.userField.text <> invalid and m.userField.text <> "" then 
+      m.passwordLabel.opacity = 1.0
+      m.passwordField.opacity = 1.0
+      m.prevButton.disable = false
+      m.inputFocus = "password"
+      m.keyboard.text = invalid
+    else
+      __showDialog(i18n_t(m.global.i18n, "loginPage.errorForm.userRequired"))
+    end if
+  else if m.inputFocus = "password" then
+    if m.passwordField.text <> invalid and m.passwordField.text <> "" then 
+      if m.sendLoginPost = false then
+        m.sendLoginPost = true
+        user = m.userField.text
+        password = m.passwordField.text
+        __initData()
+        
+        if user = "" or password = "" then      
+          m.sendLoginPost = false
+          __showDialog(i18n_t(m.global.i18n, "loginPage.errorForm.invalidAccount"))
+          return
+        end if
+        __login(user, password)
+      end if
+    else
+      __showDialog(i18n_t(m.global.i18n, "loginPage.errorForm.passwordRequired"))
+    end if 
+  end if
 end sub
 
-' Entrega el foco al Teclado y actualiza la posicion del cursor.
-sub __focusKeyboard()
-  if m.inputFocus = "user" then 
-    m.keyboard.textEditBox.cursorPosition = m.userField.text.Len()
-  else
-    m.keyboard.textEditBox.cursorPosition = m.passwordField.text.Len()
-  end if
-  m.keyboard.setFocus(true)
+' Helper para pausar el timer cuando el usuario prioriza el botón Validate
+sub __pauseValidateRegisterCodeTimerForButton() 
+  if m.validateRegisterCodeTimer = invalid then return
+  ' Marca que la pausa provino del botón manual
+  m.validateRegisterCodeTimerPausedByButton = true
+  ' Pausa el timer para dar prioridad a la validación manual
+  m.validateRegisterCodeTimer.control = "stop" 
 end sub
 
-sub __focusLoginMethod()
-  if m.lastLoginMethodFocus = "keyboard" then ' Agregado: retorna al último foco en Keyboard cuando aplica
-    m.loginMethodKeyboard.setFocus(true)
-    __animateLoginMethodSwitchSelected(false, true) ' Agregado: sincroniza selector al volver a Keyboard
-  else
-    m.loginMethodPhone.setFocus(true) ' Agregado: retorna por defecto a Phone
-    __animateLoginMethodSwitchSelected(true, true) ' Agregado: sincroniza selector al volver a Phone
-  end if
+' Valida y realiza las acciones pertinentes al precionar el boton Previus de la pantalla 
+sub __prevButtonPressed()
+  if m.inputFocus = "password" then
+    m.keyboard.text = m.userField.text
+    m.inputFocus = "user"
+    m.passwordField.text = invalid
+    m.nextButton.setFocus(true)
+    m.passwordLabel.opacity = 0.0
+    m.passwordField.opacity = 0.0
+    m.prevButton.disable = true
+  end if  
 end sub
 
 ' Guardar el log cuandos se cambia una opción del menú 
@@ -598,20 +911,26 @@ sub __saveActionLog(actionLog as object)
   end if
 end sub
 
-' Obtener el beacon token
-sub onActionLogTokenResponse() 
+' Helper para iniciar el timer de polling
+sub __startValidateRegisterCodeTimer() 
+  if m.validateRegisterCodeTimer = invalid then return
+  ' Impide reiniciar el timer si ya alcanzó su máximo de ejecuciones
+  if m.validateRegisterCodeTimerExecutions >= m.validateRegisterCodeTimerMaxExecutions then return 
+  ' Limpia el estado de pausa manual antes de reiniciar el timer
+  m.validateRegisterCodeTimerPausedByButton = false 
+  ' Reinicia el timer antes de volver a arrancarlo
+  m.validateRegisterCodeTimer.control = "stop" 
+  ' Inicia el polling periódico del servicio RegisterCodeLogin
+  m.validateRegisterCodeTimer.control = "start" 
+end sub
 
-  resp = ParseJson(m.apiLogRequestManager.response)
-  actionLog = ParseJson(m.apiLogRequestManager.dataAux)
-
-  setBeaconToken(resp.actionsLogToken)
-
-  now = CreateObject("roDateTime")
-  now.ToLocalTime()
-  m.global.beaconTokenExpiresIn = now.asSeconds() + ((resp.expiresIn - 60) * 1000)
-
-  m.apiLogRequestManager = clearApiRequest(m.apiLogRequestManager) 
-  __sendActionLog(actionLog)
+' Helper para detener el timer de polling
+sub __stopValidateRegisterCodeTimer() 
+  if m.validateRegisterCodeTimer = invalid then return 
+  ' Limpia el estado de pausa manual al detener el polling
+  m.validateRegisterCodeTimerPausedByButton = false 
+  ' Detiene el polling cuando el flujo QR no está habilitado
+  m.validateRegisterCodeTimer.control = "stop" 
 end sub
 
 ' Llamar al servicio para guardar el log
@@ -641,240 +960,14 @@ sub __sendActionLog(actionLog as object)
   end if
 end sub
 
-' Limpiar la llamada del log
-sub onActionLogResponse() 
-  m.apiLogRequestManager = clearApiRequest(m.apiLogRequestManager)
+' Muestra el modal con el mensaje de error pasado por parametro.
+sub __showDialog(errorAPI as String)
+  m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.unhandled"), errorAPI, "onDialogClosed")
 end sub
 
-sub onActiveApiUrlChanged()
-  __syncApiUrlFromGlobal()
-  ' Actualiza los datos del QR cuando cambia el dominio activo
-  __loadQrLoginConfig()
-end sub
-
-sub onValidateRegisterCodeTimerFire() ' Agregado: callback del timer de validación periódica
-  if m.apiRegisterCodeRequestManager <> invalid then return ' Agregado: evita disparar otra validación si ya hay una petición en curso
-  if m.validateRegisterCodeTimerExecutions >= m.validateRegisterCodeTimerMaxExecutions then __stopValidateRegisterCodeTimer() : return ' Agregado: corta el timer cuando ya alcanzó el máximo de 10 ejecuciones
-  m.validateRegisterCodeTimerExecutions = m.validateRegisterCodeTimerExecutions + 1 ' Agregado: registra una nueva ejecución real provocada por el timer
-  validateRegisterCodeLogin() ' Agregado: ejecuta la validación del código de registro cada vez que dispara el timer
-end sub ' Agregado: cierre del callback del timer de validación
-
-' Carga la configuración de login por código y actualiza el estado del módulo QR
-sub __loadQrLoginConfig()
-  ' Lee si el login por código está habilitado desde variables de configuración
-  enableLoginByCode = getConfigVariable(m.global.configVariablesKeys.ENABLE_LOGIN_BY_CODE)
-
-  m.LoginQrisEnabled = (enableLoginByCode = 0)
-
-  ' Oculta el switch de método cuando el login por código no está habilitado
-  m.loginMethodSwitchLayout.visible = m.LoginQrisEnabled 
-  m.qrContainer.visible = m.LoginQrisEnabled
-  m.loginMethodTitle.visible = m.LoginQrisEnabled
-
-  onLoginMethodFocusChanged()
-
-  if m.LoginQrisEnabled then 
-    ' Lee la URL remota de la imagen QR
-
-    loginByCodeUrlQr = getConfigVariable(m.global.configVariablesKeys.LOGIN_BY_CODE_URL_QR)
-
-    ' Lee la URL corta que se muestra como alternativa manual
-    loginByCodeUrlShort = getConfigVariable(m.global.configVariablesKeys.LOGIN_BY_CODE_URL_SHORT)
-
-    ' Consulta Installations cuando el login por código está habilitado
-    __loadInstallationByDevice()
-
-    m.qrShortUrlLabel.text = loginByCodeUrlShort
-
-    ' Activa el polling según la configuración remota
-    __startValidateRegisterCodeTimer()
-
-    ' Al iniciar, el foco debe quedar en la opción de login por teléfono
-    m.loginMethodPhone.setFocus(true)
-  else 
-    ' Detiene el polling según la configuración remota
-    __stopValidateRegisterCodeTimer()
-
-    'Envía el foco al teclado cuando el flujo QR queda deshabilitado
-    __focusKeyboard()
-  end if
-end sub
-
+' Obtiene el ApiUrl si este fue actualizado
 sub __syncApiUrlFromGlobal()
   if m.global.activeApiUrl <> invalid and m.global.activeApiUrl <> "" then
     m.apiUrl = m.global.activeApiUrl
-  end if
-end sub
-
-sub __startValidateRegisterCodeTimer() ' Agregado: helper para iniciar el timer de polling
-  if m.validateRegisterCodeTimer = invalid then return ' Agregado: evita errores si el timer todavía no fue creado
-  if m.validateRegisterCodeTimerExecutions >= m.validateRegisterCodeTimerMaxExecutions then return ' Agregado: impide reiniciar el timer si ya alcanzó su máximo de ejecuciones
-  m.validateRegisterCodeTimerPausedByButton = false ' Agregado: limpia el estado de pausa manual antes de reiniciar el timer
-  m.validateRegisterCodeTimer.control = "stop" ' Agregado: reinicia el timer antes de volver a arrancarlo
-  m.validateRegisterCodeTimer.control = "start" ' Agregado: inicia el polling periódico del servicio RegisterCodeLogin
-end sub ' Agregado: cierre del helper que inicia el timer
-
-sub __stopValidateRegisterCodeTimer() ' Agregado: helper para detener el timer de polling
-  if m.validateRegisterCodeTimer = invalid then return ' Agregado: evita errores si el timer todavía no fue creado
-  m.validateRegisterCodeTimerPausedByButton = false ' Agregado: limpia el estado de pausa manual al detener el polling
-  m.validateRegisterCodeTimer.control = "stop" ' Agregado: detiene el polling cuando el flujo QR no está habilitado
-end sub ' Agregado: cierre del helper que detiene el timer
-
-sub __pauseValidateRegisterCodeTimerForButton() ' Agregado: helper para pausar el timer cuando el usuario prioriza el botón Validate
-  if m.validateRegisterCodeTimer = invalid then return ' Agregado: evita errores si el timer todavía no fue creado
-  m.validateRegisterCodeTimerPausedByButton = true ' Agregado: marca que la pausa provino del botón manual
-  m.validateRegisterCodeTimer.control = "stop" ' Agregado: pausa el timer para dar prioridad a la validación manual
-end sub ' Agregado: cierre del helper que pausa el timer por prioridad manual
-
-sub validateRegisterCodeLogin() ' Agregado: ejecuta el servicio RegisterCodeLogin con el payload solicitado
-  __initData() ' Agregado: asegura que los datos base del request estén cargados antes de llamar al servicio
-  if m.apiUrl = invalid or m.apiUrl = "" then return ' Agregado: evita ejecutar la llamada sin una apiUrl válida
-  if m.global = invalid or m.global.device = invalid then return ' Agregado: evita ejecutar la llamada sin la información del dispositivo
-  if m.apiRegisterCodeRequestManager <> invalid then return ' Agregado: previene llamadas concurrentes si la validación anterior sigue en curso
-
-  requestId = createRequestId() ' Agregado: genera un identificador para reutilizar la lógica estándar de requests del componente
-  registerCodeLoginPayload = { ' Agregado: arma el payload solicitado para el servicio RegisterCodeLogin
-    productCode: m.productCode ' Agregado: envía el productCode configurado para la app
-    platformCode: m.platformCode ' Agregado: envía el platformCode configurado para la app
-    environment: m.enviroment ' Agregado: envía el environment configurado para la app
-    device: m.global.device ' Agregado: envía la información actual del dispositivo
-  } ' Agregado: cierra la definición del payload del servicio
-
-  action = { ' Agregado: encapsula la llamada siguiendo el mismo patrón del resto del componente
-    apiRequestManager: m.apiRegisterCodeRequestManager ' Agregado: utiliza un request manager dedicado para el polling del código
-    url: urlRegisterCode(m.apiUrl) ' Agregado: construye la URL del servicio RegisterCodeLogin
-    method: "POST" ' Agregado: ejecuta el servicio con método POST
-    responseMethod: "onValidateRegisterCodeLoginResponse" ' Agregado: define el callback que imprimirá la respuesta del servicio
-    body: FormatJson(registerCodeLoginPayload) ' Agregado: serializa el payload solicitado para el request
-    token: invalid ' Agregado: mantiene el comportamiento de request pública para este flujo
-    publicApi: true ' Agregado: ejecuta la llamada como pública desde la pantalla de login
-    requestId: requestId ' Agregado: conserva el requestId para retry y limpieza posterior
-    dataAux: invalid ' Agregado: no requiere datos auxiliares para procesar la respuesta
-    run: function() as Object ' Agregado: reutiliza sendApiRequest igual que los demás servicios del componente
-      m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux) ' Agregado: dispara la petición HTTP del servicio RegisterCodeLogin
-      return { success: true, error: invalid } ' Agregado: devuelve el resultado esperado por runAction
-    end function ' Agregado: cierra el ejecutor de la acción
-  } ' Agregado: cierra la definición de la acción del polling
-
-  runAction(requestId, action, ApiType().AUTH_API_URL) ' Agregado: reutiliza la lógica estándar de ejecución y reintentos del componente
-  m.apiRegisterCodeRequestManager = action.apiRequestManager ' Agregado: sincroniza el manager local luego de lanzar la acción
-end sub ' Agregado: cierre del método que llama RegisterCodeLogin
-
-sub onValidateRegisterCodeLoginResponse() ' Agregado: procesa e imprime la respuesta del polling de RegisterCodeLogin
-  if m.apiRegisterCodeRequestManager = invalid then return ' Agregado: evita procesar respuestas cuando el manager ya fue limpiado
-  if validateStatusCode(m.apiRegisterCodeRequestManager.statusCode) then ' Agregado: procesa el flujo exitoso de RegisterCodeLogin
-    __stopValidateRegisterCodeTimer() ' Agregado: corta el timer para evitar nuevas ejecuciones luego del login exitoso
-    removePendingAction(m.apiRegisterCodeRequestManager.requestId) ' Agregado: limpia la acción pendiente cuando la respuesta es exitosa
-    print "[LoginScreen] validateRegisterCodeLogin response:"; m.apiRegisterCodeRequestManager.response ' Agregado: imprime la respuesta exitosa del servicio solicitado
-    m.apiRequestManager = m.apiRegisterCodeRequestManager ' Agregado: reutiliza la respuesta exitosa en el helper compartido de finalización de login
-    __finishLoginWithApiResponse() ' Agregado: completa el login con la respuesta del RegisterCodeLogin exitoso
-    m.apiRegisterCodeRequestManager = clearApiRequest(m.apiRegisterCodeRequestManager) ' Agregado: libera el manager dedicado luego de finalizar el login
-    m.apiRequestManager = clearApiRequest(m.apiRequestManager) ' Agregado: limpia el manager general reutilizado para cerrar el flujo exitoso
-  else ' Agregado: conserva el flujo previo cuando RegisterCodeLogin no autentica exitosamente
-    print "[LoginScreen] validateRegisterCodeLogin response:"; m.apiRegisterCodeRequestManager.response ' Agregado: imprime la respuesta no exitosa del servicio solicitado
-    m.apiRegisterCodeRequestManager = clearApiRequest(m.apiRegisterCodeRequestManager) ' Agregado: libera el manager luego de imprimir la respuesta fallida
-    if m.validateRegisterCodeTimerPausedByButton and m.validateRegisterCodeTimerExecutions < m.validateRegisterCodeTimerMaxExecutions then __startValidateRegisterCodeTimer() ' Agregado: reanuda el timer luego de priorizar la validación manual si todavía quedan ejecuciones disponibles
-  end if
-end sub ' Agregado: cierre del callback que imprime la respuesta de RegisterCodeLogin
-
-sub __finishLoginWithApiResponse() ' Agregado: centraliza la finalización del login usando la respuesta HTTP disponible en m.apiRequestManager
-  resp = ParseJson(m.apiRequestManager.response) ' Agregado: parsea la respuesta del servicio que autenticó al usuario
-
-  addAndSetFields(m.global, {device: resp.device, organization: resp.organization, contact: resp.contact, variables: resp.variables} ) ' Agregado: guarda en global los datos devueltos por el login exitoso
-
-  saveNextUpdateVariables() ' Agregado: persiste la programación de actualización de variables remotas
-
-  SetDevice(resp.device) ' Agregado: actualiza el dispositivo persistido localmente
-  saveTokens(resp) ' Agregado: guarda los tokens entregados por la autenticación
-
-  actionLog = getActionLog({ actionCode: ActionLogCode().LOGIN_BY_CREDENTIALS }) ' Agregado: prepara el log de acción para el ingreso exitoso
-  __saveActionLog(actionLog) ' Agregado: envía el log del login exitoso
-
-  m.top.finished = true ' Agregado: cierra la pantalla al completar correctamente el login
-end sub ' Agregado: cierre del helper de finalización del login
-
-sub __loadInstallationByDevice()
-  if m.apiUrl = invalid then m.apiUrl = getConfigVariable(m.global.configVariablesKeys.API_URL) 
-  if m.apiUrl = invalid or m.apiUrl = "" then return ' Agregado: evita la llamada si todavía no existe apiUrl activa
-  if m.global = invalid or m.global.device = invalid then return ' Agregado: evita la llamada si todavía no existe información del dispositivo
-
-  requestId = createRequestId() ' Agregado: genera un identificador para reutilizar la lógica estándar de requests del componente
-
-  action = { ' Agregado: encapsula la llamada usando el mismo patrón de acciones del LoginComponent
-    apiRequestManager: m.apiInstallationRequestManager ' Agregado: usa un request manager dedicado para no interferir con otros servicios del login
-    url: urlInstallation(m.apiUrl) ' Agregado: arma la URL del servicio Installation con la apiUrl activa
-    method: "POST" ' Agregado: envía la información del dispositivo al endpoint de instalaciones
-    responseMethod: "onLoadInstallationByDeviceResponse" ' Agregado: define el callback que imprimirá la respuesta del servicio
-    body: FormatJson(m.global.device) ' Agregado: envía m.global.device como payload del servicio solicitado
-    token: invalid ' Agregado: no fuerza un token manual para esta llamada
-    publicApi: true ' Agregado: ejecuta la llamada como pública desde el flujo de login
-    requestId: requestId ' Agregado: conserva el requestId dentro de la acción para reintentos
-    dataAux: invalid ' Agregado: no requiere datos auxiliares para procesar la respuesta
-    run: function() as Object ' Agregado: reutiliza sendApiRequest igual que el resto del componente
-      m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux) ' Agregado: dispara la petición HTTP del servicio Installation
-      return { success: true, error: invalid } ' Agregado: devuelve el resultado esperado por runAction
-    end function ' Agregado: cierra el bloque ejecutor de la acción
-  } ' Agregado: cierra la definición de la acción para Installations
-
-  runAction(requestId, action, ApiType().CLIENTS_API_URL) ' Agregado: reutiliza la lógica de ejecución y reintento estándar del componente
-  m.apiInstallationRequestManager = action.apiRequestManager ' Agregado: sincroniza el manager local luego de lanzar la acción
-end sub
-
-sub onLoadInstallationByDeviceResponse()
-
-  if m.apiInstallationRequestManager = invalid then
-    __loadInstallationByDevice()
-    return
-  else 
-    if validateStatusCode(m.apiInstallationRequestManager.statusCode) then
-
-      removePendingAction(m.apiInstallationRequestManager.requestId)
-
-      data = ParseJson(m.apiInstallationRequestManager.response)
-
-      registerCode = data.data.formattedRegisterCode
-      m.activationCodeLabel.text = registerCode
-
-      addAndSetFields(m.global, {device: data.data} ) ' Agregado: actualiza la variable global device con la data devuelta por Installations
-      if data.data.token <> invalid and data.data.token <> "" then  setDeviceToken(data.data.token)
-
-      ' Lee la URL remota de la imagen QR
-      loginByCodeUrlQr = getConfigVariable(m.global.configVariablesKeys.LOGIN_BY_CODE_URL_QR)
-
-      activationCode = loginByCodeUrlQr.replace("[RegistrationCode]", registerCode)
-      m.qrCodePoster.uri = "https://api.qrserver.com/v1/create-qr-code/?size=256x260&data=" + activationCode 
-
-    else 
-      if m.apiInstallationRequestManager.serverError then
-        statusCode = m.apiInstallationRequestManager.statusCode
-        setCdnErrorCodeFromStatus(statusCode, ApiType().CLIENTS_API_URL)
-        changeStatusAction(m.apiInstallationRequestManager.requestId, "error")
-        retryAll()
-      else
-        removePendingAction(m.apiInstallationRequestManager.requestId)
-        if m.resultCodes = invalid then m.resultCodes = getResultCodes()
-        m.top.loading.visible = false
-
-        error = ParseJson(m.apiInstallationRequestManager.errorResponse)
-
-        errorAPI = ""
-
-        if error.code = m.resultCodes.UNAUTHORIZED then
-          errorAPI = i18n_t(m.global.i18n, "loginPage.errorForm.unAuthorized")
-        else if error.code = m.resultCodes.NOT_CONFIRMED then
-          errorAPI = i18n_t(m.global.i18n, "loginPage.errorForm.notConfirmed")
-        else if error.code = m.resultCodes.NOT_ACTIVATED then
-          errorAPI = i18n_t(m.global.i18n, "loginPage.errorForm.notActivated")
-        else if error.code = m.resultCodes.REQUESTTIMEOUT then
-          errorAPI = i18n_t(m.global.i18n, "shared.errorComponent.connection")
-        else 
-          errorAPI = i18n_t(m.global.i18n, "loginPage.errorForm.unhandled")
-        end if
-          
-        m.apiInstallationRequestManager = clearApiRequest(m.apiInstallationRequestManager)
-        __showDialog(errorAPI)
-      end if
-    end if 
-    m.apiInstallationRequestManager = clearApiRequest(m.apiInstallationRequestManager)
   end if
 end sub

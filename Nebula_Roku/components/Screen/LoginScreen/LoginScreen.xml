@@ -54,12 +54,12 @@
           id="loginMethodSwitch"
           loadDisplayMode="stretch"
           loadDisplayMode="scaleToFill"
-          uri="pkg:/images/client/login-select-background.png" > 
+          uri="pkg:/images/shared/login-select.png" > 
           <Poster
             id="loginMethodSwitchSelected"
             loadDisplayMode="stretch"
             loadDisplayMode="scaleToFill"
-            uri="pkg:/images/client/login-select.png" />
+            uri="pkg:/images/shared/login-select.png" />
 
           <ShadowLabel
             id="loginMethodPhone"
