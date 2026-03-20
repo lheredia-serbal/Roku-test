@@ -760,6 +760,8 @@ end sub
 ' Determinar si debe mostrar el método de login de QR
 sub __showLoginMethod(showQr as boolean)
 
+  m.mainContainer.visible = true
+
   if showQr then
 
     m.loginMethodSwitchLayout.visible = true

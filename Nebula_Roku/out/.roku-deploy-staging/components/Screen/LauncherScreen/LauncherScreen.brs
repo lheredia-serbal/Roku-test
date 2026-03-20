@@ -166,9 +166,10 @@ sub onValdiateConnectionResponse()
 end sub
 
 ' Procesa la respuesta al obtener las variables de la plataforma
-sub onPlatformResponse() ' invoked when EpisodesScreen content is changed
+sub onPlatformResponse()
   if validateStatusCode(m.apiRequestManager.statusCode) then    
-    __initHiddenImageValidationPoster()
+    ' Validar si el servidor soporta imágenes TSL
+    __validateImageTSL()
     addAndSetFields(m.global, {variables: ParseJson(m.apiRequestManager.response).data} )
     m.apiRequestManager = clearApiRequest(m.apiRequestManager) 
     
@@ -336,11 +337,12 @@ sub __validateInternetConnection()
 end sub
 
 ' Crea un Poster solo lógico (no visible) para validar la carga de una imagen.
-sub __initHiddenImageValidationPoster()
+sub __validateImageTSL()
   domainManagerState = __getDomainManagerState()
 
   checks = []
 
+  ' Recorrer los recursos
   for each item in domainManagerState._resources
     if shouldValidateImageUrl(item) then
       checks.push(item)
@@ -376,9 +378,9 @@ sub __initHiddenImageValidationPoster()
   m.hiddenImageValidationPoster.height = 1
   m.hiddenImageValidationPoster.translation = [-9999, -9999]
 
-  imageValidationUri =  "https://nebuladev.qvixsolutions.com/assets/resources/img/ContentNews/44_f00ed63a618d4f528bc32edda87b6461.jpg"
+  imageValidationUri = item.health_check.target.primary
   if domainManagerState <> invalid and domainManagerState._currentConfig = "Secondary" then
-    imageValidationUri = "https://nebuladev.qvixsolutions.com/assets/resources/img/ContentNews/44_f00ed63a618d4f528bc32edda87b6461.jpg"
+    imageValidationUri = item.health_check.target.secondary
   end if
 
   m.hiddenImageValidationPoster.uri = imageValidationUri
@@ -399,6 +401,7 @@ sub onHiddenImageValidationPosterLoadStatusChanged()
   printLog("Hidden poster loadStatus: " + status + " uri=" + m.hiddenImageValidationPoster.uri)
 end sub
 
+' Validar si es una imágen
 function shouldValidateImageUrl(item as Object) as Boolean
   if item = invalid then return false
 
@@ -445,6 +448,7 @@ function replaceHttpsScheme(url as String) as String
   return url
 end function
 
+' 
 function getHealthCheckPrimary(item as Object) as String
   if item = invalid then return ""
   if item.health_check = invalid then return ""

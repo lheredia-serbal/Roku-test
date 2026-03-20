@@ -156,6 +156,8 @@ sub onLogoutEvent()
       m.LoginScreen.visible = true
       m.LoginScreen.onFocus = true
       m.LoginScreen.setFocus(true)
+      ' Fuerza el cambio de foco para re-disparar initFocus al volver desde Home por logout
+      m.LoginScreen.onFocus = false
       
       m.loading.visible = false
       m.blockLogoutProcess = false

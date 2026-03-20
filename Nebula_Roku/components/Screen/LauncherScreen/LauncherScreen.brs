@@ -166,9 +166,10 @@ sub onValdiateConnectionResponse()
 end sub
 
 ' Procesa la respuesta al obtener las variables de la plataforma
-sub onPlatformResponse() ' invoked when EpisodesScreen content is changed
+sub onPlatformResponse()
   if validateStatusCode(m.apiRequestManager.statusCode) then    
-    __initHiddenImageValidationPoster()
+    ' Validar si el servidor soporta imágenes TSL
+    __validateImageTSL()
     addAndSetFields(m.global, {variables: ParseJson(m.apiRequestManager.response).data} )
     m.apiRequestManager = clearApiRequest(m.apiRequestManager) 
     
@@ -336,17 +337,19 @@ sub __validateInternetConnection()
 end sub
 
 ' Crea un Poster solo lógico (no visible) para validar la carga de una imagen.
-sub __initHiddenImageValidationPoster()
+sub __validateImageTSL()
   domainManagerState = __getDomainManagerState()
 
   checks = []
 
+  ' Recorrer los recursos y obtener las imágenes a validar
   for each item in domainManagerState._resources
     if shouldValidateImageUrl(item) then
       checks.push(item)
     end if
   end for
 
+  ' Recorrer los items obtenidos
   for each item in checks
     if item <> invalid and hasUseHttpAction(item) then
       if item.primary <> invalid then
@@ -359,7 +362,8 @@ sub __initHiddenImageValidationPoster()
     end if
   end for
 
-   if m.hiddenImageValidationPoster <> invalid then
+  ' Crear un objeto imágen, asignarle la imágen de validación y validar el status
+  if m.hiddenImageValidationPoster <> invalid then
     m.hiddenImageValidationPoster.unobserveField("loadStatus")
     if m.hiddenImageValidationPoster.getParent() <> invalid then
       m.hiddenImageValidationPoster.getParent().removeChild(m.hiddenImageValidationPoster)
@@ -370,15 +374,14 @@ sub __initHiddenImageValidationPoster()
   m.hiddenImageValidationPoster = CreateObject("roSGNode", "Poster")
   if m.hiddenImageValidationPoster = invalid then return
 
-  m.hiddenImageValidationPoster.visible = true
+  m.hiddenImageValidationPoster.visible = false
   m.hiddenImageValidationPoster.opacity = 0.0
   m.hiddenImageValidationPoster.width = 1
   m.hiddenImageValidationPoster.height = 1
-  m.hiddenImageValidationPoster.translation = [-9999, -9999]
 
-  imageValidationUri =  "https://nebuladev.qvixsolutions.com/assets/resources/img/ContentNews/44_f00ed63a618d4f528bc32edda87b6461.jpg"
+  imageValidationUri = item.health_check.target.primary
   if domainManagerState <> invalid and domainManagerState._currentConfig = "Secondary" then
-    imageValidationUri = "https://nebuladev.qvixsolutions.com/assets/resources/img/ContentNews/44_f00ed63a618d4f528bc32edda87b6461.jpg"
+    imageValidationUri = item.health_check.target.secondary
   end if
 
   m.hiddenImageValidationPoster.uri = imageValidationUri
@@ -399,21 +402,22 @@ sub onHiddenImageValidationPosterLoadStatusChanged()
   printLog("Hidden poster loadStatus: " + status + " uri=" + m.hiddenImageValidationPoster.uri)
 end sub
 
+' Validar si es una imágen
 function shouldValidateImageUrl(item as Object) as Boolean
   if item = invalid then return false
 
-  hasPrimaryToCheck = false
-  if getHealthCheckPrimary(item) <> "" then
-    hasPrimaryToCheck = true
-  else if item.primary <> invalid and item.primary <> "" then
-    hasPrimaryToCheck = true
+  hasToCheck = false
+  if getHealthCheckPrimary(item) <> "" or getHealthCheckSecondary(item) then
+    hasToCheck = true
   end if
 
-  if hasPrimaryToCheck = false then return false
+  ' Validar que tenga acciones
+  if hasToCheck = false then return false
   if item.on_failure = invalid then return false
   if item.on_failure.actions = invalid then return false
   if item.on_failure.actions.Count() = 0 then return false
 
+  ' Validarq ue las acciones sean de http y https
   for each actionInfo in item.on_failure.actions
     if LCase(actionInfo.when) = "tls_error" and LCase(actionInfo.action) = "use_http" then
       return true
@@ -423,6 +427,7 @@ function shouldValidateImageUrl(item as Object) as Boolean
   return false
 end function
 
+' Validar si usa http
 function hasUseHttpAction(item as Object) as Boolean
   if item = invalid then return false
   if item.on_failure = invalid then return false
@@ -445,6 +450,7 @@ function replaceHttpsScheme(url as String) as String
   return url
 end function
 
+' Validar si el recurso tiene validación Primaria
 function getHealthCheckPrimary(item as Object) as String
   if item = invalid then return ""
   if item.health_check = invalid then return ""
@@ -454,6 +460,7 @@ function getHealthCheckPrimary(item as Object) as String
   return item.health_check.target.primary
 end function
 
+' Validar si el recurso tiene validación Secundaria
 function getHealthCheckSecondary(item as Object) as String
   if item = invalid then return ""
   if item.health_check = invalid then return ""

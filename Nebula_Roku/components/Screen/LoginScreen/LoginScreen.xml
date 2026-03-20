@@ -36,6 +36,7 @@
     <!-- Contenedor principal centrado -->
     <LayoutGroup 
       id="mainContainer" 
+      visible="false"
       layoutDirection="vert"
       horizAlignment="custom"
       vertAlignment="top">
@@ -87,13 +88,13 @@
         <TextEditBox
           id="userField"/>
 
+        <Poster height="30" />
+
         <!-- Label de Contraseña -->
         <Label 
           id="passwordLabel"
           font="font:SmallSystemFont"
           horizAlign="left" />
-
-        <Poster height="30" />
 
         <!-- Campo de entrada para contraseña -->
         <TextEditBox
