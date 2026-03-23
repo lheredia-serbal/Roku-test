@@ -657,9 +657,9 @@ sub __applyTranslations()
     m.validatePhoneButton.text = i18n_t(m.global.i18n, "button.validateRegisterCode") 
 end sub
 
-' Centraliza la finalización del login usando la respuesta HTTP disponible en m.apiRequestManager
+' Centraliza la finalización del login usando la respuesta HTTP disponible en m.apiRegisterCodeRequestManager
 sub __finishLoginWithApiResponse() 
-  resp = ParseJson(m.apiRequestManager.response)
+  resp = ParseJson(m.apiRegisterCodeRequestManager.response)
 
   ' Guarda en global los datos devueltos por el login exitoso
   addAndSetFields(m.global, {device: resp.device, organization: resp.organization, contact: resp.contact, variables: resp.variables} ) 

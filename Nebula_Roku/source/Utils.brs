@@ -99,6 +99,21 @@ function validateErrorServer() as boolean
 end function
 
 ' Obtiene las variables de configuracion del global
+function setConfigVariable(key as String, value as String) as Dynamic
+    __setInitialValues()
+    globalVariables = m.global.variables
+    if m.global.variables <> invalid
+        for each item in m.global.variables
+            if item["variable"] = key then
+                item["value"] = value
+            end if
+        next
+    end if
+
+    addAndSetFields(m.global, {variables: globalVariables} )
+end function
+
+' Obtiene las variables de configuracion del global
 function getConfigVariable(variable as String) as Dynamic
     __setInitialValues()
     if variable = "ApiUrl" and m.global.activeApiUrl <> invalid then
@@ -146,12 +161,29 @@ function getImageUrl(image, defautlValue = invalid) as Dynamic
     __setInitialValues()
 
     if image <> invalid and image.rootVariable <> invalid and getConfigVariable(image.rootVariable) <> invalid then
-        return getConfigVariable(image.rootVariable) + image.relativePath
+        ' Arma la URL base cuando la imagen depende de una variable remota.
+        imageUrl = getConfigVariable(image.rootVariable) + image.relativePath 
+        print "imageUrl", imageUrl
+        return imageUrl
     else if image.relativePath <> invalid and image.rootVariable = invalid
-        return image.relativePath
+        imageUrl = image.relativePath
+        return imageUrl
     else 
         return defautlValue
     end if
+end function
+
+' Normaliza la URL según el protocolo global configurado.
+function applyImageProtocolOverride(url as Dynamic, protocol as String) as Dynamic 
+    ' Evita modificar URLs inválidas.
+    if url = invalid then return invalid
+    ' Si no hay override configurado, devuelve la URL original.
+    if protocol = invalid then return url
+    ' Reemplaza HTTPS por el protocolo global configurado.
+    if Left(LCase(url), 8) = "https://" then return protocol + Mid(url, 6)
+    ' Reemplaza HTTP por el protocolo global configurado.
+    if Left(LCase(url), 7) = "http://" then return protocol + Mid(url, 5) 
+    return url
 end function
 
 ' Metodo encargado de cancelar la peticion y limpiar el escuchador de la respuesta

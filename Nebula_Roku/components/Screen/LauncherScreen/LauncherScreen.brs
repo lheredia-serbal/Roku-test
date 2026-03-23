@@ -13,7 +13,7 @@ sub init()
     scaleInfo: scaleInfo,
     colors: mergeAssociativeArrays(getBasicColors(), getSpecialColors()),
     appCode: getAppCode(),
-    beaconTokenExpiresIn: 0,
+    beaconTokenExpiresIn: 0
   })
 
   'find Nodes
@@ -353,53 +353,61 @@ sub __validateImageTSL()
   for each item in checks
     if item <> invalid and hasUseHttpAction(item) then
       if item.primary <> invalid then
-        item.primary = replaceHttpsScheme(item.primary)
+        item.primary = __createImageValidation(item)
       end if
 
       if item.secondary <> invalid then
-        item.secondary = replaceHttpsScheme(item.secondary)
+        item.secondary = __createImageValidation(item)
       end if
     end if
   end for
+end sub
 
-  ' Crear un objeto imágen, asignarle la imágen de validación y validar el status
-  if m.hiddenImageValidationPoster <> invalid then
-    m.hiddenImageValidationPoster.unobserveField("loadStatus")
-    if m.hiddenImageValidationPoster.getParent() <> invalid then
-      m.hiddenImageValidationPoster.getParent().removeChild(m.hiddenImageValidationPoster)
+sub __createImageValidation(item)
+    ' Crear un objeto imágen, asignarle la imágen de validación y validar el status
+  if m.hiddenImageValidation <> invalid then
+    m.hiddenImageValidation.unobserveField("loadStatus")
+    if m.hiddenImageValidation.getParent() <> invalid then
+      m.hiddenImageValidation.getParent().removeChild(m.hiddenImageValidation)
     end if
-    m.hiddenImageValidationPoster = invalid
+    m.hiddenImageValidation = invalid
   end if
 
-  m.hiddenImageValidationPoster = CreateObject("roSGNode", "Poster")
-  if m.hiddenImageValidationPoster = invalid then return
+  m.hiddenImageValidation = CreateObject("roSGNode", "Poster")
+  if m.hiddenImageValidation = invalid then return
 
-  m.hiddenImageValidationPoster.visible = false
-  m.hiddenImageValidationPoster.opacity = 0.0
-  m.hiddenImageValidationPoster.width = 1
-  m.hiddenImageValidationPoster.height = 1
+  m.hiddenImageValidation.visible = false
+  m.hiddenImageValidation.opacity = 0.0
+  m.hiddenImageValidation.width = 1
+  m.hiddenImageValidation.height = 1
 
   imageValidationUri = item.health_check.target.primary
-  if domainManagerState <> invalid and domainManagerState._currentConfig = "Secondary" then
-    imageValidationUri = item.health_check.target.secondary
-  end if
 
-  m.hiddenImageValidationPoster.uri = imageValidationUri
-  m.hiddenImageValidationPoster.observeField("loadStatus", "onHiddenImageValidationPosterLoadStatusChanged")
-  m.top.appendChild(m.hiddenImageValidationPoster)
+  m.hiddenImageValidationItem = item ' Guarda el item validado para reutilizarlo ante fallas de carga.
 
-  if domainManagerState <> invalid and domainManagerState._currentConfig <> invalid then
-    printLog("Hidden poster init with DomainManager config: " + domainManagerState._currentConfig)
-  end if
-  printLog("Hidden poster uri: " + imageValidationUri)
+  m.hiddenImageValidation.uri = imageValidationUri
+  m.hiddenImageValidation.observeField("loadStatus", "onHiddenImageValidationLoadStatus")
+  m.top.appendChild(m.hiddenImageValidation)
 end sub
 
 ' Observa el resultado de carga de la imagen del poster lógico.
-sub onHiddenImageValidationPosterLoadStatusChanged()
-  if m.hiddenImageValidationPoster = invalid then return
+sub onHiddenImageValidationLoadStatus()
+  if m.hiddenImageValidation = invalid then return
 
-  status = m.hiddenImageValidationPoster.loadStatus
-  printLog("Hidden poster loadStatus: " + status + " uri=" + m.hiddenImageValidationPoster.uri)
+  status = m.hiddenImageValidation.loadStatus
+  ' Valida únicamente las fallas para decidir el cambio global de protocolo.
+  if status = "failed" then 
+    item = m.hiddenImageValidationItem ' Recupera el item asociado a la imagen validada.
+    if item <> invalid and item.on_failure <> invalid and item.on_failure.actions <> invalid then ' Verifica que existan acciones configuradas.
+      for each actionInfo in item.on_failure.actions ' Recorre las acciones declaradas para la falla actual.
+        if actionInfo <> invalid and actionInfo.action <> invalid and LCase(actionInfo.action) = "use_http" then ' Busca la acción use_http solicitada.
+          imageProtocolOverride = getOppositeImageProtocol(m.hiddenImageValidation.uri) ' Calcula el protocolo opuesto según la URL actual.
+          if imageProtocolOverride <> invalid then setImageProtocolOverride(item.name, item.primary, imageProtocolOverride) ' Persiste el protocolo a nivel global para futuras imágenes.
+          exit for ' Detiene el recorrido al encontrar la primera acción válida.
+        end if
+      end for
+    end if
+  end if
 end sub
 
 ' Validar si es una imágen
@@ -407,7 +415,7 @@ function shouldValidateImageUrl(item as Object) as Boolean
   if item = invalid then return false
 
   hasToCheck = false
-  if getHealthCheckPrimary(item) <> "" or getHealthCheckSecondary(item) then
+  if getHealthCheckPrimary(item) <> "" or getHealthCheckSecondary(item) <> "" then
     hasToCheck = true
   end if
 
@@ -442,12 +450,22 @@ function hasUseHttpAction(item as Object) as Boolean
   return false
 end function
 
-function replaceHttpsScheme(url as String) as String
-  if Left(url, 5) = "https" then
-    return "http" + Mid(url, 6)
-  end if
+' Persiste el protocolo de imágenes en el global node.
+sub setImageProtocolOverride(variableKey as String, url as String, protocol as Dynamic)
 
-  return url
+  finalUrl = applyImageProtocolOverride(url, protocol)
+
+  setConfigVariable(variableKey, finalUrl)
+end sub
+
+' Obtiene el protocolo opuesto para el fallback global de imágenes.
+function getOppositeImageProtocol(url as Dynamic) as Dynamic 
+  if url = invalid then return invalid
+  ' Si la URL actual usa HTTPS, cambia el override a HTTP.
+  if Left(LCase(url), 8) = "https://" then return "http" 
+  ' Si la URL actual usa HTTP, cambia el override a HTTPS.
+  if Left(LCase(url), 7) = "http://" then return "https" 
+  return invalid
 end function
 
 ' Validar si el recurso tiene validación Primaria
