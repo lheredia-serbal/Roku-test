@@ -2,8 +2,6 @@
 sub init()
   m.myMenu = m.top.findNode("myMenu")
 
-  ' Referencia al overlay independiente donde vive el título de News.
-  m.newsTitle = m.top.findNode("newsTitle")
   ' Referencia al contenedor de dots independiente del componente NewsItem.
   m.dotsContainer = m.top.findNode("dotsContainer")
 
@@ -310,13 +308,13 @@ sub populateCarousels(data as Object)
       ' Fuerza que el bloque de noticias comience arriba de todo dentro del contenedor.
       newsCarouselItem.translation = [0, 0]
       ' Escucha cambios del índice de News para refrescar título y dots externos en MainScreen.
+      newsCarouselItem.unobserveField("currentIndex")
       newsCarouselItem.observeField("currentIndex", "onNewsStateChanged")
       ' Escucha cambios de items para reconstruir dots externos al recargar el carrusel de News.
+      newsCarouselItem.unobserveField("items")
       newsCarouselItem.observeField("items", "onNewsStateChanged")
-      ' Escucha cambios del título fallback de News para reflejarlo en el overlay externo.
-      newsCarouselItem.observeField("title", "onNewsStateChanged")
-      ' Sincroniza inmediatamente el overlay externo con el estado inicial del News recién creado.
-      __syncNewsOverlay()
+      ' Sincroniza inmediatamente los dots externos con el estado inicial del News recién creado.
+      __syncNewsDots()
       ' Reserva el primer bloque vertical para que los demás carruseles comiencen debajo de NewsItem.
       yPosition = int(m.scaleInfo.height * 0.7) + scaleValue(20, m.scaleInfo)
     end if
@@ -1432,16 +1430,12 @@ sub __clearContentView()
     newsChild.unobserveField("currentIndex")
     ' Desuscribe observadores de items para evitar callbacks colgantes tras remover NewsItem.
     newsChild.unobserveField("items")
-    ' Desuscribe observadores del título para evitar callbacks colgantes tras remover NewsItem.
-    newsChild.unobserveField("title")
     ' Resetea los items del NewsItem antes de removerlo.
     newsChild.items = invalid
     ' Remueve el NewsItem del contenedor de noticias.
     m.newsContainer.removeChild(newsChild)
   end while
 
-  ' Limpia el título externo de News cuando se regenera la vista principal.
-  if m.newsTitle <> invalid then m.newsTitle.text = ""
   ' Limpia dots externos de News para reconstruirlos con la siguiente carga.
   if m.dotsContainer <> invalid then m.dotsContainer.removeChildrenIndex(m.dotsContainer.getChildCount(), 0)
 
@@ -1691,8 +1685,6 @@ sub __updateOverlayVisibilityByFocus()
     ' Aplica elevación solo si existe al menos un carrusel no-News para mostrarlo parcialmente sobre News.
     if firstCarousel <> invalid then m.carouselContainer.translation = [m.xPosition, m.yPosition - m.newsPeekOffset]
     m.selectedIndicator.visible = false
-    ' Cuando el foco está en News, muestra el título externo de News.
-    if m.newsTitle <> invalid then m.newsTitle.visible = true
     ' Cuando el foco está en News, muestra el contenedor externo de dots.
     if m.dotsContainer <> invalid then m.dotsContainer.visible = true
   else
@@ -1705,8 +1697,6 @@ sub __updateOverlayVisibilityByFocus()
       m.selectedIndicator.visible = true
     end if
 
-    ' Cuando el foco no está en News, oculta el título externo de News.
-    if m.newsTitle <> invalid then m.newsTitle.visible = false
     ' Cuando el foco no está en News, oculta el contenedor externo de dots.
     if m.dotsContainer <> invalid then m.dotsContainer.visible = false
   end if
@@ -1736,8 +1726,8 @@ end function
 
 ' Reacciona a cambios de estado del carrusel News para actualizar overlay externo en MainScreen.
 sub onNewsStateChanged()
-  ' Sincroniza título y dots externos cada vez que cambia índice o dataset de News.
-  __syncNewsOverlay()
+  ' Sincroniza dots externos cada vez que cambia índice o dataset de News.
+  __syncNewsDots()
 end sub
 
 ' Calcula layout responsivo del título y dots de News en el overlay externo.
@@ -1772,18 +1762,15 @@ sub __centerNewsDotsContainer()
   if centeredX < 0 then centeredX = 0
   m.dotsContainer.translation = [centeredX, dotsY]
 end sub
-' Sincroniza título y dots del overlay externo usando el estado actual del NewsItem.
-sub __syncNewsOverlay()
-  ' Sale si el título externo no existe para evitar errores cuando el árbol aún no está montado.
-  if m.newsTitle = invalid then return
+
+' Sincroniza los dots del overlay externo usando el estado actual del NewsItem.
+sub __syncNewsDots()
   ' Sale si el contenedor de dots externo no existe para evitar errores cuando el árbol aún no está montado.
   if m.dotsContainer = invalid then return
   ' Limpia dots previos para reconstruir el estado actual del carrusel News.
   m.dotsContainer.removeChildrenIndex(m.dotsContainer.getChildCount(), 0)
-  ' Si no hay NewsItem activo, limpia título y termina.
+  ' Si no hay NewsItem activo, termina sin renderizar dots.
   if m.newsCarouselItem = invalid then
-    ' Borra el título externo cuando no existe carrusel de News activo.
-    if m.newsTitle <> invalid then m.newsTitle.text = ""
     ' Termina porque no hay datos para renderizar.
     return
   end if
@@ -1791,14 +1778,8 @@ sub __syncNewsOverlay()
   newsItems = m.newsCarouselItem.items
   ' Toma el índice activo del NewsItem para activar el dot correcto.
   currentIndex = m.newsCarouselItem.currentIndex
-  ' Inicializa fallback con el título general del carrusel para cuando la noticia no tenga título.
-  currentTitle = m.newsCarouselItem.title
   ' Valida que exista dataset antes de leer noticia activa.
   if newsItems <> invalid and newsItems.count() > 0 and currentIndex >= 0 and currentIndex < newsItems.count() then
-    ' Lee la noticia activa en base al índice actual del carrusel.
-    currentNewsItem = newsItems[currentIndex]
-    ' Prioriza título de la noticia activa cuando existe y no está vacío.
-    if currentNewsItem <> invalid and currentNewsItem.title <> invalid and currentNewsItem.title <> "" then currentTitle = currentNewsItem.title
     ' Recorre noticias para dibujar dots externos y resaltar el índice activo.
     for i = 0 to newsItems.count() - 1
       ' Marca dot activo con mayor jerarquía visual (blanco, ancho y con esquinas redondeadas).
@@ -1831,8 +1812,6 @@ sub __syncNewsOverlay()
     ' Posiciona los dots por encima del inicio de carruseles y centrados horizontalmente.
     __centerNewsDotsContainer()
   end if
-  ' Actualiza el título externo con la noticia activa o fallback del carrusel.
-  if m.newsTitle <> invalid then m.newsTitle.text = currentTitle
 end sub
 
 ' Actualiza el indicador de seleccion segun el carrusel enfocado

@@ -6,6 +6,8 @@ sub init()
     m.incomingBackgroundImage = m.top.findNode("incomingBackgroundImage")
     ' Referencia a la capa oscura que mejora legibilidad sobre la imagen.
     m.overlay = m.top.findNode("overlay")
+    ' Referencia al label interno que muestra el título de la noticia actual.
+    m.newsTitle = m.top.findNode("newsTitle")
 
     ' Referencia al bloque de acción de detalle.
     m.detailActionGroup = m.top.findNode("detailActionGroup")
@@ -112,6 +114,17 @@ sub updateLayoutForResolution()
         ' Mantiene el overlay anclado en el origen.
         m.overlay.translation = scaleSize([0, 0], m.scaleInfo)
     end if
+    ' Ajusta el label de título para ubicarlo abajo a la izquierda del bloque de News.
+    if m.newsTitle <> invalid then
+        ' Configura ancho máximo del título para permitir hasta tres líneas legibles.
+        m.newsTitle.width = scaleValue(760, m.scaleInfo)
+        ' Configura alto del título para evitar recorte del texto.
+        m.newsTitle.height = scaleValue(190, m.scaleInfo)
+        ' Posiciona el título en la esquina inferior izquierda del hero de News.
+        m.newsTitle.translation = scaleSize([140, 300], m.scaleInfo)
+        ' Asegura que el texto sea visible sobre el fondo.
+        m.newsTitle.visible = true
+    end if
 
     if m.borderDetailAction <> invalid then
         m.borderDetailAction.size = scaleSize([238, 58], m.scaleInfo)
@@ -122,13 +135,13 @@ sub updateLayoutForResolution()
     end if
 
     if m.detailActionBackground <> invalid then
-        m.detailActionBackground.width = scaleValue(240, m.scaleInfo)
-        m.detailActionBackground.height = scaleValue(60, m.scaleInfo)
+        m.detailActionBackground.width = scaleValue(241, m.scaleInfo)
+        m.detailActionBackground.height = scaleValue(61, m.scaleInfo)
         m.detailActionBackground.color = m.global.colors.PRIMARY
     end if
 
     if m.detailActionLabel <> invalid then
-        m.detailActionLabel.translation = scaleSize([24, 24], m.scaleInfo)
+        m.detailActionLabel.translation = scaleSize([25, 25], m.scaleInfo)
     end if
 
     if m.detailActionIcon <> invalid then
@@ -145,7 +158,12 @@ sub renderCurrentItem()
     currentItem = getCurrentItem()
 
     ' Si no hay item válido, no hay cambios visuales internos adicionales.
-    if currentItem = invalid then return
+    if currentItem = invalid then
+        ' Limpia el texto cuando no hay item activo para evitar títulos residuales.
+        if m.newsTitle <> invalid then m.newsTitle.text = ""
+        ' Corta el flujo porque no hay contenido para renderizar.
+        return
+    end if
     ' Resuelve uri de imagen para el item actual.
     currentImageUri = getItemImageUri(currentItem)
     ' Si existe una imagen válida, la aplica al fondo principal.
@@ -153,9 +171,25 @@ sub renderCurrentItem()
         ' Asigna imagen proveniente del item.
         m.backgroundImage.uri = currentImageUri
     end if
+    ' Actualiza el texto del título con la noticia activa o el fallback del carrusel.
+    updateNewsTitle(currentItem)
 
     ' Actualiza visibilidad y contenido del CTA según redirectKey.
     updateDetailActionCTA(currentItem)
+end sub
+
+' Actualiza el label interno de News con el título correspondiente al item actual.
+sub updateNewsTitle(currentItem as dynamic)
+    ' Sale temprano si el nodo del título no existe en el árbol visual.
+    if m.newsTitle = invalid then return
+    ' Inicializa el título con el fallback de carrusel cuando exista.
+    resolvedTitle = m.top.title
+    ' Si el item actual trae título válido, lo prioriza sobre el fallback.
+    if currentItem <> invalid and currentItem.title <> invalid and currentItem.title <> "" then resolvedTitle = currentItem.title
+    ' Limpia cualquier valor inválido para no mostrar texto incorrecto en pantalla.
+    if resolvedTitle = invalid then resolvedTitle = ""
+    ' Aplica el título resuelto al label interno de NewsItem.
+    m.newsTitle.text = resolvedTitle
 end sub
 
 ' Actualiza el CTA de detalle/reproducción según redirectKey del item activo.
@@ -290,6 +324,8 @@ sub startSlideTransition(newIndex as integer, direction as integer)
     m.top.currentIndex = __getTargetIndex()
     ' Obtiene el item actualizado para sincronizar inmediatamente el CTA durante el slide.
     currentItem = getCurrentItem()
+    ' Refresca de inmediato el título visible para que cambie durante el slide.
+    updateNewsTitle(currentItem)
     ' Refresca visibilidad/contenido del detailActionGroup con el nuevo item activo.
     updateDetailActionCTA(currentItem)
     ' Calcula ancho de referencia para desplazar un panel completo.

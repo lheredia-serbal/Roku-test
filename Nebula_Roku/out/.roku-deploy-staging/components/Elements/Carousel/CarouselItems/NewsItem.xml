@@ -39,6 +39,15 @@
             color="#000000"
             opacity="0.20"/>
 
+        <!-- Label interno del NewsItem para mostrar el título del item activo. -->
+        <ShadowLabel
+            id="newsTitle"
+            horizAlign="left"
+            vertAlign="bottom"
+            wrap="true"
+            maxLines="3"
+            font="font:LargeBoldSystemFont" />
+
         <!-- Contenedor rectangular (más ancho que alto) para la acción de detalle. -->
         <Group 
             id="detailActionGroup" 

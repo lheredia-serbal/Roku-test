@@ -58,6 +58,7 @@ sub init()
   m.keyboardDefaultHeight = scaleValue(320, m.scaleInfo)
 
   m.relatedContainer.translation = scaleSize([0, 25], m.scaleInfo)
+  m.searchCarousels.translation = scaleSize([0, 25], m.scaleInfo)
 
   ' Posiciono inicialmente el teclado fuera de pantalla (debajo).
   m.searchKeyboard.translation = [0, m.scaleInfo.height]
@@ -988,8 +989,8 @@ sub __loadSearchCarousels(carousels)
   ' Limpio carruseles previos para evitar duplicados tras nuevas búsquedas.
   if m.carouselContainer.getChildCount() > 0 then m.carouselContainer.removeChildrenIndex(m.carouselContainer.getChildCount(), 0)
   ' Posición base del contenedor para el cálculo de desplazamiento vertical al navegar.
-  m.carouselContainer.translation = scaleSize([0, -63], m.scaleInfo)
-  m.searchSelectedIndicator.translation = scaleSize([69.5, 65], m.scaleInfo)
+  m.carouselContainer.translation = scaleSize([0, 0], m.scaleInfo)
+  m.searchSelectedIndicator.translation = scaleSize([69.5, 128], m.scaleInfo)
   m.carouselXPosition = m.carouselContainer.translation[0]
   m.carouselYPosition = m.carouselContainer.translation[1]
 

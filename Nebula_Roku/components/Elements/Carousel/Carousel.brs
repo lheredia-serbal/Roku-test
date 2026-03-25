@@ -46,14 +46,12 @@ sub __syncCarouselTitleWidth()
   ' Inicializo el ancho con cero para decidir si uso valor real o fallback por caracteres.
   titleWidth = 0
   ' Si todavía no hay ancho renderizado (primer frame), calculo fallback por cantidad de caracteres.
-  if titleWidth = 0 then titleWidth = (len(m.top.title) * scaleValue(12, m.scaleInfo))
-  ' Aplico un mínimo para que el label no colapse visualmente.
-  if titleWidth < scaleValue(20, m.scaleInfo) then titleWidth = scaleValue(20, m.scaleInfo)
+  if titleWidth = 0 then titleWidth = (len(m.top.title) * scaleValue(11, m.scaleInfo))
   ' Seteo el ancho final para que el layout horizontal ubique tags pegados al título.
-  m.carouselTitle.width = titleWidth
+  m.carouselTitle.width = scaleValue(titleWidth, m.scaleInfo)
   ' Solo cuando titleWidth tiene valor, posiciono los tags en X según ancho del título y Y fija solicitada.
   if titleWidth > 0 and m.carouselTitleTags <> invalid then 
-    m.carouselTitleTags.translation = scaleSize([titleWidth - 140, 103], m.scaleInfo)
+    m.carouselTitleTags.translation = scaleSize([titleWidth + scaleValue(90, m.scaleInfo), 103], m.scaleInfo)
   end if
 end sub
 

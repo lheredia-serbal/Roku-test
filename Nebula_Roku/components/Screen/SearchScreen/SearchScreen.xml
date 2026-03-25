@@ -58,8 +58,8 @@
     </Group>
 
     <!-- Carrusel de busqueda -->
-    <Group id="searchCarousels" visible="false" translation="[0, 135]">
-      <Group id="carouselContainer" translation="[50, 20]" />
+    <Group id="searchCarousels" visible="false">
+      <Group id="carouselContainer" />
       <SelectionBox id="searchSelectedIndicator" visible="false" />
     </Group>
 
