@@ -341,6 +341,12 @@ sub __validateImageTSL()
   domainManagerState = __getDomainManagerState()
 
   checks = []
+    currentInitialConfig = ""
+  m.hiddenImageValidationQueue = []
+
+  if domainManagerState <> invalid and domainManagerState._currentInitialConfig <> invalid then
+    currentInitialConfig = LCase(domainManagerState._currentInitialConfig)
+  end if
 
   ' Recorrer los recursos y obtener las imágenes a validar
   for each item in domainManagerState._resources
@@ -352,26 +358,44 @@ sub __validateImageTSL()
   ' Recorrer los items obtenidos
   for each item in checks
     if item <> invalid and hasUseHttpAction(item) then
-      if item.primary <> invalid then
-        item.primary = __createImageValidation(item)
-      end if
-
-      if item.secondary <> invalid then
-        item.secondary = __createImageValidation(item)
+      if currentInitialConfig = "primary" then
+        if item.primary <> invalid and getHealthCheckPrimary(item) <> "" then
+          __createImageValidation(item, item.primary, getHealthCheckPrimary(item))
+        end if
+      else if currentInitialConfig = "secondary" then
+        if item.secondary <> invalid and getHealthCheckSecondary(item) <> "" then
+          __createImageValidation(item, item.secondary, getHealthCheckSecondary(item))
+        end if
       end if
     end if
   end for
+
+  __processNextImageValidation()
 end sub
 
-sub __createImageValidation(item)
-    ' Crear un objeto imágen, asignarle la imágen de validación y validar el status
-  if m.hiddenImageValidation <> invalid then
-    m.hiddenImageValidation.unobserveField("loadStatus")
-    if m.hiddenImageValidation.getParent() <> invalid then
-      m.hiddenImageValidation.getParent().removeChild(m.hiddenImageValidation)
-    end if
-    m.hiddenImageValidation = invalid
+sub __createImageValidation(item, resourceUrl as String, imageValidationUri as String)
+  if item = invalid or resourceUrl = "" or imageValidationUri = "" then return
+
+  if m.hiddenImageValidationQueue = invalid then
+    m.hiddenImageValidationQueue = []
   end if
+
+  validationItem = {
+    item: item
+    resourceUrl: resourceUrl
+    imageValidationUri: imageValidationUri
+  }
+
+  m.hiddenImageValidationQueue.push(validationItem)
+end sub
+
+sub __processNextImageValidation()
+  if m.hiddenImageValidation <> invalid then return
+  if m.hiddenImageValidationQueue = invalid then return
+  if m.hiddenImageValidationQueue.Count() = 0 then return
+
+  validationItem = m.hiddenImageValidationQueue.Shift()
+  if validationItem = invalid then return
 
   m.hiddenImageValidation = CreateObject("roSGNode", "Poster")
   if m.hiddenImageValidation = invalid then return
@@ -381,13 +405,21 @@ sub __createImageValidation(item)
   m.hiddenImageValidation.width = 1
   m.hiddenImageValidation.height = 1
 
-  imageValidationUri = item.health_check.target.primary
+  m.hiddenImageValidationItem = validationItem
 
-  m.hiddenImageValidationItem = item ' Guarda el item validado para reutilizarlo ante fallas de carga.
-
-  m.hiddenImageValidation.uri = imageValidationUri
+  m.hiddenImageValidation.uri = validationItem.imageValidationUri
   m.hiddenImageValidation.observeField("loadStatus", "onHiddenImageValidationLoadStatus")
   m.top.appendChild(m.hiddenImageValidation)
+end sub
+
+sub __clearHiddenImageValidation()
+  if m.hiddenImageValidation <> invalid then
+    m.hiddenImageValidation.unobserveField("loadStatus")
+    if m.hiddenImageValidation.getParent() <> invalid then
+      m.hiddenImageValidation.getParent().removeChild(m.hiddenImageValidation)
+    end if
+    m.hiddenImageValidation = invalid
+  end if
 end sub
 
 ' Observa el resultado de carga de la imagen del poster lógico.
@@ -395,21 +427,26 @@ sub onHiddenImageValidationLoadStatus()
   if m.hiddenImageValidation = invalid then return
 
   status = m.hiddenImageValidation.loadStatus
+  validationItem = m.hiddenImageValidationItem
+
   ' Valida únicamente las fallas para decidir el cambio global de protocolo.
-  if status = "failed" then 
-    item = m.hiddenImageValidationItem ' Recupera el item asociado a la imagen validada.
+  if status = "failed" and validationItem <> invalid then
+    item = validationItem.item ' Recupera el item asociado a la imagen validada.
     if item <> invalid and item.on_failure <> invalid and item.on_failure.actions <> invalid then ' Verifica que existan acciones configuradas.
       for each actionInfo in item.on_failure.actions ' Recorre las acciones declaradas para la falla actual.
         if actionInfo <> invalid and actionInfo.action <> invalid and LCase(actionInfo.action) = "use_http" then ' Busca la acción use_http solicitada.
           imageProtocolOverride = getOppositeImageProtocol(m.hiddenImageValidation.uri) ' Calcula el protocolo opuesto según la URL actual.
-          if imageProtocolOverride <> invalid then setImageProtocolOverride(item.name, item.primary, imageProtocolOverride) ' Persiste el protocolo a nivel global para futuras imágenes.
+          if imageProtocolOverride <> invalid then setImageProtocolOverride(item.name, validationItem.resourceUrl, imageProtocolOverride) ' Persiste el protocolo a nivel global para futuras imágenes.
           exit for ' Detiene el recorrido al encontrar la primera acción válida.
         end if
       end for
     end if
   end if
-end sub
 
+  __clearHiddenImageValidation()
+  m.hiddenImageValidationItem = invalid
+  __processNextImageValidation()
+end sub
 ' Validar si es una imágen
 function shouldValidateImageUrl(item as Object) as Boolean
   if item = invalid then return false

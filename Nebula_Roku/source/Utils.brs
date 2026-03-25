@@ -162,8 +162,7 @@ function getImageUrl(image, defautlValue = invalid) as Dynamic
 
     if image <> invalid and image.rootVariable <> invalid and getConfigVariable(image.rootVariable) <> invalid then
         ' Arma la URL base cuando la imagen depende de una variable remota.
-        imageUrl = getConfigVariable(image.rootVariable) + image.relativePath 
-        print "imageUrl", imageUrl
+        imageUrl = getConfigVariable(image.rootVariable) + image.relativePath
         return imageUrl
     else if image.relativePath <> invalid and image.rootVariable = invalid
         imageUrl = image.relativePath

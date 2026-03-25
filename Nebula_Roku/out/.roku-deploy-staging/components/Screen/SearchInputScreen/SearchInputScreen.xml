@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<component
+  name="SearchInputScreen"
+  extends="Group" xsi:noNamespaceSchemaLocation="https://devtools.web.roku.com/schema/RokuSceneGraph.xsd"> <!-- Componente de búsqueda mínima para aislar input + teclado. -->
+
+  <script type="text/brightscript" uri="SearchInputScreen.brs" /> <!-- Lógica local para input y teclado. -->
+
+  <script type="text/brightscript" uri="pkg:/source/Utils.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Utils/i18nUtils.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Utils/RetryUtils.brs" />
+
+  <script type="text/brightscript" uri="pkg:/source/Enums.brs" />
+  <script type="text/brightscript" uri="pkg:/source/StreamingConstants.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Storage.brs" />
+
+  <script type="text/brightscript" uri="pkg:/source/Services/Programs.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Services/Retry.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Services/DomainManager.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Services/ErrorCode.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Services/Watch.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Services/Streamings.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Services/Channels.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Services/ParentalControl.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Services/Health.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Services/ActionLogs.brs" />
+
+  <script type="text/brightscript" uri="pkg:/source/CarouselConstants.brs" />
+
+<interface>
+    <field id="loading" type="node" /> <!-- Mantengo compatibilidad con MainScene. -->
+    <field id="onFocus" type="boolean" value="false" onChange="initFocus" /> <!-- Activa flujo de foco al mostrar/ocultar pantalla. -->
+    <field id="streaming" type="string" /> <!-- Campo de salida legado para compatibilidad. -->
+    <field id="detail" type="string" /> <!-- Campo de salida legado para compatibilidad. -->
+    <field id="viewAll" type="string" /> <!-- Campo de salida legado para compatibilidad. -->
+    <field id="openGuide" type="boolean" value="false" /> <!-- Campo de salida legado para compatibilidad. -->
+    <field id="returnFromProgramDetail" type="boolean" value="false" /> <!-- Campo legado para compatibilidad. -->
+    <field id="enterFromMainScreen" type="boolean" value="false" /> <!-- Campo legado para compatibilidad. -->
+  </interface>
+
+  <children>
+    <TextEditBox id="debugSearchInput" clearOnDownKey="false" /> <!-- Input visible para escribir búsquedas (renombrado). -->
+    <Label id="debugSearchInputMirror" visible="false" /> <!-- Label espejo para evitar parpadeo visual cuando Roku limpia temporalmente el TextEditBox. -->
+    <Rectangle id="debugKeyboardBackground" color="0x000000FF" visible="false" /> <!-- Fondo opaco para el teclado (renombrado). -->
+    <Keyboard id="debugSearchKeyboard" visible="false" /> <!-- Teclado virtual usado para la edición (renombrado). -->
+  </children>
+</component>

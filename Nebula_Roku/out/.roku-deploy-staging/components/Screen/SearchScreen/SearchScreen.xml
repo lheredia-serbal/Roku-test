@@ -65,7 +65,7 @@
 
     <!-- Input de busqueda -->
     <TextEditBox
-      id="searchInput" />
+      id="searchInput" clearOnDownKey="false" />
 
     <!-- Animación vertical reutilizada para desplazar carouselContainer con la misma suavidad que HomeScreen. -->
     <Animation id="carouselContainerMoveAnimation" duration="0.5" repeat="false" easeFunction="linear" optional="true"> <!-- Define transición de 0.5s para navegación UP/DOWN entre carruseles. -->

@@ -1757,10 +1757,10 @@ sub __layoutNewsOverlay()
   titleHeight = scaleValue(int(screenHeight * 0.30), m.scaleInfo)
   m.newsTitle.height = titleHeight
   ' Posiciona el título un poco más arriba de los carruseles y encima del hero de News.
-  baseTitleTranslation = scaleSize([125, -50], m.scaleInfo)
+  baseTitleTranslation = scaleSize([125, 0], m.scaleInfo)
   m.newsTitle.translation = baseTitleTranslation
   ' Escala el título para mantener la presencia visual previa del NewsItem original.
-  m.newsTitle.scale = [1.7, 1.7]
+  m.newsTitle.scale = scaleSize([1, 1], m.scaleInfo)
 end sub
 
 ' Centra horizontalmente el contenedor de dots de News en la pantalla.

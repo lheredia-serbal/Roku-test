@@ -36,7 +36,7 @@ sub init()
 
   ' Seteo la configuración del input de busqueda
   m.searchInput.width = m.scaleInfo.width - 150
-  m.searchInput.translation = scaleSize([50, 50], m.scaleInfo)
+  m.searchInput.translation = scaleSize([70, 50], m.scaleInfo)
   m.searchInput.maxTextLength = 255
   m.searchKeyboardBackgroundoOpacity = "1.0"
 
@@ -112,7 +112,7 @@ sub initFocus()
     ' Aseguro foco en el nodo top para cadena de foco correcta.
     m.top.setFocus(true)
 
-    m.searchKeyboard.unobserveField("textEditBox")
+    __unbindKeyboardTextObservers()
 
     ' Al entrar a Search, limpio input y estado para iniciar siempre desde cero.
     __resetSearchState()
@@ -120,7 +120,7 @@ sub initFocus()
     ' Enfoco el input para iniciar una nueva búsqueda.
     m.searchInput.setFocus(true)
 
-    m.searchKeyboard.ObserveField("textEditBox", "onTextBoxManagment")
+    __bindKeyboardTextObservers()
 
     ' Si Search se abrió desde MainScreen, fuerzo foco en input y refrescar el carrusel de recomendados.
     if m.top.enterFromMainScreen then
@@ -183,9 +183,8 @@ end sub
 
 ' Administrar el uso de los Inputs anidando el input posicionado en pantalla con el que usa internamente el teclado.
 sub onTextBoxManagment()
-  m.searchInput.cursorPosition = m.searchKeyboard.textEditBox.cursorPosition
-  m.searchInput.text = m.searchKeyboard.textEditBox.text
-  m.searchInput.active = m.searchKeyboard.textEditBox.active
+  __bindKeyboardTextObservers()
+  __syncSearchInputFromKeyboard()
 end sub
 
 ' Cierra dialog de error y devuelve foco al último carrusel seleccionado.
@@ -311,24 +310,10 @@ end sub
 
 ' Sincroniza el texto y cursor del teclado con el input visible.
 sub onKeyboardTextChanged()
-  ' Si falta teclado o input, salgo.
-  if m.searchKeyboard = invalid or m.searchInput = invalid then return
-  ' Si aún no existe el TextEditBox interno, no hay nada para sincronizar.
-  if m.searchKeyboard.textEditBox = invalid then return
-  ' Solo sincronizo cambios cuando el foco está realmente dentro del teclado.
-  if not m.searchKeyboard.isInFocusChain() then return
-  ' Copio el cursor actual del teclado interno al input visible para mantener ambos en espejo.
-  m.searchInput.cursorPosition = m.searchKeyboard.textEditBox.cursorPosition
-  ' Copio el texto actual del teclado interno al input visible para evitar depender del observer del nodo completo.
-  m.searchInput.text = m.searchKeyboard.textEditBox.text
-  ' Copio el estado activo del teclado interno al input visible para conservar consistencia visual.
-  m.searchInput.active = m.searchKeyboard.textEditBox.active
-  ' Persisto el texto actual para restaurarlo correctamente cuando el teclado se oculta o se vuelve a mostrar.
-  m.currentSearchText = m.searchInput.text
-
-  ' Programo llamada al servicio cuando dejan de escribir por 2 segundos.
+  __syncSearchInputFromKeyboard()
   __scheduleSearchRequest()
 end sub
+
 ' Maneja eventos de control remoto para navegación/foco.
 function onKeyEvent(key as string, press as boolean) as boolean
 
@@ -1248,6 +1233,9 @@ sub __showKeyboard()
   ' Inicio teclado transparente para fade in.
   m.searchKeyboard.opacity = 0.0
 
+    ' Reengancho observers directos al TextEditBox interno por si el nodo fue recreado.
+  __bindKeyboardTextObservers()
+
   ' Sincronizo texto persistido al teclado para recuperar valor aunque el input haya perdido foco.
   m.searchKeyboard.textEditBox.text = m.currentSearchText
   ' Sincronizo cursor actual del input al teclado.
@@ -1362,6 +1350,54 @@ sub __restoreSearchInputText()
 
   m.searchInput.text = m.currentSearchText
   m.searchInput.cursorPosition = m.currentSearchText.len()
+end sub
+
+' Vincula observers al TextEditBox interno del teclado para escuchar cambios reales de texto/cursor.
+sub __bindKeyboardTextObservers()
+  if m.searchKeyboard = invalid then return
+
+  ' Mantengo observer del nodo contenedor para reenganchar si Roku recrea el TextEditBox interno.
+  m.searchKeyboard.unobserveField("textEditBox")
+  m.searchKeyboard.observeField("textEditBox", "onTextBoxManagment")
+
+  if m.searchKeyboard.textEditBox = invalid then return
+
+  m.searchKeyboard.textEditBox.unobserveField("text")
+  m.searchKeyboard.textEditBox.unobserveField("cursorPosition")
+  m.searchKeyboard.textEditBox.observeField("text", "onKeyboardTextChanged")
+  m.searchKeyboard.textEditBox.observeField("cursorPosition", "onKeyboardTextChanged")
+end sub
+
+' Desvincula observers del teclado para evitar duplicados al reingresar a la pantalla.
+sub __unbindKeyboardTextObservers()
+  if m.searchKeyboard = invalid then return
+
+  m.searchKeyboard.unobserveField("textEditBox")
+
+  if m.searchKeyboard.textEditBox = invalid then return
+
+  m.searchKeyboard.textEditBox.unobserveField("text")
+  m.searchKeyboard.textEditBox.unobserveField("cursorPosition")
+end sub
+
+' Sincroniza el TextEditBox interno del teclado con el input visible.
+sub __syncSearchInputFromKeyboard()
+  ' Si falta teclado o input, salgo.
+  if m.searchKeyboard = invalid or m.searchInput = invalid then return
+  ' Si aún no existe el TextEditBox interno, no hay nada para sincronizar.
+  if m.searchKeyboard.textEditBox = invalid then return
+  ' Solo sincronizo cambios cuando el foco está realmente dentro del teclado.
+  if not m.searchKeyboard.isInFocusChain() then return
+
+  ' Copio el cursor actual del teclado interno al input visible para mantener ambos en espejo.
+  m.searchInput.cursorPosition = m.searchKeyboard.textEditBox.cursorPosition
+  ' Copio el texto actual del teclado interno al input visible para evitar depender del observer del nodo completo.
+  m.searchInput.text = m.searchKeyboard.textEditBox.text
+  ' Copio el estado activo del teclado interno al input visible para conservar consistencia visual.
+  m.searchInput.active = m.searchKeyboard.textEditBox.active
+  ' Persisto el texto actual para restaurarlo correctamente cuando el teclado se oculta o se vuelve a mostrar.
+  m.currentSearchText = m.searchInput.text
+
 end sub
 
 ' Restaura el último foco
