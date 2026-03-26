@@ -27,7 +27,7 @@ sub initData()
     m.carouselTitle.text = m.top.title
 
     ' Ajusto el ancho del título según su texto renderizado para que el row horizontal calcule bien.
-    titleWidth = __syncCarouselTitleWidth()
+    __syncCarouselTitleWidth()
     m.carouselTitle.height = scaleValue(48, m.scaleInfo)
     ' Seteo por defecto el texto de tags (puede ser vacío si no aplica).
 
@@ -41,17 +41,22 @@ end sub
 
 ' Calcula y aplica el ancho del título con base en su texto renderizado.
 sub __syncCarouselTitleWidth()
-  ' Obtengo el ancho real del texto ya renderizado en el label.
-  titleBounds = m.carouselTitle.boundingRect()
-  ' Inicializo el ancho con cero para decidir si uso valor real o fallback por caracteres.
-  titleWidth = 0
-  ' Si todavía no hay ancho renderizado (primer frame), calculo fallback por cantidad de caracteres.
-  if titleWidth = 0 then titleWidth = (len(m.top.title) * scaleValue(11, m.scaleInfo))
-  ' Seteo el ancho final para que el layout horizontal ubique tags pegados al título.
-  m.carouselTitle.width = scaleValue(titleWidth, m.scaleInfo)
-  ' Solo cuando titleWidth tiene valor, posiciono los tags en X según ancho del título y Y fija solicitada.
-  if titleWidth > 0 and m.carouselTitleTags <> invalid then 
-    m.carouselTitleTags.translation = scaleSize([titleWidth + scaleValue(90, m.scaleInfo), 103], m.scaleInfo)
+  ' Obtengo el ancho real del título para ubicar los tags justo al terminar el texto.
+  titleWidth = __getCarouselTitleRenderedWidth()
+  ' Si aún no hay ancho renderizado, uso fallback según longitud del texto.
+  if titleWidth <= 0 then titleWidth = (len(m.top.title) * __getApproxCharWidthByScale())
+  ' Mantengo el ancho del título sincronizado con el texto visible.
+  m.carouselTitle.width = titleWidth
+  ' Solo si existe el label de tags, lo reposiciono en la misma línea del título.
+  if m.carouselTitleTags <> invalid then
+    ' Defino un espacio mínimo entre el título y los tags para que queden pegados sin superponerse.
+    tagSpacing = scaleValue(6, m.scaleInfo)
+    ' Calculo X de tags usando X del título + ancho del texto + separación mínima.
+    tagsX = m.carouselTitle.translation[0] + titleWidth + tagSpacing
+    ' Reutilizo la misma Y del título para que ambos queden en la misma línea.
+    tagsY = m.carouselTitle.translation[1]
+    ' Aplico la nueva posición de tags alineada horizontalmente con el título principal.
+    m.carouselTitleTags.translation = [tagsX, tagsY]
   end if
 end sub
 
@@ -332,14 +337,36 @@ sub __populateList()
 end sub
 
 function __getCarouselTitleRenderedWidth() as float
+  ' Si el título aún no existe, devuelvo cero para evitar errores en cualquier resolución.
   if m.carouselTitle = invalid then return 0
 
+  ' Obtengo el Label interno principal para leer su medida renderizada real.
   mainTitleNode = m.carouselTitle.findNode("mainText")
   if mainTitleNode <> invalid then
-    return mainTitleNode.localBoundingRect().width
+    ' Primer intento: ancho local renderizado del texto principal.
+    mainTextWidth = mainTitleNode.localBoundingRect().width
+    ' Si la medición local todavía no está lista, pruebo boundingRect como respaldo.
+    if mainTextWidth <= 0 then mainTextWidth = mainTitleNode.boundingRect().width
+    ' Si existe un ancho válido, lo retorno para mantener compatibilidad multi-resolución.
+    if mainTextWidth > 0 then return mainTextWidth
   end if
 
-  return m.carouselTitle.localBoundingRect().width
+  ' Segundo intento: uso el ancho local del contenedor ShadowLabel.
+  titleContainerWidth = m.carouselTitle.localBoundingRect().width
+  ' Si no hay ancho local disponible, intento con boundingRect del contenedor.
+  if titleContainerWidth <= 0 then titleContainerWidth = m.carouselTitle.boundingRect().width
+  ' Como último fallback, reutilizo el width asignado si ya existía.
+  if titleContainerWidth <= 0 and m.carouselTitle.width <> invalid then titleContainerWidth = m.carouselTitle.width
+  ' Retorno el ancho final normalizado para usarlo en la posición de tags.
+  return titleContainerWidth
+end function
+
+' Devuelve un ancho aproximado por carácter escalado según la resolución actual del dispositivo.
+function __getApproxCharWidthByScale() as float
+  ' Defino una base de 11 px sobre layout 1280x720 para títulos SmallBold.
+  baseCharWidth = 11
+  ' Escalo el valor base para que el fallback de ancho sea consistente en cualquier resolución.
+  return scaleValue(baseCharWidth, m.scaleInfo)
 end function
 
 ' Función para configurar un TargetList con su TargetSet y contenido

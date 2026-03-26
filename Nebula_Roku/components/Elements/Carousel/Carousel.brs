@@ -26,8 +26,6 @@ sub initData()
     ' Seteo el título principal del carrusel con el valor recibido.
     m.carouselTitle.text = m.top.title
 
-    ' Ajusto el ancho del título según su texto renderizado para que el row horizontal calcule bien.
-    titleWidth = __syncCarouselTitleWidth()
     m.carouselTitle.height = scaleValue(48, m.scaleInfo)
     ' Seteo por defecto el texto de tags (puede ser vacío si no aplica).
 
@@ -36,22 +34,6 @@ sub initData()
     __populateList()
   else 
     __clearList()
-  end if
-end sub
-
-' Calcula y aplica el ancho del título con base en su texto renderizado.
-sub __syncCarouselTitleWidth()
-  ' Obtengo el ancho real del texto ya renderizado en el label.
-  titleBounds = m.carouselTitle.boundingRect()
-  ' Inicializo el ancho con cero para decidir si uso valor real o fallback por caracteres.
-  titleWidth = 0
-  ' Si todavía no hay ancho renderizado (primer frame), calculo fallback por cantidad de caracteres.
-  if titleWidth = 0 then titleWidth = (len(m.top.title) * scaleValue(11, m.scaleInfo))
-  ' Seteo el ancho final para que el layout horizontal ubique tags pegados al título.
-  m.carouselTitle.width = scaleValue(titleWidth, m.scaleInfo)
-  ' Solo cuando titleWidth tiene valor, posiciono los tags en X según ancho del título y Y fija solicitada.
-  if titleWidth > 0 and m.carouselTitleTags <> invalid then 
-    m.carouselTitleTags.translation = scaleSize([titleWidth + scaleValue(90, m.scaleInfo), 103], m.scaleInfo)
   end if
 end sub
 
@@ -331,17 +313,6 @@ sub __populateList()
   __setupTargetList(focusedTargetSet, contentRoot)
 end sub
 
-function __getCarouselTitleRenderedWidth() as float
-  if m.carouselTitle = invalid then return 0
-
-  mainTitleNode = m.carouselTitle.findNode("mainText")
-  if mainTitleNode <> invalid then
-    return mainTitleNode.localBoundingRect().width
-  end if
-
-  return m.carouselTitle.localBoundingRect().width
-end function
-
 ' Función para configurar un TargetList con su TargetSet y contenido
 sub __setupTargetList(targetSet as Object, content as Object)
   ' Genera las posiciones de los targets dinámicamente según la cantidad de items
@@ -356,4 +327,3 @@ sub __setupTargetList(targetSet as Object, content as Object)
   m.carouselList.observeField("itemFocused", "onItemFocusedChanged")
   m.carouselList.ObserveField("leftEvent", "onProcessLeftEvent")
 end sub
-
