@@ -1072,7 +1072,6 @@ sub __renderCreditGroups()
       row.layoutDirection = "horiz"
       row.horizAlignment = KeyButtons().LEFT
       row.vertAlignment = "top"
-      row.itemSpacings = [scaleValue(12, m.scaleInfo)]
 
       lType = CreateObject("roSGNode", "ShadowLabel")
       lType.text = creditType + ":"

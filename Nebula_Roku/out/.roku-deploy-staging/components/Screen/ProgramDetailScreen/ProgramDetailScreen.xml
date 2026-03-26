@@ -121,8 +121,7 @@
             id="creditsContainer"
             layoutDirection="vert"
             horizAlignment="left"
-            vertAlignment="top"
-            itemSpacings="[20]" >
+            vertAlignment="top">
           </LayoutGroup>
 
         </LayoutGroup>

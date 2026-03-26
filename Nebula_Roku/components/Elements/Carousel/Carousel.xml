@@ -44,7 +44,7 @@
       font="font:SmallBoldSystemFont" />
 
     <!-- Label para mostrar tags concatenados a la derecha del título del carrusel. -->
-    <ShadowLabel
+    <label
       id="carouselTitleTags"
       font="font:SmallestBoldSystemFont"
       color="0xFFA500FF" />

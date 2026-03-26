@@ -1999,7 +1999,7 @@ sub __validateVariables()
 end sub
 
 ' Valdia el error obtenido desde la API
-sub __validateError(statusCode, resultCode, errorResponse, callback = invalid)
+sub __validateError(statusCode, resultCode, errorResponse)
   ' Centraliza la validación de errores HTTP/resultCode para la MainScreen.
   ' Decide cuándo redirigir, mostrar diálogos y setear códigos específicos en el CDN dialog.
   error = invalid

@@ -282,7 +282,7 @@ sub __renderEpisodes(episodes)
     ' Crea un nuevo componente reusable EpisodeItem.
     newEpisodeItem = m.episodesList.createChild("EpisodeItem")
     ' Asigna ancho al 100% de la pantalla.
-    newEpisodeItem.widthContainer = scaleValue(m.screenWidth - 400, m.scaleInfo)
+    newEpisodeItem.widthContainer = scaleValue(1500, m.scaleInfo)
     ' Pasa el objeto image para que EpisodeItem use getImageUrl internamente.
     if item <> invalid and item.image <> invalid then newEpisodeItem.image = item.image
     ' Pasa synopsis para setearla en episodeSynopsis dentro de EpisodeItem.

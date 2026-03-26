@@ -25,6 +25,10 @@ sub initData()
   if m.top.items <> invalid and m.top.items.count() > 0 then
     ' Seteo el título principal del carrusel con el valor recibido.
     m.carouselTitle.text = m.top.title
+    ' Calculo el ancho dinámico del título según caracteres y resolución.
+    m.carouselTitle.width = __calculateCarouselTitleWidth(m.top.title)
+    ' Muevo los tags a la derecha del título usando el ancho calculado + separación.
+    __updateCarouselTitleTagsTranslation(m.carouselTitle.width)
 
     m.carouselTitle.height = scaleValue(48, m.scaleInfo)
     ' Seteo por defecto el texto de tags (puede ser vacío si no aplica).
@@ -37,9 +41,19 @@ sub initData()
   end if
 end sub
 
+' Sincroniza el ancho del título cuando cambia el campo title desde el XML.
+sub onTitleChanged()
+  if m.carouselTitle = invalid then return
+  m.carouselTitle.text = m.top.title
+  ' Recalculo el ancho para mantener layout consistente por resolución.
+  m.carouselTitle.width = __calculateCarouselTitleWidth(m.top.title)
+  ' Reposiciono los tags en base al nuevo ancho del título.
+  __updateCarouselTitleTagsTranslation(m.carouselTitle.width) 
+end sub
+
 ' Define la configuracion necesaria del estilo del carousel
 sub initSyle()
-  if m.top.style = -1 then ' AvatarsItem
+  if m.top.style = -1 then
     m.top.size = scaleSize([120, 120], m.scaleInfo)
     m.labelSpace = scaleValue(60, m.scaleInfo)
     m.separator = scaleValue(20, m.scaleInfo)
@@ -50,7 +64,7 @@ sub initSyle()
     m.carouselTitle.translation = scalePoint([29, 110], m.scaleInfo)
     m.targetRects = createTargetRects(m.targetItems, m.xInitial, (m.top.size[0] + m.separator), m.top.size[0], m.top.size[1])
 
-  else if m.top.style = getCarouselStyles().PORTRAIT_FEATURED then ' carouselPortraitFeatured
+  else if m.top.style = getCarouselStyles().PORTRAIT_FEATURED then
     m.top.size = scaleSize([270, 405], m.scaleInfo)
     __defaultConfig()
     m.top.height = (m.top.size[1] + m.labelSpace)
@@ -59,7 +73,7 @@ sub initSyle()
     m.xInitial = scaleValue(-449, m.scaleInfo)
     m.targetRects = createTargetRects(m.targetItems, m.xInitial, (m.top.size[0] + m.separator), m.top.size[0], m.top.size[1])
 
-  else if m.top.style = getCarouselStyles().LANDSCAPE_STANDARD then ' carouselLandscapeStandard
+  else if m.top.style = getCarouselStyles().LANDSCAPE_STANDARD then
     m.top.size = scaleSize([450, 253], m.scaleInfo)
     __defaultConfig()
     m.top.height = (m.top.size[1] + m.labelSpace)
@@ -68,7 +82,7 @@ sub initSyle()
     m.xInitial = scaleValue(-808, m.scaleInfo)
     m.targetRects = createTargetRects(m.targetItems, m.xInitial, (m.top.size[0] + m.separator), m.top.size[0], m.top.size[1])
 
-  else if m.top.style = getCarouselStyles().LANDSCAPE_FEATURED then ' carouselLandscapeFeatured
+  else if m.top.style = getCarouselStyles().LANDSCAPE_FEATURED then
     m.top.size = scaleSize([450, 253], m.scaleInfo)
     __defaultConfig()
     m.top.height = (m.top.size[1] + m.labelSpace)
@@ -77,7 +91,7 @@ sub initSyle()
     m.xInitial = scaleValue(-808, m.scaleInfo)
     m.targetRects = createTargetRects(m.targetItems, m.xInitial, (m.top.size[0] + m.separator), m.top.size[0], m.top.size[1])
 
-  else if m.top.style = getCarouselStyles().SQUARE_STANDARD then ' carouselSquareStandard
+  else if m.top.style = getCarouselStyles().SQUARE_STANDARD then
     m.top.size = scaleSize([120, 120], m.scaleInfo)
     __defaultConfig()
     m.top.height = (m.top.size[1] + m.labelSpace)
@@ -86,7 +100,7 @@ sub initSyle()
     m.xInitial = scaleValue(-150, m.scaleInfo)
     m.targetRects = createTargetRects(m.targetItems, m.xInitial, (m.top.size[0] + m.separator), m.top.size[0], m.top.size[1])
 
-  else if m.top.style = getCarouselStyles().SQUARE_FEATURED then ' carouselSquareFeatured
+  else if m.top.style = getCarouselStyles().SQUARE_FEATURED then
     m.top.size = scaleSize([310, 110], m.scaleInfo)
     __defaultConfig()
     m.top.height = (m.top.size[1] + m.labelSpace)
@@ -99,7 +113,7 @@ sub initSyle()
     m.xInitial = scaleValue(-530, m.scaleInfo)
     m.targetRects = createTargetRects(m.targetItems, m.xInitial, (m.top.size[0] + m.separator), m.top.size[0], m.top.size[1])
 
-  else ' Style = getCarouselStyles().PORTRAIT_STANDARD and default carouselPortraitStandard
+  else
     m.top.size = scaleSize([180, 270], m.scaleInfo)
     __defaultConfig()
     m.top.height = (m.top.size[1] + m.labelSpace)
@@ -116,7 +130,7 @@ sub onItemSelectedChanged()
   m.top.selected = FormatJson(m.items[m.carouselList.itemSelected])
 end sub
 
-' devuelve el nodo que esta teniendo el foco.
+' Devuelve el nodo que esta teniendo el foco.
 sub onItemFocusedChanged()
   focusTo = m.items[m.carouselList.itemFocused]
   if focusTo <> invalid then
@@ -206,6 +220,48 @@ sub __defaultConfig()
   m.separator = scaleValue(30, m.scaleInfo)
 end sub
 
+' Calcula el ancho ideal del título del carrusel según caracteres y resolución del TV.
+function __calculateCarouselTitleWidth(title as dynamic) as integer
+  rawTitle = ""
+  if title <> invalid then rawTitle = title
+  ' Quito espacios laterales para medir caracteres reales.
+  normalizedTitle = rawTitle.trim()
+  ' Obtengo la cantidad de caracteres visibles.
+  titleLength = normalizedTitle.len()
+  ' Defino un ancho por defecto para asegurar fallback.
+  screenWidth = 1280 
+   ' Priorizo el ancho informado por scaleInfo.
+  if m.scaleInfo <> invalid and m.scaleInfo.width <> invalid then screenWidth = m.scaleInfo.width
+  ' Defino ancho estimado por carácter para resoluciones base.
+  charWidth = scaleValue(13.2, m.scaleInfo) 
+  ' Ajusto densidad de caracteres para televisores 4K.
+  if screenWidth >= 3840 then charWidth = scaleValue(18, m.scaleInfo) 
+  ' Ajusto métrica para Full HD.
+  if screenWidth >= 1920 and screenWidth < 3840 then charWidth = scaleValue(13.2, m.scaleInfo) 
+  ' Defino ancho mínimo para títulos cortos.
+  minWidth = scaleValue(100, m.scaleInfo) 
+  ' Limito el ancho máximo para no invadir zonas de foco y tags.
+  maxWidth = int(screenWidth * 0.72) 
+  ' Calculo el ancho estimado desde caracteres.
+  estimatedWidth = int(titleLength * charWidth)
+  ' Garantizo ancho mínimo del componente. 
+  if estimatedWidth < minWidth then estimatedWidth = minWidth 
+  ' Aplico tope máximo según resolución actual.
+  if estimatedWidth > maxWidth then estimatedWidth = maxWidth 
+  return estimatedWidth ' Retorno el ancho final para asignarlo a carouselTitle.
+end function
+
+' Reubica el label de tags a la derecha del título principal del carrusel.
+sub __updateCarouselTitleTagsTranslation(titleWidth as dynamic) 
+  if m.carouselTitleTags = invalid then return 
+  if m.carouselTitle = invalid then return
+  ' Inicializo ancho seguro para prevenir valores invalid.
+  safeTitleWidth = 0 
+  ' Uso el ancho calculado cuando existe valor válido.
+  if titleWidth <> invalid then safeTitleWidth = titleWidth 
+  m.carouselTitleTags.translation = [safeTitleWidth, scaleValue(102, m.scaleInfo)]
+end sub
+
 ' Limpia todas las propiedades internas o observables necesarios en su uso interno
 sub __clearList()
   m.carouselList.unobserveField("itemSelected")
@@ -213,7 +269,6 @@ sub __clearList()
   m.carouselList.unobserveField("leftEvent")
   m.items = m.clearItems
   m.carouselTitle.text = ""
-  ' Limpio el texto de tags cuando se vacía el carrusel.
   if m.carouselTitleTags <> invalid then m.carouselTitleTags.text = ""
   m.carouselList.jumpToItem = 0 
   m.carouselList.targetSet = invalid

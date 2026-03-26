@@ -13,7 +13,7 @@ sub init()
 
     m.HeightToHide = 1
     m.defaultHeight = 40
-    m.spacings = scaleValue(10, m.scaleInfo)
+    m.spacings = scaleValue(0, m.scaleInfo)
 end sub
 
 ' Carga la configuracion inicial del componente, escuchando los observable y obteniendo las 

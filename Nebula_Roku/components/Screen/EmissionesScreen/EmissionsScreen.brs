@@ -282,7 +282,7 @@ sub __renderEpisodes(episodes)
     ' Crea un nuevo componente reusable EpisodeItem.
     newEpisodeItem = m.episodesList.createChild("EpisodeItem")
     ' Asigna ancho al 100% de la pantalla.
-    newEpisodeItem.widthContainer = scaleValue(m.screenWidth - 400, m.scaleInfo)
+    newEpisodeItem.widthContainer = scaleValue(1500, m.scaleInfo)
     ' Pasa el objeto image para que EpisodeItem use getImageUrl internamente.
     if item <> invalid and item.image <> invalid then newEpisodeItem.image = item.image
     ' Pasa synopsis para setearla en episodeSynopsis dentro de EpisodeItem.
@@ -481,7 +481,7 @@ end sub
 ' Procesa cierre del diálogo de PIN inválido para liberar el modal.
 sub onEpisodePinErrorDialogClosed()
   ' Limpia diálogo y descarta la opción porque solo hay botón de cierre.
-  option = clearDialogAndGetOption(m.top, m.dialog)
+  clearDialogAndGetOption(m.top, m.dialog)
   ' Limpia referencia del diálogo luego del cierre.
   m.dialog = invalid
 end sub

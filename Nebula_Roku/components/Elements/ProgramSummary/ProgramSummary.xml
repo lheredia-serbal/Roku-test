@@ -23,7 +23,7 @@
       layoutDirection="vert"
       horizAlignment="left"
       vertAlignment="top"
-      itemSpacings="[5]">
+      itemSpacings="[1]">
       <ShadowLabel 
         id="programTitle"
         height="1"

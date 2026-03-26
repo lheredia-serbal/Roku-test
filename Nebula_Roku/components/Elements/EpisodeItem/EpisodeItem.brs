@@ -60,10 +60,6 @@ sub __updateLayout()
   aspectWidth = 3
   aspectHeight = 4
 
-  ' Lee ancho y alto original enviado en el objeto image cuando existe.
-  sourceWidth = invalid
-  sourceHeight = invalid
-
   ' Calcula alto esperado a partir del ancho fijo y la proporción elegida.
   expectedHeight = cint((scaledImageWidth * aspectHeight) / aspectWidth)
   ' Garantiza que la imágen quede más alta que ancha.
