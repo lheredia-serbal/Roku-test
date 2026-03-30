@@ -64,7 +64,7 @@ sub initSyle()
     m.carouselTitle.translation = scalePoint([29, 110], m.scaleInfo)
     m.targetRects = createTargetRects(m.targetItems, m.xInitial, (m.top.size[0] + m.separator), m.top.size[0], m.top.size[1])
 
-  else if m.top.style = getCarouselStyles().PORTRAIT_FEATURED then
+  else if m.top.style = getCarouselStyles().PORTRAIT_FEATURED then ' carouselPortraitFeatured
     m.top.size = scaleSize([270, 405], m.scaleInfo)
     __defaultConfig()
     m.top.height = (m.top.size[1] + m.labelSpace)
@@ -73,7 +73,7 @@ sub initSyle()
     m.xInitial = scaleValue(-449, m.scaleInfo)
     m.targetRects = createTargetRects(m.targetItems, m.xInitial, (m.top.size[0] + m.separator), m.top.size[0], m.top.size[1])
 
-  else if m.top.style = getCarouselStyles().LANDSCAPE_STANDARD then
+  else if m.top.style = getCarouselStyles().LANDSCAPE_STANDARD then ' carouselLandscapeStandard
     m.top.size = scaleSize([450, 253], m.scaleInfo)
     __defaultConfig()
     m.top.height = (m.top.size[1] + m.labelSpace)
@@ -82,7 +82,7 @@ sub initSyle()
     m.xInitial = scaleValue(-808, m.scaleInfo)
     m.targetRects = createTargetRects(m.targetItems, m.xInitial, (m.top.size[0] + m.separator), m.top.size[0], m.top.size[1])
 
-  else if m.top.style = getCarouselStyles().LANDSCAPE_FEATURED then
+  else if m.top.style = getCarouselStyles().LANDSCAPE_FEATURED then ' carouselLandscapeFeatured
     m.top.size = scaleSize([450, 253], m.scaleInfo)
     __defaultConfig()
     m.top.height = (m.top.size[1] + m.labelSpace)
@@ -91,7 +91,7 @@ sub initSyle()
     m.xInitial = scaleValue(-808, m.scaleInfo)
     m.targetRects = createTargetRects(m.targetItems, m.xInitial, (m.top.size[0] + m.separator), m.top.size[0], m.top.size[1])
 
-  else if m.top.style = getCarouselStyles().SQUARE_STANDARD then
+  else if m.top.style = getCarouselStyles().SQUARE_STANDARD then ' carouselSquareStandard
     m.top.size = scaleSize([120, 120], m.scaleInfo)
     __defaultConfig()
     m.top.height = (m.top.size[1] + m.labelSpace)
@@ -100,7 +100,7 @@ sub initSyle()
     m.xInitial = scaleValue(-150, m.scaleInfo)
     m.targetRects = createTargetRects(m.targetItems, m.xInitial, (m.top.size[0] + m.separator), m.top.size[0], m.top.size[1])
 
-  else if m.top.style = getCarouselStyles().SQUARE_FEATURED then
+  else if m.top.style = getCarouselStyles().SQUARE_FEATURED then ' carouselSquareFeatured
     m.top.size = scaleSize([310, 110], m.scaleInfo)
     __defaultConfig()
     m.top.height = (m.top.size[1] + m.labelSpace)

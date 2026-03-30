@@ -3,7 +3,6 @@
 ' Inicialización del componente SearchScreen.
 sub init()
 
-  print "init Search"
   m.searchInput = m.top.findNode("searchInput")
   m.searchKeyboard = m.top.findNode("searchKeyboard")
 
@@ -226,7 +225,6 @@ sub onGetRecommendedResponse()
     end if
   else
     statusCode = m.apiRequestManager.statusCode
-    errorResponse = m.apiRequestManager.errorResponse
 
     ' Si es error de servidor, sigo la misma estrategia de retry global.
     if m.apiRequestManager.serverError then
@@ -498,11 +496,8 @@ sub onLastWatchedResponse()
   else
     ' Si falla HTTP, oculto loading y limpio estado.
     if m.top.loading <> invalid then m.top.loading.visible = false
-    statusCode = m.apiRequestManager.statusCode
-    errorResponse = m.apiRequestManager.errorResponse
     removePendingAction(m.apiRequestManager.requestId)
     __restoreLastFocus()
-    printError("LastWatched Search:", statusCode.toStr() + " " + errorResponse)
   end if
 
     m.apiRequestManager = clearApiRequest(m.apiRequestManager)
@@ -1100,7 +1095,6 @@ end sub
 
 ' Limpia input y variables de estado de búsqueda al entrar a SearchScreen.
 sub __resetSearchState()
-  print "__resetSearchState"
   ' Detengo debounce previo para evitar requests rezagados.
   if m.searchDebounceTimer <> invalid then m.searchDebounceTimer.control = "stop"
 

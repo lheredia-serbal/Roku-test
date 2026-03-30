@@ -225,7 +225,6 @@ sub onGetRecommendedResponse()
     end if
   else
     statusCode = m.apiRequestManager.statusCode
-    errorResponse = m.apiRequestManager.errorResponse
 
     ' Si es error de servidor, sigo la misma estrategia de retry global.
     if m.apiRequestManager.serverError then
@@ -497,7 +496,6 @@ sub onLastWatchedResponse()
   else
     ' Si falla HTTP, oculto loading y limpio estado.
     if m.top.loading <> invalid then m.top.loading.visible = false
-    statusCode = m.apiRequestManager.statusCode
     removePendingAction(m.apiRequestManager.requestId)
     __restoreLastFocus()
   end if

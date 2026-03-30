@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<component
+  name="EmissionsScreen"
+  extends="Group"
+  xsi:noNamespaceSchemaLocation="https://devtools.web.roku.com/schema/RokuSceneGraph.xsd">
+
+  <script type="text/brightscript" uri="EmissionsScreen.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Utils.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Utils/i18nUtils.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Utils/DateFunctions.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Enums.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Services/Programs.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Utils/RetryUtils.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Services/DomainManager.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Services/ErrorManager.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Services/ErrorCode.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Services/Health.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Services/Retry.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Services/Streamings.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Services/Watch.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Services/ActionLogs.brs" />
+  <script type="text/brightscript" uri="pkg:/source/StreamingConstants.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Storage.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Services/ParentalControl.brs" />
+
+  <interface>
+    <!-- Nodo loading compartido desde MainScene. -->
+    <field id="loading" type="node" />
+    <!-- Flag de foco para iniciar acciones al entrar a pantalla. -->
+    <field id="onFocus" type="boolean" value="false" onChange="initFocus" />
+    <!-- Payload de entrada con key e id del programa. -->
+    <field id="data" type="string" onChange="initData" />
+    <!-- Evento de salida para volver a la pantalla anterior. -->
+    <field id="onBack" alwaysnotify="true" type="boolean" value="false" />
+    <!-- Salida de streaming para que MainScene navegue al PlayerScreen. -->
+    <field id="streaming" alwaysnotify="true" type="string" />
+    <!-- Campo para limpieza de sesión consistente con otras pantallas. -->
+    <field id="logout" alwaysnotify="true" type="boolean" value="false" onChange="onLogoutChange" />
+  </interface>
+
+  <children>
+    <!-- Contenedor base sin UI adicional por ahora. -->
+    <!-- Contenedor raíz de emisiones. -->
+    <Group id="emissionsRoot">
+      <!-- Viewport fijo de la lista para recortar los items al subir/bajar. -->
+      <Group id="episodesViewport">
+        <!-- Lista vertical de EpisodeItem creada desde el servicio. -->
+        <LayoutGroup
+          id="episodesList"
+          layoutDirection="vert"
+          horizAlignment="left"
+          vertAlignment="top"
+          itemSpacings="[24]"/>
+      </Group>
+
+      <SelectionBox
+        id="selectedIndicator"
+        visible="false" />
+
+      <Label
+        id="emissionsTitle"
+        text=""
+        width="1760"
+        horizAlign="left"
+        vertAlign="center"
+        font="font:LargeBoldSystemFont" />
+
+      <Animation
+        id="episodesMoveAnimation"
+        duration="0.16"
+        repeat="false">
+        <Vector2DFieldInterpolator
+          id="episodesMoveInterpolator"
+          key="[0.0, 1.0]"
+          keyValue="[[80, 100], [80, 100]]"
+          fieldToInterp="episodesList.translation" />
+      </Animation>
+    </Group>
+  </children>
+</component>

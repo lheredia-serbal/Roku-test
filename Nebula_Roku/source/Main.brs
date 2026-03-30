@@ -56,9 +56,7 @@ sub InitMemoryMonitoring(port as Object)
             m.memMon.EnableMemoryWarningEvent(true)
 
             ' Snapshot inicial de memoria para diagnóstico en logs
-            channelAvailableMemory = m.memMon.GetChannelAvailableMemory()
-            channelMemoryLimit = m.memMon.GetChannelMemoryLimit()
-            memoryLimitPercent = m.memMon.GetMemoryLimitPercent()
+            m.lastMemorySnapshot = LogMemorySnapshot("startup")
         end if
     end if
 
@@ -78,9 +76,13 @@ function HandleSystemEvents(msg as Object) as Boolean
 
         if m.memMon <> invalid then
             ' Snapshot al momento del warning para entender severidad
-            channelAvailableMemory = m.memMon.GetChannelAvailableMemory()
-            channelMemoryLimit = m.memMon.GetChannelMemoryLimit()
-            memoryLimitPercent = m.memMon.GetMemoryLimitPercent()
+            snapshot = LogMemorySnapshot("warning")
+
+            ' Presión de memoria alta: fuerza GC para liberar objetos no referenciados.
+            if snapshot <> invalid and snapshot.memoryLimitPercent >= 85 then
+                printLog("High memory pressure detected (" + snapshot.memoryLimitPercent.toStr() + "%). Triggering garbage collection.")
+                RunGarbageCollector()
+            end if
         end if
         return true
     else if msgType = "roDeviceInfoEvent" then
@@ -92,4 +94,23 @@ function HandleSystemEvents(msg as Object) as Boolean
     end if
 
     return false
+end function
+
+function LogMemorySnapshot(context as String) as Dynamic
+    if m.memMon = invalid then return invalid
+
+    channelAvailableMemory = m.memMon.GetChannelAvailableMemory()
+    channelMemoryLimit = m.memMon.GetChannelMemoryLimit()
+    memoryLimitPercent = m.memMon.GetMemoryLimitPercent()
+
+    snapshot = {
+        context: context
+        channelAvailableMemory: channelAvailableMemory
+        channelMemoryLimit: channelMemoryLimit
+        memoryLimitPercent: memoryLimitPercent
+    }
+
+    m.lastMemorySnapshot = snapshot
+    printLog("Memory snapshot [" + context + "] - available: " + channelAvailableMemory.toStr() + " bytes, usage: " + memoryLimitPercent.toStr() + "%")
+    return snapshot
 end function

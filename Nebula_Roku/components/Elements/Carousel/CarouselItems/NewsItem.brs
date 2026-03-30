@@ -1,4 +1,3 @@
-' Inicializa referencias y renderiza el estado inicial del componente.
 sub init()
     ' Referencia al poster de fondo principal.
     m.backgroundImage = m.top.findNode("backgroundImage")
@@ -20,7 +19,6 @@ sub init()
     ' Referencia a los bordes
     m.borderDetailAction = m.top.findNode("borderDetailAction")
 
-    ' Guarda escala global de la app para cálculo responsive.
     m.scaleInfo = m.global.scaleInfo
 
     ' Control de animación horizontal entre elementos de News.
@@ -40,9 +38,7 @@ sub init()
 
     ' Registra callback del timer para avanzar frame a frame.
     if m.slideTimer <> invalid then
-        ' Elimina observador previo para evitar dobles disparos.
         m.slideTimer.unobserveField("fire")
-        ' Asocia el evento fire al handler de animación.
         m.slideTimer.observeField("fire", "onSlideFrame")
     end if
 
@@ -72,13 +68,11 @@ end sub
 
 ' Reacciona al cambio del título fallback.
 sub titleChanged()
-    ' Re-renderiza para usar título fallback si aplica.
     renderCurrentItem()
 end sub
 
 ' Reacciona al cambio de imagen fallback.
 sub imageURLChanged()
-    ' Re-renderiza para usar imagen fallback si aplica.
     renderCurrentItem()
 end sub
 
@@ -87,63 +81,56 @@ sub updateLayoutForResolution()
     ' Usa base 1280x720 para que el escalado lleve el fondo al tamaño real de pantalla.
     baseScreenWidth = 1280
     baseScreenHeight = 720
-
-    ' Hace que la imagen de fondo ocupe el ancho completo del display.
+ 
     m.backgroundImage.width = scaleValue(baseScreenWidth, m.scaleInfo)
-    ' Aplica el alto efectivo del bloque de noticias a la imagen de fondo.
     m.backgroundImage.height = scaleValue(baseScreenHeight, m.scaleInfo)
-    ' Mantiene el fondo anclado en el origen.
     m.backgroundImage.translation = scaleSize([0, 0], m.scaleInfo)
 
-    ' Hace que la imagen entrante tenga el mismo tamaño que el fondo principal.
+    ' Hace que la imágen entrante tenga el mismo tamaño que el fondo principal.
     if m.incomingBackgroundImage <> invalid then
-        ' Copia el ancho escalado para el item entrante.
         m.incomingBackgroundImage.width = scaleValue(baseScreenWidth, m.scaleInfo)
-        ' Copia el alto escalado para el item entrante.
         m.incomingBackgroundImage.height = scaleValue(baseScreenHeight, m.scaleInfo)
-        ' Mantiene el item entrante anclado al origen en reposo.
         m.incomingBackgroundImage.translation = scaleSize([0, 0], m.scaleInfo)
     end if
 
     ' Ajusta el overlay para que cubra exactamente el bloque visible de noticias.
     if m.overlay <> invalid then
-        ' Aplica ancho completo del bloque de noticias al overlay.
         m.overlay.width = scaleValue(baseScreenWidth, m.scaleInfo)
-        ' Aplica el alto efectivo del bloque de noticias al overlay.
         m.overlay.height = scaleValue(baseScreenHeight, m.scaleInfo)
-        ' Mantiene el overlay anclado en el origen.
         m.overlay.translation = scaleSize([0, 0], m.scaleInfo)
     end if
+
     ' Ajusta el label de título para ubicarlo abajo a la izquierda del bloque de News.
     if m.newsTitle <> invalid then
-        ' Configura ancho máximo del título para permitir hasta tres líneas legibles.
         m.newsTitle.width = scaleValue(760, m.scaleInfo)
-        ' Configura alto del título para evitar recorte del texto.
         m.newsTitle.height = scaleValue(190, m.scaleInfo)
-        ' Posiciona el título en la esquina inferior izquierda del hero de News.
         m.newsTitle.translation = scaleSize([140, 300], m.scaleInfo)
-        ' Asegura que el texto sea visible sobre el fondo.
         m.newsTitle.visible = true
     end if
 
+    ' Setear los bordes blancos del botón
     if m.borderDetailAction <> invalid then
         m.borderDetailAction.size = scaleSize([238, 58], m.scaleInfo)
     end if
 
+    ' Setear los bordes blancos del botón
     if m.detailActionGroup <> invalid then
         m.detailActionGroup.translation = scaleSize([950, 440], m.scaleInfo)
     end if
 
+    ' Setear el color de fondo del botón
     if m.detailActionBackground <> invalid then
         m.detailActionBackground.width = scaleValue(241, m.scaleInfo)
         m.detailActionBackground.height = scaleValue(61, m.scaleInfo)
         m.detailActionBackground.color = m.global.colors.PRIMARY
     end if
 
+    ' Setear el label del botón
     if m.detailActionLabel <> invalid then
         m.detailActionLabel.translation = scaleSize([25, 25], m.scaleInfo)
     end if
 
+    ' Setear el icono del botón
     if m.detailActionIcon <> invalid then
         m.detailActionIcon.width = scaleValue(23, m.scaleInfo)
         m.detailActionIcon.height = scaleValue(23, m.scaleInfo)
@@ -152,7 +139,7 @@ sub updateLayoutForResolution()
 end sub
 
 
-' Dibuja contenido del item activo (imagen + título).
+' Dibuja contenido del item activo.
 sub renderCurrentItem()
     ' Obtiene item activo según currentIndex.
     currentItem = getCurrentItem()
@@ -161,16 +148,16 @@ sub renderCurrentItem()
     if currentItem = invalid then
         ' Limpia el texto cuando no hay item activo para evitar títulos residuales.
         if m.newsTitle <> invalid then m.newsTitle.text = ""
-        ' Corta el flujo porque no hay contenido para renderizar.
         return
     end if
-    ' Resuelve uri de imagen para el item actual.
+    ' Setear la imágen para el item actual.
     currentImageUri = getItemImageUri(currentItem)
+
     ' Si existe una imagen válida, la aplica al fondo principal.
     if currentImageUri <> invalid then
-        ' Asigna imagen proveniente del item.
         m.backgroundImage.uri = currentImageUri
     end if
+
     ' Actualiza el texto del título con la noticia activa o el fallback del carrusel.
     updateNewsTitle(currentItem)
 
@@ -180,21 +167,18 @@ end sub
 
 ' Actualiza el label interno de News con el título correspondiente al item actual.
 sub updateNewsTitle(currentItem as dynamic)
-    ' Sale temprano si el nodo del título no existe en el árbol visual.
     if m.newsTitle = invalid then return
-    ' Inicializa el título con el fallback de carrusel cuando exista.
+
     resolvedTitle = m.top.title
     ' Si el item actual trae título válido, lo prioriza sobre el fallback.
     if currentItem <> invalid and currentItem.title <> invalid and currentItem.title <> "" then resolvedTitle = currentItem.title
     ' Limpia cualquier valor inválido para no mostrar texto incorrecto en pantalla.
     if resolvedTitle = invalid then resolvedTitle = ""
-    ' Aplica el título resuelto al label interno de NewsItem.
     m.newsTitle.text = resolvedTitle
 end sub
 
 ' Actualiza el CTA de detalle/reproducción según redirectKey del item activo.
 sub updateDetailActionCTA(currentItem as dynamic)
-    ' Si no existen los nodos del CTA, no hay nada para actualizar.
     if m.detailActionGroup = invalid or m.detailActionLabel = invalid or m.detailActionIcon = invalid then return
 
     ' Obtiene redirectKey del item actual cuando existe.
@@ -203,7 +187,7 @@ sub updateDetailActionCTA(currentItem as dynamic)
         redirectKey = currentItem.redirectKey
     end if
 
-    ' Si redirectKey es inválido, oculta el CTA y corta el flujo.
+    ' Si redirectKey es inválido, oculta el botón y corta el flujo.
     if redirectKey = invalid then
         m.detailActionGroup.visible = false
         return
@@ -237,7 +221,7 @@ function getCurrentItem() as dynamic
     if m.top.items.count() <= 0 then return invalid
     ' Si el índice cae fuera de rango, devuelve invalid.
     if m.top.currentIndex < 0 or m.top.currentIndex >= m.top.items.count() then return invalid
-    ' Devuelve el item correspondiente al índice actual.
+
     return m.top.items[m.top.currentIndex]
 end function
 
@@ -245,7 +229,6 @@ end function
 function getItemsCount() as integer
     ' Si items no es válido, retorna 0.
     if m.top.items = invalid then return 0
-    ' Retorna longitud de items.
     return m.top.items.count()
 end function
 
@@ -256,21 +239,18 @@ sub normalizeCurrentIndex()
 
     ' Si no hay items, fuerza índice a 0 y termina.
     if totalItems <= 0 then
-        ' Resetea índice sin items.
         m.top.currentIndex = 0
         return
    end if
 
     ' Si índice es negativo, lo corrige al primero.
     if m.top.currentIndex < 0 then
-        ' Corrige al índice inicial.
         m.top.currentIndex = 0
         return
     end if
 
     ' Si índice supera el máximo, lo corrige al último.
     if m.top.currentIndex >= totalItems then
-        ' Corrige al último índice válido.
         m.top.currentIndex = totalItems - 1
     end if
 end sub
@@ -309,9 +289,9 @@ sub startSlideTransition(newIndex as integer, direction as integer)
 
     ' Obtiene el item que será mostrado al finalizar el slide.
     incomingItem = m.top.items[newIndex]
-    ' Resuelve uri del item entrante.
+    ' Setear la uri del item entrante.
     incomingImageUri = getItemImageUri(incomingItem)
-    ' Si no hay imagen entrante, evita una animación inconsistente.
+    ' Si no hay imágen entrante, evita una animación inconsistente.
     if incomingImageUri = invalid then return
 
     ' Marca que la animación comenzó.
@@ -344,13 +324,12 @@ sub startSlideTransition(newIndex as integer, direction as integer)
         m.outgoingEndX = slideWidth
     end if
 
-    ' Carga imagen entrante en el poster secundario.
+    ' Carga imágen entrante en el poster secundario.
     if m.incomingBackgroundImage <> invalid then
         ' Asigna la uri del item entrante.
         m.incomingBackgroundImage.uri = incomingImageUri
         ' Posiciona el poster entrante fuera de pantalla para iniciar el slide.
         m.incomingBackgroundImage.translation = [m.incomingStartX, 0]
-        ' Hace visible el poster entrante durante la animación.
         m.incomingBackgroundImage.visible = true
     end if
 
@@ -392,13 +371,13 @@ sub __animateSlideFrame()
     ' Aplica desplazamiento al item entrante.
     if m.incomingBackgroundImage <> invalid then m.incomingBackgroundImage.translation = [incomingX, 0]
 
-    ' Si llegó al último frame del slide, consolida imagen y finaliza transición.
+    ' Si llegó al último frame del slide, consolida imágen y finaliza transición.
     if m.slideCurrentFrame >= m.slideTotalFrames then
-        ' Obtiene item ya seleccionado para consolidar la imagen final.
+        ' Obtiene item ya seleccionado para consolidar la imágen final.
         currentItem = getCurrentItem()
         ' Resuelve uri final del item seleccionado.
         finalImageUri = getItemImageUri(currentItem)
-        ' Si hay uri válida, la aplica al poster principal.
+        
         if finalImageUri <> invalid then m.backgroundImage.uri = finalImageUri
         ' Restablece posición base del poster principal.
         m.backgroundImage.translation = [0, 0]

@@ -65,7 +65,7 @@ function __getHeaderValue(headers as Object, key as String) as Dynamic
 end function
 
 ' Registra todas las acciones que se vayan ejecutando en un historial
-sub __registerPendingAction(requestId, action as Object)
+sub __registerPendingAction(requestId, action as Object, apiTypeParam)
     if action = invalid or action.run = invalid then return
     actions = __getPendingActions()
     ' Validar que la misma acción no este registrada
@@ -76,7 +76,7 @@ sub __registerPendingAction(requestId, action as Object)
         end if
     end for    
     ' Registrar la nueva acción
-    newActions.push({ id: requestId, action: action })
+    newActions.push({ id: requestId, action: action, apiTypeParam: apiTypeParam })
     __setPendingActions(newActions)
 end sub
 
@@ -209,7 +209,7 @@ end sub
 sub runAction(requestId, httpRequest as Object, apiTypeParam as Dynamic)
     ' Ejecuta llamadas HTTP con failover y reconfiguración si es necesario.
     httpRequest.status = "running"
-    __registerPendingAction(requestId, httpRequest)
+    __registerPendingAction(requestId, httpRequest, apiTypeParam)
     __runAction(httpRequest)
 end sub
 

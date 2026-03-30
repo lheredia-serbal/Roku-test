@@ -769,8 +769,6 @@ sub __showLoginMethod(showQr as boolean)
     m.loginMethodTitle.visible = true
     m.credentialsContainer.visible = false
 
-    loginByCodeUrlQr = getConfigVariable(m.global.configVariablesKeys.LOGIN_BY_CODE_URL_QR)
-
     ' Lee la URL corta que se muestra como alternativa manual
     loginByCodeUrlShort = getConfigVariable(m.global.configVariablesKeys.LOGIN_BY_CODE_URL_SHORT)
 
