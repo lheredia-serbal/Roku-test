@@ -76,7 +76,7 @@ if m.episodesViewport <> invalid and m.episodesList <> invalid then
     ' Calcula el tamaño del viewport que recorta visualmente la lista.
     episodesViewportWidth = scaleValue(1600, m.scaleInfo)
     ' Calcula altura visible de episodios para evitar superposición con el título.
-    episodesViewportHeight = scaleValue(860, m.scaleInfo)
+    episodesViewportHeight = scaleValue(600, m.scaleInfo)
     ' Posiciona viewport debajo del título para fijar el área visible.
     m.episodesViewport.translation = scaleSize([80, 100], m.scaleInfo)
     ' Recorta el contenido de episodios al rectángulo visible del viewport.
@@ -748,7 +748,7 @@ sub __updateSelection(newIndex as integer)
   ' Captura límite superior (Y) desde donde el indicador debe quedar fijo.
   indicatorTopY = indicatorTopTranslation[1]
   ' Calcula altura visible del viewport para ubicar el indicador al fondo de la pantalla.
-  episodesViewportHeight = scaleValue(860, m.scaleInfo)
+  episodesViewportHeight = scaleValue(600, m.scaleInfo)
   ' Usa alto fallback del indicador para robustez cuando aún no se pueda medir.
   indicatorHeight = m.selectedIndicatorFallbackHeight
   ' Prioriza alto real del indicador ya sincronizado con el EpisodeItem seleccionado.
