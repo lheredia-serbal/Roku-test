@@ -59,7 +59,7 @@ function onKeyEvent(key as string, press as boolean) as boolean
         else if m.actionsBtn.focusedChild <> invalid and m.actionsBtn.focusedChild.id = "btnContinue" then 
           m.lastButtonSelect = m.actionsBtn.focusedChild
           __openPlayer(getStreamingAction().CONTINUE)
-        else if m.actionsBtn.focusedChild <> invalid and m.actionsBtn.focusedChild.id = "btnEmissions" then 
+        else if m.actionsBtn.focusedChild <> invalid and (m.actionsBtn.focusedChild.id = "btnEmissions" or m.actionsBtn.focusedChild.id = "btnEpisodes") then 
           m.lastButtonSelect = m.actionsBtn.focusedChild
           __openEmissions()
         else if m.actionsBtn.focusedChild <> invalid and m.actionsBtn.focusedChild.id = "btnBack" then 
@@ -661,7 +661,7 @@ sub __processActions()
       if focusElement = invalid then focusElement = btnRestart
     end if
 
-    if  m.program.actions.emissions <> invalid and m.program.actions.emissions then 
+    if m.program.actions.emissions <> invalid and m.program.actions.emissions then 
       btnEmissions = m.actionsBtn.createChild("QvButton")
       btnEmissions.id = "btnEmissions"
       btnEmissions.text = i18n_t(m.global.i18n, "button.emissions")
@@ -675,6 +675,22 @@ sub __processActions()
       lastBtnCreate = btnEmissions
 
       if focusElement = invalid then focusElement = btnEmissions
+    end if
+
+    if m.program.actions.episodes <> invalid and m.program.actions.episodes then 
+      btnEpisodes = m.actionsBtn.createChild("QvButton")
+      btnEpisodes.id = "btnEpisodes"
+      btnEpisodes.text = i18n_t(m.global.i18n, "button.episodes")
+      btnEpisodes.focusable = true
+      btnEpisodes.size = buttonSize
+
+      if lastBtnCreate <> invalid then 
+        lastBtnCreate.focusRight = btnEpisodes
+        btnEpisodes.focusLeft = lastBtnCreate
+      end if
+      lastBtnCreate = btnEpisodes
+
+      if focusElement = invalid then focusElement = btnEpisodes
     end if
 
     btnBack = m.actionsBtn.createChild("QvButton")

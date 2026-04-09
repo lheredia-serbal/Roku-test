@@ -784,7 +784,7 @@ sub __showLoginMethod(showQr as boolean)
     m.loginMethodSwitchLayout.visible = false
     m.qrContainer.visible = false
     m.loginMethodTitle.visible = false
-    m.credentialsContainer = true
+    m.credentialsContainer.visible = true
     'Envía el foco al teclado cuando el flujo QR queda deshabilitado
     __focusKeyboard()
   end if

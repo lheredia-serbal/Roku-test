@@ -1652,6 +1652,24 @@ sub __loadPlayer(streaming, focusPlayer = true)
     else if streaming.streamFormat.id = getStreamingFormat().DASH
       videoContent.streamformat = getVideoContentStreamformat().DASH
     end if
+
+    ' Configurar DRM si el streaming lo requiere
+    if streaming.drm <> invalid then
+      drmTechnology = streaming.drm.technology
+      drmLicenseUrl = streaming.drm.licenseUrl
+
+      if drmTechnology = getDRMTechnology().WIDEVINE then
+        videoContent.drmParams = {
+          keySystem: "Widevine"
+          licenseServerURL: drmLicenseUrl
+        }
+      else if drmTechnology = getDRMTechnology().PLAY_READY then
+        videoContent.encodingType = "PlayReadyLicenseAcquisitionUrl"
+        videoContent.encodingKey = drmLicenseUrl
+      else if drmTechnology = getDRMTechnology().FAIR_PLAY then
+        ' FairPlay no es soportado en Roku
+      end if
+    end if
     
     m.videoPlayer.content = videoContent
     

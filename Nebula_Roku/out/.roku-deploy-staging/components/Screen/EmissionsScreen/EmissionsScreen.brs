@@ -86,7 +86,7 @@ if m.episodesViewport <> invalid and m.episodesList <> invalid then
   end if
 
 if m.selectedIndicator <> invalid then
-    m.selectedIndicator.translation = scaleSize([80, 100], m.scaleInfo)
+    m.selectedIndicator.translation = scaleSize([80, 0], m.scaleInfo)
     ' Actualiza ancho cacheado con el valor escalado vigente para mantener consistencia visual.
     m.selectedIndicatorWidth = scaleValue(1100, m.scaleInfo)
     ' Actualiza alto fallback cacheado con el valor escalado vigente para mantener consistencia visual.
@@ -303,8 +303,12 @@ sub __renderEpisodes(episodes)
     end if
   end for
 
-  ' Reinicia índice al primer elemento y ajusta la lista al SelectionBox fijo.
-  __updateSelection(0)
+  ' Define el índice inicial en el último episodio para abrir la pantalla con foco al final.
+  initialSelectionIndex = 0
+  ' Reemplaza el índice inicial por el último elemento cuando existe al menos un episodio.
+  if m.episodesCount > 0 then initialSelectionIndex = m.episodesCount - 1
+  ' Aplica selección inicial para ubicar foco lógico e indicador sobre el último episodio.
+  __updateSelection(initialSelectionIndex)
 end sub
 
 ' Intenta abrir player con el episodio seleccionado cuando playImage está visible.
@@ -735,8 +739,36 @@ sub __updateSelection(newIndex as integer)
   ' Mueve la lista verticalmente mientras el SelectionBox permanece fijo.
   targetTranslation = [baseTranslation[0], baseTranslation[1] - (m.selectedEpisodeIndex * stepY) + (m.selectedEpisodeIndex * 0.5)]
   animateTransition = previousIndex <> newIndex
-    ' Sincroniza el alto del indicador con el EpisodeItem actualmente enfocado.
+  ' Sincroniza el alto del indicador con el EpisodeItem actualmente enfocado.
   __syncSelectedIndicatorSize()
+  ' Obtiene la posición superior base del indicador según el layout escalado.
+  indicatorTopTranslation = scaleSize([80, -150], m.scaleInfo)
+  ' Captura coordenada X fija del indicador para mantener alineación horizontal.
+  indicatorX = indicatorTopTranslation[0]
+  ' Captura límite superior (Y) desde donde el indicador debe quedar fijo.
+  indicatorTopY = indicatorTopTranslation[1]
+  ' Calcula altura visible del viewport para ubicar el indicador al fondo de la pantalla.
+  episodesViewportHeight = scaleValue(860, m.scaleInfo)
+  ' Usa alto fallback del indicador para robustez cuando aún no se pueda medir.
+  indicatorHeight = m.selectedIndicatorFallbackHeight
+  ' Prioriza alto real del indicador ya sincronizado con el EpisodeItem seleccionado.
+  if m.selectedIndicator <> invalid and m.selectedIndicator.size <> invalid and m.selectedIndicator.size.count() > 1 then indicatorHeight = cint(m.selectedIndicator.size[1])
+  ' Define un margen inferior mínimo para mantener el indicador abajo pero completamente visible.
+  indicatorBottomPadding = scaleValue(6, m.scaleInfo)
+  ' Calcula límite inferior del indicador dejando un respiro muy sutil en la parte baja.
+  indicatorBottomY = indicatorTopY + episodesViewportHeight - indicatorHeight - indicatorBottomPadding
+  ' Evita invertir límites cuando el alto del indicador supera el viewport.
+  if indicatorBottomY < indicatorTopY then indicatorBottomY = indicatorTopY
+  ' Calcula cuántos pasos separan al item actual del último episodio cargado.
+  distanceFromLast = (m.episodesCount - 1 - m.selectedEpisodeIndex) * stepY
+  ' Mueve el indicador desde abajo hacia arriba a medida que se navega con flecha UP.
+  indicatorTargetY = indicatorBottomY - distanceFromLast
+  ' Fija el indicador en el límite superior cuando intenta sobrepasarlo.
+  if indicatorTargetY < indicatorTopY then indicatorTargetY = indicatorTopY
+  ' Aplica traducción final del indicador para reflejar la posición dinámica actual.
+  if m.selectedIndicator <> invalid then m.selectedIndicator.translation = [indicatorX, indicatorTargetY]
+  ' Recalcula desplazamiento de la lista para mantener alineado el item seleccionado con el indicador.
+  targetTranslation = [baseTranslation[0], (indicatorTargetY - indicatorTopY) + baseTranslation[1] - (m.selectedEpisodeIndex * stepY) + (m.selectedEpisodeIndex * 0.5)]
   __setEpisodesListTranslation(targetTranslation, animateTransition)
 
   ' Muestra el marco de selección al existir un episodio activo.

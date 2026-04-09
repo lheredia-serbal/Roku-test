@@ -233,11 +233,11 @@ function __calculateCarouselTitleWidth(title as dynamic) as integer
    ' Priorizo el ancho informado por scaleInfo.
   if m.scaleInfo <> invalid and m.scaleInfo.width <> invalid then screenWidth = m.scaleInfo.width
   ' Defino ancho estimado por carácter para resoluciones base.
-  charWidth = scaleValue(13.2, m.scaleInfo) 
+  charWidth = scaleValue(13.5, m.scaleInfo) 
   ' Ajusto densidad de caracteres para televisores 4K.
   if screenWidth >= 3840 then charWidth = scaleValue(18, m.scaleInfo) 
   ' Ajusto métrica para Full HD.
-  if screenWidth >= 1920 and screenWidth < 3840 then charWidth = scaleValue(13.2, m.scaleInfo) 
+  if screenWidth >= 1920 and screenWidth < 3840 then charWidth = scaleValue(13.5, m.scaleInfo) 
   ' Defino ancho mínimo para títulos cortos.
   minWidth = scaleValue(100, m.scaleInfo) 
   ' Limito el ancho máximo para no invadir zonas de foco y tags.

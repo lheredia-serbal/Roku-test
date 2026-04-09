@@ -4,8 +4,8 @@ End function
 
 function getCdnConfigUrls() As Object
     return [
-        "https://cdndev.qvixprimary.com/v1/nebuladev.json",
-        "https://cdndev.qvixsecondary.com/v1/nebuladev.json"
+        "https://d1gbojyyzaqxpn.cloudfront.net/v1/nebulatest.json",
+        "https://qvixstatic-g5h3fha4cnh9chff.z03.azurefd.net/static-content/v1/nebulatest.json"
     ]
 end function
 

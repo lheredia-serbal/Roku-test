@@ -116,6 +116,7 @@ function onKeyEvent(key as string, press as boolean) as boolean
     handled = true
 
   else if key = KeyButtons().LEFT and press and ( __isNewsFocused() or (m.carouselContainer <> invalid and m.carouselContainer.isInFocusChain()) ) then
+    __markLastFocus() ' Guarda el carrusel actualmente enfocado antes de abrir el menú lateral.
     m.returnFocusToNewsAfterMenu = __isNewsFocused()
     m.myMenu.action = "expand"
     m.selectedIndicator.visible = false
@@ -1264,8 +1265,8 @@ sub __selectMenuItem(menuSelectedItem)
 
   getNeedRefresh()
   if menuSelectedItem.key = "MenuId" and menuSelectedItem.id = -1 and menuSelectedItem.code <> invalid and menuSelectedItem.code = "setting" then
+    __markLastFocus() ' Persiste el último carrusel enfocado para restaurarlo al volver desde SettingsScreen.
     m.myMenu.action = "collapse"
-    m.selectedIndicator.visible = true
 
     actionLog =  getActionLog({
       actionCode: ActionLogCode().OPEN_PAGE,

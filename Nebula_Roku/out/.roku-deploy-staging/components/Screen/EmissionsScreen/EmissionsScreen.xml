@@ -47,6 +47,7 @@
       <Group id="episodesViewport">
         <!-- Lista vertical de EpisodeItem creada desde el servicio. -->
         <LayoutGroup
+         
           id="episodesList"
           layoutDirection="vert"
           horizAlignment="left"
