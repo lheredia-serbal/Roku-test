@@ -14,6 +14,10 @@ sub init()
   m.episodesViewport = m.top.findNode("episodesViewport")
   ' Guarda referencia del indicador de selección fijo.
   m.selectedIndicator = m.top.findNode("selectedIndicator")
+  ' Guarda referencia del fondo visual que usa la primera imagen de emisiones.
+  m.programImageBackground = m.top.findNode("programImageBackground")
+  ' Guarda referencia del gradiente superpuesto para mejorar legibilidad del contenido.
+  m.infoGradient = m.top.findNode("infoGradient")
   ' Cachea el ancho fijo del indicador para reutilizarlo al recalcular su alto dinámico.
   m.selectedIndicatorWidth = scaleValue(1100, m.scaleInfo)
   ' Cachea alto fallback del indicador para usarlo cuando no se pueda medir el EpisodeItem.
@@ -59,6 +63,8 @@ sub init()
   if m.scaleInfo = invalid then m.scaleInfo = getScaleInfo(CreateObject("roDeviceInfo"))
   ' Aplica tamaños y posiciones escaladas para todos los nodos de emisiones.
   __applyScaledLayout()
+    ' Arranca con posters ocultos hasta disponer de una primera imagen válida de emisiones.
+  __hideEpisodeBackground()
 end sub
 
 ' Aplica medidas escaladas a width y height de los nodos visuales.
@@ -72,7 +78,17 @@ sub __applyScaledLayout()
     m.emissionsTitle.translation = scaleSize([80, 40], m.scaleInfo)
   end if
 
-if m.episodesViewport <> invalid and m.episodesList <> invalid then
+    if m.infoGradient <> invalid then
+    m.infoGradient.width = m.scaleInfo.width
+    m.infoGradient.height = m.scaleInfo.height
+  end if
+
+  if m.programImageBackground <> invalid then
+    m.programImageBackground.width = m.scaleInfo.width
+    m.programImageBackground.height = m.scaleInfo.height
+  end if
+
+  if m.episodesViewport <> invalid and m.episodesList <> invalid then
     ' Calcula el tamaño del viewport que recorta visualmente la lista.
     episodesViewportWidth = scaleValue(1600, m.scaleInfo)
     ' Calcula altura visible de episodios para evitar superposición con el título.
@@ -86,7 +102,7 @@ if m.episodesViewport <> invalid and m.episodesList <> invalid then
   end if
 
 if m.selectedIndicator <> invalid then
-    m.selectedIndicator.translation = scaleSize([80, 0], m.scaleInfo)
+    m.selectedIndicator.translation = scaleSize([80, 148], m.scaleInfo)
     ' Actualiza ancho cacheado con el valor escalado vigente para mantener consistencia visual.
     m.selectedIndicatorWidth = scaleValue(1100, m.scaleInfo)
     ' Actualiza alto fallback cacheado con el valor escalado vigente para mantener consistencia visual.
@@ -172,6 +188,8 @@ sub __getEpisodes(key, id)
   m.lastKey = key
   ' Guarda id para posibles reintentos.
   m.lastId = id
+  ' Oculta indicador mientras se carga contenido para evitar selección visual desfasada.
+  if m.selectedIndicator <> invalid then m.selectedIndicator.visible = false
   ' Activa loading compartido mientras se consulta API.
   if m.top.loading <> invalid then m.top.loading.visible = true
   ' Crea identificador de acción para retry manager.
@@ -274,6 +292,8 @@ sub __renderEpisodes(episodes)
   if episodes = invalid then return
   ' Guarda episodios originales para poder abrir player desde selección actual.
   m.episodesData = episodes
+  ' Actualiza imagen de fondo usando la primera imagen válida del listado de emisiones.
+  __setEpisodeBackgroundImage(episodes)
   ' Guarda la cantidad real de EpisodeItem para navegación con separadores.
   m.episodesCount = episodes.count()
   ' Recorre episodios para crear un EpisodeItem por cada uno.
@@ -688,7 +708,51 @@ sub __clearEpisodes()
   end while
 
   ' Oculta el SelectionBox cuando no quedan episodios visibles.
-  if m.selectedIndicator <> invalid then m.selectedIndicator.visible = false
+  ' Limpia posters de fondo al vaciar emisiones para evitar arrastrar imagen anterior.
+  __hideEpisodeBackground()
+end sub
+
+' Configura el fondo de emisiones usando la primera imagen válida de la lista recibida.
+sub __setEpisodeBackgroundImage(episodes as dynamic)
+  ' Evita errores y oculta fondo cuando la respuesta no trae episodios.
+  if episodes = invalid or episodes.count() <= 0 then
+    __hideEpisodeBackground()
+    return
+  end if
+
+  ' Busca la primera imagen disponible en orden de aparición del listado.
+  firstImageUrl = invalid
+  for each episode in episodes
+    if episode <> invalid and episode.image <> invalid then
+      imageUrl = getImageUrl(episode.image)
+      if imageUrl <> invalid and imageUrl <> "" then
+        firstImageUrl = imageUrl
+        exit for
+      end if
+    end if
+  end for
+
+  ' Oculta posters cuando ningún episodio trae imagen utilizable.
+  if firstImageUrl = invalid or firstImageUrl = "" then
+    __hideEpisodeBackground()
+    return
+  end if
+
+  ' Asigna imagen de fondo y muestra ambos posters como en ProgramDetailScreen.
+  if m.programImageBackground <> invalid then
+    m.programImageBackground.uri = firstImageUrl
+    m.programImageBackground.visible = true
+  end if
+  if m.infoGradient <> invalid then m.infoGradient.visible = true
+end sub
+
+' Oculta y limpia los posters de fondo/gradiente cuando no hay imagen.
+sub __hideEpisodeBackground()
+  if m.programImageBackground <> invalid then
+    m.programImageBackground.uri = ""
+    m.programImageBackground.visible = false
+  end if
+  if m.infoGradient <> invalid then m.infoGradient.visible = false
 end sub
 
 ' Mueve la selección vertical y desplaza los EpisodeItem para mantener fijo el indicador.
@@ -742,7 +806,7 @@ sub __updateSelection(newIndex as integer)
   ' Sincroniza el alto del indicador con el EpisodeItem actualmente enfocado.
   __syncSelectedIndicatorSize()
   ' Obtiene la posición superior base del indicador según el layout escalado.
-  indicatorTopTranslation = scaleSize([80, -150], m.scaleInfo)
+  indicatorTopTranslation = scaleSize([80, 98], m.scaleInfo)
   ' Captura coordenada X fija del indicador para mantener alineación horizontal.
   indicatorX = indicatorTopTranslation[0]
   ' Captura límite superior (Y) desde donde el indicador debe quedar fijo.

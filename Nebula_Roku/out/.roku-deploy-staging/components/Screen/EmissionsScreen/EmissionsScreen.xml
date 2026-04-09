@@ -40,6 +40,16 @@
   </interface>
 
   <children>
+
+    <Poster 
+      id="programImageBackground" 
+      loadDisplayMode="scaleToZoom"
+      uri="pkg:/images/client/info_gradient.png" />
+
+    <Poster 
+      id="infoGradient" 
+      loadDisplayMode="scaleToFit"
+      uri="pkg:/images/client/info_gradient.png" />
     <!-- Contenedor base sin UI adicional por ahora. -->
     <!-- Contenedor raíz de emisiones. -->
     <Group id="emissionsRoot">
