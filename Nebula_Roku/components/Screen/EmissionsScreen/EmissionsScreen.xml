@@ -28,7 +28,7 @@
     <!-- Nodo loading compartido desde MainScene. -->
     <field id="loading" type="node" />
     <!-- Flag de foco para iniciar acciones al entrar a pantalla. -->
-    <field id="onFocus" type="boolean" value="false" onChange="initFocus" />
+    <field id="onFocus" type="boolean" value="false" />
     <!-- Payload de entrada con key e id del programa. -->
     <field id="data" type="string" onChange="initData" />
     <!-- Evento de salida para volver a la pantalla anterior. -->
@@ -76,6 +76,26 @@
         horizAlign="left"
         vertAlign="center"
         font="font:LargeBoldSystemFont" />
+
+      <!-- Label principal del estado sin emisiones o con error de servicio. -->
+      <Label
+        id="episodesUnavailableTitle"
+        visible="false"
+        text="Ups!"
+        width="1760"
+        horizAlign="center"
+        vertAlign="center"
+        font="font:LargeBoldSystemFont" />
+      <!-- Label secundario traducible para explicar indisponibilidad temporal. -->
+      <Label
+        id="episodesUnavailableDescription"
+        visible="false"
+        text=""
+        width="1760"
+        horizAlign="center"
+        vertAlign="center"
+        numLines="3"
+        font="font:MediumSystemFont" />
 
       <Animation
         id="episodesMoveAnimation"

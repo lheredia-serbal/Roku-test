@@ -6,6 +6,8 @@ sub init()
   m.episodeMedia = m.top.findNode("episodeMedia")
   ' Guarda imagen principal del episodio.
   m.emissionImage = m.top.findNode("emissionImage")
+  ' Guarda label de título superpuesto sobre la imagen.
+  m.emissionTitleOverlay = m.top.findNode("emissionTitleOverlay")
   ' Guarda ícono de play superpuesto.
   m.playImage = m.top.findNode("playImage")
   ' Guarda bloque de duración en esquina inferior derecha.
@@ -35,6 +37,13 @@ end sub
 
 ' Actualiza contenido visible cuando cambian los campos públicos del componente.
 sub onEpisodeInputChanged()
+  episodeTitle = ""
+  if m.top.title <> invalid and m.top.title <> "" then episodeTitle = m.top.title
+  ' Setea título tanto en la columna de información como sobre la imagen.
+  m.episodeTitle.text = episodeTitle
+  programTitle = ""
+  if m.top.programTitle <> invalid and m.top.programTitle <> "" then programTitle = m.top.programTitle
+  m.emissionTitleOverlay.text = programTitle
   ' Setea título únicamente cuando llega un valor válido.
   if m.top.title <> invalid and m.top.title <> "" then m.episodeTitle.text = m.top.title
   ' Setea sinopsis únicamente cuando llega un valor válido.
@@ -67,10 +76,17 @@ sub __updateLayout()
   ' Aplica el alto final manteniendo la proporción seleccionada.
   m.emissionImage.height = expectedHeight
 
+  ' Sincroniza tamaño del label superpuesto para cubrir toda la imagen.
+  m.emissionTitleOverlay.width = m.emissionImage.width
+  m.emissionTitleOverlay.height = m.emissionImage.height
+  m.emissionTitleOverlay.translation = [0, 0]
+
   ' Aplica traslación final para que playImage quede justo en el centro de la imagen.
   centeredPlayX = cint((m.emissionImage.width - m.playImage.width) / 2)
   centeredPlayY = cint((m.emissionImage.height - m.playImage.height) / 2)
   m.playImage.translation = [centeredPlayX, centeredPlayY]
+  m.playImage.height = scaleValue(100, m.scaleInfo)
+  m.playImage.width = scaleValue(100, m.scaleInfo)
 
   ' Setear el ancho y alto de los componentes
   m.episodeTimeGroup.width = cint(scaleValue(70, m.scaleInfo))

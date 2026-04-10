@@ -142,6 +142,9 @@
       "restart": "Restart"
     }
   },
+  "emissions": {
+    "unavailableEpisodes": "The episodes for this title are not available at this time."
+  },
   "autoUpgrade": {
     "title": "Update available",
     "message": "A new version is available.",

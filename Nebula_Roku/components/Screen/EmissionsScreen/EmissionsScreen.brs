@@ -8,6 +8,10 @@ sub init()
   m.apiRequestManager = invalid
   ' Referencia al título principal de la pantalla.
   m.emissionsTitle = m.top.findNode("emissionsTitle")
+  ' Referencia al label principal mostrado cuando no hay emisiones disponibles.
+  m.episodesUnavailableTitle = m.top.findNode("episodesUnavailableTitle")
+  ' Referencia al label descriptivo traducible para estado sin emisiones.
+  m.episodesUnavailableDescription = m.top.findNode("episodesUnavailableDescription")
   ' Guarda referencia de la lista visual de episodios.
   m.episodesList = m.top.findNode("episodesList")
   ' Guarda referencia del viewport que recorta la lista bajo el título.
@@ -34,7 +38,9 @@ sub init()
   m.episodesData = []
   ' Guarda episodio seleccionado para reutilizarlo en watchValidate/streaming.
   m.selectedEpisode = invalid
-    ' Guarda referencia del PIN modal para validar control parental antes de reproducir.
+  ' Guarda nombre del programa padre para mostrarlo sobre cada poster de episodio.
+  m.parentProgramTitle = ""
+  ' Guarda referencia del PIN modal para validar control parental antes de reproducir.
   m.pinDialog = invalid
   ' Guarda referencia del diálogo de error para informar PIN inválido.
   m.dialog = invalid
@@ -77,6 +83,20 @@ sub __applyScaledLayout()
   if m.emissionsTitle <> invalid then
     m.emissionsTitle.translation = scaleSize([80, 40], m.scaleInfo)
   end if
+    ' Centra verticalmente el label principal de indisponibilidad.
+  if m.episodesUnavailableTitle <> invalid then
+    ' Asigna ancho total para permitir centrado horizontal exacto.
+    m.episodesUnavailableTitle.width = m.scaleInfo.width
+    ' Posiciona el texto principal levemente por encima del centro.
+    m.episodesUnavailableTitle.translation = [0, cint(m.scaleInfo.height / 2) - scaleValue(70, m.scaleInfo)]
+  end if
+  ' Centra verticalmente el label descriptivo debajo del título "Ups!".
+  if m.episodesUnavailableDescription <> invalid then
+    ' Asigna ancho total para permitir centrado horizontal exacto.
+    m.episodesUnavailableDescription.width = m.scaleInfo.width
+    ' Posiciona descripción inmediatamente debajo del label principal.
+    m.episodesUnavailableDescription.translation = [0, cint(m.scaleInfo.height / 2)]
+  end if
 
     if m.infoGradient <> invalid then
     m.infoGradient.width = m.scaleInfo.width
@@ -112,12 +132,6 @@ if m.selectedIndicator <> invalid then
   end if
 end sub
 
-
-' Maneja foco de pantalla al mostrarse.
-sub initFocus()
-  ' No requiere comportamiento adicional al tomar foco.
-end sub
-
 ' Procesa payload de entrada y dispara servicio de episodios.
 sub initData()
   ' Evita ejecución cuando no hay payload.
@@ -143,6 +157,8 @@ sub initData()
   })
 
   __saveActionLog(actionLog)
+
+  __applyTranslations()
 end sub
 
 ' Captura eventos de teclado para volver a la pantalla anterior.
@@ -236,10 +252,16 @@ sub onEpisodesResponse()
     episodes = invalid
     ' Prioriza lista dentro de data cuando exista.
     if response <> invalid and response.data <> invalid then episodes = response.data
+    ' Cachea título del programa padre desde la respuesta para pasarlo a cada EpisodeItem.
+    m.parentProgramTitle = ""
+    if episodes <> invalid and episodes.title <> invalid and episodes.title <> "" then m.parentProgramTitle = episodes.title
     ' Soporta respuesta como arreglo directo si aplica.
-    if episodes = invalid and type(response) = "roArray" then episodes = response
+    ' Extrae lista de episodios contenida dentro del payload de data.
+    episodeCollection = invalid
+    ' Valida estructura esperada antes de acceder al arreglo de episodios.
+    if episodes <> invalid and episodes.episodes <> invalid then episodeCollection = episodes.episodes
     ' Renderiza N EpisodeItem según cantidad recibida por servicio.
-    __renderEpisodes(episodes.episodes)
+    __renderEpisodes(episodeCollection)
     ' Remueve acción pendiente al completar correctamente.
     removePendingAction(m.apiRequestManager.requestId)
     ' Parsea respuesta para mostrar título en pantalla.
@@ -252,6 +274,8 @@ sub onEpisodesResponse()
       end if
     end if
   else
+    ' Muestra mensaje de indisponibilidad cuando el servicio de emisiones falla.
+    __showEpisodesUnavailableMessage()
     ' Obtiene status para decisiones de error.
     statusCode = m.apiRequestManager.statusCode
     ' Obtiene payload de error para logging.
@@ -289,7 +313,19 @@ sub __renderEpisodes(episodes)
   ' Limpia elementos previos antes de pintar nuevos episodios.
   __clearEpisodes()
   ' Corta render cuando la respuesta no contiene lista.
-  if episodes = invalid then return
+    if episodes = invalid then
+    ' Muestra mensaje cuando la API no devuelve emisiones válidas.
+    __showEpisodesUnavailableMessage()
+    return
+  end if
+  ' Muestra mensaje cuando la API devuelve cero emisiones disponibles.
+  if episodes.count() <= 0 then
+    ' Muestra mensaje cuando la API no trae episodios para el título.
+    __showEpisodesUnavailableMessage()
+    return
+  end if
+  ' Oculta mensaje de indisponibilidad cuando sí existen emisiones renderizables.
+  __hideEpisodesUnavailableMessage()
   ' Guarda episodios originales para poder abrir player desde selección actual.
   m.episodesData = episodes
   ' Actualiza imagen de fondo usando la primera imagen válida del listado de emisiones.
@@ -313,6 +349,8 @@ sub __renderEpisodes(episodes)
     newEpisodeItem.play = __resolveEpisodePlay(item)
     ' Pasa título compuesto con fecha, hora y nombre de canal.
     newEpisodeItem.title = __buildEpisodeTitle(item)
+    ' Pasa título del programa padre para mostrarlo centrado sobre la imagen.
+    newEpisodeItem.programTitle = m.parentProgramTitle
 
     ' Agrega un separador visual entre episodios autogenerados.
     if i < episodes.count() - 1 then
@@ -712,6 +750,22 @@ sub __clearEpisodes()
   __hideEpisodeBackground()
 end sub
 
+' Muestra ambos labels centrados cuando no hay emisiones o falla el servicio.
+sub __showEpisodesUnavailableMessage()
+  ' Muestra el label principal con el texto fijo "Ups!".
+  if m.episodesUnavailableTitle <> invalid then m.episodesUnavailableTitle.visible = true
+  ' Muestra el label secundario con el texto traducido de indisponibilidad.
+  if m.episodesUnavailableDescription <> invalid then m.episodesUnavailableDescription.visible = true
+end sub
+
+' Oculta ambos labels cuando existen emisiones para mostrar.
+sub __hideEpisodesUnavailableMessage()
+  ' Oculta el label principal para no superponer la lista de episodios.
+  if m.episodesUnavailableTitle <> invalid then m.episodesUnavailableTitle.visible = false
+  ' Oculta el label secundario para no superponer la lista de episodios.
+  if m.episodesUnavailableDescription <> invalid then m.episodesUnavailableDescription.visible = false
+end sub
+
 ' Configura el fondo de emisiones usando la primera imagen válida de la lista recibida.
 sub __setEpisodeBackgroundImage(episodes as dynamic)
   ' Evita errores y oculta fondo cuando la respuesta no trae episodios.
@@ -961,6 +1015,11 @@ function __getEpisodeStepY() as integer
   return cint(stepY)
 end function
 
+sub __applyTranslations()
+  ' Carga texto traducido del mensaje secundario para estado sin emisiones.
+  if m.episodesUnavailableDescription <> invalid then m.episodesUnavailableDescription.text = i18n_t(m.global.i18n, "emissions.unavailableEpisodes")
+end sub
+
 ' Limpia estado cuando ocurre logout.
 sub onLogoutChange()
   ' Resetea payload y flags básicos del componente.
@@ -979,8 +1038,12 @@ sub onLogoutChange()
     m.top.streaming = invalid
     ' Limpia episodio seleccionado durante logout.
     m.selectedEpisode = invalid
+    ' Limpia nombre del programa padre durante logout.
+    m.parentProgramTitle = ""
     ' Limpia el título cuando se resetea la pantalla por logout.
     if m.emissionsTitle <> invalid then m.emissionsTitle.text = ""
+    ' Oculta labels de indisponibilidad al resetear estado por logout.
+    __hideEpisodesUnavailableMessage()
     ' Oculta el marco para evitar residuos visuales al salir de sesión.
     if m.selectedIndicator <> invalid then m.selectedIndicator.visible = false
   end if
