@@ -21,9 +21,21 @@
     <field id="play" type="boolean" value="false" onChange="onEpisodeInputChanged" />
     <!-- Título compuesto del episodio. -->
     <field id="title" type="string" onChange="onEpisodeInputChanged" />
+    <!-- Nombre del programa padre para mostrar sobre la imagen. -->
+    <field id="programTitle" type="string" onChange="onEpisodeInputChanged" />
+    <!-- Índice del fallback de poster recibido desde EmissionsScreen. -->
+    <field id="index" type="integer" value="1" onChange="onEpisodeInputChanged" />
+     <!-- Flag para activar fondo oscuro cuando el item está seleccionado. -->
+    <field id="isFocused" type="boolean" value="false" onChange="onFocusStateChanged" />
   </interface>
 
   <children>
+    <!-- Fondo de foco para resaltar todo el item con negro semitransparente. -->
+    <Rectangle
+      id="focusBackground"
+      visible="false"
+      color="0x0000004D" />
+
     <!-- Layout horizontal principal del episodio. -->
     <LayoutGroup
       id="episodeContainer"
@@ -35,19 +47,32 @@
       <!-- Contenedor superpuesto para poster, play y duración. -->
       <Group id="episodeMedia">
         <!-- Imagen principal del episodio. -->
+
+        <Poster
+          id="imageNotFound"
+          loadDisplayMode="scaleToZoom"
+          uri="pkg:/images/shared/show_image_empty_1.jpg"/>
+
+        <Label
+          id="emissionTitleOverlay"
+          text=""
+          wrap="true"
+          maxLines="3"
+          horizAlign="center"
+          vertAlign="center"
+          color="0xFFFFFFFF"
+          font="font:MediumBoldSystemFont" />
+
         <Poster
           id="emissionImage"
-          loadDisplayMode="scaleToFin"
-          uri="pkg:/images/shared/show_image_empty_1.jpg" />
+          loadDisplayMode="scaleToZoom"/>
 
         <!-- Ícono play superpuesto al centro de emissionImage. -->
         <!-- Inicia oculto y se muestra solo cuando play=true. -->
         <Poster
           id="playImage"
-          width="64"
-          height="64"
           visible="false"
-          uri="pkg:/images/shared/play.png" />
+          uri="pkg:/images/shared/play_circle.png" />
 
         <!-- Grupo de tiempo superpuesto abajo a la derecha de emissionImage. -->
         <Rectangle
@@ -91,7 +116,6 @@
           id="episodeSynopsis"
           text=""
           wrap="true"
-          maxLines="10"
           font="font:SmallSystemFont" />
       </LayoutGroup>
     </LayoutGroup>

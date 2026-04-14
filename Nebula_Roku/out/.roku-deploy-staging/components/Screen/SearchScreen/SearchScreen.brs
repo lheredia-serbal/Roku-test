@@ -191,8 +191,20 @@ end sub
 sub onDialogClosedLastFocus()
   ' Si existe dialog abierto, lo cerramos explícitamente.
   if m.dialog <> invalid then m.dialog.close = true
+
+  option = clearDialogAndGetOption(m.top, m.dialog)
+  m.dialog = invalid
   ' Restauramos foco para continuar navegación en Search.
   __restoreLastFocus()
+end sub
+
+' Procesa el cierre de los modales de error para volver a dar foco sobre el elemento que lo 
+' tenia antes del error
+sub onDialogClosedFocusContainer()
+  option = clearDialogAndGetOption(m.top, m.dialog)
+  m.dialog = invalid
+  
+  if option = 0 then __restoreLastFocus()
 end sub
 
 sub onGetRecommendedResponse()
@@ -215,7 +227,7 @@ sub onGetRecommendedResponse()
     __loadSearchCarousels(invalid)
 
     ' Si la API devuelve data, cargo el carrusel.
-    if resp.data <> invalid then
+    if resp <> invalid and resp.data <> invalid then
       ' Pinto items en el carrusel de relacionados.
       __loadRecommendedCarousel(resp.data)
     else
@@ -569,9 +581,6 @@ sub onSelectItem()
   ' Si no hay API URL cacheada, la obtengo antes de consumir servicios.
   if m.apiUrl = invalid then m.apiUrl = getConfigVariable(m.global.configVariablesKeys.API_URL)
 
-  ' Muestro loading global mientras resuelvo la navegación del item.
-  if m.top.loading <> invalid then m.top.loading.visible = true
-
   ' Si se selecciona la tarjeta "Ver todos", disparo navegación directa a ViewAllScreen.
   if m.itemSelected.showSeeMore <> invalid and m.itemSelected.showSeeMore = true then
     if m.carouselIndex <> invalid and m.carousels <> invalid and m.carouselIndex >= 0 and m.carouselIndex < m.carousels.count() and m.carousels[m.carouselIndex] <> invalid then
@@ -642,7 +651,7 @@ sub onStreamingsResponse()
     removePendingAction(m.apiRequestManager.requestId)
     ' Parseo respuesta de streamings.
     resp = ParseJson(m.apiRequestManager.response)
-    if resp.data <> invalid then
+    if resp <> invalid and resp.data <> invalid then
 
       m.apiRequestManager = clearApiRequest(m.apiRequestManager)
       streaming = resp.data
@@ -699,6 +708,7 @@ sub onWatchValidateResponse()
       ' Restaura foco al item previo para continuidad de UX.
       __restoreLastFocus()
       printError("WatchValidate ResultCode Search:", resp.resultCode)
+      m.apiRequestManager = clearApiRequest(m.apiRequestManager)
     end if
   else
     if m.top.loading <> invalid then m.top.loading.visible = false
@@ -708,9 +718,8 @@ sub onWatchValidateResponse()
     ' Restauro foco al último nodo para no perder navegabilidad.
     __restoreLastFocus()
     printError("WatchValidate Status Search:", statusCode.toStr() + " " + errorResponse)
-  end if
-
     m.apiRequestManager = clearApiRequest(m.apiRequestManager)
+  end if
 end sub
 
 ' Restaura foco al último item seleccionado al volver desde otras pantallas.
@@ -1243,13 +1252,13 @@ sub __showKeyboard()
 end sub
 
 ' Procesa callback del modal PIN reutilizando lógica de MainScreen.
-sub __onPinDialogLoad()
+sub onPinDialogLoad()
   ' Leo respuesta del PIN ingresado por el usuario.
-  resp = m.pinDialog.response
+  resp = clearPINDialogAndGetOption(m.top, m.pinDialog)
   ' Creo requestId para la validación del PIN.
   requestId = createRequestId()
   ' Si se confirma botón OK con PIN de 4 dígitos, valido contra backend.
-  if resp.option = 0 and resp.pin <> invalid and Len(resp.pin) = 4 then
+  if (resp.option = 0 and resp.pin <> invalid and Len(resp.pin) = 4) then 
     if m.top.loading <> invalid then m.top.loading.visible = true
     action = {
       apiRequestManager: m.apiRequestManager
@@ -1300,6 +1309,73 @@ sub __requestGuideLastWatched()
   ' Registro acción para retry/failover estándar.
   runAction(requestId, action, ApiType().CLIENTS_API_URL)
   m.apiRequestManager = action.apiRequestManager
+end sub
+
+' Procesa la respuesta de la validacion del PIN
+sub onParentalControlResponse()
+  if m.apiRequestManager = invalid then
+    onPinDialogLoad()
+    return
+  else
+    if validateStatusCode(m.apiRequestManager.statusCode) then
+      resp = ParseJson(m.apiRequestManager.response)
+
+      if resp <> invalid and resp.data <> invalid and resp.data then 
+        removePendingAction(m.apiRequestManager.requestId)
+        watchSessionId = getWatchSessionId()
+        requestId = createRequestId()
+        action = {
+          apiRequestManager: m.apiRequestManager
+          url: urlWatchValidate(m.apiUrl, watchSessionId, m.itemSelected.redirectKey, m.itemSelected.redirectId)
+          method: "GET"
+          responseMethod: "onWatchValidateResponse"
+          body: invalid
+          token: invalid
+          publicApi: false
+          dataAux: invalid
+          requestId: requestId
+          run: function() as Object
+              m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux)
+              return { success: true, error: invalid }
+            end function
+          }
+          
+          runAction(requestId, action, ApiType().CLIENTS_API_URL)
+          m.apiRequestManager = action.apiRequestManager
+        else
+          m.top.loading.visible = false
+          __markLastFocus() 
+          m.dialog = createAndShowDialog(m.top, "", i18n_t(m.global.i18n, "shared.parentalControlModal.error.invalid"), "onDialogClosedFocusContainer")
+      end if
+    else     
+      m.top.loading.visible = false
+      statusCode = m.apiRequestManager.statusCode
+      errorResponse = m.apiRequestManager.errorResponse
+      m.apiRequestManager = clearApiRequest(m.apiRequestManager)
+
+      if m.apiRequestManager.serverError then
+        __validateError(statusCode, 9000, errorResponse)
+        changeStatusAction(m.apiRequestManager.requestId, "error")
+        retryAll()
+      else
+        removePendingAction(m.apiRequestManager.requestId)
+
+        printError("ParentalControl:", statusCode.toStr() + " " +  errorResponse)
+        
+        if validateLogout(statusCode, m.top) then return 
+      
+        if (statusCode = 408) then
+          __markLastFocus() 
+          m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.global.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogClosedLastFocus", [i18n_t(m.global.i18n, "button.cancel")])
+        else 
+          __validateError(statusCode, 0, errorResponse)
+        end if
+    
+        actionLog = createLogError(generateErrorDescription(errorResponse), generateErrorPageUrl("valdiatePin", "ParentalControlModalComponent"), getServerErrorStack(errorResponse))
+        __saveActionLog(actionLog)
+      end if
+    end if
+  end if
 end sub
 
 ' Fuerza restaurar foco al volver desde ProgramDetail priorizando resultados/recomendados.
@@ -1443,4 +1519,48 @@ sub __validateCarouselItem(carouselItem)
 
   ' Si no requiere PIN, navego según tipo de destino.
   __navigateToSelectedItem(carouselItem)
+end sub
+
+' Valdia el error obtenido desde la API
+sub __validateError(statusCode, resultCode, errorResponse)
+  ' Centraliza la validación de errores HTTP/resultCode para la MainScreen.
+  ' Decide cuándo redirigir, mostrar diálogos y setear códigos específicos en el CDN dialog.
+  error = invalid
+  
+  if validateLogout(statusCode, m.top) then return 
+
+  if errorResponse <> invalid and errorResponse <> "" then 
+    ' Si llega un body de error, intenta parsearlo para obtener el code interno.
+  else 
+    ' Si no hay body de error, usa el resultCode recibido.
+    error = { code: resultCode }
+  end if
+
+  if (error <> invalid and error.code <> invalid) then 
+    if (error.code = 5931) then
+      ' No tiene plan: mostrar diálogo con mensaje específico.
+      __markLastFocus() 
+      m.dialog = createAndShowDialog(m.top,i18n_t(m.global.i18n, "shared.errorComponent.weAreSorry"), (i18n_t(m.global.i18n, "shared.errorComponent.youCurrentlyDoNotHavePlan")).Replace("[ProductName]", m.productName), "onDialogClosedLastFocus", [i18n_t(m.global.i18n, "button.cancel")])
+    
+    else if (error.code = 5932) then
+      ' No tiene suscripciones activas: mostrar diálogo con mensaje específico.
+      __markLastFocus() 
+      m.dialog = createAndShowDialog(m.top,i18n_t(m.global.i18n, "shared.errorComponent.weAreSorry"), (i18n_t(m.global.i18n, "shared.errorComponent.youCurrentlyDoNotHaveAnyActiveSubscriptions")).Replace("[ProductName]", m.productName), "onDialogClosedLastFocus", [i18n_t(m.global.i18n, "button.cancel")])
+    
+    else if (error.code = 5939) then
+      ' Saldo insuficiente: mostrar diálogo con mensaje específico.
+      __markLastFocus() 
+      m.dialog = createAndShowDialog(m.top,i18n_t(m.global.i18n, "shared.errorComponent.weAreSorry"), i18n_t(m.global.i18n, "shared.errorComponent.youCurrentlyDoNotHaveSufficientBalance"), "onDialogClosedLastFocus", [i18n_t(m.global.i18n, "button.cancel")])
+    
+    else if (error.code = 9000) then
+      ' Error de configuración inicial: mapear a código CDN usando statusCode.
+      setCdnErrorCodeFromStatus(statusCode, ApiType().CLIENTS_API_URL)
+    else if (error.code = 100) or (error.code = 101) then
+      ' Errores de parseo/estructura JSON de CDN: mapear a códigos PR.
+      setCdnErrorCodeFromStatus(error.code, ApiType().CLIENTS_API_URL)
+    else if (error.code = 404) or (error.code = 521) or (error.code = 523) then
+      ' Errores al cargar módulos cliente: mapear a códigos CL.
+      setClientModuleErrorCodeFromStatus(error.code, ApiType().CLIENTS_API_URL)
+    end if
+  end if 
 end sub

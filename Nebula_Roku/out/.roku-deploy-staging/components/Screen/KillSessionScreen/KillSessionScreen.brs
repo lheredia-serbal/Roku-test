@@ -176,7 +176,7 @@ end sub
 sub onStreamingsResponse() 
   if validateStatusCode(m.apiRequestManager.statusCode) then
     resp = ParseJson(m.apiRequestManager.response)
-    if resp.data <> invalid then
+    if resp <> invalid and resp.data <> invalid then
       m.apiRequestManager = clearApiRequest(m.apiRequestManager)
       streaming = resp.data
       streaming.key = m.redirectKey 

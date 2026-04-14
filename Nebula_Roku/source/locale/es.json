@@ -7,6 +7,7 @@
     "ok": "OK",
     "cancel": "Cancelar",
     "close": "Cerrar",
+    "delete": "Eliminar",
     "next": "Siguiente",
     "no": "NO",
     "previous": "Anterior",
@@ -55,10 +56,11 @@
     "titleDiveId": "ID de dispositivo: ",
     "titleSerialNumber": "N° de serie: ",
     "titleVersion": "Versión: ",
-    "orgName": "Qvix Solutions"
+    "orgName": ""
   },
   "content": {
     "menuComponent": {
+      "search": "Buscar",
       "changeProfile": "Cambiar perfil",
       "Setting": "Configuración",
       "exit": "Salir",

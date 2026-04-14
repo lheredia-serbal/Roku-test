@@ -23,9 +23,19 @@
     <field id="title" type="string" onChange="onEpisodeInputChanged" />
     <!-- Nombre del programa padre para mostrar sobre la imagen. -->
     <field id="programTitle" type="string" onChange="onEpisodeInputChanged" />
+    <!-- Índice del fallback de poster recibido desde EmissionsScreen. -->
+    <field id="index" type="integer" value="1" onChange="onEpisodeInputChanged" />
+     <!-- Flag para activar fondo oscuro cuando el item está seleccionado. -->
+    <field id="isFocused" type="boolean" value="false" onChange="onFocusStateChanged" />
   </interface>
 
   <children>
+    <!-- Fondo de foco para resaltar todo el item con negro semitransparente. -->
+    <Rectangle
+      id="focusBackground"
+      visible="false"
+      color="0x0000004D" />
+
     <!-- Layout horizontal principal del episodio. -->
     <LayoutGroup
       id="episodeContainer"
@@ -40,8 +50,8 @@
 
         <Poster
           id="imageNotFound"
-          loadDisplayMode=""
-          uri="pkg:/images/shared/show_image_empty_1.jpg" />
+          loadDisplayMode="scaleToZoom"
+          uri="pkg:/images/shared/show_image_empty_1.jpg"/>
 
         <Label
           id="emissionTitleOverlay"
@@ -55,8 +65,7 @@
 
         <Poster
           id="emissionImage"
-          loadDisplayMode=""
-          uri="pkg:/images/shared/show_image_empty_1.jpg" />
+          loadDisplayMode="scaleToZoom"/>
 
         <!-- Ícono play superpuesto al centro de emissionImage. -->
         <!-- Inicia oculto y se muestra solo cuando play=true. -->
@@ -107,7 +116,6 @@
           id="episodeSynopsis"
           text=""
           wrap="true"
-          maxLines="10"
           font="font:SmallSystemFont" />
       </LayoutGroup>
     </LayoutGroup>

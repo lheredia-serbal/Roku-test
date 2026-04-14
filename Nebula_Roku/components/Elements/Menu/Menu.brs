@@ -30,19 +30,7 @@ sub init()
   m.logoutItem = {key: "MenuId", Id: -1, code: "logout", behavior: "logout"}
   m.settingItem = {key: "MenuId", Id: -1, code: "setting", behavior: "setting"}
   m.changeProfilesItem = {key: "MenuId", Id: -1, code: "profiles", behavior: "profiles"}
-  m.searchItem = {
-    key: "MenuId",
-    id: -1,
-    code: "search",
-    behavior: "search",
-    mainMenu: true,
-    text: "Buscar",
-    icon: {
-      image: {
-        relativePath: "pkg:/images/shared/search_icon.png"
-      }
-    }
-  }
+
   m.homeItem = invalid
 
   m.orderSecondaryMenu = [m.settingLabel, m.exitLabel, m.logoutLabel]
@@ -200,14 +188,14 @@ sub configureMenu()
   m.backgroundMenu.width = 1
   m.backgroundMenu.height = m.scaleInfo.height
 
-  m.menuContainer.translation = [0, safeY]
+  m.menuContainer.translation = [0, safeY + scaleValue(50, m.scaleInfo)]
   m.menuContainer.width = scaleValue(118, m.scaleInfo)
   m.menuContainer.height = contentHeight
 
   m.menuExpandVector2DFAnimation.keyValue = [1, usableWidth]
   m.menuCollapseVector2DFAnimation.keyValue = [usableWidth, 1]
 
-  m.avatarMenuContainer.translation = [safeX + scaleValue(0, m.scaleInfo), safeY + scaleValue(70, m.scaleInfo)]
+  m.avatarMenuContainer.translation = [safeX + scaleValue(0, m.scaleInfo), safeY + scaleValue(40, m.scaleInfo)]
   m.avatarMenuContainer.itemSpacings = [scaleValue(10, m.scaleInfo)]
   m.avatarImage.width = scaleValue(65, m.scaleInfo)
   m.avatarImage.height = scaleValue(65, m.scaleInfo)
@@ -264,6 +252,12 @@ sub itemData()
     for each menuItem in m.top.items
       menuItems.push(menuItem)
     next
+
+    ' Obtener si el usuario es For Test
+    forTest = false
+    if m.global.contact.forTest = invalid or (m.global.contact.forTest <> invalid and not m.global.contact.forTest) then 
+      forTest = true
+    end if
 
     for each item in menuItems
       if item.mainMenu then 
@@ -392,6 +386,20 @@ sub __applyTranslations()
   m.settingLabel.text = i18n_t(m.global.i18n, "content.menuComponent.Setting")
   m.exitLabel.text    = i18n_t(m.global.i18n, "content.menuComponent.exit")
   m.logoutLabel.text  = i18n_t(m.global.i18n, "content.menuComponent.logout")
+
+  m.searchItem = {
+    key: "MenuId",
+    id: -1,
+    code: "search",
+    behavior: "search",
+    mainMenu: true,
+    text: i18n_t(m.global.i18n, "content.menuComponent.search"),
+    icon: {
+      image: {
+        relativePath: "pkg:/images/shared/search_icon.png"
+      }
+    }
+  }
 end sub
 
 ' Realiza la apertura del menú

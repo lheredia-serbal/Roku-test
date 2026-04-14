@@ -48,7 +48,7 @@
 
     <Poster 
       id="infoGradient" 
-      loadDisplayMode="scaleToFit"
+      loadDisplayMode="scaleToFill"
       uri="pkg:/images/client/info_gradient.png" />
     <!-- Contenedor base sin UI adicional por ahora. -->
     <!-- Contenedor raíz de emisiones. -->

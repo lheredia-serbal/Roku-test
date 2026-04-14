@@ -181,7 +181,7 @@ sub onGetByIdResponse()
       resp = ParseJson(m.apiRequestManager.response)
       m.apiRequestManager = clearApiRequest(m.apiRequestManager) 
 
-      if resp.data <> invalid then
+      if resp <> invalid and resp.data <> invalid then
         m.top.loading.visible = false
         __loadProgramInfo(resp.data)
       else
@@ -234,7 +234,7 @@ sub onActionsResponse()
       m.apiRequestManager = clearApiRequest(m.apiRequestManager)
 
       __clearButtons()
-      if resp.data <> invalid then
+      if resp <> invalid and resp.data <> invalid then
         m.program.actions = resp.data 
         __processActions()
         m.top.loading.visible = false
@@ -350,7 +350,7 @@ sub onStreamingsResponse()
     if validateStatusCode(m.apiRequestManager.statusCode) then
       removePendingAction(m.apiRequestManager.requestId)
       resp = ParseJson(m.apiRequestManager.response)
-      if resp.data <> invalid then
+      if resp <> invalid and resp.data <> invalid then
         m.apiRequestManager = clearApiRequest(m.apiRequestManager) 
         streaming = resp.data
         streaming.key = m.program.key 
@@ -419,7 +419,7 @@ sub onGetRelatedResponse()
       resp = ParseJson(m.apiRequestManager.response)
       m.apiRequestManager = clearApiRequest(m.apiRequestManager) 
       
-      if resp.data <> invalid then
+      if resp <> invalid and resp.data <> invalid then
         m.top.loading.visible = false
         __loadRelatedCarousel(resp.data)
       end if 

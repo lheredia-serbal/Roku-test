@@ -220,6 +220,7 @@ sub initData()
     if m.mainLogoDisplayType = invalid then m.mainLogoDisplayType = getConfigVariable(m.global.configVariablesKeys.LOGO_DISPLAY_TYPE) 
 
     m.myMenu.ObserveField("selectedItem", "onSelectMenuItem")
+
     __getMenu()
 
     __loadOrganizationLogo()
@@ -791,7 +792,7 @@ sub onStreamingsResponse()
     if validateStatusCode(m.apiRequestManager.statusCode) then
       removePendingAction(m.apiRequestManager.requestId)
       resp = ParseJson(m.apiRequestManager.response)
-      if resp.data <> invalid then
+      if resp <> invalid and resp.data <> invalid then
         m.apiRequestManager = clearApiRequest(m.apiRequestManager)
         __markLastFocus()
         streaming = resp.data
@@ -872,6 +873,7 @@ sub onDialogLogoutContainer()
   end if 
 end sub
 
+
 ' Procesa el cierre de los modales de error para volver a dar foco sobre el elemento que lo 
 ' tenia antes del error
 sub onDialogClosedFocusContainer()
@@ -884,7 +886,11 @@ end sub
 ' Hace foco en objeto que lo tenia antes de que se abriera el modal
 sub onDialogClosedLastFocus()
   onDialogClosedFocusContainer()
-  if m.lastFocus <> invalid then m.lastFocus = invalid 
+  if m.lastFocus <> invalid then 
+    m.lastFocus = invalid
+  else
+    
+  end if
 end sub
 
 ' Dispara el evento de deslogueo
@@ -959,7 +965,7 @@ sub onProgramSummaryResponse()
     if validateStatusCode(m.apiSummaryRequestManager.statusCode) and not __isNewsFocused() then
       m.itemfocused = invalid
       resp = ParseJson(m.apiSummaryRequestManager.response)
-      if resp.data <> invalid then
+      if resp <> invalid and resp.data <> invalid then
         removePendingAction(m.apiSummaryRequestManager.requestId)
         m.apiSummaryRequestManager = clearApiRequest(m.apiSummaryRequestManager)
         m.program = resp.data
@@ -1010,7 +1016,7 @@ sub onMenuResponse()
       removePendingAction(m.apiRequestManager.requestId)
       resp = ParseJson(m.apiRequestManager.response)
       m.apiRequestManager = clearApiRequest(m.apiRequestManager)
-      if resp.data <> invalid then
+      if resp <> invalid and resp.data <> invalid then
         m.myMenu.items = resp.data
       else 
         m.top.loading.visible = false
@@ -1074,7 +1080,7 @@ sub onContentViewResponse()
 
         __saveActionLog(actionLog)
 
-        if resp.data <> invalid and resp.data.items <> invalid and resp.data.items.count() > 0 and not (resp.data.items.count() = 1 and resp.data.items[0].code = "news") then
+        if resp <> invalid and resp.data <> invalid and resp.data.items <> invalid and resp.data.items.count() > 0 and not (resp.data.items.count() = 1 and resp.data.items[0].code = "news") then
           
           populateCarousels(resp.data)
           m.top.loading.visible = false
@@ -1293,7 +1299,6 @@ sub __selectMenuItem(menuSelectedItem)
 
   else if menuSelectedItem.key = "MenuId" and menuSelectedItem.id = -1 and menuSelectedItem.code <> invalid and menuSelectedItem.code = "logout" then
     m.myMenu.action = "collapse"
-    m.selectedIndicator.visible = true 
     m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.exitModal.title"), i18n_t(m.global.i18n, "shared.exitModal.askLogout"), "onDialogLogoutContainer", [ i18n_t(m.global.i18n, "button.yes"), i18n_t(m.global.i18n, "button.no")])
 
   else if menuSelectedItem.key = "MenuId" and menuSelectedItem.id = -1 and menuSelectedItem.code <> invalid and menuSelectedItem.code = "profiles" then
@@ -1422,6 +1427,7 @@ sub __clearContentView()
   m.withoutContentLayoutGroup.visible = false
   ' Reinicia referencia al NewsItem para evitar foco a nodos eliminados.
   m.newsCarouselItem = invalid
+  m.selectedIndicator.visible = false
 
   ' Limpia el contenedor dedicado de noticias para recrearlo desde cero.
   while m.newsContainer <> invalid and m.newsContainer.getChildCount() > 0
@@ -1497,6 +1503,7 @@ sub __focusCarousels()
     m.selectedIndicator.visible = true
     if m.lastFocus <> invalid then m.lastFocus.setFocus(true)
   else
+    m.selectedIndicator.visible = false
     m.carouselContainer.setFocus(true)
   end if
   __updateOverlayVisibilityByFocus()
@@ -1694,7 +1701,7 @@ sub __updateOverlayVisibilityByFocus()
     ' Si carouselContainer está animando, mantiene oculto selectedIndicator hasta terminar transición.
     if m.isCarouselContainerAnimating = true then
       m.selectedIndicator.visible = false
-    else if m.carouselContainer <> invalid and m.carouselContainer.focusedChild <> invalid then
+    else if m.carouselContainer <> invalid and m.carouselContainer.focusedChild <> invalid and m.carouselContainer.getChildCount() > 0 then
       m.selectedIndicator.visible = true
     end if
 

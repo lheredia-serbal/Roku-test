@@ -8,6 +8,10 @@ sub init()
   m.apiRequestManager = invalid
   ' Referencia al título principal de la pantalla.
   m.emissionsTitle = m.top.findNode("emissionsTitle")
+  ' Referencia al label principal mostrado cuando no hay emisiones disponibles.
+  m.episodesUnavailableTitle = m.top.findNode("episodesUnavailableTitle")
+  ' Referencia al label descriptivo traducible para estado sin emisiones.
+  m.episodesUnavailableDescription = m.top.findNode("episodesUnavailableDescription")
   ' Guarda referencia de la lista visual de episodios.
   m.episodesList = m.top.findNode("episodesList")
   ' Guarda referencia del viewport que recorta la lista bajo el título.
@@ -34,7 +38,9 @@ sub init()
   m.episodesData = []
   ' Guarda episodio seleccionado para reutilizarlo en watchValidate/streaming.
   m.selectedEpisode = invalid
-    ' Guarda referencia del PIN modal para validar control parental antes de reproducir.
+  ' Guarda nombre del programa padre para mostrarlo sobre cada poster de episodio.
+  m.parentProgramTitle = ""
+  ' Guarda referencia del PIN modal para validar control parental antes de reproducir.
   m.pinDialog = invalid
   ' Guarda referencia del diálogo de error para informar PIN inválido.
   m.dialog = invalid
@@ -78,6 +84,25 @@ sub __applyScaledLayout()
     m.emissionsTitle.translation = scaleSize([80, 40], m.scaleInfo)
   end if
 
+  ' Define centro vertical compartido para mantener ambos labels alineados entre sí.
+  unavailableCenterY = cint(m.scaleInfo.height / 2)
+  ' Define separación vertical compacta entre título y descripción.
+  unavailableVerticalGap = scaleValue(44, m.scaleInfo)
+  ' Centra verticalmente el label principal de indisponibilidad.
+  if m.episodesUnavailableTitle <> invalid then
+    ' Asigna ancho total para permitir centrado horizontal exacto.
+    m.episodesUnavailableTitle.width = m.scaleInfo.width
+    ' Posiciona el texto principal levemente por encima del centro compartido.
+    m.episodesUnavailableTitle.translation = [0, unavailableCenterY - unavailableVerticalGap]
+  end if
+  ' Centra verticalmente el label descriptivo debajo del título "Ups!".
+  if m.episodesUnavailableDescription <> invalid then
+    ' Asigna ancho total para permitir centrado horizontal exacto.
+    m.episodesUnavailableDescription.width = m.scaleInfo.width
+    ' Posiciona descripción cerca del título manteniendo alineación horizontal/vertical.
+    m.episodesUnavailableDescription.translation = [0, unavailableCenterY]
+  end if
+
     if m.infoGradient <> invalid then
     m.infoGradient.width = m.scaleInfo.width
     m.infoGradient.height = m.scaleInfo.height
@@ -112,12 +137,6 @@ if m.selectedIndicator <> invalid then
   end if
 end sub
 
-
-' Maneja foco de pantalla al mostrarse.
-sub initFocus()
-  ' No requiere comportamiento adicional al tomar foco.
-end sub
-
 ' Procesa payload de entrada y dispara servicio de episodios.
 sub initData()
   ' Evita ejecución cuando no hay payload.
@@ -143,6 +162,8 @@ sub initData()
   })
 
   __saveActionLog(actionLog)
+
+  __applyTranslations()
 end sub
 
 ' Captura eventos de teclado para volver a la pantalla anterior.
@@ -236,10 +257,16 @@ sub onEpisodesResponse()
     episodes = invalid
     ' Prioriza lista dentro de data cuando exista.
     if response <> invalid and response.data <> invalid then episodes = response.data
+    ' Cachea título del programa padre desde la respuesta para pasarlo a cada EpisodeItem.
+    m.parentProgramTitle = ""
+    if episodes <> invalid and episodes.title <> invalid and episodes.title <> "" then m.parentProgramTitle = episodes.title
     ' Soporta respuesta como arreglo directo si aplica.
-    if episodes = invalid and type(response) = "roArray" then episodes = response
+    ' Extrae lista de episodios contenida dentro del payload de data.
+    episodeCollection = invalid
+    ' Valida estructura esperada antes de acceder al arreglo de episodios.
+    if episodes <> invalid and episodes.episodes <> invalid then episodeCollection = episodes.episodes
     ' Renderiza N EpisodeItem según cantidad recibida por servicio.
-    __renderEpisodes(episodes.episodes)
+    __renderEpisodes(episodeCollection)
     ' Remueve acción pendiente al completar correctamente.
     removePendingAction(m.apiRequestManager.requestId)
     ' Parsea respuesta para mostrar título en pantalla.
@@ -252,6 +279,8 @@ sub onEpisodesResponse()
       end if
     end if
   else
+    ' Muestra mensaje de indisponibilidad cuando el servicio de emisiones falla.
+    __showEpisodesUnavailableMessage()
     ' Obtiene status para decisiones de error.
     statusCode = m.apiRequestManager.statusCode
     ' Obtiene payload de error para logging.
@@ -289,7 +318,19 @@ sub __renderEpisodes(episodes)
   ' Limpia elementos previos antes de pintar nuevos episodios.
   __clearEpisodes()
   ' Corta render cuando la respuesta no contiene lista.
-  if episodes = invalid then return
+    if episodes = invalid then
+    ' Muestra mensaje cuando la API no devuelve emisiones válidas.
+    __showEpisodesUnavailableMessage()
+    return
+  end if
+  ' Muestra mensaje cuando la API devuelve cero emisiones disponibles.
+  if episodes.count() <= 0 then
+    ' Muestra mensaje cuando la API no trae episodios para el título.
+    __showEpisodesUnavailableMessage()
+    return
+  end if
+  ' Oculta mensaje de indisponibilidad cuando sí existen emisiones renderizables.
+  __hideEpisodesUnavailableMessage()
   ' Guarda episodios originales para poder abrir player desde selección actual.
   m.episodesData = episodes
   ' Actualiza imagen de fondo usando la primera imagen válida del listado de emisiones.
@@ -313,6 +354,10 @@ sub __renderEpisodes(episodes)
     newEpisodeItem.play = __resolveEpisodePlay(item)
     ' Pasa título compuesto con fecha, hora y nombre de canal.
     newEpisodeItem.title = __buildEpisodeTitle(item)
+    ' Pasa título del programa padre para mostrarlo centrado sobre la imagen.
+    newEpisodeItem.programTitle = m.parentProgramTitle
+    ' Pasa índice 1-based cíclico (1..4) para seleccionar poster fallback dinámico.
+    newEpisodeItem.index = (i mod 4) + 1
 
     ' Agrega un separador visual entre episodios autogenerados.
     if i < episodes.count() - 1 then
@@ -323,11 +368,16 @@ sub __renderEpisodes(episodes)
     end if
   end for
 
-  ' Define el índice inicial en el último episodio para abrir la pantalla con foco al final.
+  ' Define el índice inicial en el último episodio con play habilitado.
   initialSelectionIndex = 0
-  ' Reemplaza el índice inicial por el último elemento cuando existe al menos un episodio.
-  if m.episodesCount > 0 then initialSelectionIndex = m.episodesCount - 1
-  ' Aplica selección inicial para ubicar foco lógico e indicador sobre el último episodio.
+  ' Busca desde el final el último episodio que tenga playImage visible.
+  for i = m.episodesCount - 1 to 0 step -1
+    if __resolveEpisodePlay(m.episodesData[i]) then
+      initialSelectionIndex = i
+      exit for
+    end if
+  end for
+  ' Aplica selección inicial para ubicar foco lógico e indicador sobre el último episodio reproducible.
   __updateSelection(initialSelectionIndex)
 end sub
 
@@ -688,16 +738,19 @@ end function
 
 ' Limpia todos los EpisodeItem creados dinámicamente.
 sub __clearEpisodes()
-  ' Evita operar si la lista no está inicializada.
-  if m.episodesList = invalid then return
-  ' Elimina cada hijo existente del contenedor.
-  m.episodesCount = 0
+  m.emissionsTitle.text = ""
+  m.episodesUnavailableTitle.text = ""
+  m.episodesUnavailableDescription.text = ""
   ' Limpia cache de episodios para evitar abrir contenidos obsoletos.
   m.episodesData = []
   ' Limpia episodio seleccionado para evitar reuso de estado obsoleto.
   m.selectedEpisode = invalid
   ' Reinicia el contador total para evitar navegación con datos obsoletos.
   m.selectedEpisodeIndex = 0
+  ' Evita operar si la lista no está inicializada.
+  if m.episodesList = invalid then return
+  ' Elimina cada hijo existente del contenedor.
+  m.episodesCount = 0
   ' Reinicia la selección al primer elemento para la próxima carga.
   __setEpisodesListTranslation(scaleSize([80, 100], m.scaleInfo), false)
   ' Devuelve la lista a su posición base cuando se limpia la pantalla.
@@ -710,6 +763,22 @@ sub __clearEpisodes()
   ' Oculta el SelectionBox cuando no quedan episodios visibles.
   ' Limpia posters de fondo al vaciar emisiones para evitar arrastrar imagen anterior.
   __hideEpisodeBackground()
+end sub
+
+' Muestra ambos labels centrados cuando no hay emisiones o falla el servicio.
+sub __showEpisodesUnavailableMessage()
+  ' Muestra el label principal con el texto fijo "Ups!".
+  if m.episodesUnavailableTitle <> invalid then m.episodesUnavailableTitle.visible = true
+  ' Muestra el label secundario con el texto traducido de indisponibilidad.
+  if m.episodesUnavailableDescription <> invalid then m.episodesUnavailableDescription.visible = true
+end sub
+
+' Oculta ambos labels cuando existen emisiones para mostrar.
+sub __hideEpisodesUnavailableMessage()
+  ' Oculta el label principal para no superponer la lista de episodios.
+  if m.episodesUnavailableTitle <> invalid then m.episodesUnavailableTitle.visible = false
+  ' Oculta el label secundario para no superponer la lista de episodios.
+  if m.episodesUnavailableDescription <> invalid then m.episodesUnavailableDescription.visible = false
 end sub
 
 ' Configura el fondo de emisiones usando la primera imagen válida de la lista recibida.
@@ -794,6 +863,8 @@ sub __updateSelection(newIndex as integer)
 
   ' Persiste el índice seleccionado que usará la navegación posterior.
   m.selectedEpisodeIndex = newIndex
+  ' Actualiza estado visual de foco en los EpisodeItem para pintar fondo del seleccionado.
+  __updateEpisodeItemFocusedState()
 
   ' Calcula la posición base (reposo) de la lista en la pantalla.
   baseTranslation = [0, 0]
@@ -823,20 +894,37 @@ sub __updateSelection(newIndex as integer)
   indicatorBottomY = indicatorTopY + episodesViewportHeight - indicatorHeight - indicatorBottomPadding
   ' Evita invertir límites cuando el alto del indicador supera el viewport.
   if indicatorBottomY < indicatorTopY then indicatorBottomY = indicatorTopY
-  ' Calcula cuántos pasos separan al item actual del último episodio cargado.
-  distanceFromLast = (m.episodesCount - 1 - m.selectedEpisodeIndex) * stepY
-  ' Mueve el indicador desde abajo hacia arriba a medida que se navega con flecha UP.
-  indicatorTargetY = indicatorBottomY - distanceFromLast
-  ' Fija el indicador en el límite superior cuando intenta sobrepasarlo.
-  if indicatorTargetY < indicatorTopY then indicatorTargetY = indicatorTopY
-  ' Aplica traducción final del indicador para reflejar la posición dinámica actual.
-  if m.selectedIndicator <> invalid then m.selectedIndicator.translation = [indicatorX, indicatorTargetY]
+
+  ' Mantiene el indicador fijo abajo por defecto para que el foco se vea en la parte baja.
+  indicatorTargetY = indicatorBottomY
   ' Recalcula desplazamiento de la lista para mantener alineado el item seleccionado con el indicador.
   targetTranslation = [baseTranslation[0], (indicatorTargetY - indicatorTopY) + baseTranslation[1] - (m.selectedEpisodeIndex * stepY) + (m.selectedEpisodeIndex * 0.5)]
+  ' Cuando se llega a la zona superior, fija la lista en su posición base.
+  if targetTranslation[1] > baseTranslation[1] then
+    targetTranslation = [baseTranslation[0], baseTranslation[1]]
+    ' Desacopla el indicador del fondo para acompañar al item mientras la lista queda fija.
+    indicatorTargetY = indicatorTopY + (m.selectedEpisodeIndex * stepY)
+    if indicatorTargetY > indicatorBottomY then indicatorTargetY = indicatorBottomY
+  end if
+  ' Aplica traducción final del indicador para reflejar la posición dinámica actual.
+  if m.selectedIndicator <> invalid then m.selectedIndicator.translation = [indicatorX, indicatorTargetY]
   __setEpisodesListTranslation(targetTranslation, animateTransition)
 
   ' Muestra el marco de selección al existir un episodio activo.
   if m.selectedIndicator <> invalid then m.selectedIndicator.visible = true
+end sub
+
+' Marca visualmente el EpisodeItem seleccionado y limpia el resto.
+sub __updateEpisodeItemFocusedState()
+  if m.episodesList = invalid then return
+  currentEpisodeIndex = 0
+  for i = 0 to m.episodesList.getChildCount() - 1
+    child = m.episodesList.getChild(i)
+    if child <> invalid and child.subtype() = "EpisodeItem" then
+      child.isFocused = (currentEpisodeIndex = m.selectedEpisodeIndex)
+      currentEpisodeIndex = currentEpisodeIndex + 1
+    end if
+  end for
 end sub
 
 ' Sincroniza el tamaño del SelectionBox para igualar el alto del EpisodeItem enfocado.
@@ -961,6 +1049,11 @@ function __getEpisodeStepY() as integer
   return cint(stepY)
 end function
 
+sub __applyTranslations()
+  ' Carga texto traducido del mensaje secundario para estado sin emisiones.
+  if m.episodesUnavailableDescription <> invalid then m.episodesUnavailableDescription.text = i18n_t(m.global.i18n, "emissions.unavailableEpisodes")
+end sub
+
 ' Limpia estado cuando ocurre logout.
 sub onLogoutChange()
   ' Resetea payload y flags básicos del componente.
@@ -979,8 +1072,12 @@ sub onLogoutChange()
     m.top.streaming = invalid
     ' Limpia episodio seleccionado durante logout.
     m.selectedEpisode = invalid
+    ' Limpia nombre del programa padre durante logout.
+    m.parentProgramTitle = ""
     ' Limpia el título cuando se resetea la pantalla por logout.
     if m.emissionsTitle <> invalid then m.emissionsTitle.text = ""
+    ' Oculta labels de indisponibilidad al resetear estado por logout.
+    __hideEpisodesUnavailableMessage()
     ' Oculta el marco para evitar residuos visuales al salir de sesión.
     if m.selectedIndicator <> invalid then m.selectedIndicator.visible = false
   end if

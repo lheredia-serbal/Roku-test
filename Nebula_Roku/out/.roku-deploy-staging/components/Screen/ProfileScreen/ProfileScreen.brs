@@ -164,7 +164,7 @@ function onKeyEvent(key as string, press as boolean) as boolean
       handled = true
 
     else if key = KeyButtons().OK and m.btnDeleteProfile <> invalid and m.btnDeleteProfile.isInFocusChain() then
-      if press then m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "profiles.confirmDeleteModal.title"), i18n_t(m.global.i18n, "profiles.confirmDeleteModal.askDelete"), "onDialogDeleteClosed", ["Delete", i18n_t(m.global.i18n, "button.cancel")])
+      if press then m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "profiles.confirmDeleteModal.title"), i18n_t(m.global.i18n, "profiles.confirmDeleteModal.askDelete"), "onDialogDeleteClosed", [i18n_t(m.global.i18n, "button.delete"), i18n_t(m.global.i18n, "button.cancel")])
       handled = true
 
     else if key = KeyButtons().OK and m.profileImageEdit.isInFocusChain() then
@@ -237,7 +237,7 @@ sub onGetAllProfileResponse()
       removePendingAction(m.apiRequestManager.requestId)
       resp = ParseJson(m.apiRequestManager.response)
       m.allowAddingProfiles = (resp.metadata <> invalid and resp.metadata.actions <> invalid and resp.metadata.actions.add <> invalid and resp.metadata.actions.add)
-      if resp.data <> invalid and resp.data.count() > 0 then 
+      if resp <> invalid and resp.data <> invalid and resp.data.count() > 0 then 
         profiles = resp.data
         m.apiRequestManager = clearApiRequest(m.apiRequestManager)
         __loadProfiles(profiles)

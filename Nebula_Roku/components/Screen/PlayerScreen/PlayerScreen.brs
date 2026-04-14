@@ -799,7 +799,7 @@ end sub
 sub onChannelsResponse()
   if validateStatusCode(m.apiRequestManager.statusCode) then
     resp = ParseJson(m.apiRequestManager.response)
-    if resp.data <> invalid then
+    if resp <> invalid and resp.data <> invalid then
       if  m.channelList <> invalid then m.channelList.items = invalid
 
       m.guide.channelId = m.channelSelected.id
@@ -912,7 +912,7 @@ end sub
 sub onUpdateWatchSessionResponse()
   if validateStatusCode(m.apiSessionRequestManager.statusCode) then
     resp = ParseJson(m.apiSessionRequestManager.response)
-    if resp.data <> invalid then
+    if resp <> invalid and resp.data <> invalid then
       if resp.data.watchToken <> invalid then setWatchToken(resp.data.watchToken)
       if resp.data.watchSessionId <> invalid then setWatchSessionId(resp.data.watchSessionId)
     else
@@ -1062,7 +1062,7 @@ end sub
 sub onStreamingsResponse() 
   if validateStatusCode(m.apiRequestManager.statusCode) then
     resp = ParseJson(m.apiRequestManager.response)
-    if resp.data <> invalid then
+    if resp <> invalid and resp.data <> invalid then
       ' Detener el player
       m.videoPlayer.control = "stop" 
       m.videoPlayer.content = invalid
@@ -1212,7 +1212,7 @@ sub onProgramSummaryResponse()
 
   if validateStatusCode(m.apiProgramManager.statusCode) then
     resp = ParseJson(m.apiProgramManager.response)
-    if resp.data <> invalid then
+    if resp <> invalid and resp.data <> invalid then
       fistLoad = false
       if m.program = invalid then fistLoad = true
       __loadProgramInfo(resp.data)

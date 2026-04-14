@@ -7,6 +7,7 @@
     "ok": "OK",
     "cancel": "Cancelar",
     "close": "Cerrar",
+    "delete": "Eliminar",
     "next": "Siguiente",
     "no": "NO",
     "previous": "Anterior",
@@ -55,7 +56,7 @@
     "titleDiveId": "ID de dispositivo: ",
     "titleSerialNumber": "N° de serie: ",
     "titleVersion": "Versión: ",
-    "orgName": "Qvix Solutions"
+    "orgName": ""
   },
   "content": {
     "menuComponent": {
@@ -141,6 +142,9 @@
       "continue": "Continuar",
       "restart": "Reiniciar"
     }
+  },
+  "emissions": {
+    "unavailableEpisodes": "Los episodios de este título no están disponibles en este momento."
   },
   "autoUpgrade": {
     "title": "Actualización disponible",

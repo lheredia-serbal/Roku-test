@@ -15,6 +15,7 @@
   <script type="text/brightscript" uri="pkg:/source/Services/ContentViews.brs" />
   <script type="text/brightscript" uri="pkg:/source/Services/Programs.brs" />
 
+  <script type="text/brightscript" uri="pkg:/source/Services/ParentalControl.brs" />
   <script type="text/brightscript" uri="pkg:/source/Utils/i18nUtils.brs" />
   <script type="text/brightscript" uri="pkg:/source/Utils.brs" />
   <script type="text/brightscript" uri="pkg:/source/Utils/RetryUtils.brs" />

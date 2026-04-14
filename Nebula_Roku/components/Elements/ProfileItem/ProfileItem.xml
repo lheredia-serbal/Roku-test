@@ -62,7 +62,7 @@
                 maxLines="1"
                 horizAlign="center"
                 color="#BBBBBB"
-                font="font:SmallSystemFont"
+                font="font:SmallestSystemFont"
             />
         </Rectangle>
     </children>

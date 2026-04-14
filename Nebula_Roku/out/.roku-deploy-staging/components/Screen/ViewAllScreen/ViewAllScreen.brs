@@ -251,41 +251,169 @@ sub onSelectItem()
   ' Guardamos referencia del foco para restauración en caso de error.
   __markLastFocus() 
 
-  ' Mostramos loading global mientras resolvemos la acción.
-  if m.top.loading <> invalid then m.top.loading.visible = true 
+  if  m.itemSelected.parentalControl <> invalid and  m.itemSelected.parentalControl = true and  m.itemSelected.redirectKey = "ChannelId" then
 
-  ' Si el item es canal, replicamos flujo WatchValidate + Streaming de MainScreen.
-  if m.itemSelected.redirectKey = "ChannelId" then 
-    ' Recuperamos la sesión de visualización activa.
-    watchSessionId = getWatchSessionId() 
-    ' Creamos requestId para retries del servicio.
-    requestId = createRequestId() 
+     ' Muestro modal de PIN con mismo callback y textos usados en MainScreen.
+    m.pinDialog = createAndShowPINDialog(m.top, i18n_t(m.global.i18n, "shared.parentalControlModal.title"), "onPinDialogLoad", [i18n_t(m.global.i18n, "button.ok"), i18n_t(m.global.i18n, "button.cancel")])
+    return
+  else
+
+    ' Mostramos loading global mientras resolvemos la acción.
+    if m.top.loading <> invalid then m.top.loading.visible = true 
+
+    ' Si el item es canal, replicamos flujo WatchValidate + Streaming de MainScreen.
+    if m.itemSelected.redirectKey = "ChannelId" then 
+      ' Recuperamos la sesión de visualización activa.
+      watchSessionId = getWatchSessionId() 
+      ' Creamos requestId para retries del servicio.
+      requestId = createRequestId() 
+      action = {
+        apiRequestManager: m.apiRequestManager
+        url: urlWatchValidate(m.apiUrl, watchSessionId, m.itemSelected.redirectKey, m.itemSelected.redirectId)
+        method: "GET"
+        responseMethod: "onWatchValidateResponse"
+        body: invalid
+        token: invalid
+        publicApi: false
+        dataAux: invalid
+        requestId: requestId
+        run: function() as Object
+          m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux)
+          return { success: true, error: invalid }
+        end function
+      }
+      ' Ejecutamos acción con retries centralizados.
+      runAction(requestId, action, ApiType().CLIENTS_API_URL)
+      m.apiRequestManager = action.apiRequestManager
+    else
+      ' Limpiamos cualquier request pendiente antes de navegar a detalle.
+      m.apiRequestManager = clearApiRequest(m.apiRequestManager)
+      ' Emitimos detalle para que MainScene abra ProgramDetailScreen.
+      m.top.detail = FormatJson(m.itemSelected) 
+      ' Ocultamos loading porque la navegación ya fue emitida.
+      if m.top.loading <> invalid then m.top.loading.visible = false
+    end if
+  end if
+end sub
+
+' Procesa callback del modal PIN reutilizando lógica de MainScreen.
+sub onPinDialogLoad()
+  ' Leo respuesta del PIN ingresado por el usuario.
+  resp = clearPINDialogAndGetOption(m.top, m.pinDialog)
+  ' Creo requestId para la validación del PIN.
+  requestId = createRequestId()
+  ' Si se confirma botón OK con PIN de 4 dígitos, valido contra backend.
+  if (resp.option = 0 and resp.pin <> invalid and Len(resp.pin) = 4) then 
+    if m.top.loading <> invalid then m.top.loading.visible = true
     action = {
       apiRequestManager: m.apiRequestManager
-      url: urlWatchValidate(m.apiUrl, watchSessionId, m.itemSelected.redirectKey, m.itemSelected.redirectId)
+      url: urlParentalControlPin(m.apiUrl, resp.pin)
       method: "GET"
-      responseMethod: "onWatchValidateResponse"
+      responseMethod: "onParentalControlResponse"
       body: invalid
       token: invalid
       publicApi: false
       dataAux: invalid
       requestId: requestId
-      run: function() as Object
+      run: function() as object
         m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux)
         return { success: true, error: invalid }
       end function
     }
-    ' Ejecutamos acción con retries centralizados.
     runAction(requestId, action, ApiType().CLIENTS_API_URL)
     m.apiRequestManager = action.apiRequestManager
   else
-    ' Limpiamos cualquier request pendiente antes de navegar a detalle.
-    m.apiRequestManager = clearApiRequest(m.apiRequestManager)
-    ' Emitimos detalle para que MainScene abra ProgramDetailScreen.
-    m.top.detail = FormatJson(m.itemSelected) 
-    ' Ocultamos loading porque la navegación ya fue emitida.
+    ' Si se cancela o PIN inválido en formato, cierro loading y restauro foco.
     if m.top.loading <> invalid then m.top.loading.visible = false
+    __restoreLastFocus()
   end if
+end sub
+
+' Procesa la respuesta de la validacion del PIN
+sub onParentalControlResponse()
+  if m.apiRequestManager = invalid then
+    onPinDialogLoad()
+    return
+  else
+    if validateStatusCode(m.apiRequestManager.statusCode) then
+      resp = ParseJson(m.apiRequestManager.response)
+
+      if resp <> invalid and resp.data <> invalid and resp.data then 
+        removePendingAction(m.apiRequestManager.requestId)
+        watchSessionId = getWatchSessionId()
+        requestId = createRequestId()
+        action = {
+          apiRequestManager: m.apiRequestManager
+          url: urlWatchValidate(m.apiUrl, watchSessionId, m.itemSelected.redirectKey, m.itemSelected.redirectId)
+          method: "GET"
+          responseMethod: "onWatchValidateResponse"
+          body: invalid
+          token: invalid
+          publicApi: false
+          dataAux: invalid
+          requestId: requestId
+          run: function() as Object
+              m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux)
+              return { success: true, error: invalid }
+            end function
+          }
+          
+          runAction(requestId, action, ApiType().CLIENTS_API_URL)
+          m.apiRequestManager = action.apiRequestManager
+        else
+          m.top.loading.visible = false
+          __markLastFocus() 
+          m.dialog = createAndShowDialog(m.top, "", i18n_t(m.global.i18n, "shared.parentalControlModal.error.invalid"), "onDialogClosedFocusContainer")
+      end if
+    else     
+      m.top.loading.visible = false
+      statusCode = m.apiRequestManager.statusCode
+      errorResponse = m.apiRequestManager.errorResponse
+      m.apiRequestManager = clearApiRequest(m.apiRequestManager)
+
+      if m.apiRequestManager.serverError then
+        __validateError(statusCode)
+        changeStatusAction(m.apiRequestManager.requestId, "error")
+        retryAll()
+      else
+        removePendingAction(m.apiRequestManager.requestId)
+
+        printError("ParentalControl:", statusCode.toStr() + " " +  errorResponse)
+        
+        if validateLogout(statusCode, m.top) then return 
+      
+        if (statusCode = 408) then
+          __markLastFocus() 
+          m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.global.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogClosedLastFocus", [i18n_t(m.global.i18n, "button.cancel")])
+        else 
+          __validateError(statusCode)
+        end if
+    
+        actionLog = createLogError(generateErrorDescription(errorResponse), generateErrorPageUrl("valdiatePin", "ParentalControlModalComponent"), getServerErrorStack(errorResponse))
+        __saveActionLog(actionLog)
+      end if
+    end if
+  end if
+end sub
+
+' Cierra dialog de error y devuelve foco al último carrusel seleccionado.
+sub onDialogClosedLastFocus()
+  ' Si existe dialog abierto, lo cerramos explícitamente.
+  if m.dialog <> invalid then m.dialog.close = true
+
+  option = clearDialogAndGetOption(m.top, m.dialog)
+  m.dialog = invalid
+  ' Restauramos foco para continuar navegación en Search.
+  __restoreLastFocus()
+end sub
+
+' Procesa el cierre de los modales de error para volver a dar foco sobre el elemento que lo 
+' tenia antes del error
+sub onDialogClosedFocusContainer()
+  option = clearDialogAndGetOption(m.top, m.dialog)
+  m.dialog = invalid
+  
+  if option = 0 then __restoreLastFocus()
 end sub
 
 ' Procesa la respuesta del servicio de streaming y emite salida hacia MainScene para abrir Player.
@@ -302,7 +430,7 @@ sub onStreamingsResponse()
       removePendingAction(m.apiRequestManager.requestId) 
       ' Parseamos respuesta JSON de streaming.
       resp = ParseJson(m.apiRequestManager.response) 
-      if resp.data <> invalid then
+      if resp <> invalid and resp.data <> invalid then
         ' Limpiamos request manager al obtener data válida.
         m.apiRequestManager = clearApiRequest(m.apiRequestManager) 
         streaming = resp.data

@@ -83,19 +83,24 @@ sub __applyScaledLayout()
   if m.emissionsTitle <> invalid then
     m.emissionsTitle.translation = scaleSize([80, 40], m.scaleInfo)
   end if
-    ' Centra verticalmente el label principal de indisponibilidad.
+
+  ' Define centro vertical compartido para mantener ambos labels alineados entre sí.
+  unavailableCenterY = cint(m.scaleInfo.height / 2)
+  ' Define separación vertical compacta entre título y descripción.
+  unavailableVerticalGap = scaleValue(44, m.scaleInfo)
+  ' Centra verticalmente el label principal de indisponibilidad.
   if m.episodesUnavailableTitle <> invalid then
     ' Asigna ancho total para permitir centrado horizontal exacto.
     m.episodesUnavailableTitle.width = m.scaleInfo.width
-    ' Posiciona el texto principal levemente por encima del centro.
-    m.episodesUnavailableTitle.translation = [0, cint(m.scaleInfo.height / 2) - scaleValue(70, m.scaleInfo)]
+    ' Posiciona el texto principal levemente por encima del centro compartido.
+    m.episodesUnavailableTitle.translation = [0, unavailableCenterY - unavailableVerticalGap]
   end if
   ' Centra verticalmente el label descriptivo debajo del título "Ups!".
   if m.episodesUnavailableDescription <> invalid then
     ' Asigna ancho total para permitir centrado horizontal exacto.
     m.episodesUnavailableDescription.width = m.scaleInfo.width
-    ' Posiciona descripción inmediatamente debajo del label principal.
-    m.episodesUnavailableDescription.translation = [0, cint(m.scaleInfo.height / 2)]
+    ' Posiciona descripción cerca del título manteniendo alineación horizontal/vertical.
+    m.episodesUnavailableDescription.translation = [0, unavailableCenterY]
   end if
 
     if m.infoGradient <> invalid then
@@ -351,6 +356,8 @@ sub __renderEpisodes(episodes)
     newEpisodeItem.title = __buildEpisodeTitle(item)
     ' Pasa título del programa padre para mostrarlo centrado sobre la imagen.
     newEpisodeItem.programTitle = m.parentProgramTitle
+    ' Pasa índice 1-based cíclico (1..4) para seleccionar poster fallback dinámico.
+    newEpisodeItem.index = (i mod 4) + 1
 
     ' Agrega un separador visual entre episodios autogenerados.
     if i < episodes.count() - 1 then
@@ -361,11 +368,16 @@ sub __renderEpisodes(episodes)
     end if
   end for
 
-  ' Define el índice inicial en el último episodio para abrir la pantalla con foco al final.
+  ' Define el índice inicial en el último episodio con play habilitado.
   initialSelectionIndex = 0
-  ' Reemplaza el índice inicial por el último elemento cuando existe al menos un episodio.
-  if m.episodesCount > 0 then initialSelectionIndex = m.episodesCount - 1
-  ' Aplica selección inicial para ubicar foco lógico e indicador sobre el último episodio.
+  ' Busca desde el final el último episodio que tenga playImage visible.
+  for i = m.episodesCount - 1 to 0 step -1
+    if __resolveEpisodePlay(m.episodesData[i]) then
+      initialSelectionIndex = i
+      exit for
+    end if
+  end for
+  ' Aplica selección inicial para ubicar foco lógico e indicador sobre el último episodio reproducible.
   __updateSelection(initialSelectionIndex)
 end sub
 
@@ -726,16 +738,19 @@ end function
 
 ' Limpia todos los EpisodeItem creados dinámicamente.
 sub __clearEpisodes()
-  ' Evita operar si la lista no está inicializada.
-  if m.episodesList = invalid then return
-  ' Elimina cada hijo existente del contenedor.
-  m.episodesCount = 0
+  m.emissionsTitle.text = ""
+  m.episodesUnavailableTitle.text = ""
+  m.episodesUnavailableDescription.text = ""
   ' Limpia cache de episodios para evitar abrir contenidos obsoletos.
   m.episodesData = []
   ' Limpia episodio seleccionado para evitar reuso de estado obsoleto.
   m.selectedEpisode = invalid
   ' Reinicia el contador total para evitar navegación con datos obsoletos.
   m.selectedEpisodeIndex = 0
+  ' Evita operar si la lista no está inicializada.
+  if m.episodesList = invalid then return
+  ' Elimina cada hijo existente del contenedor.
+  m.episodesCount = 0
   ' Reinicia la selección al primer elemento para la próxima carga.
   __setEpisodesListTranslation(scaleSize([80, 100], m.scaleInfo), false)
   ' Devuelve la lista a su posición base cuando se limpia la pantalla.
@@ -848,6 +863,8 @@ sub __updateSelection(newIndex as integer)
 
   ' Persiste el índice seleccionado que usará la navegación posterior.
   m.selectedEpisodeIndex = newIndex
+  ' Actualiza estado visual de foco en los EpisodeItem para pintar fondo del seleccionado.
+  __updateEpisodeItemFocusedState()
 
   ' Calcula la posición base (reposo) de la lista en la pantalla.
   baseTranslation = [0, 0]
@@ -877,20 +894,37 @@ sub __updateSelection(newIndex as integer)
   indicatorBottomY = indicatorTopY + episodesViewportHeight - indicatorHeight - indicatorBottomPadding
   ' Evita invertir límites cuando el alto del indicador supera el viewport.
   if indicatorBottomY < indicatorTopY then indicatorBottomY = indicatorTopY
-  ' Calcula cuántos pasos separan al item actual del último episodio cargado.
-  distanceFromLast = (m.episodesCount - 1 - m.selectedEpisodeIndex) * stepY
-  ' Mueve el indicador desde abajo hacia arriba a medida que se navega con flecha UP.
-  indicatorTargetY = indicatorBottomY - distanceFromLast
-  ' Fija el indicador en el límite superior cuando intenta sobrepasarlo.
-  if indicatorTargetY < indicatorTopY then indicatorTargetY = indicatorTopY
-  ' Aplica traducción final del indicador para reflejar la posición dinámica actual.
-  if m.selectedIndicator <> invalid then m.selectedIndicator.translation = [indicatorX, indicatorTargetY]
+
+  ' Mantiene el indicador fijo abajo por defecto para que el foco se vea en la parte baja.
+  indicatorTargetY = indicatorBottomY
   ' Recalcula desplazamiento de la lista para mantener alineado el item seleccionado con el indicador.
   targetTranslation = [baseTranslation[0], (indicatorTargetY - indicatorTopY) + baseTranslation[1] - (m.selectedEpisodeIndex * stepY) + (m.selectedEpisodeIndex * 0.5)]
+  ' Cuando se llega a la zona superior, fija la lista en su posición base.
+  if targetTranslation[1] > baseTranslation[1] then
+    targetTranslation = [baseTranslation[0], baseTranslation[1]]
+    ' Desacopla el indicador del fondo para acompañar al item mientras la lista queda fija.
+    indicatorTargetY = indicatorTopY + (m.selectedEpisodeIndex * stepY)
+    if indicatorTargetY > indicatorBottomY then indicatorTargetY = indicatorBottomY
+  end if
+  ' Aplica traducción final del indicador para reflejar la posición dinámica actual.
+  if m.selectedIndicator <> invalid then m.selectedIndicator.translation = [indicatorX, indicatorTargetY]
   __setEpisodesListTranslation(targetTranslation, animateTransition)
 
   ' Muestra el marco de selección al existir un episodio activo.
   if m.selectedIndicator <> invalid then m.selectedIndicator.visible = true
+end sub
+
+' Marca visualmente el EpisodeItem seleccionado y limpia el resto.
+sub __updateEpisodeItemFocusedState()
+  if m.episodesList = invalid then return
+  currentEpisodeIndex = 0
+  for i = 0 to m.episodesList.getChildCount() - 1
+    child = m.episodesList.getChild(i)
+    if child <> invalid and child.subtype() = "EpisodeItem" then
+      child.isFocused = (currentEpisodeIndex = m.selectedEpisodeIndex)
+      currentEpisodeIndex = currentEpisodeIndex + 1
+    end if
+  end for
 end sub
 
 ' Sincroniza el tamaño del SelectionBox para igualar el alto del EpisodeItem enfocado.
