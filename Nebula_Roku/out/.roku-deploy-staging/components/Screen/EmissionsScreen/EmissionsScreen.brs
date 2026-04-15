@@ -931,20 +931,22 @@ end sub
 sub __syncSelectedIndicatorSize()
   ' Evita cálculos cuando el indicador aún no está disponible en la pantalla.
   if m.selectedIndicator = invalid then return
-  ' Usa ancho cacheado como base para conservar el diseño horizontal del marco.
+  ' Usa ancho fallback como base en caso de que no se pueda medir el EpisodeItem activo.
   indicatorWidth = m.selectedIndicatorWidth
   ' Usa alto fallback como base en caso de que no se pueda medir el EpisodeItem activo.
   indicatorHeight = m.selectedIndicatorFallbackHeight
   ' Obtiene referencia del EpisodeItem correspondiente al índice actualmente seleccionado.
   selectedEpisodeItem = __getEpisodeItemByIndex(m.selectedEpisodeIndex)
-  ' Intenta medir alto real solo cuando el EpisodeItem enfocado existe.
+  ' Intenta medir tamaño real solo cuando el EpisodeItem enfocado existe.
   if selectedEpisodeItem <> invalid then
-    ' Lee el bounding rect del EpisodeItem para capturar su altura dinámica actual.
+    ' Lee el bounding rect del EpisodeItem para capturar su tamaño dinámico actual.
     selectedEpisodeBounds = selectedEpisodeItem.boundingRect()
+    ' Reemplaza el ancho fallback solo cuando el ancho medido es válido y mayor a cero.
+    if selectedEpisodeBounds <> invalid and selectedEpisodeBounds.width <> invalid and cint(selectedEpisodeBounds.width) > 0 then indicatorWidth = cint(selectedEpisodeBounds.width)
     ' Reemplaza el alto fallback solo cuando la altura medida es válida y mayor a cero.
     if selectedEpisodeBounds <> invalid and selectedEpisodeBounds.height <> invalid and cint(selectedEpisodeBounds.height) > 0 then indicatorHeight = cint(selectedEpisodeBounds.height)
   end if
-  ' Aplica tamaño final al SelectionBox usando ancho fijo y alto dinámico.
+  ' Aplica tamaño final al SelectionBox usando ancho y alto sincronizados con el item seleccionado.
   m.selectedIndicator.size = [indicatorWidth, indicatorHeight]
 end sub
 

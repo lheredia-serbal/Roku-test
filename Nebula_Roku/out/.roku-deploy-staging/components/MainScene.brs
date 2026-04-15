@@ -438,6 +438,20 @@ sub onBackPlayer()
   end if
 end sub
 
+' Metodo que retrocede de la pantalla de configuracion y vuelve a MainScreen.
+sub onBackSetting()
+  if not m.SettingScreen.onBack then return
+
+  m.SettingScreen.onBack = false
+
+  if m.StackOfScreens.Peek() = "SettingScreen" then
+    m.StackOfScreens.Pop()
+    __hideSetting()
+    __backManager(m.StackOfScreens.Peek())
+    if m.StackOfScreens.Peek() = "MainScreen" then m.MainScreen.callFunc("focusMenuFromSettingsBack")
+  end if
+end sub
+
 ' Metodo que se dispara al querer salir de la app por ociones de menú 
 sub onExitEvent()
   if m.MainScreen.onExit then 
@@ -627,6 +641,7 @@ sub __showSetting()
   if m.MainScreen.visible then m.MainScreen.visible = false
   m.SettingScreen.visible = true
   m.SettingScreen.onFocus = true
+  m.SettingScreen.ObserveField("onBack", "onBackSetting")
   m.SettingScreen.setFocus(true)
 end sub
 
@@ -723,6 +738,8 @@ end sub
 sub __hideSetting()
   m.SettingScreen.visible = false
   m.SettingScreen.onFocus = false
+  m.SettingScreen.unobserveField("onBack")
+  if m.SettingScreen.onBack then m.SettingScreen.onBack = false
 end sub
 
 ' Esconde la pantalla de búsqueda.

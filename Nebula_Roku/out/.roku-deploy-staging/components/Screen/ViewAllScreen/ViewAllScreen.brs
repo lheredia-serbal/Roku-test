@@ -362,7 +362,6 @@ sub onParentalControlResponse()
           m.apiRequestManager = action.apiRequestManager
         else
           m.top.loading.visible = false
-          __markLastFocus() 
           m.dialog = createAndShowDialog(m.top, "", i18n_t(m.global.i18n, "shared.parentalControlModal.error.invalid"), "onDialogClosedFocusContainer")
       end if
     else     
@@ -605,7 +604,7 @@ sub __applyLayout()
   m.infoGradient.height = height
   m.programImageBackground.width = width
   m.programImageBackground.height = height
-  m.programInfo.translation = [safeX + scaleValue(60, m.scaleInfo), safeY ]
+  m.programInfo.translation = [safeX + scaleValue(35, m.scaleInfo), safeY ]
   ' Aplicamos posición inicial del bloque de carruseles usando los valores cacheados.
   m.carouselContainer.translation = [0, m.yPosition] 
   m.selectedIndicator.translation = [safeX + scaleValue(5, m.scaleInfo), safeY + scaleValue(148, m.scaleInfo)]

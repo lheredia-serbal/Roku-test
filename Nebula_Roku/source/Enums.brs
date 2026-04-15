@@ -27,7 +27,10 @@ function getAppConfigVariable() as Object
         SEEK_TO: "SeekTo",
         INACTIVITY_PROMPT_DURATION_IN_SECONDS: "InactivityPromptDurationInSeconds",
         INACTIVITY_PROMPT_TIME_IN_SECONDS: "InactivityPromptTimeInSeconds",
-        INACTIVITY_PROMPT_ENABLED: "InactivityPromptEnabled"
+        INACTIVITY_PROMPT_ENABLED: "InactivityPromptEnabled",
+        SEARCH_MODE: "SearchMode",
+        SEARCH_MIN_CHARS: "SearchMinChars",
+        SEARCH_DEBOUNCE_MS: "SearchDebounceMs"
     }
 end function
 
@@ -136,3 +139,9 @@ function KeyButtons() as Object
     }
 end function
 
+function SearchMode() as object
+    return {
+        AUTO: "auto",
+        MANUAL: "manual"
+    }
+end function

@@ -195,7 +195,7 @@ sub configureMenu()
   m.menuExpandVector2DFAnimation.keyValue = [1, usableWidth]
   m.menuCollapseVector2DFAnimation.keyValue = [usableWidth, 1]
 
-  m.avatarMenuContainer.translation = [safeX + scaleValue(0, m.scaleInfo), safeY + scaleValue(40, m.scaleInfo)]
+  m.avatarMenuContainer.translation = [safeX + scaleValue(0, m.scaleInfo), safeY + scaleValue(70, m.scaleInfo)]
   m.avatarMenuContainer.itemSpacings = [scaleValue(10, m.scaleInfo)]
   m.avatarImage.width = scaleValue(65, m.scaleInfo)
   m.avatarImage.height = scaleValue(65, m.scaleInfo)
@@ -253,14 +253,22 @@ sub itemData()
       menuItems.push(menuItem)
     next
 
-    ' Obtener si el usuario es For Test
+        ' Obtener si el usuario es For Test
     forTest = false
-    if m.global.contact.forTest = invalid or (m.global.contact.forTest <> invalid and not m.global.contact.forTest) then 
-      forTest = true
+
+    if m.global.contact <> invalid and m.global.contact.forTest <> invalid then 
+      forTest = m.global.contact.forTest
+
+      ' Si forTest esta, solo mostrar la opción "Home"
+      if forTest = true then 
+        safeX = m.scaleInfo.safeZone.x
+        safeY = m.scaleInfo.safeZone.y
+        m.principalMenuLayoutGroup.translation = [safeX + scaleValue(0, m.scaleInfo), (safeY + scaleValue(60, m.scaleInfo))]
+      end if
     end if
 
     for each item in menuItems
-      if item.mainMenu then 
+      if item.mainMenu and (not forTest or item.behavior = "home") then 
         if item.icon <> invalid and item.icon.image <> invalid then
           newMenuItemNode = createObject("roSGNode", "MenuItem")
     
@@ -387,7 +395,7 @@ sub __applyTranslations()
   m.exitLabel.text    = i18n_t(m.global.i18n, "content.menuComponent.exit")
   m.logoutLabel.text  = i18n_t(m.global.i18n, "content.menuComponent.logout")
 
-  m.searchItem = {
+    m.searchItem = {
     key: "MenuId",
     id: -1,
     code: "search",

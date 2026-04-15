@@ -60,6 +60,7 @@
   },
   "content": {
     "menuComponent": {
+      "search": "Procurar",
       "changeProfile": "Mudar perfil",
       "Setting": "Configurações",
       "exit": "Sair",

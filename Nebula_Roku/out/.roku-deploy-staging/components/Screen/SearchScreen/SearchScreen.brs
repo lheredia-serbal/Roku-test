@@ -16,10 +16,14 @@ sub init()
   m.carouselContainer = m.top.findNode("carouselContainer")
   m.searchSelectedIndicator = m.top.findNode("searchSelectedIndicator")
 
-    m.carouselContainerMoveAnimation = m.top.findNode("carouselContainerMoveAnimation") ' Referencia a la animación que suaviza el desplazamiento vertical del contenedor.
-  m.carouselContainerMoveInterpolator = m.top.findNode("carouselContainerMoveInterpolator") ' Referencia al interpolador que recibe origen/destino de translation.
-  m.focusUpOpacityAnimation = m.top.findNode("focusUpOpacityAnimation") ' Referencia a la animación de opacidad para fila saliente/entrante.
-  m.focusUpOpacityInterpolator = m.top.findNode("focusUpOpacityInterpolator") ' Referencia al interpolador de opacidad con fieldToInterp dinámico.
+  ' Referencia a la animación que suaviza el desplazamiento vertical del contenedor.
+  m.carouselContainerMoveAnimation = m.top.findNode("carouselContainerMoveAnimation")
+  ' Referencia al interpolador que recibe origen/destino de translation.
+  m.carouselContainerMoveInterpolator = m.top.findNode("carouselContainerMoveInterpolator")
+  ' Referencia a la animación de opacidad para fila saliente/entrante.
+  m.focusUpOpacityAnimation = m.top.findNode("focusUpOpacityAnimation")
+  ' Referencia al interpolador de opacidad con fieldToInterp dinámico.
+  m.focusUpOpacityInterpolator = m.top.findNode("focusUpOpacityInterpolator")
 
   m.noResultsLabel = m.top.findNode("noResultsLabel")
 
@@ -114,18 +118,14 @@ sub initFocus()
 
     __unbindKeyboardTextObservers()
 
-    ' Al entrar a Search, limpio input y estado para iniciar siempre desde cero.
-    __resetSearchState()
-
-    ' Enfoco el input para iniciar una nueva búsqueda.
-    m.searchInput.setFocus(true)
-
     __bindKeyboardTextObservers()
 
     ' Si Search se abrió desde MainScreen, fuerzo foco en input y refrescar el carrusel de recomendados.
     if m.top.enterFromMainScreen then
       m.top.enterFromMainScreen = false
       m.top.returnFromProgramDetail = false
+      ' Solo en ingreso "nuevo" desde MainScreen reseteamos estado de búsqueda.
+      __resetSearchState()
       m.hasLoadedRecommended = false
       m.searchInput.setFocus(true)
       __loadRecommendedCarousel(invalid)
@@ -136,10 +136,32 @@ sub initFocus()
       return
     end if
 
+    ' Cuando volvemos desde otra pantalla (back), mantenemos el valor actual del buscador.
+    __restoreSearchInputText()
+
     ' Si vuelvo desde ProgramDetail, intento restaurar foco en el último item.
     if m.top.returnFromProgramDetail then
       m.top.returnFromProgramDetail = false
       __restoreFocusFromProgramDetail()
+    else if m.searchInput <> invalid then
+      ' Fallback para entradas sin foco previo: dejamos el input listo sin borrar el texto.
+      m.searchInput.setFocus(true)
+    end if
+
+    m.searchMode = getConfigVariable(m.global.configVariablesKeys.SEARCH_MODE)
+    m.searchMinChars = getConfigVariable(m.global.configVariablesKeys.SEARCH_MIN_CHARS)
+    m.searchDebounceMs = getConfigVariable(m.global.configVariablesKeys.SEARCH_DEBOUNCE_MS)
+
+    if m.searchMode <> invalid and m.searchMode = SearchMode().MANUAL then
+      
+    end if
+
+    if m.searchMinChars <> invalid then
+      
+    end if
+
+    if m.searchDebounceMs <> invalid then
+      
     end if
   else
     ' Si pierde foco, detengo debounce pendiente para evitar búsquedas fuera de pantalla.

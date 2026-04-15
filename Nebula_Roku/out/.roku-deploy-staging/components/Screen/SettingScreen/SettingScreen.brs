@@ -10,7 +10,6 @@ sub init()
   m.titleLabel  = m.top.findNode("titleLabel")
 end sub
 
-
 ' Inicializa el foco del componente seteando los valores necesarios
 sub initFocus()
   if m.top.onFocus then 
@@ -35,6 +34,15 @@ sub initFocus()
     __saveActionLog(actionLog)
   end if
 end sub
+
+' Captura todas las teclas en Settings; BACK dispara regreso a MainScreen.
+function onKeyEvent(key as string, press as boolean) as boolean
+  if press and key = KeyButtons().BACK then
+    m.top.onBack = true
+  end if
+
+  return true
+end function
 
 ' Guardar el log cuandos se cambia una opción del menú 
 sub __saveActionLog(actionLog as object)

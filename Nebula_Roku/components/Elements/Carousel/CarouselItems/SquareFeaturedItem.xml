@@ -31,7 +31,7 @@
                     <LayoutGroup
                         layoutDirection="vert"
                         horizAlignment="left"
-                        vertAlignment="center"
+                        vertAlignment="bottom"
                         itemSpacings="[1]">
                         <Label 
                             id="title"

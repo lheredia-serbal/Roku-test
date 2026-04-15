@@ -3,12 +3,9 @@ sub init()
   m.carouselList = m.top.findNode("carouselList")
   m.carouselTitle = m.top.findNode("carouselTitle")
   
-  ' Referencio el label secundario donde se dibujarán los tags de título.
-  m.carouselTitleTags = m.top.findNode("carouselTitleTags")
-  
   m.scaleInfo = m.global.scaleInfo
   
-  m.carouselTitle.translation = scalePoint([70, 75], m.scaleInfo)
+  m.carouselTitle.translation = scalePoint([70, 95], m.scaleInfo)
 
   ' Alineo verticalmente los tags con el título principal del carrusel.
   m.carouselList.translation = scalePoint([-80, 130], m.scaleInfo)
@@ -23,19 +20,29 @@ end sub
 ' Carga los datos de componente, si no recibe datos o los recibe vacios entonces dispara la limpieza del componete
 sub initData()
   if m.top.items <> invalid and m.top.items.count() > 0 then
+    
+
+    m.carouselTitle.width = scaleValue(900, m.scaleInfo)
+
+    m.carouselTitle.drawingStyles = {
+      "default": { "fontUri": "font:SmallBoldSystemFont" }
+      "titleTags": { "fontUri": "font:SmallBoldSystemFont", color: "0xFFA500FF" }
+    }
+
     ' Seteo el título principal del carrusel con el valor recibido.
     m.carouselTitle.text = m.top.title
-    ' Calculo el ancho dinámico del título según caracteres y resolución.
-    m.carouselTitle.width = __calculateCarouselTitleWidth(m.top.title)
-    ' Muevo los tags a la derecha del título usando el ancho calculado + separación.
-    __updateCarouselTitleTagsTranslation(m.carouselTitle.width)
 
+    ' Si recibo tags de busqueda, los agrego cambiadole el format
+    if (m.top.titleTagsText <> invalid and m.top.titleTagsText <> "") then 
+      m.carouselTitle.text = m.carouselTitle.text + " <titleTags> " + m.top.titleTagsText + "</titleTags>"
+    end if
+    
     m.carouselTitle.height = scaleValue(48, m.scaleInfo)
     ' Seteo por defecto el texto de tags (puede ser vacío si no aplica).
 
-    if m.carouselTitleTags <> invalid then m.carouselTitleTags.text = m.top.titleTagsText
     m.items = m.top.items
     __populateList()
+    
   else 
     __clearList()
   end if
@@ -45,10 +52,6 @@ end sub
 sub onTitleChanged()
   if m.carouselTitle = invalid then return
   m.carouselTitle.text = m.top.title
-  ' Recalculo el ancho para mantener layout consistente por resolución.
-  m.carouselTitle.width = __calculateCarouselTitleWidth(m.top.title)
-  ' Reposiciono los tags en base al nuevo ancho del título.
-  __updateCarouselTitleTagsTranslation(m.carouselTitle.width) 
 end sub
 
 ' Define la configuracion necesaria del estilo del carousel
@@ -220,48 +223,6 @@ sub __defaultConfig()
   m.separator = scaleValue(30, m.scaleInfo)
 end sub
 
-' Calcula el ancho ideal del título del carrusel según caracteres y resolución del TV.
-function __calculateCarouselTitleWidth(title as dynamic) as integer
-  rawTitle = ""
-  if title <> invalid then rawTitle = title
-  ' Quito espacios laterales para medir caracteres reales.
-  normalizedTitle = rawTitle.trim()
-  ' Obtengo la cantidad de caracteres visibles.
-  titleLength = normalizedTitle.len()
-  ' Defino un ancho por defecto para asegurar fallback.
-  screenWidth = 1280 
-   ' Priorizo el ancho informado por scaleInfo.
-  if m.scaleInfo <> invalid and m.scaleInfo.width <> invalid then screenWidth = m.scaleInfo.width
-  ' Defino ancho estimado por carácter para resoluciones base.
-  charWidth = scaleValue(13.5, m.scaleInfo) 
-  ' Ajusto densidad de caracteres para televisores 4K.
-  if screenWidth >= 3840 then charWidth = scaleValue(18, m.scaleInfo) 
-  ' Ajusto métrica para Full HD.
-  if screenWidth >= 1920 and screenWidth < 3840 then charWidth = scaleValue(13.5, m.scaleInfo) 
-  ' Defino ancho mínimo para títulos cortos.
-  minWidth = scaleValue(100, m.scaleInfo) 
-  ' Limito el ancho máximo para no invadir zonas de foco y tags.
-  maxWidth = int(screenWidth * 0.72) 
-  ' Calculo el ancho estimado desde caracteres.
-  estimatedWidth = int(titleLength * charWidth)
-  ' Garantizo ancho mínimo del componente. 
-  if estimatedWidth < minWidth then estimatedWidth = minWidth 
-  ' Aplico tope máximo según resolución actual.
-  if estimatedWidth > maxWidth then estimatedWidth = maxWidth 
-  return estimatedWidth ' Retorno el ancho final para asignarlo a carouselTitle.
-end function
-
-' Reubica el label de tags a la derecha del título principal del carrusel.
-sub __updateCarouselTitleTagsTranslation(titleWidth as dynamic) 
-  if m.carouselTitleTags = invalid then return 
-  if m.carouselTitle = invalid then return
-  ' Inicializo ancho seguro para prevenir valores invalid.
-  safeTitleWidth = 0 
-  ' Uso el ancho calculado cuando existe valor válido.
-  if titleWidth <> invalid then safeTitleWidth = titleWidth 
-  m.carouselTitleTags.translation = [safeTitleWidth, scaleValue(102, m.scaleInfo)]
-end sub
-
 ' Limpia todas las propiedades internas o observables necesarios en su uso interno
 sub __clearList()
   m.carouselList.unobserveField("itemSelected")
@@ -269,7 +230,6 @@ sub __clearList()
   m.carouselList.unobserveField("leftEvent")
   m.items = m.clearItems
   m.carouselTitle.text = ""
-  if m.carouselTitleTags <> invalid then m.carouselTitleTags.text = ""
   m.carouselList.jumpToItem = 0 
   m.carouselList.targetSet = invalid
   m.carouselList.content = m.items

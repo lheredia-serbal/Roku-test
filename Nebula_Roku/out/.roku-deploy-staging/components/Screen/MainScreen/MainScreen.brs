@@ -220,6 +220,7 @@ sub initData()
     if m.mainLogoDisplayType = invalid then m.mainLogoDisplayType = getConfigVariable(m.global.configVariablesKeys.LOGO_DISPLAY_TYPE) 
 
     m.myMenu.ObserveField("selectedItem", "onSelectMenuItem")
+
     __getMenu()
 
     __loadOrganizationLogo()

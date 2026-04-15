@@ -37,17 +37,12 @@
   </interface>
 
   <children>
-    <ShadowLabel 
-      id="carouselTitle"
-      horizAlign="left"
-      vertAlign="bottom"
-      font="font:SmallBoldSystemFont" />
 
-    <!-- Label para mostrar tags concatenados a la derecha del título del carrusel. -->
-    <label
-      id="carouselTitleTags"
-      font="font:SmallestBoldSystemFont"
-      color="0xFFA500FF" />
+    <MultiStyleLabel 
+      id="carouselTitle"
+      wrap="false" 
+      maxLines="1"
+      horizAlign="left"/>
 
       <QvTargetList 
         id="carouselList"

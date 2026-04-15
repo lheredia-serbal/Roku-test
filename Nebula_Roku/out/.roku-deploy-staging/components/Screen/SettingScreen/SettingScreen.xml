@@ -22,6 +22,7 @@
   <interface>
     <!-- Paramentros de Entrada -->
     <field id="onFocus" type="boolean" value="false" onChange="initFocus" />
+    <field id="onBack" type="boolean" value="false" />
   </interface>
   
   <children>

@@ -36,7 +36,6 @@ function __getDomainManagerState() as Object
             _initialConfigRequestManager: invalid
             _initialConfigSuccess: false
             _mode: "Primary"
-            _jsonMode: "Primary"
             _primaryDns: ""
             _secondaryDns: ""
             _currentConfig: "Primary"
@@ -149,7 +148,6 @@ function __refreshConfigFromCdns() as Boolean
     if primaryResponse.success then
         setConfigResponse(primaryResponse.data, "Primary")
         state = __getDomainManagerState()
-        state._jsonMode = "Primary"
         state._currentInitialConfig = "Primary"
         state._fetchInitialConfig = false
         __syncDomainManagerState(state)
@@ -160,7 +158,6 @@ function __refreshConfigFromCdns() as Boolean
     if secondaryResponse.success then
         setConfigResponse(secondaryResponse.data, "Primary")
         state = __getDomainManagerState()
-        state._jsonMode = "Secondary"
         state._currentInitialConfig = "Secondary"
         state._fetchInitialConfig = false
         __syncDomainManagerState(state)
@@ -411,7 +408,6 @@ sub onInitialConfigSecondaryResponse()
             __notifyInitialConfigResult(false)
         else
             ' JSON correcto en CDN secundario: aplicar modo Secondary y notificar éxito.
-            state._jsonMode = "Secondary"
             setConfigResponse(response, state._mode)
             state._fetchInitialConfig = false
             state._currentInitialConfig = "Secondary"
@@ -438,7 +434,6 @@ sub setConfigResponse(response as Object, mode as String)
     state = __getDomainManagerState()
     state._currentConfig = mode
     state._mode = mode
-    state._jsonMode = "Primary"
     state._fetchInitialConfig = false
     state._currentInitialConfig = "Primary"
     state._initialConfigSuccess = true
@@ -497,9 +492,7 @@ end function
 ' Retorna el código actual basado en el modo JSON y el modo activo.
 function getCode() As String
     state = __getDomainManagerState()
-    jsonPrefix = "P"
-    if state._jsonMode = "Secondary" then jsonPrefix = "S"
     modeSuffix = "P"
     if state._mode = "Secondary" then modeSuffix = "S"
-    return jsonPrefix + "/" + state._code + modeSuffix
+    return state._code + modeSuffix
 end function

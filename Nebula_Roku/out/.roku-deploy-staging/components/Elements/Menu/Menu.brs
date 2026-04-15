@@ -30,19 +30,7 @@ sub init()
   m.logoutItem = {key: "MenuId", Id: -1, code: "logout", behavior: "logout"}
   m.settingItem = {key: "MenuId", Id: -1, code: "setting", behavior: "setting"}
   m.changeProfilesItem = {key: "MenuId", Id: -1, code: "profiles", behavior: "profiles"}
-  m.searchItem = {
-    key: "MenuId",
-    id: -1,
-    code: "search",
-    behavior: "search",
-    mainMenu: true,
-    text: "Buscar",
-    icon: {
-      image: {
-        relativePath: "pkg:/images/shared/search_icon.png"
-      }
-    }
-  }
+
   m.homeItem = invalid
 
   m.orderSecondaryMenu = [m.settingLabel, m.exitLabel, m.logoutLabel]
@@ -200,7 +188,7 @@ sub configureMenu()
   m.backgroundMenu.width = 1
   m.backgroundMenu.height = m.scaleInfo.height
 
-  m.menuContainer.translation = [0, safeY]
+  m.menuContainer.translation = [0, safeY + scaleValue(50, m.scaleInfo)]
   m.menuContainer.width = scaleValue(118, m.scaleInfo)
   m.menuContainer.height = contentHeight
 
@@ -265,8 +253,22 @@ sub itemData()
       menuItems.push(menuItem)
     next
 
+        ' Obtener si el usuario es For Test
+    forTest = false
+
+    if m.global.contact <> invalid and m.global.contact.forTest <> invalid then 
+      forTest = m.global.contact.forTest
+
+      ' Si forTest esta, solo mostrar la opción "Home"
+      if forTest = true then 
+        safeX = m.scaleInfo.safeZone.x
+        safeY = m.scaleInfo.safeZone.y
+        m.principalMenuLayoutGroup.translation = [safeX + scaleValue(0, m.scaleInfo), (safeY + scaleValue(60, m.scaleInfo))]
+      end if
+    end if
+
     for each item in menuItems
-      if item.mainMenu then 
+      if item.mainMenu and (not forTest or item.behavior = "home") then 
         if item.icon <> invalid and item.icon.image <> invalid then
           newMenuItemNode = createObject("roSGNode", "MenuItem")
     
@@ -392,6 +394,20 @@ sub __applyTranslations()
   m.settingLabel.text = i18n_t(m.global.i18n, "content.menuComponent.Setting")
   m.exitLabel.text    = i18n_t(m.global.i18n, "content.menuComponent.exit")
   m.logoutLabel.text  = i18n_t(m.global.i18n, "content.menuComponent.logout")
+
+    m.searchItem = {
+    key: "MenuId",
+    id: -1,
+    code: "search",
+    behavior: "search",
+    mainMenu: true,
+    text: i18n_t(m.global.i18n, "content.menuComponent.search"),
+    icon: {
+      image: {
+        relativePath: "pkg:/images/shared/search_icon.png"
+      }
+    }
+  }
 end sub
 
 ' Realiza la apertura del menú

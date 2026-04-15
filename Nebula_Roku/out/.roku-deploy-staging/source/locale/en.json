@@ -60,6 +60,7 @@
   },
   "content": {
     "menuComponent": {
+      "search": "Search",
       "changeProfile": "Change profile",
       "Setting": "Setting",
       "exit": "Exit",

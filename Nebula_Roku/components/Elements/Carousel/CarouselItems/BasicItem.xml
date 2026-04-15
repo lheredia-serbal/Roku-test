@@ -21,7 +21,7 @@
         <!-- Fondo negro -->
         <Rectangle id="theRect" color="#000000">
 
-            <!-- Imagen item -->
+             <!-- Imagen item -->
             <Poster 
                 id="imageItem"
                 translation="[0, 0]"
@@ -40,6 +40,46 @@
                     vertAlign="center"
                     horizAlign="center" />
             </LayoutGroup>
+
+            <Group
+                id="metadataGroup"
+                visible="false">
+                <!-- NUEVO: Poster de gradiente por encima de imageItem y por debajo de los labels de metadata. -->
+                <Poster
+                    id="metadataGradient"
+                    uri="pkg:/images/shared/gradient_bg.png"
+                    loadDisplayMode="scaleToFill" />
+
+                <!-- NUEVO: Contenedor vertical de labels dentro de metadataGroup para mantener el orden visual. -->
+                <LayoutGroup
+                    id="metadataLabels"
+                    layoutDirection="vert"
+                    horizAlignment="left"
+                    vertAlignment="center"
+                    itemSpacings="[1]">
+                    <Label
+                        id="title"
+                        wrap="true"
+                        maxLines="2"
+                        visible="false"
+                        lineSpacing="2"
+                        font="font:TinySystemFont"/>
+
+                    <Label
+                        id="category"
+                        wrap="false"
+                        maxLines="1"
+                        visible="false"
+                        font="font:TinySystemFont"/>
+
+                    <Label
+                        id="dateTime"
+                        wrap="false"
+                        maxLines="1"
+                        visible="false"
+                        font="font:TinySystemFont"/>
+                </LayoutGroup>
+            </Group>
 
             <LayoutGroup
                 id="progressContainer"

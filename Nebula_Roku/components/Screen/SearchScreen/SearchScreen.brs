@@ -16,10 +16,14 @@ sub init()
   m.carouselContainer = m.top.findNode("carouselContainer")
   m.searchSelectedIndicator = m.top.findNode("searchSelectedIndicator")
 
-    m.carouselContainerMoveAnimation = m.top.findNode("carouselContainerMoveAnimation") ' Referencia a la animación que suaviza el desplazamiento vertical del contenedor.
-  m.carouselContainerMoveInterpolator = m.top.findNode("carouselContainerMoveInterpolator") ' Referencia al interpolador que recibe origen/destino de translation.
-  m.focusUpOpacityAnimation = m.top.findNode("focusUpOpacityAnimation") ' Referencia a la animación de opacidad para fila saliente/entrante.
-  m.focusUpOpacityInterpolator = m.top.findNode("focusUpOpacityInterpolator") ' Referencia al interpolador de opacidad con fieldToInterp dinámico.
+  ' Referencia a la animación que suaviza el desplazamiento vertical del contenedor.
+  m.carouselContainerMoveAnimation = m.top.findNode("carouselContainerMoveAnimation")
+  ' Referencia al interpolador que recibe origen/destino de translation.
+  m.carouselContainerMoveInterpolator = m.top.findNode("carouselContainerMoveInterpolator")
+  ' Referencia a la animación de opacidad para fila saliente/entrante.
+  m.focusUpOpacityAnimation = m.top.findNode("focusUpOpacityAnimation")
+  ' Referencia al interpolador de opacidad con fieldToInterp dinámico.
+  m.focusUpOpacityInterpolator = m.top.findNode("focusUpOpacityInterpolator")
 
   m.noResultsLabel = m.top.findNode("noResultsLabel")
 
@@ -142,6 +146,22 @@ sub initFocus()
     else if m.searchInput <> invalid then
       ' Fallback para entradas sin foco previo: dejamos el input listo sin borrar el texto.
       m.searchInput.setFocus(true)
+    end if
+
+    m.searchMode = getConfigVariable(m.global.configVariablesKeys.SEARCH_MODE)
+    m.searchMinChars = getConfigVariable(m.global.configVariablesKeys.SEARCH_MIN_CHARS)
+    m.searchDebounceMs = getConfigVariable(m.global.configVariablesKeys.SEARCH_DEBOUNCE_MS)
+
+    if m.searchMode <> invalid and m.searchMode = SearchMode().MANUAL then
+      
+    end if
+
+    if m.searchMinChars <> invalid then
+      
+    end if
+
+    if m.searchDebounceMs <> invalid then
+      
     end if
   else
     ' Si pierde foco, detengo debounce pendiente para evitar búsquedas fuera de pantalla.
