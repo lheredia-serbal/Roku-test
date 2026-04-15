@@ -18,6 +18,7 @@
     "yes": "SIM",
     "continueSee": "Continuar assistindo",
     "exit": "Sair",
+    "search": "Pesquisar",
     "validateRegisterCode": "Validar"
   },
   "time": {
@@ -184,7 +185,10 @@
     }
   },
   "search": {
-    "noResultsDefaultSearch": "Pesquise por título, atores e canais de TV.",
-    "noResultsRecomendations": "A sua pesquisa não retornou resultados."
+    "noResultsDefaultSearch": "O que você quer assistir?",
+    "noResultsRecomendations": "A sua pesquisa não retornou resultados.",
+    "minCharsTypeToSearch": "Digite {{count}} letras para pesquisar",
+    "minCharsMoreToSearchPlural": "Digite mais {{count}} letras para pesquisar",
+    "minCharsMoreToSearchSingular": "Digite mais {{count}} letra para pesquisar"
   }
 }

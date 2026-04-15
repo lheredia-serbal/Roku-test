@@ -18,6 +18,7 @@
     "yes": "YES",
     "continueSee": "Continue watching",
     "exit": "Exit",
+    "search": "Search",
     "validateRegisterCode": "Validate"
   },
   "time": {
@@ -184,7 +185,10 @@
     }
   },
   "search": {
-    "noResultsDefaultSearch": "Search by title, actors, and TV channels.",
-    "noResultsRecomendations": "Your search returned no results."
+    "noResultsDefaultSearch": "Find something to watch...",
+    "noResultsRecomendations": "Your search returned no results.",
+    "minCharsTypeToSearch": "Type {{count}} characters to search",
+    "minCharsMoreToSearchPlural": "{{count}} more characters to search",
+    "minCharsMoreToSearchSingular": "{{count}} more character to search"
   }
 }

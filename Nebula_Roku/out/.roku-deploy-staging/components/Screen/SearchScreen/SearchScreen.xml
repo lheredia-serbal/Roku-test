@@ -51,6 +51,11 @@
 
   <children>
 
+    <!-- Fondo de pantalla completo detrás de todo el contenido. -->
+    <Poster
+      id="backgroundPoster"
+      loadDisplayMode="scaleToZoom" />
+
     <!-- Carrusel de recomendados -->
     <Group id="relatedContainer" visible="false">
       <Carousel id="related" />
@@ -64,8 +69,10 @@
     </Group>
 
     <!-- Input de busqueda -->
-    <TextEditBox
-      id="searchInput" clearOnDownKey="false" />
+    <TextEditBox id="searchInput" clearOnDownKey="false" />
+
+    <!-- Botón de búsqueda manual (solo visible en modo MANUAL). -->
+    <QvButton id="searchActionButton" visible="false" focusable="true" />
 
     <!-- Animación vertical reutilizada para desplazar carouselContainer con la misma suavidad que HomeScreen. -->
     <Animation id="carouselContainerMoveAnimation" duration="0.5" repeat="false" easeFunction="linear" optional="true"> <!-- Define transición de 0.5s para navegación UP/DOWN entre carruseles. -->
@@ -83,6 +90,12 @@
       visible="false"
       horizAlign="center"
       font="font:MediumSystemFont" />
+
+    <!-- Label de ayuda para indicar caracteres faltantes mínimos de búsqueda. -->
+    <Label
+      id="searchMinCharsLabel"
+      visible="false"
+      font="font:SmallestSystemFont" />
 
     <!-- Teclado cuando se hace foco en el buscador -->
     <Rectangle

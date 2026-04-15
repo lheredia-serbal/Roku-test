@@ -4,6 +4,8 @@
 sub init()
 
   m.searchInput = m.top.findNode("searchInput")
+  m.backgroundPoster = m.top.findNode("backgroundPoster")
+  m.searchActionButton = m.top.findNode("searchActionButton")
   m.searchKeyboard = m.top.findNode("searchKeyboard")
 
   m.searchKeyboardBackground = m.top.findNode("searchKeyboardBackground")
@@ -26,6 +28,7 @@ sub init()
   m.focusUpOpacityInterpolator = m.top.findNode("focusUpOpacityInterpolator")
 
   m.noResultsLabel = m.top.findNode("noResultsLabel")
+   m.searchMinCharsLabel = m.top.findNode("searchMinCharsLabel")
 
   m.keyboardShowAnimation = m.top.findNode("keyboardShowAnimation")
   m.keyboardHideAnimation = m.top.findNode("keyboardHideAnimation")
@@ -37,15 +40,31 @@ sub init()
 
   m.scaleInfo = m.global.scaleInfo
 
+  ' Setea la imágen de fondo
+  if m.backgroundPoster <> invalid then
+    m.backgroundPoster.width = m.scaleInfo.width
+    m.backgroundPoster.height = m.scaleInfo.height
+    m.backgroundPoster.translation = [0, 0]
+  end if
+
   ' Seteo la configuración del input de busqueda
-  m.searchInput.width = m.scaleInfo.width - 150
+  m.searchInputDefaultWidth = m.scaleInfo.width - 150
+  m.searchInputManualWidth = m.scaleInfo.width - 410
+  if m.searchInputManualWidth < scaleValue(420, m.scaleInfo) then m.searchInputManualWidth = scaleValue(420, m.scaleInfo)
+  m.searchInput.width = m.searchInputDefaultWidth
   m.searchInput.translation = scaleSize([70, 50], m.scaleInfo)
   m.searchInput.maxTextLength = 255
   m.searchKeyboardBackgroundoOpacity = "1.0"
 
   ' Defino el color del texto de ayuda del input.
   m.searchInput.hintTextColor = m.global.colors.LIGHT_GRAY
-  m.searchInput.opacity = 1.0 ' Mantengo el input completamente visible desde la inicialización.
+  ' Mantengo el input completamente visible desde la inicialización.
+  m.searchInput.opacity = 1.0 
+  if m.searchActionButton <> invalid then
+    m.searchActionButton.size = scaleSize([180, 44], m.scaleInfo)
+    m.searchActionButton.translation = [m.searchInput.translation[0] + m.searchInput.width + scaleValue(20, m.scaleInfo), m.searchInput.translation[1]]
+    m.searchActionButton.visible = false
+  end if
 
   ' Configuro label de no resultados centrado y debajo del input.
   if m.noResultsLabel <> invalid then
@@ -55,13 +74,20 @@ sub init()
     m.noResultsLabel.visible = false
   end if
 
+  if m.searchMinCharsLabel <> invalid then
+    m.searchMinCharsLabel.translation = [m.searchInput.translation[0], m.searchInput.translation[1] + scaleValue(62, m.scaleInfo)]
+    m.searchMinCharsLabel.width = m.searchInput.width
+    m.searchMinCharsLabel.color = m.global.colors.LIGHT_GRAY
+    m.searchMinCharsLabel.visible = false
+  end if
+
   ' Defino un ancho por defecto para el teclado si no hay medidas reales aún.
   m.keyboardDefaultWidth = scaleValue(1120, m.scaleInfo)
   ' Defino una altura por defecto para el teclado si no hay medidas reales aún.
   m.keyboardDefaultHeight = scaleValue(320, m.scaleInfo)
 
-  m.relatedContainer.translation = scaleSize([0, 25], m.scaleInfo)
-  m.searchCarousels.translation = scaleSize([0, 25], m.scaleInfo)
+  m.relatedContainer.translation = scaleSize([0, 50], m.scaleInfo)
+  m.searchCarousels.translation = scaleSize([0, 50], m.scaleInfo)
 
   ' Posiciono inicialmente el teclado fuera de pantalla (debajo).
   m.searchKeyboard.translation = [0, m.scaleInfo.height]
@@ -111,6 +137,17 @@ end sub
 sub initFocus()
   ' Si la pantalla recibió foco.
   if m.top.onFocus then
+    m.searchMode = getConfigVariable(m.global.configVariablesKeys.SEARCH_MODE)
+    m.searchMinChars = getConfigVariable(m.global.configVariablesKeys.SEARCH_MIN_CHARS)
+    m.searchDebounceMs = getConfigVariable(m.global.configVariablesKeys.SEARCH_DEBOUNCE_MS)
+
+    if m.searchMode = invalid or (m.searchMode <> SearchMode().AUTO and m.searchMode <> SearchMode().MANUAL) then m.searchMode = SearchMode().AUTO
+
+    if m.searchMinChars = invalid or m.searchMinChars < 1 then m.searchMinChars = 1
+
+    if m.searchDebounceMs = invalid or m.searchDebounceMs < 0 then m.searchDebounceMs = 0
+
+    __applySearchModeConfiguration()
     ' Aplico textos traducidos del input.
     __applyTranslations()
     ' Aseguro foco en el nodo top para cadena de foco correcta.
@@ -119,6 +156,8 @@ sub initFocus()
     __unbindKeyboardTextObservers()
 
     __bindKeyboardTextObservers()
+
+    m.backgroundPoster.uri = m.top.backgroundUri
 
     ' Si Search se abrió desde MainScreen, fuerzo foco en input y refrescar el carrusel de recomendados.
     if m.top.enterFromMainScreen then
@@ -146,22 +185,6 @@ sub initFocus()
     else if m.searchInput <> invalid then
       ' Fallback para entradas sin foco previo: dejamos el input listo sin borrar el texto.
       m.searchInput.setFocus(true)
-    end if
-
-    m.searchMode = getConfigVariable(m.global.configVariablesKeys.SEARCH_MODE)
-    m.searchMinChars = getConfigVariable(m.global.configVariablesKeys.SEARCH_MIN_CHARS)
-    m.searchDebounceMs = getConfigVariable(m.global.configVariablesKeys.SEARCH_DEBOUNCE_MS)
-
-    if m.searchMode <> invalid and m.searchMode = SearchMode().MANUAL then
-      
-    end if
-
-    if m.searchMinChars <> invalid then
-      
-    end if
-
-    if m.searchDebounceMs <> invalid then
-      
     end if
   else
     ' Si pierde foco, detengo debounce pendiente para evitar búsquedas fuera de pantalla.
@@ -312,9 +335,6 @@ sub onGetSearchProgramsResponse()
       ' Muestro feedback de no resultados al usuario.
       __showSearchNoResults(true)
 
-      ' Sin resultados, regreso el foco al input para facilitar nueva búsqueda.
-      if m.searchInput <> invalid then m.searchInput.setFocus(true)
-
       ' Oculto indicadores de selección al no existir listas navegables.
       if m.selectedIndicator <> invalid then m.selectedIndicator.visible = false
       if m.searchSelectedIndicator <> invalid then m.searchSelectedIndicator.visible = false
@@ -345,6 +365,7 @@ end sub
 sub onKeyboardTextChanged()
   __syncSearchInputFromKeyboard()
   __scheduleSearchRequest()
+  __updateSearchMinCharsFeedback()
 end sub
 
 ' Maneja eventos de control remoto para navegación/foco.
@@ -358,7 +379,12 @@ function onKeyEvent(key as string, press as boolean) as boolean
   end if
 
   ' Si el usuario baja desde el input, intento enviar foco a resultados visibles.
-  if key = KeyButtons().DOWN and m.searchInput <> invalid and m.searchInput.isInFocusChain() then
+  shouldMoveDownFromSearchHeader = m.searchInput <> invalid and m.searchInput.isInFocusChain()
+  if m.searchMode = SearchMode().MANUAL and m.searchActionButton <> invalid and m.searchActionButton.isInFocusChain() then
+    shouldMoveDownFromSearchHeader = true
+  end if
+
+  if key = KeyButtons().DOWN and shouldMoveDownFromSearchHeader then
 
     ' Prioridad 1: carruseles de búsqueda (cuando hay resultados de search).
     if m.searchCarousels <> invalid and m.searchCarousels.visible and m.carouselContainer <> invalid and m.carouselContainer.getChildCount() > 0 then
@@ -416,9 +442,24 @@ function onKeyEvent(key as string, press as boolean) as boolean
     return true
   end if
 
+  if key = KeyButtons().RIGHT and press and m.searchMode = SearchMode().MANUAL and m.searchInput <> invalid and m.searchInput.isInFocusChain() and m.searchActionButton <> invalid and m.searchActionButton.visible then
+    m.searchActionButton.setFocus(true)
+    return true
+  end if
+
+  if key = KeyButtons().LEFT and press and m.searchMode = SearchMode().MANUAL and m.searchActionButton <> invalid and m.searchActionButton.isInFocusChain() and m.searchInput <> invalid then
+    m.searchInput.setFocus(true)
+    return true
+  end if
+
   ' El foco esta en el input de busqueda, mostrar el teclado
   if m.searchInput <> invalid and m.searchInput.isInFocusChain() and key = KeyButtons().OK and press then
     __showKeyboard()
+    return true
+  end if
+
+  if m.searchMode = SearchMode().MANUAL and m.searchActionButton <> invalid and m.searchActionButton.isInFocusChain() and key = KeyButtons().OK and press then
+    __triggerSearchFromManualMode()
     return true
   end if
 
@@ -561,18 +602,16 @@ end sub
 sub onSearchDebounceTimerFire()
   ' Solo proceso debounce si la pantalla Search está activa/en foco.
   if not m.top.onFocus then return
+  ' En modo MANUAL no se consulta por debounce.
+  if m.searchMode <> SearchMode().AUTO then return
   ' Si no hay input disponible, no realizo consulta.
   if m.searchInput = invalid then return
 
   query = m.currentSearchText.trim()
-  ' Si no hay término de búsqueda, recargo carrusel de recomendados.
-  if query = "" then
-    m.hasLoadedRecommended = false
-    __getRecommendedCarousel()
-  else
-    ' Disparo request al endpoint de búsqueda.
-    __getSearchPrograms(query)
-  end if
+  queryCharsWithoutSpaces = __countNonWhitespaceChars(query)
+  if query <> "" and queryCharsWithoutSpaces < m.searchMinChars then return
+
+  __runSearchRequest(query)
 end sub
 
 ' Función que se ejecuta cuando se presiona OK sobre algún item
@@ -633,6 +672,7 @@ sub onSelectItem()
     m.currentSearchText = m.itemSelected.title
     ' Reflejo texto en input para que el usuario vea la nueva query aplicada.
     if m.searchInput <> invalid then m.searchInput.text = m.currentSearchText
+    __updateSearchMinCharsFeedback()
     ' Disparo request de búsqueda con el title del elemento seleccionado.
     __getSearchPrograms(m.itemSelected.title)
 
@@ -767,6 +807,9 @@ sub __applyTranslations()
 
   ' Aplico traducción del mensaje cuando la búsqueda no devuelve resultados.
   m.noResultsLabel.text = i18n_t(m.global.i18n, "search.noResultsRecomendations")
+
+  if m.searchActionButton <> invalid then m.searchActionButton.text = i18n_t(m.global.i18n, "button.search")
+  __updateSearchMinCharsFeedback()
 end sub
 
 ' Construye el string de tags del título usando formato: "tag" | Tag2 | Tag3.
@@ -1143,6 +1186,7 @@ sub __resetSearchState()
 
   ' Reinicio variable persistida de texto de búsqueda.
   m.currentSearchText = ""
+    __updateSearchMinCharsFeedback()
   ' Permito recargar recomendados en cada ingreso al componente.
   m.hasLoadedRecommended = false
 
@@ -1184,13 +1228,70 @@ end sub
 sub __scheduleSearchRequest()
   ' Si la pantalla no está activa, no programo búsquedas.
   if not m.top.onFocus then return
+  ' En modo MANUAL, no se permite búsqueda por debounce.
+  if m.searchMode <> SearchMode().AUTO then return
   ' Si no existe el timer, no se puede debouncear.
   if m.searchDebounceTimer = invalid then return
 
-  ' Reinicio el timer en cada tecla para contar 2 segundos desde la última edición.
+  if m.searchDebounceMs <> invalid then m.searchDebounceTimer.duration = m.searchDebounceMs / 1000
+
+  ' Reinicio el timer en cada tecla para contar el tiempo desde la última edición.
   m.searchDebounceTimer.control = "stop"
   m.searchDebounceTimer.control = "start"
 end sub
+
+sub __applySearchModeConfiguration()
+  if m.searchInput = invalid then return
+
+  if m.searchMode = SearchMode().MANUAL then
+    m.searchInput.width = m.searchInputManualWidth
+    if m.searchDebounceTimer <> invalid then m.searchDebounceTimer.control = "stop"
+    if m.searchActionButton <> invalid then
+      m.searchActionButton.translation = [m.searchInput.translation[0] + m.searchInput.width + scaleValue(20, m.scaleInfo), m.searchInput.translation[1]]
+      m.searchActionButton.visible = true
+    end if
+  else
+    m.searchInput.width = m.searchInputDefaultWidth
+    if m.searchDebounceTimer <> invalid and m.searchDebounceMs <> invalid then m.searchDebounceTimer.duration = m.searchDebounceMs / 1000
+    if m.searchActionButton <> invalid then
+      m.searchActionButton.visible = false
+    end if
+  end if
+
+  if m.searchMinCharsLabel <> invalid then m.searchMinCharsLabel.width = m.searchInput.width
+  __updateSearchMinCharsFeedback()
+end sub
+
+sub __triggerSearchFromManualMode()
+  if m.searchDebounceTimer <> invalid then m.searchDebounceTimer.control = "stop"
+  query = m.currentSearchText.trim()
+
+  queryCharsWithoutSpaces = __countNonWhitespaceChars(query)
+  if query <> "" and queryCharsWithoutSpaces < m.searchMinChars then return
+
+  __runSearchRequest(query)
+end sub
+
+sub __runSearchRequest(query as string)
+  if query = "" then
+    m.hasLoadedRecommended = false
+    __getRecommendedCarousel()
+  else
+    __getSearchPrograms(query)
+  end if
+end sub
+
+function __countNonWhitespaceChars(text as string) as integer
+  if text = invalid then return 0
+
+  charsCount = 0
+  for index = 0 to text.len() - 1
+    currentChar = Mid(text, index + 1, 1)
+    if currentChar <> " " and currentChar <> Chr(9) and currentChar <> Chr(10) and currentChar <> Chr(13) then charsCount = charsCount + 1
+  end for
+
+  return charsCount
+end function
 
 ' Calcula posición final del teclado centrado y pegado al borde inferior.
 sub __updateKeyboardTranslations()
@@ -1443,6 +1544,7 @@ sub __restoreSearchInputText()
 
   m.searchInput.text = m.currentSearchText
   m.searchInput.cursorPosition = m.currentSearchText.len()
+  __updateSearchMinCharsFeedback()
 end sub
 
 ' Vincula observers al TextEditBox interno del teclado para escuchar cambios reales de texto/cursor.
@@ -1491,6 +1593,37 @@ sub __syncSearchInputFromKeyboard()
   ' Persisto el texto actual para restaurarlo correctamente cuando el teclado se oculta o se vuelve a mostrar.
   m.currentSearchText = m.searchInput.text
 
+  __updateSearchMinCharsFeedback()
+end sub
+
+sub __updateSearchMinCharsFeedback()
+  if m.searchMinChars = invalid or m.searchMinChars < 1 then m.searchMinChars = 1
+  if m.currentSearchText = invalid then m.currentSearchText = ""
+
+  typedChars = __countNonWhitespaceChars(m.currentSearchText)
+  charsRemaining = m.searchMinChars - typedChars
+  if charsRemaining < 0 then charsRemaining = 0
+
+  if m.searchActionButton <> invalid then
+    m.searchActionButton.disable = typedChars > 0 and typedChars < m.searchMinChars
+  end if
+
+  if m.searchMinCharsLabel = invalid or m.global = invalid or m.global.i18n = invalid then return
+
+  if typedChars >= m.searchMinChars then
+    m.searchMinCharsLabel.visible = false
+    return
+  end if
+
+  if typedChars = 0 then
+    m.searchMinCharsLabel.text = i18n_t(m.global.i18n, "search.minCharsTypeToSearch").Replace("{{count}}", charsRemaining.toStr())
+  else if charsRemaining = 1 then
+    m.searchMinCharsLabel.text = i18n_t(m.global.i18n, "search.minCharsMoreToSearchSingular").Replace("{{count}}", charsRemaining.toStr())
+  else
+    m.searchMinCharsLabel.text = i18n_t(m.global.i18n, "search.minCharsMoreToSearchPlural").Replace("{{count}}", charsRemaining.toStr())
+  end if
+
+  m.searchMinCharsLabel.visible = true
 end sub
 
 ' Restaura el último foco

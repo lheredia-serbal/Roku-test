@@ -18,6 +18,7 @@
     "yes": "SI",
     "continueSee": "Continuar viendo",
     "exit": "Salir",
+    "search": "Buscar",
     "validateRegisterCode": "Validar"
   },
   "time": {
@@ -184,7 +185,10 @@
     }
   },
   "search": {
-    "noResultsDefaultSearch": "Buscá por título, actores y canales de TV.",
-    "noResultsRecomendations": "Tu búsqueda no obtuvo resultados."
+    "noResultsDefaultSearch": "¿Qué quieres ver?",
+    "noResultsRecomendations": "Tu búsqueda no obtuvo resultados.",
+    "minCharsTypeToSearch": "Escribí {{count}} letras para buscar",
+    "minCharsMoreToSearchPlural": "Escribí {{count}} letras más para buscar",
+    "minCharsMoreToSearchSingular": "Escribí {{count}} letra más para buscar"
   }
 }
