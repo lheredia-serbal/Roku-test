@@ -262,6 +262,7 @@ sub __populateList()
     child.redirectId = item.redirectId
     child.percentageElapsed = item.percentageElapsed
     child.category = item.category
+    child.formattedDuration = item.formattedDuration
     child.contentType = m.top.contentType
     child.size = m.top.size
     child.style = m.top.style

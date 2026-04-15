@@ -44,6 +44,7 @@
             <Group
                 id="metadataGroup"
                 visible="false">
+
                 <!-- NUEVO: Poster de gradiente por encima de imageItem y por debajo de los labels de metadata. -->
                 <Poster
                     id="metadataGradient"
@@ -55,7 +56,7 @@
                     id="metadataLabels"
                     layoutDirection="vert"
                     horizAlignment="left"
-                    vertAlignment="center"
+                    vertAlignment="bottom"
                     itemSpacings="[1]">
                     <Label
                         id="title"

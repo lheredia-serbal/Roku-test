@@ -17,6 +17,8 @@ sub init()
   m.searchCarousels = m.top.findNode("searchCarousels")
   m.carouselContainer = m.top.findNode("carouselContainer")
   m.searchSelectedIndicator = m.top.findNode("searchSelectedIndicator")
+  ' Bandera visual: indica si la config SEARCH_MIN_CHARS está informada.
+  m.hasSearchMinCharsConfig = true
 
   ' Referencia a la animación que suaviza el desplazamiento vertical del contenedor.
   m.carouselContainerMoveAnimation = m.top.findNode("carouselContainerMoveAnimation")
@@ -28,7 +30,7 @@ sub init()
   m.focusUpOpacityInterpolator = m.top.findNode("focusUpOpacityInterpolator")
 
   m.noResultsLabel = m.top.findNode("noResultsLabel")
-   m.searchMinCharsLabel = m.top.findNode("searchMinCharsLabel")
+  m.searchMinCharsLabel = m.top.findNode("searchMinCharsLabel")
 
   m.keyboardShowAnimation = m.top.findNode("keyboardShowAnimation")
   m.keyboardHideAnimation = m.top.findNode("keyboardHideAnimation")
@@ -86,6 +88,8 @@ sub init()
   ' Defino una altura por defecto para el teclado si no hay medidas reales aún.
   m.keyboardDefaultHeight = scaleValue(320, m.scaleInfo)
 
+  __updateSearchResultsLayout()
+
   m.relatedContainer.translation = scaleSize([0, 50], m.scaleInfo)
   m.searchCarousels.translation = scaleSize([0, 50], m.scaleInfo)
 
@@ -140,6 +144,7 @@ sub initFocus()
     m.searchMode = getConfigVariable(m.global.configVariablesKeys.SEARCH_MODE)
     m.searchMinChars = getConfigVariable(m.global.configVariablesKeys.SEARCH_MIN_CHARS)
     m.searchDebounceMs = getConfigVariable(m.global.configVariablesKeys.SEARCH_DEBOUNCE_MS)
+    m.hasSearchMinCharsConfig = __hasSearchMinCharsConfig(m.searchMinChars)
 
     if m.searchMode = invalid or (m.searchMode <> SearchMode().AUTO and m.searchMode <> SearchMode().MANUAL) then m.searchMode = SearchMode().AUTO
 
@@ -866,6 +871,20 @@ sub __configSearchScreen()
   m.related.translation = scaleSize([0, 0], m.scaleInfo)
   ' Alineo indicador de selección con la geometría del carrusel.
   m.selectedIndicator.translation = scaleSize([69.5, 128], m.scaleInfo)
+end sub
+
+' Ajusta la posición vertical de los contenedores de resultados según visibilidad del label mínimo.
+sub __updateSearchResultsLayout()
+  if m.relatedContainer = invalid or m.searchCarousels = invalid then return
+
+  if m.hasSearchMinCharsConfig then
+    m.relatedContainer.translation = scaleSize([0, 50], m.scaleInfo)
+    m.searchCarousels.translation = scaleSize([0, 50], m.scaleInfo)
+  else
+    ' Sin label de mínimos, subimos ligeramente los carruseles.
+    m.relatedContainer.translation = scaleSize([0, 20], m.scaleInfo)
+    m.searchCarousels.translation = scaleSize([0, 20], m.scaleInfo)
+  end if
 end sub
 
 ' Guardar el log cuandos se cambia una opción del menú
@@ -1605,10 +1624,20 @@ sub __updateSearchMinCharsFeedback()
   if charsRemaining < 0 then charsRemaining = 0
 
   if m.searchActionButton <> invalid then
-    m.searchActionButton.disable = typedChars > 0 and typedChars < m.searchMinChars
+    if not m.hasSearchMinCharsConfig then
+      m.searchActionButton.disable = false
+    else
+      m.searchActionButton.disable = typedChars > 0 and typedChars < m.searchMinChars
+    end if
   end if
 
   if m.searchMinCharsLabel = invalid or m.global = invalid or m.global.i18n = invalid then return
+  __updateSearchResultsLayout()
+
+  if not m.hasSearchMinCharsConfig then
+    m.searchMinCharsLabel.visible = false
+    return
+  end if
 
   if typedChars >= m.searchMinChars then
     m.searchMinCharsLabel.visible = false
@@ -1625,6 +1654,17 @@ sub __updateSearchMinCharsFeedback()
 
   m.searchMinCharsLabel.visible = true
 end sub
+
+' Determina si SEARCH_MIN_CHARS está configurado con un valor útil.
+function __hasSearchMinCharsConfig(searchMinChars as dynamic) as boolean
+  if searchMinChars = invalid then return false
+
+  if GetInterface(searchMinChars, "ifString") <> invalid then
+    return searchMinChars.trim() <> ""
+  end if
+
+  return true
+end function
 
 ' Restaura el último foco
 sub __restoreLastFocus()

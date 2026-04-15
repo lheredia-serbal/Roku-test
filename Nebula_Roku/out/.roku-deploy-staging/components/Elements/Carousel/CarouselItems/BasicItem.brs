@@ -21,8 +21,8 @@ sub init()
     m.backgroundImage = invalid
     m.showBackgroundImage = false
     m.showMetadataGroup = false
-    m.showMetadataGroup = false ' NUEVO: Estado para mostrar/ocultar el bloque de metadatos como unidad.
-    m.isSearchScreenContext = __isSearchScreenContext() ' NUEVO: Cachea si el item pertenece al árbol de SearchScreen.
+    m.showMetadataGroup = false
+    m.isSearchScreenContext = __isSearchScreenContext()
     __initConfig()
 end sub
 
@@ -40,7 +40,8 @@ sub itemContentChanged()
 
         m.progressLeft.width = 0
         m.progressRight.width = 0
-        if m.metadataGroup <> invalid then m.metadataGroup.visible = false ' Oculta metadatos en tarjetas "Ver más/Guía".
+        ' Oculta metadatos en tarjetas "Ver más/Guía".
+        if m.metadataGroup <> invalid then m.metadataGroup.visible = false 
         return
     else
         if m.top.itemContent.title <> invalid and m.top.itemContent.title <> "" then 
@@ -141,20 +142,24 @@ sub currRectChanged()
     if m.title.width < 0 then m.title.width = 0
     if m.category.width < 0 then m.category.width = 0 
     if m.dateTime.width < 0 then m.dateTime.width = 0
-    ' Posiciona los labels por encima del gradiente con padding.
-    if m.metadataLabels <> invalid then m.metadataLabels.translation = [metadataHorizontalPadding, metadataVerticalPadding] 
-     ' Altura acumulada de labels para ubicar el bloque justo sobre la barra de progreso.
+    ' Altura acumulada de labels para ubicar el bloque justo sobre la barra de progreso.
     metadataLabelsHeight = 0
     ' Obtiene altura real del contenido textual.
     if m.metadataLabels <> invalid then metadataLabelsHeight = m.metadataLabels.boundingRect().height 
     ' Incluye padding superior/inferior en la altura total del bloque.
-    metadataGroupHeight = metadataLabelsHeight + (metadataVerticalPadding * 2) 
-    ' Coloca metadataGroup justo arriba de progressContainer.
-    if m.metadataGroup <> invalid then m.metadataGroup.translation = [imageX + m.padding, imageY + imageHeight - metadataGroupHeight - scaleValue(15, m.scaleInfo) - metadataBottomSpacing] 
-    ' Hace que el gradiente cubra todo el ancho del bloque de metadatos.
-    if m.metadataGradient <> invalid then m.metadataGradient.width = metadataWidth 
-    ' Hace que el gradiente cubra toda la altura del bloque de metadatos.
-    if m.metadataGradient <> invalid then m.metadataGradient.height = metadataGroupHeight 
+    metadataGroupHeight = metadataLabelsHeight + (metadataVerticalPadding * 2)
+    ' Desplaza levemente labels hacia abajo para acercarlos al borde inferior.
+    metadataLabelsBottomOffset = scaleValue(6, m.scaleInfo)
+    metadataLabelsY = imageHeight - scaleValue(40, m.scaleInfo) - metadataBottomSpacing + metadataVerticalPadding + metadataLabelsBottomOffset
+    if metadataLabelsY < 0 then metadataLabelsY = 0
+    ' Posiciona labels en la parte inferior para mantener el mismo layout de metadata.
+    if m.metadataLabels <> invalid then m.metadataLabels.translation = [m.padding + metadataHorizontalPadding, metadataLabelsY]
+    ' Hace que metadataGroup cubra todo el componente para que su gradiente ocupe ancho/alto completos.
+    if m.metadataGroup <> invalid then m.metadataGroup.translation = [imageX, imageY]
+    ' Hace que el gradiente cubra todo el ancho del componente.
+    if m.metadataGradient <> invalid then m.metadataGradient.width = imageWidth
+    ' Hace que el gradiente cubra toda la altura del componente.
+    if m.metadataGradient <> invalid then m.metadataGradient.height = imageHeight
 
     m.progressContainer.translation = [m.padding , scaledCurrRect.height - scaleValue(15, m.scaleInfo)]
 end sub
@@ -207,51 +212,58 @@ function getScaledItemSize() as object
     return [0, 0]
 end function
 
-' NUEVO: Replica la lógica de SquareFeaturedItem para limpiar/mostrar title-category-dateTime de forma consistente.
-sub __updateMetadataVisibility()
-    m.showMetadataGroup = false ' NUEVO: Reinicia el estado antes de recalcular visibilidad.
+' Replica la lógica de SquareFeaturedItem para limpiar/mostrar title-category-dateTime de forma consistente.
+ sub __updateMetadataVisibility()
+    'Reinicia el estado antes de recalcular visibilidad.
+    m.showMetadataGroup = false 
 
-    m.title.visible = false ' NUEVO: Limpia estado previo del título para evitar artefactos por reciclado de celdas.
-    m.category.visible = false ' NUEVO: Limpia estado previo de categoría para evitar artefactos por reciclado de celdas.
-    m.dateTime.visible = false ' NUEVO: Limpia estado previo de fecha/hora para evitar artefactos por reciclado de celdas.
+    m.title.visible = true 
+    m.category.visible = false
+    m.dateTime.visible = true
 
-    if m.top.itemContent.title <> invalid and m.top.itemContent.title <> "" then ' NUEVO: Muestra título solo si viene informado.
-        m.title.text = m.top.itemContent.title ' NUEVO: Asigna el título al label de metadatos.
-        m.title.visible = true ' NUEVO: Habilita renderizado de título.
-        m.showMetadataGroup = true ' NUEVO: Marca el grupo para mostrarse porque hay información útil.
+    if m.top.itemContent.title <> invalid and m.top.itemContent.title <> "" then
+        m.title.text = m.top.itemContent.title
+        m.title.visible = true
+        m.showMetadataGroup = true
     end if
 
-    if m.top.itemContent.category <> invalid and m.top.itemContent.category <> "" then ' NUEVO: Muestra categoría solo si viene informada.
-        m.category.text = m.top.itemContent.category ' NUEVO: Asigna la categoría al label de metadatos.
-        m.category.visible = true ' NUEVO: Habilita renderizado de categoría.
-        m.showMetadataGroup = true ' NUEVO: Mantiene visible el grupo al tener información útil.
+    if m.top.itemContent.category <> invalid and m.top.itemContent.category <> "" then
+        m.category.text = m.top.itemContent.category
+        m.category.visible = true
+        m.showMetadataGroup = true
     end if
 
-    if m.top.itemContent.date <> invalid and m.top.itemContent.date <> "" then ' NUEVO: Muestra fecha/hora solo si viene informada.
-        m.dateTime.text = m.top.itemContent.date ' NUEVO: Asigna la fecha/hora al label de metadatos.
-        m.dateTime.visible = true ' NUEVO: Habilita renderizado de fecha/hora.
-        m.showMetadataGroup = true ' NUEVO: Mantiene visible el grupo al tener información útil.
+    if m.top.itemContent.formattedDuration <> invalid and m.top.itemContent.daformattedDurationte <> "" then
+        m.dateTime.text = m.top.itemContent.formattedDuration
+        m.dateTime.visible = true
+        m.showMetadataGroup = true
     end if
 
-    __applyMetadataGroupVisibility() ' NUEVO: Aplica la regla final (SearchScreen + foco + datos disponibles).
+    __applyMetadataGroupVisibility()
 end sub
 
 ' NUEVO: Determina si este item vive dentro de SearchScreen recorriendo el árbol de padres.
 function __isSearchScreenContext() as boolean
-    currentNode = m.top ' NUEVO: Inicia el recorrido desde el nodo actual del item.
-    while currentNode <> invalid ' NUEVO: Recorre padres hasta llegar a la raíz.
-        if currentNode.subtype() = "SearchScreen" then return true ' NUEVO: Confirma contexto de SearchScreen cuando encuentra el subtipo.
-        currentNode = currentNode.getParent() ' NUEVO: Avanza al siguiente padre en la jerarquía.
+    currentNode = m.top
+    ' Recorre padres hasta llegar a la raíz.
+    while currentNode <> invalid 
+        ' Confirma contexto de SearchScreen cuando encuentra el subtipo.
+        if currentNode.subtype() = "SearchScreen" then return true 
+        ' Avanza al siguiente padre en la jerarquía.
+        currentNode = currentNode.getParent() 
     end while
-    return false ' NUEVO: Si no encontró SearchScreen, no debe mostrarse metadataGroup.
+    return false
 end function
 
 ' NUEVO: Unifica la condición final de visibilidad para metadataGroup.
 sub __applyMetadataGroupVisibility()
-    hasFocus = false ' NUEVO: Estado por defecto sin foco.
-    if m.top.groupHasFocus <> invalid then hasFocus = m.top.groupHasFocus ' NUEVO: Usa el flag de foco de grupo cuando esté disponible.
-    if m.top.groupHasFocus = invalid and m.top.focusPercent <> invalid and m.top.focusPercent > 0 then hasFocus = true ' NUEVO: Fallback a focusPercent para casos sin groupHasFocus.
-    if m.metadataGroup <> invalid then m.metadataGroup.visible = (m.showMetadataGroup and m.isSearchScreenContext and hasFocus) ' NUEVO: Visible solo en SearchScreen + foco + metadata válida.
+    hasFocus = false
+    ' Usa el flag de foco de grupo cuando esté disponible.
+    if m.top.groupHasFocus <> invalid then hasFocus = m.top.groupHasFocus
+    ' Fallback a focusPercent para casos sin groupHasFocus.
+    if m.top.groupHasFocus = invalid and m.top.focusPercent <> invalid and m.top.focusPercent > 0 then hasFocus = true 
+    ' Visible solo en SearchScreen + foco + metadata válida.
+    if m.metadataGroup <> invalid then m.metadataGroup.visible = (m.showMetadataGroup and m.isSearchScreenContext and hasFocus) 
 end sub
 
 ' Obtiene el rectángulo escalado actual.

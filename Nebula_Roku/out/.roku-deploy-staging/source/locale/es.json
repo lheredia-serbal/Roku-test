@@ -187,8 +187,8 @@
   "search": {
     "noResultsDefaultSearch": "¿Qué quieres ver?",
     "noResultsRecomendations": "Tu búsqueda no obtuvo resultados.",
-    "minCharsTypeToSearch": "Escribí {{count}} letras para buscar",
-    "minCharsMoreToSearchPlural": "Escribí {{count}} letras más para buscar",
-    "minCharsMoreToSearchSingular": "Escribí {{count}} letra más para buscar"
+    "minCharsTypeToSearch": "Ingrese {{count}} letras para buscar",
+    "minCharsMoreToSearchPlural": "Ingrese {{count}} letras más para buscar",
+    "minCharsMoreToSearchSingular": "Ingrese {{count}} letra más para buscar"
   }
 }
