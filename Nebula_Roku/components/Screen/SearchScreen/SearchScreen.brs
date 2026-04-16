@@ -51,7 +51,7 @@ sub init()
 
   ' Seteo la configuración del input de busqueda
   m.searchInputDefaultWidth = m.scaleInfo.width - 150
-  m.searchInputManualWidth = m.scaleInfo.width - 410
+  m.searchInputManualWidth = m.scaleInfo.width - 450
   if m.searchInputManualWidth < scaleValue(420, m.scaleInfo) then m.searchInputManualWidth = scaleValue(420, m.scaleInfo)
   m.searchInput.width = m.searchInputDefaultWidth
   m.searchInput.translation = scaleSize([70, 50], m.scaleInfo)
@@ -1101,7 +1101,6 @@ sub __loadSearchCarousels(carousels)
         newCarousel.titleTagsText = __buildCarouselTitleTagsText(carouselData.titleTags)
         newCarousel.imageType = carouselData.imageType
         newCarousel.redirectType = carouselData.redirectType
-        newCarousel.redirectType = 4 ' Fuerzo la tarjeta "Ver todos" en cada carrusel de resultados de búsqueda.
         newCarousel.items = carouselData.items
 
         ' Ubico verticalmente este carrusel dentro del stack.

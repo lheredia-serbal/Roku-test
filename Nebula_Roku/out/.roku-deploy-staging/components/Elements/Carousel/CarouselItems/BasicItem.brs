@@ -21,8 +21,7 @@ sub init()
     m.backgroundImage = invalid
     m.showBackgroundImage = false
     m.showMetadataGroup = false
-    m.showMetadataGroup = false
-    m.isSearchScreenContext = __isSearchScreenContext()
+    m.isSearchScreenContext = false
     __initConfig()
 end sub
 
@@ -255,15 +254,27 @@ function __isSearchScreenContext() as boolean
     return false
 end function
 
-' NUEVO: Unifica la condición final de visibilidad para metadataGroup.
+' Unifica la condición final de visibilidad para metadataGroup.
 sub __applyMetadataGroupVisibility()
-    hasFocus = false
-    ' Usa el flag de foco de grupo cuando esté disponible.
-    if m.top.groupHasFocus <> invalid then hasFocus = m.top.groupHasFocus
-    ' Fallback a focusPercent para casos sin groupHasFocus.
-    if m.top.groupHasFocus = invalid and m.top.focusPercent <> invalid and m.top.focusPercent > 0 then hasFocus = true 
-    ' Visible solo en SearchScreen + foco + metadata válida.
-    if m.metadataGroup <> invalid then m.metadataGroup.visible = (m.showMetadataGroup and m.isSearchScreenContext and hasFocus) 
+    hasItemFocus = false
+    hasCarouselFocus = false
+    ' Actualiza contexto dinámicamente porque el árbol de padres puede no estar completo en init().
+    m.isSearchScreenContext = __isSearchScreenContext()
+
+    ' Detecta el item actualmente seleccionado del carrusel.
+    if m.top.focusPercent <> invalid and m.top.focusPercent >= 0.95 then hasItemFocus = true
+    ' Detecta si el carrusel que contiene el item tiene foco activo.
+    if m.top.groupHasFocus <> invalid and m.top.groupHasFocus = true then hasCarouselFocus = true
+
+    if m.metadataGroup <> invalid then
+        ' En SearchScreen solo mostramos metadata cuando el item y su carrusel tienen foco.
+        if m.isSearchScreenContext then
+            m.metadataGroup.visible = (m.showMetadataGroup and hasItemFocus and hasCarouselFocus)
+        else
+            ' Fuera de SearchScreen mantenemos el comportamiento estándar.
+            m.metadataGroup.visible = m.showMetadataGroup
+        end if
+    end if
 end sub
 
 ' Obtiene el rectángulo escalado actual.

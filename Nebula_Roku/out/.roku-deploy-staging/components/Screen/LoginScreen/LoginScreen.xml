@@ -6,6 +6,7 @@
   xsi:noNamespaceSchemaLocation="https://devtools.web.roku.com/schema/RokuSceneGraph.xsd">
 
   <script type="text/brightscript" uri="LoginScreen.brs"/>
+  <script type="text/brightscript" uri="pkg:/source/Config.brs" />
   <script type="text/brightscript" uri="pkg:/source/Utils/i18nUtils.brs" />
   <script type="text/brightscript" uri="pkg:/source/Utils/RetryUtils.brs" />
   <script type="text/brightscript" uri="pkg:/source/Utils.brs" />
@@ -48,7 +49,7 @@
         horizAlign="center" 
         vertAlign="top"/>
 
-      <LayoutGroup id="loginMethodSwitchLayout" layoutDirection="vert" horizAlignment="custom" vertAlignment="top">
+      <LayoutGroup id="loginMethodSwitchLayout" layoutDirection="vert" horizAlignment="center" vertAlignment="top">
 
         <!-- Contenedor visual del switch de método de login -->
         <Poster

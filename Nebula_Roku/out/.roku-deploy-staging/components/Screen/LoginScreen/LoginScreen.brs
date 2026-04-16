@@ -80,24 +80,25 @@ sub init()
   ' Setear los estilos del selector
   m.loginMethodSwitch.blendColor = m.global.colors.PLAYER_TIMEBAR_NOT_FOCUCED
   m.loginMethodSwitchSelected.blendColor = m.global.colors.PRIMARY
-  m.loginMethodTitle.width = scaleValue(900, m.scaleInfo)
+  m.loginMethodTitle.width = scaleValue(910, m.scaleInfo)
   m.loginMethodTitle.height = scaleValue(55, m.scaleInfo)
-  m.loginMethodSwitchLayout.translation = [150, 0]
+  m.loginMethodTitle.translation = [0, 0]
+  m.loginMethodSwitchLayout.translation = [0, 0]
   m.loginMethodSwitch.width = scaleValue(370, m.scaleInfo)
-  m.loginMethodSwitch.height = scaleValue(45, m.scaleInfo)
-  m.loginMethodSwitch.translation = [260, 0] 
+  m.loginMethodSwitch.height = scaleValue(50, m.scaleInfo)
+  m.loginMethodSwitch.translation = [0, 0] 
   m.loginMethodSwitchSelected.width = scaleValue(180, m.scaleInfo)
-  m.loginMethodSwitchSelected.height = scaleValue(33, m.scaleInfo)
-  m.loginMethodSwitchSelected.translation = scaleSize([0, 0], m.scaleInfo)
+  m.loginMethodSwitchSelected.height = scaleValue(34, m.scaleInfo)
+  m.loginMethodSwitchSelected.translation = scaleSize([0], m.scaleInfo)
   m.loginMethodPhone.width = scaleValue(180, m.scaleInfo)
   m.loginMethodPhone.height = scaleValue(45, m.scaleInfo)
-  m.loginMethodPhone.translation = [0, 2]
+  m.loginMethodPhone.translation = [0, 4]
   m.loginMethodKeyboard.width = scaleValue(180, m.scaleInfo)
   m.loginMethodKeyboard.height = scaleValue(45, m.scaleInfo)
   m.loginMethodKeyboard.translation = scaleSize([180, 2], m.scaleInfo)
   m.loginSwitchSelectedLeftX = scaleValue(8, m.scaleInfo)
   m.loginSwitchSelectedRightX = scaleValue(180, m.scaleInfo)
-  m.loginSwitchSelectedY = scaleValue(6, m.scaleInfo)
+  m.loginSwitchSelectedY = scaleValue(8, m.scaleInfo)
   m.loginMethodSwitchHasInitialized = false
   m.lastLoginMethodFocus = "phone"
   
@@ -183,6 +184,7 @@ end sub
 ' Inicializa el foco del componente seteando los valores necesarios
 sub initFocus()
   if m.top.onFocus then
+    __setDeviceInfoOnLoginEntry()
     __applyTranslations()
     m.sendLoginPost = false
     m.inputFocus = "user"
@@ -194,6 +196,7 @@ sub initFocus()
 
     m.buttonContainer.translation = [((width - scaleValue(380, m.scaleInfo)) / 2), 400]
     m.logo.translation = [(width - scaleValue(280, m.scaleInfo)), scaleValue(30, m.scaleInfo)]
+    m.loginMethodSwitchLayout.translation = [((width - m.loginMethodSwitch.width) / 2), 0]
 
     ' Reinicia el contador del polling al entrar nuevamente a la pantalla
     m.validateRegisterCodeTimerExecutions = 0 
@@ -208,6 +211,14 @@ sub initFocus()
     onLoginMethodFocusChanged()
   end if
 end sub 
+
+' Setea la info de dispositivo al ingresar al LoginScreen (incluye retorno por logout)
+sub __setDeviceInfoOnLoginEntry()
+  deviceInfo = CreateObject("roDeviceInfo")
+  scaleInfo = getScaleInfo(deviceInfo)
+  device = getDevice(deviceInfo, scaleInfo, getVersion(), getVersionCode(), getAppCode(), m.global.language)
+  addAndSetFields(m.global, {device: device})
+end sub
 
 ' Limpiar la llamada del log
 sub onActionLogResponse() 
@@ -463,7 +474,7 @@ sub onLoginResponse()
 
       resp = ParseJson(m.apiRequestManager.response)
       
-      addAndSetFields(m.global, {device: resp.device, organization: resp.organization, contact: resp.contact, variables: resp.variables} )
+      addAndSetFields(m.global, {device: resp.device, organization: resp.organization, contact: resp.contact} )
       
       saveNextUpdateVariables()
 
@@ -662,7 +673,7 @@ sub __finishLoginWithApiResponse()
   resp = ParseJson(m.apiRegisterCodeRequestManager.response)
 
   ' Guarda en global los datos devueltos por el login exitoso
-  addAndSetFields(m.global, {device: resp.device, organization: resp.organization, contact: resp.contact, variables: resp.variables} ) 
+  addAndSetFields(m.global, {device: resp.device, organization: resp.organization, contact: resp.contact} ) 
 
   ' Persiste la programación de actualización de variables remotas
   saveNextUpdateVariables() 
