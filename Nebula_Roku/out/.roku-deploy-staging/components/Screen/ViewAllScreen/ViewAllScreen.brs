@@ -22,6 +22,7 @@ end sub
 
 ' Maneja la lógica de foco para la pantalla.
 sub initFocus()
+  if m.beaconUrl = invalid then m.beaconUrl = getConfigVariable(m.global.configVariablesKeys.BEACON_URL) 
   ' Siempre que ViewAll vuelva a estar visible, reposicionamos foco al primer item del primer carrusel.
   if m.top.onFocus then __focusFirstCarousel()
 end sub

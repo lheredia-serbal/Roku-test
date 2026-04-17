@@ -139,6 +139,7 @@ end sub
 
 ' Procesa payload de entrada y dispara servicio de episodios.
 sub initData()
+  if m.beaconUrl = invalid then m.beaconUrl = getConfigVariable(m.global.configVariablesKeys.BEACON_URL) 
   ' Evita ejecución cuando no hay payload.
   if m.top.data = invalid or m.top.data = "" then return
   ' Resuelve apiUrl reutilizando la misma lógica del resto de pantallas.
@@ -150,14 +151,15 @@ sub initData()
   ' Evita request si payload es inválido.
   if payload = invalid then return
   ' Valida key requerida para endpoint de episodios.
-  if payload.key = invalid then return
+  if payload.program.key = invalid then return
   ' Valida id requerido para endpoint de episodios.
-  if payload.id = invalid then return
+  if payload.program.id = invalid then return
   ' Ejecuta request de episodios con key e id recibidos.
-  __getEpisodes(payload.key, payload.id)
+  __getEpisodes(payload.program.key, payload.program.id)
 
   actionLog = getActionLog({
-    actionCode: ActionLogCode().OPEN_PAGE,
+    actionCode: ActionLogCode().EMISSIONS,
+    program: payload.program,
     pageUrl: "Emissions"
   })
 

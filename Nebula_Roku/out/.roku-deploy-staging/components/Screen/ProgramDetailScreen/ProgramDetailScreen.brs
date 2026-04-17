@@ -849,7 +849,7 @@ sub __openEmissions()
   ' Marca que se abrió la pantalla de emisiones para preservar foco al volver.
   m.isOpenEmissions = true
   ' Dispara navegación hacia Emissions enviando key e id del programa actual.
-  m.top.emissions = FormatJson({ key: m.program.key, id: m.program.id })
+  m.top.emissions = FormatJson({ program: m.program })
 end sub
 
 ' Carga la configuracion inicial de la pantalla de detalle de programas.

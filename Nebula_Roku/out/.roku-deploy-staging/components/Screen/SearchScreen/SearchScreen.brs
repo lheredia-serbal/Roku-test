@@ -152,6 +152,8 @@ sub initFocus()
 
     if m.searchDebounceMs = invalid or m.searchDebounceMs < 0 then m.searchDebounceMs = 0
 
+    if m.beaconUrl = invalid then m.beaconUrl = getConfigVariable(m.global.configVariablesKeys.BEACON_URL) 
+
     __applySearchModeConfiguration()
     ' Aplico textos traducidos del input.
     __applyTranslations()

@@ -70,7 +70,12 @@ sub itemContentChanged()
 
     end if
 
-    __updateMetadataVisibility() 
+    ' Mostrar la información del programa cuando se encuentra en la pantalla de Busqueda
+    m.isSearchScreenContext = __isSearchScreenContext()
+
+    if (m.isSearchScreenContext) then 
+        __updateMetadataVisibility()
+    end if
 
     scaledSize = getScaledItemSize()
 
@@ -254,12 +259,12 @@ function __isSearchScreenContext() as boolean
     return false
 end function
 
+' Determina si este item pertenece al contenedor principal de carruseles de SearchScreen.
+
 ' Unifica la condición final de visibilidad para metadataGroup.
 sub __applyMetadataGroupVisibility()
     hasItemFocus = false
     hasCarouselFocus = false
-    ' Actualiza contexto dinámicamente porque el árbol de padres puede no estar completo en init().
-    m.isSearchScreenContext = __isSearchScreenContext()
 
     ' Detecta el item actualmente seleccionado del carrusel.
     if m.top.focusPercent <> invalid and m.top.focusPercent >= 0.95 then hasItemFocus = true
@@ -267,9 +272,12 @@ sub __applyMetadataGroupVisibility()
     if m.top.groupHasFocus <> invalid and m.top.groupHasFocus = true then hasCarouselFocus = true
 
     if m.metadataGroup <> invalid then
-        ' En SearchScreen solo mostramos metadata cuando el item y su carrusel tienen foco.
+        ' En el carrusel principal de SearchScreen solo mostramos metadata cuando item y carrusel tienen foco.
         if m.isSearchScreenContext then
             m.metadataGroup.visible = (m.showMetadataGroup and hasItemFocus and hasCarouselFocus)
+        else if m.isSearchScreenContext then
+            ' En otros carruseles de SearchScreen ocultamos metadata.
+            m.metadataGroup.visible = false
         else
             ' Fuera de SearchScreen mantenemos el comportamiento estándar.
             m.metadataGroup.visible = m.showMetadataGroup

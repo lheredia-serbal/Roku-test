@@ -79,7 +79,8 @@ function ActionLogCode() as Object
         OPEN_APPLICATION: "OpenApplication"
         START_APP: "StartApp"
         ERROR: "Error"
-        DEBUG: "Debug"
+        DEBUG: "Debug",
+        EMISSIONS: "OpenEmissions"
     }
 end function
 

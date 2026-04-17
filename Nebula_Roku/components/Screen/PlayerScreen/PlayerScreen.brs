@@ -424,6 +424,11 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
         ' Si el stream es un live, no hacer nada
         if LCase(m.streaming.type) = getVideoType().LIVE then return true
 
+        if LCase(m.streaming.type) = getVideoType().VOD or LCase(m.streaming.type) = getVideoType().DVR
+          actionLog = getActionLog({ actionCode: ActionLogCode().CATCHUP_GO_TO_START, program: m.program, contentType: m.streaming.type })
+          __saveActionLog(actionLog)
+        end if
+
         ' Si el stream permite live rewind, reiniciar el stream
         if LCase(m.streaming.type) = getVideoType().LIVE_REWIND then
 
@@ -662,6 +667,8 @@ sub initData()
     m.streamingType = m.streaming.streamingType
     openGuide = m.top.openGuide
     m.top.openGuide = false
+
+    if m.beaconUrl = invalid then m.beaconUrl = getConfigVariable(m.global.configVariablesKeys.BEACON_URL) 
     
     m.guide.loading = m.top.loading
     
@@ -1548,7 +1555,7 @@ end sub
 
 ' Limpiar la llamada del log
 sub onActionLogResponse() 
-  if m.apiRequestManager <> invalid and not m.apiRequestManager.serverError then
+  if m.apiLogRequestManager <> invalid and not m.apiLogRequestManager.serverError then
     m.apiLogRequestManager = clearApiRequest(m.apiLogRequestManager)
   end if
 end sub
@@ -1746,6 +1753,28 @@ sub __loadPlayer(streaming, focusPlayer = true)
 
       runAction(requestId, action, ApiType().CLIENTS_API_URL)
       m.apiProgramManager = action.apiProgramManager
+
+      if videoContent.live or LCase(m.streaming.type) = getVideoType().LIVE_REWIND then
+        actionLog = getActionLog({ actionCode: ActionLogCode().WATCH_LIVE, program: m.program, contentType: m.streaming.type })
+        __saveActionLog(actionLog)
+      else if LCase(m.streaming.type) = getVideoType().VOD or LCase(m.streaming.type) = getVideoType().DVR
+
+        if m.actionPostChageState <> "restart" 
+          actionLog = getActionLog({ actionCode: ActionLogCode().WATCH_CARCHUP, program: m.program, contentType: m.streaming.type })
+          __saveActionLog(actionLog)
+        end if
+      end if
+    else 
+
+      if (m.streaming.streamingType = getStreamingType().LIVE_REWIND) then
+        if m.actionPostChageState <> "restart" 
+          actionLog = getActionLog({ actionCode: ActionLogCode().WATCH_LIVE_REWIND, program: m.program, contentType: m.streaming.type })
+          __saveActionLog(actionLog)
+        else
+          actionLog = getActionLog({ actionCode: ActionLogCode().LIVE_REWIND_GO_TO_START, program: m.program, contentType: m.streaming.type })
+          __saveActionLog(actionLog)
+        end if
+      end if
     end if
     
     ' Extender el tiempo para mostrar el cartel de inactividad
