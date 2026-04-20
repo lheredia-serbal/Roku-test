@@ -22,7 +22,6 @@ sub init()
   m.splashBackground = m.top.findNode("splashBackground")
   m.domainManagerTimer = m.top.findNode("domainManagerTimer")
   m.domainManagerTimer.observeField("fire", "onDomainManagerTimerFire")
-  m.simulateCdnFirstFailure = getSimulateCdnFirstFailure()
   m.cdnFirstFailureTriggered = false
 
   if m.splashBackground <> invalid then
@@ -61,12 +60,6 @@ sub __startCdnInitialization(keepDialogVisible = false)
     __hideCdnErrorDialog()
   end if
   m.cdnUrls = getCdnConfigUrls()
-
-  if m.simulateCdnFirstFailure and not m.cdnFirstFailureTriggered then
-    m.cdnFirstFailureTriggered = true
-    m.cdnUrls[0] = m.cdnUrls[0] + "1"
-    m.cdnUrls[1] = m.cdnUrls[1]
-  end if
 
   m.cdnIndex = 0
 
