@@ -37,6 +37,7 @@ end sub
 ' Funcion que interpreta los eventos de teclado y retorna true si fue porcesada por este componente. Sino es porcesado por el
 ' entonces sigue con el siguente metodo onKeyEvent del compoente superior
 function onKeyEvent(key as string, press as boolean) as boolean
+
   if press and key = KeyButtons().BACK then
     if m.StackOfScreens.count() = 0 or (m.StackOfScreens.count() = 1 and m.StackOfScreens.Peek() = "MainScreen") then 
       __showExitAsk()

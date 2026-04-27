@@ -221,7 +221,7 @@ sub __getEpisodes(key, id)
   ' Define request siguiendo el patrón existente del proyecto.
   action = {
     apiRequestManager: m.apiRequestManager
-    url: urlEpisodes(m.apiUrl, m.lastKey, m.lastId)
+    url: urlEpisodes(m.lastKey, m.lastId)
     method: "GET"
     responseMethod: "onEpisodesResponse"
     body: invalid

@@ -220,6 +220,7 @@ sub __getEpisodes(key, id)
 
   ' Define request siguiendo el patrón existente del proyecto.
   action = {
+    node: m.top
     apiRequestManager: m.apiRequestManager
     url: urlEpisodes(m.lastKey, m.lastId)
     method: "GET"
@@ -227,6 +228,8 @@ sub __getEpisodes(key, id)
     body: invalid
     token: invalid
     publicApi: false
+    methodName: "__getEpisodes"
+    parameter: [key, id]
     requestId: requestId
     dataAux: invalid
     run: function() as Object
@@ -447,14 +450,17 @@ sub __runEpisodeWatchValidate()
 
   ' Construye acción WatchValidate siguiendo el mismo patrón de MainScreen.
   action = {
+    node: m.top
     apiRequestManager: m.apiRequestManager
-    url: urlWatchValidate(m.apiUrl, watchSessionId, m.selectedEpisode.redirectKey, m.selectedEpisode.redirectId)
+    url: urlWatchValidate(watchSessionId, m.selectedEpisode.redirectKey, m.selectedEpisode.redirectId)
     method: "GET"
     responseMethod: "onEpisodeWatchValidateResponse"
     body: invalid
     token: invalid
     publicApi: false
     dataAux: invalid
+    methodName: "__runEpisodeWatchValidate"
+    parameter: invalid
     requestId: requestId
     run: function() as Object
       m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux)
@@ -483,14 +489,17 @@ sub onEpisodePinDialogLoad()
     if m.top.loading <> invalid then m.top.loading.visible = true
     ' Construye acción para endpoint de validación parental por PIN.
     action = {
+      node: m.top
       apiRequestManager: m.apiRequestManager
-      url: urlParentalControlPin(m.apiUrl, resp.pin)
+      url: urlParentalControlPin(resp.pin)
       method: "GET"
       responseMethod: "onEpisodeParentalControlResponse"
       body: invalid
       token: invalid
       publicApi: false
       dataAux: invalid
+      methodName: "onEpisodePinDialogLoad"
+      parameter: invalid
       requestId: requestId
       run: function() as Object
         m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux)
@@ -585,7 +594,7 @@ sub onEpisodeWatchValidateResponse()
       setWatchSessionId(watchData.watchSessionId)
       setWatchToken(watchData.watchToken)
       ' Solicita streaming del episodio validado igual que MainScreen.
-      m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlStreaming(m.apiUrl, m.selectedEpisode.redirectKey, m.selectedEpisode.redirectId), "GET", "onEpisodeStreamingResponse")
+      m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlStreaming(m.selectedEpisode.redirectKey, m.selectedEpisode.redirectId), "GET", "onEpisodeStreamingResponse")
       ' Corta aquí para no limpiar loading hasta terminar streaming.
       return
     else
@@ -1100,13 +1109,16 @@ sub __saveActionLog(actionLog as object)
     requestId = createRequestId()
 
     action = {
+      node: m.top
       apiRequestManager: m.apiLogRequestManager
-      url: urlActionLogsToken(m.apiUrl)
+      url: urlActionLogsToken()
       method: "GET"
       responseMethod: "onActionLogTokenResponse"
       body: invalid
       token: invalid
       publicApi: false
+      methodName: "__saveActionLog"
+      parameter: FormatJson(actionLog)
       requestId: requestId
       dataAux: FormatJson(actionLog)
       run: function() as Object
@@ -1130,14 +1142,17 @@ sub __sendActionLog(actionLog as object)
     requestId = createRequestId()
 
     action = {
+      node: m.top
       apiRequestManager: m.apiLogRequestManager
-      url: urlActionLogs(m.beaconUrl)
+      url: urlActionLogs()
       method: "POST"
       responseMethod: "onActionLogResponse"
       body: FormatJson(actionLog)
       token: beaconToken
       publicApi: false
       dataAux: invalid
+      methodName: "__sendActionLog"
+      parameter: FormatJson(actionLog)
       requestId: requestId
       run: function() as Object
         m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux)

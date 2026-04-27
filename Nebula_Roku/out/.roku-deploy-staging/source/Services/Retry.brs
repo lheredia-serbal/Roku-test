@@ -184,25 +184,32 @@ sub retryAll()
 
     wasEmpty = actions = invalid or actions.count() = 0
     if not wasEmpty then
-        response = changeMode()
-        if response then
+        started = changeMode("onRetryChangeModeResponse")
+        if not started then showCdnErrorDialog()
+    end if
+end sub
+
+sub onRetryChangeModeResponse(result as boolean)
+    if result = true then
+        actions = __getPendingActions("error")
+        if actions <> invalid then
             for each item in actions
                 if item <> invalid and item.action <> invalid then
-                    result = __runAction(item.action)
-                    if result.success = true then
+                    response = __runAction(item.action)
+                    if response.success = true then
                         item.action.status = "success"
                     else
                         item.action.status = "error"
                     end if
                 end if
             end for
-        else 
-            showCdnErrorDialog()
         end if
-
-        ' Mantener solo errores pendientes para liberar memoria de acciones resueltas.
-        __setPendingActions(__getPendingActions("error"))
+    else 
+        showCdnErrorDialog()
     end if
+
+    ' Mantener solo errores pendientes para liberar memoria de acciones resueltas.
+    __setPendingActions(__getPendingActions("error"))
 end sub
 
 ' Ejecuta llamadas HTTP con failover y reconfiguración si es necesario.

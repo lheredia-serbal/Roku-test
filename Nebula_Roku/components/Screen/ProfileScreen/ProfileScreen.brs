@@ -42,6 +42,69 @@ sub init()
   end if
 end sub
 
+' Guarda el foco actual de ProfileScreen antes de abrir CdnErrorDialog.
+function cacheFocusBeforeCdnDialog() as boolean
+  if not m.top.visible then return false
+
+  if (m.lastMainScreenFocusBeforeCdnDialog <> invalid) then return false
+
+  m.lastProfileFocusBeforeCdnDialog = invalid
+
+  if m.screenProfileSelected <> invalid and m.screenProfileSelected.visible then
+    if m.profilesElements <> invalid and m.profilesElements.isInFocusChain() and m.profilesElements.focusedChild <> invalid then
+      m.lastProfileFocusBeforeCdnDialog = m.profilesElements.focusedChild
+    else if m.manageProfile <> invalid and m.manageProfile.isInFocusChain() then
+      m.lastProfileFocusBeforeCdnDialog = m.manageProfile
+    end if
+  else if m.screenProfileEdit <> invalid and m.screenProfileEdit.visible then
+    if m.keyboard <> invalid and m.keyboard.isInFocusChain() then
+      m.lastProfileFocusBeforeCdnDialog = m.keyboard
+    else if m.buttonEditContainer <> invalid and m.buttonEditContainer.isInFocusChain() and m.buttonEditContainer.focusedChild <> invalid then
+      m.lastProfileFocusBeforeCdnDialog = m.buttonEditContainer.focusedChild
+    else if m.profileImageEdit <> invalid and m.profileImageEdit.isInFocusChain() then
+      m.lastProfileFocusBeforeCdnDialog = m.profileImageEdit
+    end if
+  else if m.screenAvatarEdit <> invalid and m.screenAvatarEdit.visible then
+    if m.carouselContainer <> invalid and m.carouselContainer.focusedChild <> invalid then
+      carouselList = m.carouselContainer.focusedChild.findNode("carouselList")
+      if carouselList <> invalid then m.lastProfileFocusBeforeCdnDialog = carouselList
+    end if
+  end if
+
+  return m.lastProfileFocusBeforeCdnDialog <> invalid
+end function
+
+' Restaura el foco en ProfileScreen al cerrar CdnErrorDialog.
+function restoreFocusAfterCdnDialog() as boolean
+  if not m.top.visible then return false
+
+  m.top.setFocus(true)
+  if m.lastProfileFocusBeforeCdnDialog <> invalid then
+    m.lastProfileFocusBeforeCdnDialog.setFocus(true)
+    m.lastProfileFocusBeforeCdnDialog = invalid
+    return true
+  end if
+
+  if m.screenProfileSelected <> invalid and m.screenProfileSelected.visible then
+    if m.profilesElements <> invalid and m.profilesElements.getChildCount() > 1 then
+      m.profilesElements.getChild(1).setFocus(true)
+    else if m.manageProfile <> invalid then
+      m.manageProfile.setFocus(true)
+    end if
+  else if m.screenProfileEdit <> invalid and m.screenProfileEdit.visible then
+    if m.btnSave <> invalid then
+      m.btnSave.setFocus(true)
+    else if m.profileImageEdit <> invalid then
+      m.profileImageEdit.setFocus(true)
+    end if
+  else if m.screenAvatarEdit <> invalid and m.carouselContainer <> invalid then
+    m.carouselContainer.setFocus(true)
+  end if
+
+  m.lastProfileFocusBeforeCdnDialog = invalid
+  return true
+end function
+
 ' Funcion que interpreta los eventos de teclado y retorna true si fue porcesada por este componente. Sino es porcesado por el
 ' entonces sigue con el siguente metodo onKeyEvent del compoente superior
 function onKeyEvent(key as string, press as boolean) as boolean
@@ -423,16 +486,19 @@ sub onDialogDeleteClosed(_event)
     requestId = createRequestId()
 
     action = {
-    apiRequestManager: m.apiRequestManager
-    url: urlProfilesbyId(m.apiUrl, m.profileByEdit.id)
-    method: "DELETE"
-    responseMethod: "onSuccessDeleteResponse"
-    body: invalid
-    token: invalid
-    publicApi: false
-    requestId: requestId
-    dataAux: invalid
-    run: function() as Object
+      node: m.top
+      apiRequestManager: m.apiRequestManager
+      url: urlProfilesbyId(m.profileByEdit.id)
+      method: "DELETE"
+      responseMethod: "onSuccessDeleteResponse"
+      body: invalid
+      token: invalid
+      publicApi: false
+      methodName: "onDialogDeleteClosed"
+      parameter: FormatJson(_event)
+      requestId: requestId
+      dataAux: invalid
+      run: function() as Object
       m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux)
       return { success: true, error: invalid }
     end function
@@ -655,7 +721,6 @@ end sub
 ' Carga la configuracion inicial del componente, escuchando los observable y obteniendo las 
 ' referencias de compenentes necesarios para su uso
 sub __initConfig()
-  if m.apiUrl = invalid then m.apiUrl = getConfigVariable(m.global.configVariablesKeys.API_URL) 
   if m.beaconUrl = invalid then m.beaconUrl = getConfigVariable(m.global.configVariablesKeys.BEACON_URL) 
 
   width = m.scaleInfo.width
@@ -716,14 +781,18 @@ sub __getAllProfile()
   requestId = createRequestId()
 
   action = {
+    node: m.top
     apiRequestManager: m.apiRequestManager
-    url: urlProfiles(m.apiUrl)
+    url: urlProfiles()
     method: "GET"
     responseMethod: "onGetAllProfileResponse"
     body: invalid
     token: invalid
     publicApi: false
+    methodName: "__getAllProfile"
+    parameter: invalid
     dataAux: invalid
+    requestId: requestId
     run: function() as Object
       m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux)
       return { success: true, error: invalid }
@@ -794,13 +863,16 @@ sub __editProfile(profileId)
   
   requestId = createRequestId()
   action = {
+    node: m.top
     apiRequestManager: m.apiRequestManager
-    url: urlProfilesbyId(m.apiUrl, profileId)
+    url: urlProfilesbyId(profileId)
     method: "GET"
     responseMethod: "onGetByIdResponse"
     body: invalid
     token: invalid
     publicApi: false
+    methodName: "__editProfile"
+    parameter: FormatJson(profileId)
     dataAux: invalid
     requestId: requestId
     run: function() as Object
@@ -821,13 +893,16 @@ sub __selectProfile(profileId, auxInfo)
   
   requestId = createRequestId()
   action = {
+    node: m.top
     apiRequestManager: m.apiRequestManager
-    url: urlAuthProfile(m.apiUrl, profileId)
+    url: urlAuthProfile(profileId)
     method: "PUT"
     responseMethod: "onSuccessSelectResponse"
     body: invalid
     token: invalid
     publicApi: false
+    methodName: "__selectProfile"
+    parameter: [FormatJson(profileId), FormatJson(auxInfo)]
     requestId: requestId
     dataAux: StrI(profileId)
     run: function() as Object
@@ -852,13 +927,16 @@ sub __editAvatar()
 
   requestId = createRequestId()
   action = {
+    node: m.top
     apiRequestManager: m.apiRequestManager
-    url: urlAvatarsAll(m.apiUrl)
+    url: urlAvatarsAll()
     method: "GET"
     responseMethod: "onGetAllAvatarsResponse"
     body: invalid
     token: invalid
     publicApi: false
+    methodName: "__editAvatar"
+    parameter: invalid
     dataAux: invalid
     requestId: requestId
     run: function() as Object
@@ -881,13 +959,16 @@ sub __addProfile()
   
   requestId = createRequestId()
   action = {
+    node: m.top
     apiRequestManager: m.apiRequestManager
-    url: urlAvatarsDefault(m.apiUrl)
+    url: urlAvatarsDefault()
     method: "GET"
     responseMethod: "onGetDefaultAvatarResponse"
     body: invalid
     token: invalid
     publicApi: false
+    methodName: "__addProfile"
+    parameter: invalid
     dataAux: invalid
     requestId: requestId
     run: function() as Object
@@ -925,13 +1006,16 @@ sub __saveProfile()
     'update
     requestId = createRequestId()
     action = {
+      node: m.top
       apiRequestManager: m.apiRequestManager
-      url: urlProfilesbyId(m.apiUrl, m.profileByEdit.id)
+      url: urlProfilesbyId(m.profileByEdit.id)
       method: "PUT"
       responseMethod: "onSuccessSaveResponse"
       body: FormatJson(m.profileByEdit)
       token: invalid
       publicApi: false
+      methodName: "__saveProfile"
+      parameter: invalid
       dataAux: invalid
       requestId: requestId
       run: function() as Object
@@ -946,13 +1030,16 @@ sub __saveProfile()
     'insert
     requestId = createRequestId()
     action = {
+      node: m.top
       apiRequestManager: m.apiRequestManager
-      url: urlProfiles(m.apiUrl)
+      url: urlProfiles()
       method: "POST"
       responseMethod: "onSuccessSaveResponse"
       body: FormatJson(m.profileByEdit)
       token: invalid
       publicApi: false
+      methodName: "__saveProfile"
+      parameter: invalid
       dataAux: invalid
       requestId: requestId
       run: function() as Object
@@ -1113,29 +1200,22 @@ sub __clearScreen()
   m.screenAvatarEdit.visible = false
 end sub
 
-sub onActiveApiUrlChanged()
-  __syncApiUrlFromGlobal()
-end sub
-
-sub __syncApiUrlFromGlobal()
-  if m.global.activeApiUrl <> invalid and m.global.activeApiUrl <> "" then
-    m.apiUrl = m.global.activeApiUrl
-  end if
-end sub
-
 ' Guardar el log cuandos se cambia una opción del menú 
 sub __saveActionLog(actionLog as object)
 
-  if beaconTokenExpired() and m.apiUrl <> invalid then
+  if beaconTokenExpired() then
     requestId = createRequestId()
     action = {
+      node: m.top
       apiRequestManager: m.apiLogRequestManager
-      url: urlActionLogsToken(m.apiUrl)
+      url: urlActionLogsToken()
       method: "GET"
       responseMethod: "onActionLogTokenResponse"
       body: invalid
       token: invalid
       publicApi: false
+      methodName: "__saveActionLog"
+      parameter: FormatJson(actionLog)
       requestId: requestId
       dataAux: FormatJson(actionLog)
       run: function() as Object
@@ -1174,13 +1254,16 @@ sub __sendActionLog(actionLog as object)
     requestId = createRequestId()
 
     action = {
+      node: m.top
       apiRequestManager: m.apiLogRequestManager
-      url: urlActionLogs(m.beaconUrl)
+      url: urlActionLogs()
       method: "POST"
       responseMethod: "onActionLogResponse"
       body: FormatJson(actionLog)
       token: beaconToken
       publicApi: false
+      methodName: "__sendActionLog"
+      parameter: FormatJson(actionLog)
       dataAux: invalid
       requestId: requestId
       run: function() as Object

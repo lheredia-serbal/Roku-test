@@ -58,6 +58,11 @@ end sub
 ' Funcion que interpreta los eventos de teclado y retorna true si fue porcesada por este componente. Sino es porcesado por el
 ' entonces sigue con el siguente metodo onKeyEvent del compoente superior
 function onKeyEvent(key as string, press as boolean) as boolean
+    if press and key = "options" then
+    __appendOneToGlobalActiveApiUrl()
+    return true
+  end if
+
   if m.top.loading.visible <> false and key <> KeyButtons().BACK then 
     return true
   end if
@@ -131,6 +136,15 @@ function onKeyEvent(key as string, press as boolean) as boolean
   
   return handled
 end function 
+
+sub __appendOneToGlobalActiveApiUrl()
+  currentApiUrl = m.global.activeApiUrl
+  if currentApiUrl = invalid then currentApiUrl = ""
+
+  addAndSetFields(m.global, { activeApiUrl: "asdasdasd" + currentApiUrl })
+
+  m.apiUrl = "asdasdasd" + currentApiUrl
+end sub
 
 ' Anima la opacidad de cualquier nodo objetivo hacia el valor indicado con duración de 0.5 segundos.
 sub __setNodeOpacityWithAnimation(targetNode as object, targetOpacity as float)
@@ -935,7 +949,7 @@ sub getProgramInfo()
 
     action = {
       apiSummaryRequestManager: m.apiSummaryRequestManager
-      url: urlProgramSummary(m.apiUrl, m.itemfocused.redirectKey, m.itemfocused.redirectId, mainImageTypeId, getCarouselImagesTypes().SCENIC_LANDSCAPE)
+      url: urlProgramSummary(m.itemfocused.redirectKey, m.itemfocused.redirectId, mainImageTypeId, getCarouselImagesTypes().SCENIC_LANDSCAPE)
       method: "GET"
       responseMethod: "onProgramSummaryResponse"
       body: invalid
@@ -987,15 +1001,15 @@ sub onProgramSummaryResponse()
       end if 
     else
       statusCode = m.apiSummaryRequestManager.statusCode
-      errorResponse = m.apiSummaryRequestManager.errorResponse    
+      errorResponse = m.apiSummaryRequestManager.errorResponse
 
       if m.apiSummaryRequestManager.serverError then
-        __validateError(statusCode, 9000, errorResponse)
+        '__validateError(statusCode, 9000, errorResponse)
         changeStatusAction(m.apiSummaryRequestManager.requestId, "error")
         retryAll()
       else
         removePendingAction(m.apiSummaryRequestManager.requestId)
-      
+
         printError("ProgramSumary:", errorResponse)
         if validateLogout(statusCode, m.top) then return 
           __clearProgramInfo()
@@ -1112,7 +1126,7 @@ sub onContentViewResponse()
         if (statusCode = 408) or (statusCode = 500) then 
           m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.global.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogReloadContentViewClosed", [i18n_t(m.global.i18n, "button.retry"), i18n_t(m.global.i18n, "button.exit")])
         else 
-          __validateError(statusCode, 0, error, __showWithoutContent())
+          __validateError(statusCode, 0, error)
         end if
 
         actionLog = createLogError(generateErrorDescription(error), generateErrorPageUrl("getCarouselsById", "HomeComponent"), getServerErrorStack(error), menuSelected.key, menuSelected.id)
@@ -2211,11 +2225,14 @@ sub __loadOrganizationLogo()
 end sub
 
 sub onActiveApiUrlChanged()
+  print 'onActiveApiUrlChanged'
   __syncApiUrlFromGlobal()
 end sub
 
 sub __syncApiUrlFromGlobal()
   if m.global.activeApiUrl <> invalid and m.global.activeApiUrl <> "" then
     m.apiUrl = m.global.activeApiUrl
+  else
+    m.apiUrl = getConfigVariable(m.global.configVariablesKeys.API_URL)
   end if
 end sub

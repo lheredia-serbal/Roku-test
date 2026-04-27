@@ -99,18 +99,18 @@ function validateErrorServer() as boolean
 end function
 
 ' Obtiene las variables de configuracion del global
-function setConfigVariable(key as String, value as String) as Dynamic
+function setConfigVariable(key as String, value as String, mode as String) as Dynamic
     __setInitialValues()
-    globalVariables = m.global.variables
-    if m.global.variables <> invalid
-        for each item in m.global.variables
-            if item["variable"] = key then
-                item["value"] = value
+    globalVariables = m.global.domainManagerState
+    if globalVariables <> invalid
+        for each item in globalVariables._resources
+            if item.name = key then
+                item[mode] = value
             end if
         next
     end if
 
-    addAndSetFields(m.global, {variables: globalVariables} )
+    addAndSetFields(m.global, {domainManagerState: globalVariables} )
 end function
 
 ' Obtiene las variables de configuracion del global
@@ -160,9 +160,9 @@ function getImageUrl(image, defautlValue = invalid) as Dynamic
     if image = invalid then return defautlValue
     __setInitialValues()
 
-    if image <> invalid and image.rootVariable <> invalid and getConfigVariable(image.rootVariable) <> invalid then
+    if image <> invalid and image.rootVariable <> invalid and __getVariable(image.rootVariable) <> invalid then
         ' Arma la URL base cuando la imagen depende de una variable remota.
-        imageUrl = getConfigVariable(image.rootVariable) + image.relativePath
+        imageUrl = __getVariable(image.rootVariable) + image.relativePath
         return imageUrl
     else if image.relativePath <> invalid and image.rootVariable = invalid
         imageUrl = image.relativePath
@@ -170,6 +170,29 @@ function getImageUrl(image, defautlValue = invalid) as Dynamic
     else 
         return defautlValue
     end if
+end function
+
+' Obtener las URLs de las APIs a partir de los resources.
+function __getVariable(key as String) as String
+
+    if m.global <> invalid and m.global.domainManagerState <> invalid then
+        m.domainManagerState = m.global.domainManagerState
+
+        state = m.global.domainManagerState
+        if state._resources <> invalid then
+            for each item in state._resources
+                if item <> invalid and item.name = key then
+                    if state._mode = "Primary" or item.secondary = invalid then
+                        return item.primary
+                    else
+                        return item.secondary
+                    end if
+                end if
+            end for
+        end if
+    end if
+
+    return ""
 end function
 
 ' Normaliza la URL según el protocolo global configurado.
@@ -201,12 +224,11 @@ end function
 ' url: Direcion a donde realizara la llamada.
 ' method: Metodo a realizar (GET / POST / PUT / DELETE / PATCH).
 ' responseMethod: Funcion a llamar al terminar la peticion.
-' responseMethod: Funcion a llamar al terminar la peticion.
 ' body: Cuerpo a enviar en la peticion. Debe enviarse como un string. Por defecto es vacio.
 ' token: Token a enviar, si se setea entocnes anula el Token de la aplicacion. Por defecto es vacio.
 ' publicApi: Si la llamada debe realizarse con Token, si se setea en False entonces valida que el token de la aplciaicon sea valido antes de llamar. Por defecto es False
 ' dataAux: Informacion adicional que necestio que el objeto concerve para cuando vuelva la respuesta 
-function sendApiRequest(apiRequestManager, url, method, responseMethod, requestId = invalid, body = invalid, token = invalid, publicApi = false, dataAux = invalid)
+function sendApiRequest(apiRequestManager, url, method, responseMethod, requestId = invalid, body = invalid, token = invalid, publicApi = false, dataAux = invalid, methodName = invalid)
   apiRequestManager = clearApiRequest(apiRequestManager)
   apiRequestManager = CreateObject("roSGNode", "APIRequestManager")
     'url = maybeCorruptApiUrl(url)
@@ -217,6 +239,7 @@ function sendApiRequest(apiRequestManager, url, method, responseMethod, requestI
   if token <> invalid and token <> "" then  apiRequestManager.setField("token", token) 
   if dataAux <> invalid and dataAux <> "" then  apiRequestManager.setField("dataAux", dataAux) 
   if requestId <> invalid and requestId <> "" then apiRequestManager.setField("requestId", requestId) 
+  if methodName <> invalid and methodName <> "" then apiRequestManager.setField("methodName", methodName) 
   apiRequestManager.ObserveField("statusCode", responseMethod)
   apiRequestManager.control = "RUN"
   return apiRequestManager
@@ -290,15 +313,32 @@ end function
 sub showCdnErrorDialog(overlayTransparent = false as Boolean)
     if m.global = invalid then return
     dialog = m.global.cdnErrorDialog
-    if dialog = invalid and m.top <> invalid then
-        scene = m.top.getScene()
-        if scene <> invalid then dialog = scene.findNode("cdnErrorDialog")
+    scene = invalid
+    ownerScreen = invalid
+
+    if dialog <> invalid then scene = dialog.getScene()
+    if scene = invalid and m.top <> invalid then scene = m.top.getScene()
+
+    if dialog = invalid and scene <> invalid then
+        dialog = scene.findNode("cdnErrorDialog")
     end if
     if dialog = invalid then return
+
+    if scene <> invalid then ownerScreen = __getActiveScreenForCdnDialog(scene)
+    if ownerScreen <> invalid and ownerScreen.id <> invalid then
+        addAndSetFields(m.global, {cdnDialogFocusOwnerId: ownerScreen.id})
+        if ownerScreen.id = "MainScreen" or ownerScreen.id = "ProfileScreen" then
+            ownerScreen.node.callFunc("cacheFocusBeforeCdnDialog")
+        end if
+    else
+        addAndSetFields(m.global, {cdnDialogFocusOwnerId: invalid})
+    end if
+
     'permite overlay transparente cuando se solicita.
     dialog.overlayTransparent = overlayTransparent
     dialog.showSpinner = false
     dialog.buttonDisabled = false
+    dialog.focusable = true
     dialog.visible = true
     dialog.setFocus(true)
 end sub
@@ -306,17 +346,72 @@ end sub
 sub hideCdnErrorDialog()
     if m.global = invalid then return
     dialog = m.global.cdnErrorDialog
-    if dialog = invalid and m.top <> invalid then
-        scene = m.top.getScene()
-        if scene <> invalid then dialog = scene.findNode("cdnErrorDialog")
+    scene = invalid
+    ownerScreen = invalid
+    ownerId = invalid
+
+    if dialog <> invalid then scene = dialog.getScene()
+    if scene = invalid and m.top <> invalid then scene = m.top.getScene()
+
+    if dialog = invalid and scene <> invalid then
+        dialog = scene.findNode("cdnErrorDialog")
     end if
     if dialog = invalid then return
+
+    if m.global.cdnDialogFocusOwnerId <> invalid and m.global.cdnDialogFocusOwnerId <> "" then
+        ownerId = m.global.cdnDialogFocusOwnerId
+    end if
+    if ownerId <> invalid and scene <> invalid then
+        ownerNode = scene.findNode(ownerId)
+        if ownerNode <> invalid then ownerScreen = { id: ownerId, node: ownerNode }
+    end if
+
     ' Resetea el overlay transparente al ocultar el diálogo CDN.
     dialog.overlayTransparent = false
     dialog.showSpinner = false
     dialog.buttonDisabled = false
+    dialog.setFocus(false)
     dialog.visible = false
+    dialog.focusable = false
+    if ownerScreen <> invalid and ownerScreen.node <> invalid then
+        if ownerScreen.id = "MainScreen" or ownerScreen.id = "ProfileScreen" then
+            ownerScreen.node.callFunc("restoreFocusAfterCdnDialog")
+        else
+            ownerScreen.node.setFocus(true)
+        end if
+    end if
+    addAndSetFields(m.global, {cdnDialogFocusOwnerId: invalid})
 end sub
+
+function __getActiveScreenForCdnDialog(scene as Object) as Dynamic
+    if scene = invalid then return invalid
+    screenIds = [
+        "MainScreen"
+        "ProfileScreen"
+        "PlayerScreen"
+        "SearchScreen"
+        "ProgramDetailScreen"
+        "ViewAllScreen"
+        "SettingScreen"
+        "EmissionsScreen"
+        "LoginScreen"
+        "LauncherScreen"
+        "KillSessionScreen"
+    ]
+
+    firstVisible = invalid
+    for each screenId in screenIds
+        node = scene.findNode(screenId)
+        if node = invalid then
+            ' Ignora nodos no presentes.
+        else
+            if firstVisible = invalid and node.visible then firstVisible = { id: screenId, node: node }
+            if node.isInFocusChain() then return { id: screenId, node: node }
+        end if
+    end for
+
+    return firstVisible
+end function
 
 ' Limipia las variables del modal y retornan la respuesta. Se debe asignar la variable del modal con invalid 
 ' para que sea limpiado por el garbage collection 

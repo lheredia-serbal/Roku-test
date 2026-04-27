@@ -1485,9 +1485,9 @@ sub onGetNewProgramInfo()
   url = invalid
 
   if m.program <> invalid then
-    url = urlProgramSummary(m.apiUrl, m.program.infoKey, m.program.infoId, getCarouselImagesTypes().NONE, getCarouselImagesTypes().NONE)
+    url = urlProgramSummary(m.program.infoKey, m.program.infoId, getCarouselImagesTypes().NONE, getCarouselImagesTypes().NONE)
   else if m.lastKey <> invalid AND  m.lastId <> invalid then 
-    url = urlProgramSummary(m.apiUrl, m.lastKey, m.lastId, getCarouselImagesTypes().NONE, getCarouselImagesTypes().NONE)
+    url = urlProgramSummary(m.lastKey, m.lastId, getCarouselImagesTypes().NONE, getCarouselImagesTypes().NONE)
   end if
 
   if url <> invalid then
@@ -1737,7 +1737,7 @@ sub __loadPlayer(streaming, focusPlayer = true)
       requestId = createRequestId()
       action = {
         apiProgramManager: m.apiProgramManager
-        url: urlProgramSummary(m.apiUrl, streaming.key, streaming.id, getCarouselImagesTypes().NONE, getCarouselImagesTypes().NONE)
+        url: urlProgramSummary(streaming.key, streaming.id, getCarouselImagesTypes().NONE, getCarouselImagesTypes().NONE)
         method: "GET"
         responseMethod: "onProgramSummaryResponse"
         body: invalid

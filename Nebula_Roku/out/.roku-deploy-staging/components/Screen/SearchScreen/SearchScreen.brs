@@ -934,7 +934,7 @@ sub __getSearchPrograms(query as string)
   ' Construyo la acción HTTP de búsqueda.
   action = {
     apiRequestManager: m.apiRequestManager
-    url: urlSearch(m.apiUrl)
+    url: urlSearch()
     method: "POST"
     responseMethod: "onGetSearchProgramsResponse"
     body: FormatJson({ "searchText": query.trim() })
@@ -985,7 +985,7 @@ sub __getRecommendedCarousel()
   ' Construyo la acción HTTP con el mismo patrón de ProgramDetail.
   action = {
     apiRequestManager: m.apiRequestManager
-    url: urlErrorPage(m.apiUrl)
+    url: urlErrorPage()
     method: "GET"
     responseMethod: "onGetRecommendedResponse"
     body: invalid

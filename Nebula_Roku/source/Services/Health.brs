@@ -1,7 +1,11 @@
-function urlHealth(apiUrl)
-    return apiUrl + "/"+ m.global.apiVersions.V2 +"/Health"
+function urlHealth(apiUrl = invalid)
+    if (apiUrl = invalid) then
+        apiUrl = getServiceBaseUrl()
+    end if
+    return apiUrl + "/"+ m.global.apiVersions.V3 +"/Health"
 end function
 
-function urlClientsHealth(apiUrl)
-    return apiUrl + "/v1/health"
+function urlClientsHealth(baseUrl)
+    baseUrl = getServiceBaseUrl()
+    return baseUrl + "/v1/health"
 end function

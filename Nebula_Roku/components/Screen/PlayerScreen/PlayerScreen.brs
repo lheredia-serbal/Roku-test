@@ -1302,7 +1302,7 @@ end sub
 ' Metodo que dispara el guardado del ultimo canal visto. La llamada a este metodo esta definida por un timer
 sub onSaveLastWatched()
   if m.program <> invalid and m.program.channel <> invalid  and m.streaming <> invalid and (m.streaming.type <> invalid and m.streaming.type <> "" and (LCase(m.streaming.type) = getVideoType().LIVE) or (LCase(m.streaming.type) = getVideoType().LIVE_REWIND)) then 
-    m.apiLastWatchedRequestManager = sendApiRequest(m.apiLastWatchedRequestManager, urlChannelsLastWatched(m.apiUrl), "PUT", "onLastWatchedResponse", invalid, FormatJson({ key: "ChannelId", id: m.program.channel.id }))
+    m.apiLastWatchedRequestManager = sendApiRequest(m.apiLastWatchedRequestManager, urlChannelsLastWatched(), "PUT", "onLastWatchedResponse", invalid, FormatJson({ key: "ChannelId", id: m.program.channel.id }))
   end if
 end sub
 
@@ -1329,7 +1329,7 @@ end sub
 ' Metodo que dispara el guardado del beacon
 sub onSendBeacon()
   position = 0
-  url = urlWatchKeepAlive(m.apiBeaconUrl)
+  url = urlWatchKeepAlive()
 
   if m.videoPlayer <> invalid then 
     if m.videoPlayer.position >= 0 then  position = m.videoPlayer.position
@@ -1374,7 +1374,7 @@ sub onSendBeaconResponse()
       watchSessionId = getWatchSessionId()
       if statusCode = 401 then 
         requestId = createRequestId()
-        m.apiBeaconRequestManager = sendApiRequest(m.apiBeaconRequestManager, urlWatchValidate(m.apiUrl, watchSessionId, m.streaming.redirectKey, m.streaming.redirectId), "GET", "onWatchValidateResponse", requestId)
+        m.apiBeaconRequestManager = sendApiRequest(m.apiBeaconRequestManager, urlWatchValidate(watchSessionId, m.streaming.redirectKey, m.streaming.redirectId), "GET", "onWatchValidateResponse", requestId)
       end if
 
       printError("onSendBeaconResponse:", errorResponse)
@@ -1431,7 +1431,7 @@ sub onPinDialogLoad()
   if (resp.option = 0 and resp.pin <> invalid and Len(resp.pin) = 4) then 
     if m.lastButtonSelect <> invalid then m.lastButtonSelect.setFocus(true)
     requestId = createRequestId()
-    m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlParentalControlPin(m.apiUrl, resp.pin), "GET", "onParentalControlResponse", requestId)
+    m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlParentalControlPin(resp.pin), "GET", "onParentalControlResponse", requestId)
   else 
     m.repositionChannnelList = true
     if m.lastButtonSelect <> invalid then m.lastButtonSelect.setFocus(true)
@@ -1891,7 +1891,7 @@ sub __getChannels(getNewChannels = true)
   if getNewChannels then
     action = {
       apiRequestManager: m.apiRequestManager
-      url: urlChannels(m.apiUrl)
+      url: urlChannels()
       method: "GET"
       responseMethod: "onChannelsResponse"
       body: invalid
@@ -2258,7 +2258,7 @@ sub __closePlayer(onBack = false, logout = false)
         secondsElapsed: Int(position)
       }
     
-      m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlWatchEnd(m.apiUrl), "POST", "onEndWatchResponse", invalid, FormatJson(body), invalid, true)
+      m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlWatchEnd(), "POST", "onEndWatchResponse", invalid, FormatJson(body), invalid, true)
     end if
   end if 
   
@@ -2363,7 +2363,7 @@ sub __loadStreamingURL(key, id, streamingAction, streamingType = getStreamingTyp
   requestId = createRequestId()
   action = {
     apiRequestManager: m.apiRequestManager
-    url: urlStreaming(m.apiUrl, m.lastKey, m.lastId, streamingAction, streamingType, startpid)
+    url: urlStreaming(m.lastKey, m.lastId, streamingAction, streamingType, startpid)
     method: "GET"
     responseMethod: "onStreamingsResponse"
     body: invalid
@@ -2423,7 +2423,7 @@ end function
 ' Guardar el log cuandos se cambia una opción del menú 
 sub __saveActionLog(actionLog as object)
   if beaconTokenExpired() and m.apiUrl <> invalid then
-    m.apiLogRequestManager = sendApiRequest(m.apiLogRequestManager, urlActionLogsToken(m.apiUrl), "GET", "onActionLogTokenResponse", invalid, invalid, invalid, false, FormatJson(actionLog))
+    m.apiLogRequestManager = sendApiRequest(m.apiLogRequestManager, urlActionLogsToken(), "GET", "onActionLogTokenResponse", invalid, invalid, invalid, false, FormatJson(actionLog))
   else
     __sendActionLog(actionLog)
   end if
@@ -2434,7 +2434,7 @@ sub __sendActionLog(actionLog as object)
   beaconToken = getBeaconToken()
 
   if (beaconToken <> invalid and m.beaconUrl <> invalid)
-    m.apiLogRequestManager = sendApiRequest(m.apiLogRequestManager, urlActionLogs(m.beaconUrl), "POST", "onActionLogResponse", invalid, FormatJson(actionLog), beaconToken, false)
+    m.apiLogRequestManager = sendApiRequest(m.apiLogRequestManager, urlActionLogs(), "POST", "onActionLogResponse", invalid, FormatJson(actionLog), beaconToken, false)
   end if
 end sub
 
@@ -3294,7 +3294,7 @@ end sub
 
 ' Actualizar al watch token
 sub __refreshWatchTokenData(key as string, id as integer)
-  m.apiSessionRequestManager = sendApiRequest(m.apiSessionRequestManager, urlUpdateWatchSession(m.apiUrl, key,  id), "GET", "onUpdateWatchSessionResponse", invalid, getWatchToken())
+  m.apiSessionRequestManager = sendApiRequest(m.apiSessionRequestManager, urlUpdateWatchSession(key,  id), "GET", "onUpdateWatchSessionResponse", invalid, getWatchToken())
 end sub
 
 ' Obtiene le tiempo actual

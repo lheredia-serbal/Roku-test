@@ -56,7 +56,7 @@ sub getProgramInfo()
   requestId = createRequestId() 
   action = { 
     apiSummaryRequestManager: m.apiSummaryRequestManager
-    url: urlProgramSummary(m.apiUrl, m.itemfocused.redirectKey, m.itemfocused.redirectId, mainImageTypeId, getCarouselImagesTypes().SCENIC_LANDSCAPE)
+    url: urlProgramSummary(m.itemfocused.redirectKey, m.itemfocused.redirectId, mainImageTypeId, getCarouselImagesTypes().SCENIC_LANDSCAPE)
     method: "GET" 
     responseMethod: "onProgramSummaryResponse"
     body: invalid 
@@ -783,7 +783,7 @@ end sub
 function __getViewAllRequestConfig() as Object 
   ' Si llega contentViewId válido, priorizamos el flujo SearchById.
   if __hasValidContentViewId() then return { 
-    url: urlSearchById(m.apiUrl, m.viewAllPayload.carouselId) 
+    url: urlSearchById(m.viewAllPayload.carouselId) 
     method: "POST"
     body: __buildSearchBody(m.viewAllPayload.contentViewId)
   }

@@ -1,3 +1,4 @@
-function urlMenu(apiUrl, productCode)
-    return apiUrl + "/"+ m.global.apiVersions.V2 +"/Menu?pr=" + productCode
+function urlMenu(productCode)
+    baseUrl = getServiceBaseUrl()
+    return baseUrl + "/"+ m.global.apiVersions.V3 +"/Menu?pr=" + productCode
 end function

@@ -1,7 +1,9 @@
-function urlAvatarsAll(apiUrl)
-    return apiUrl + "/"+ m.global.apiVersions.V2 +"/Avatars"
+function urlAvatarsAll()
+    baseUrl = getServiceBaseUrl()
+    return baseUrl + "/"+ m.global.apiVersions.V3 +"/Avatars"
 end function
 
-function urlAvatarsDefault(apiUrl)
-    return apiUrl + "/"+ m.global.apiVersions.V2 +"/Avatars/Default"
+function urlAvatarsDefault()
+    baseUrl = getServiceBaseUrl()
+    return baseUrl + "/"+ m.global.apiVersions.V3 +"/Avatars/Default"
 end function

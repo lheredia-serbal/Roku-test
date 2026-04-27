@@ -1,9 +1,10 @@
-function urlTokensUpdate(authUrl)
-    return authUrl + "/" + m.global.apiVersions.V1 + "/Tokens/Update"
+function urlTokensUpdate()
+    baseUrl = getAuthBaseUrl()
+    return baseUrl + "/" + m.global.apiVersions.V1 + "/Tokens/Update"
 end function
 
-
-function urlTokensReAuthenticate(authUrl)
-    return authUrl + "/" + m.global.apiVersions.V1 + "/Tokens/ReAuthenticate"
+function urlTokensReAuthenticate()
+    baseUrl = getAuthBaseUrl()
+    return baseUrl + "/" + m.global.apiVersions.V1 + "/Tokens/ReAuthenticate"
 end function
 

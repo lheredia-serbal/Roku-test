@@ -185,20 +185,18 @@ end function
 function __updateToken(accToken) as object
     refToken = getRefreshToken()
 
-    authUrl = getConfigVariable(m.global.configVariablesKeys.AUTH_API_URL)
     tokenBody = FormatJson({accessToken: accToken})
     
-    newAuxToken = __apiRequest(urlTokensUpdate(authUrl), "POST", tokenBody, refToken)
-
+    newAuxToken = __apiRequest(urlTokensUpdate(), "POST", tokenBody, refToken)
     
     if validateStatusCode(newAuxToken.statusCode) then
         respToken = ParseJson(newAuxToken.response)
         saveTokens(respToken)
 
-       return newAuxToken 
+        return newAuxToken
     else
         if newAuxToken.statusCode = 401 then 
-            return __reAuthenticate(authUrl, accToken, refToken)
+            return __reAuthenticate(accToken, refToken)
         else 
             return { statusCode: newAuxToken.statusCode }
         end if
@@ -206,7 +204,7 @@ function __updateToken(accToken) as object
 end function
 
 ' Trata de reloguear al usuario a traves del token de reautenticacion- 
-function __reAuthenticate(authUrl, accToken, refToken) as object
+function __reAuthenticate(accToken, refToken) as object
     reAuthToken = getReAuthenticateToken()
     device = m.global.device
 
@@ -218,7 +216,7 @@ function __reAuthenticate(authUrl, accToken, refToken) as object
         macWireless: device.macWireless
     })
     
-    newAuxToken = __apiRequest(urlTokensReAuthenticate(authUrl), "POST", tokenBody, reAuthToken)
+    newAuxToken = __apiRequest(urlTokensReAuthenticate(), "POST", tokenBody, reAuthToken)
 
     
     if validateStatusCode(newAuxToken.statusCode) then

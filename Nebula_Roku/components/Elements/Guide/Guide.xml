@@ -10,8 +10,12 @@
     <script type="text/brightscript" uri="pkg:/source/Utils.brs" />
     <script type="text/brightscript" uri="pkg:/source/Utils/DateFunctions.brs" />
     <script type="text/brightscript" uri="pkg:/source/Enums.brs" />
-
+    
+    <script type="text/brightscript" uri="pkg:/source/Services/DomainManager.brs" />
+    <script type="text/brightscript" uri="pkg:/source/Services/Retry.brs" />
+    <script type="text/brightscript" uri="pkg:/source/Services/ErrorCode.brs" />
     <script type="text/brightscript" uri="pkg:/source/Services/Epg.brs" />
+    <script type="text/brightscript" uri="pkg:/source/Services/Health.brs" />
     <script type="text/brightscript" uri="pkg:/source/Services/ParentalControl.brs" />
 
     <interface>

@@ -146,7 +146,7 @@ sub initFocus()
 
         action = {
           apiRequestManager: m.apiRequestManager
-          url: urlProgramAction(m.apiUrl, m.program.key, m.program.id)
+          url: urlProgramAction(m.program.key, m.program.id)
           method: "GET"
           responseMethod: "onActionsResponse"
           body: invalid
@@ -597,7 +597,7 @@ sub __getProgramDetail(key, id)
 
   action = {
     apiRequestManager: m.apiRequestManager
-    url: urlProgramById(m.apiUrl, m.lastKey, m.lastId, getCarouselImagesTypes().POSTER_PORTRAIT, getCarouselImagesTypes().SCENIC_LANDSCAPE)
+    url: urlProgramById(m.lastKey, m.lastId, getCarouselImagesTypes().POSTER_PORTRAIT, getCarouselImagesTypes().SCENIC_LANDSCAPE)
     method: "GET"
     responseMethod: "onGetByIdResponse"
     body: invalid
@@ -756,11 +756,11 @@ sub __loadProgramInfo(program)
   requestId = createRequestId()
   
   ' Selecciona endpoint de relacionados según el origen de navegación.
-  relatedUrl = urlProgramRelated(m.apiUrl, m.program.key, m.program.id)
+  relatedUrl = urlProgramRelated(m.program.key, m.program.id)
   ' Si el detalle se abrió desde News, usa servicio específico para News.
   newsRedirectKey = m.program.key
   if m.redirectKey <> invalid then newsRedirectKey = m.redirectKey
-  if m.openFromNews then relatedUrl = urlProgramRelatedFromNews(m.apiUrl, newsRedirectKey, m.program.id)
+  if m.openFromNews then relatedUrl = urlProgramRelatedFromNews(newsRedirectKey, m.program.id)
 
   action = {
     apiRequestManager: m.apiRequestManager

@@ -146,3 +146,11 @@ function SearchMode() as object
         MANUAL: "manual"
     }
 end function
+
+function ConfigMode() as object
+    return {
+        "PRIMARY": "Primary",
+        "SECONDARY": "Secondary"
+        "RECOVERY": "Recovery"
+    }
+end function

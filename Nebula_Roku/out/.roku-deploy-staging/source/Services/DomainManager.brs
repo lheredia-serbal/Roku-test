@@ -44,11 +44,72 @@ function __getDomainManagerState() as Object
             _currentInitialConfig: "Primary"
             _initialConfigStatus: "idle"
             _initialConfigCallback: invalid
+            _changeModeStatus: "idle"
+            _changeModeCallback: invalid
+            _changeModeHealthRequestManager: invalid
         }
     end if
 
     return m.domainManagerState
 end function
+
+sub __finishChangeMode(success as Boolean)
+    state = __getDomainManagerState()
+    callback = state._changeModeCallback
+    state._changeModeStatus = "idle"
+    state._changeModeCallback = invalid
+    state._changeModeHealthRequestManager = clearApiRequest(state._changeModeHealthRequestManager)
+    __syncDomainManagerState(state)
+
+    if callback <> invalid then
+        if callback = "onRetryChangeModeResponse" then
+            onRetryChangeModeResponse(success)
+        else if m.top <> invalid then
+            m.top.callFunc(callback, success)
+        end if
+    end if
+end sub
+
+' Obtiene la base URL de API para servicios.
+' Si apiUrl viene por parámetro y es válida, la respeta.
+' Si no viene, usa activeApiUrl y como fallback usa la URL del modo actual.
+function getServiceBaseUrl(apiUrl = invalid as Dynamic) as String
+    if apiUrl <> invalid and apiUrl <> "" then return apiUrl
+
+    if m.global <> invalid and m.global.activeApiUrl <> invalid and m.global.activeApiUrl <> "" then
+        return m.global.activeApiUrl
+    end if
+
+    state = __getDomainManagerState()
+    baseUrl = __getApiUrlForMode(state._mode)
+    if baseUrl = invalid then return ""
+    return baseUrl
+end function
+
+function __requestChangeModeHealth(mode as String, responseHandler as String) as Boolean
+    state = __getDomainManagerState()
+    baseUrl = __getApiUrlForMode(mode)
+    if baseUrl = invalid or baseUrl = "" then return false
+    healthUrl = urlClientsHealth(baseUrl)
+    state._changeModeHealthRequestManager = sendApiRequest(state._changeModeHealthRequestManager, healthUrl, "GET", responseHandler, invalid, invalid, invalid, true)
+    __syncDomainManagerState(state)
+    return true
+end function
+
+sub __setChangeModeSuccess(mode as String)
+    baseUrl = __getApiUrlForMode(mode)
+    if baseUrl = invalid or baseUrl = "" then
+        __finishChangeMode(false)
+        return
+    end if
+
+    state = __getDomainManagerState()
+    state._mode = mode
+    state._currentConfig = mode
+    __updateActiveApiUrl(baseUrl)
+    __syncDomainManagerState(state)
+    __finishChangeMode(true)
+end sub
 
 ' Sincroniza el estado actual con el global para mantener los valores persistentes.
 sub __syncDomainManagerState(state as Object)
@@ -85,7 +146,7 @@ end function
 function __getApiUrlForMode(mode as String) as String
     resource = getResourceByName("ClientsApiUrl")
     if resource = invalid then return ""
-    if mode = "Primary" then return resource.primary
+    if mode = "Primary" then return resource.primary + "1"
     if mode = "Secondary" then return resource.secondary
     return ""
 end function
@@ -210,55 +271,93 @@ sub getNeedRefresh()
     end if
 end sub
 
-' Esta función se ejecuta cuando alguna api dió error de conexión con el servidor,
-' Prueba de nuevo con Primario y Secundario
-function changeMode() as Boolean
-    ' Cambiar de Primario a Secundario solo cuando el error sea de DNS.
+' Esta función se ejecuta cuando alguna api dió error de conexión con el servidor.
+' Ahora trabaja de forma asíncrona y notifica resultado en callback.
+function changeMode(responseHandler = invalid as Dynamic) as Boolean
     state = __getDomainManagerState()
+    if state._changeModeStatus = "pending" then return false
+    state._changeModeStatus = "pending"
+    state._changeModeCallback = responseHandler
+    __syncDomainManagerState(state)
 
-    state._mode = "Primary"
-
-    ' Probar primero con Primario
-    if __attemptHealthAndRetry("Primary") then 
-        return true
-    else
-        state._mode = "Secondary"
-    end if
-
-    ' Fallo Primario, probar con secundario
-    if __attemptHealthAndRetry("Secondary") then
-        return true
-    else 
-        ' Fallo con secundario, volver a buscar los archivos de configuración
-        enableFetchConfigJson()
-    end if
-
-    if state._fetchInitialConfig then
-        configResponse = __refreshConfigFromCdns()
-
-        ' No pudo obtener los archivos de configuración, mostrar el mensaje de error
-        if not configResponse then return false
-    end if
-
-    ' Volver a probar los primario y secundario de nuevo y por última vez
-    state._mode = "Primary"
-
-    if __attemptHealthAndRetry("Primary") then 
-        return true
-    else
-        state._mode = "Secondary"
-    end if
-
-    ' Fallo Primario, probar con secundario
-    if __attemptHealthAndRetry("Secondary") then
-        return true
-    else 
-        ' Volvió a fallar con Secundario, y ya se actualizaron los archivos  
+    if not __requestChangeModeHealth("Primary", "onChangeModeInitialPrimaryHealthResponse") then
+        __finishChangeMode(false)
         return false
     end if
 
-    return false
+    return true
 end function
+
+sub onChangeModeInitialPrimaryHealthResponse()
+    state = __getDomainManagerState()
+    success = validateStatusCode(state._changeModeHealthRequestManager.statusCode)
+    state._changeModeHealthRequestManager = clearApiRequest(state._changeModeHealthRequestManager)
+    __syncDomainManagerState(state)
+
+    if success then
+        __setChangeModeSuccess("Primary")
+        return
+    end if
+
+    if not __requestChangeModeHealth("Secondary", "onChangeModeInitialSecondaryHealthResponse") then
+        getInitialConfiguration("Primary", "onChangeModeRefreshConfigResponse")
+    end if
+end sub
+
+sub onChangeModeInitialSecondaryHealthResponse()
+    state = __getDomainManagerState()
+    success = validateStatusCode(state._changeModeHealthRequestManager.statusCode)
+    state._changeModeHealthRequestManager = clearApiRequest(state._changeModeHealthRequestManager)
+    __syncDomainManagerState(state)
+
+    if success then
+        __setChangeModeSuccess("Secondary")
+        return
+    end if
+
+    getInitialConfiguration("Primary", "onChangeModeRefreshConfigResponse")
+end sub
+
+sub onChangeModeRefreshConfigResponse(result as Object)
+    if result = invalid or result.success <> true then
+        __finishChangeMode(false)
+        return
+    end if
+
+    if not __requestChangeModeHealth("Primary", "onChangeModeRefreshPrimaryHealthResponse") then
+        __finishChangeMode(false)
+    end if
+end sub
+
+sub onChangeModeRefreshPrimaryHealthResponse()
+    state = __getDomainManagerState()
+    success = validateStatusCode(state._changeModeHealthRequestManager.statusCode)
+    state._changeModeHealthRequestManager = clearApiRequest(state._changeModeHealthRequestManager)
+    __syncDomainManagerState(state)
+
+    if success then
+        __setChangeModeSuccess("Primary")
+        return
+    end if
+
+    if not __requestChangeModeHealth("Secondary", "onChangeModeRefreshSecondaryHealthResponse") then
+        __finishChangeMode(false)
+    end if
+end sub
+
+sub onChangeModeRefreshSecondaryHealthResponse()
+    state = __getDomainManagerState()
+    success = validateStatusCode(state._changeModeHealthRequestManager.statusCode)
+    state._changeModeHealthRequestManager = clearApiRequest(state._changeModeHealthRequestManager)
+    __syncDomainManagerState(state)
+
+    if success then
+        __setChangeModeSuccess("Secondary")
+        return
+    end if
+
+    __finishChangeMode(false)
+end sub
 
 ' Llamar a la solicitud http Health
 function performHealthCheck(url as String, timeoutMS = 20000 as Integer) as boolean

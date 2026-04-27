@@ -9,10 +9,6 @@ function getCdnConfigUrls() As Object
     ]
 end function
 
-function getSimulateCdnFirstFailure() As Boolean
-    return false
-end function
-
 ' Función para obtener los colores Principales
 function getSpecialColors()
     return {

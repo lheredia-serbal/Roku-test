@@ -9,10 +9,12 @@ end function
 function __getPendingActions(status = "all") as Object
     actions = []
 
-    if m.pendingActions = invalid then
-        m.pendingActions = []
+    if m.global = invalid then return []
+
+    if m.global.pendingActions = invalid then
+        addAndSetFields(m.global, { pendingActions: [] })
     end if
-    actions = m.pendingActions
+    actions = m.global.pendingActions
 
     errorActions = []
     for each item in actions
@@ -27,7 +29,8 @@ end function
 ' Setear las actions que fallaron las peticiones http por problemas del servidor
 sub __setPendingActions(actions as Object)
     if actions = invalid then actions = []
-    m.pendingActions = __normalizePendingActions(actions)
+    if m.global = invalid then return
+    addAndSetFields(m.global, { pendingActions: __normalizePendingActions(actions) })
 end sub
 
 ' Limpia entradas inválidas y limita el tamaño del historial en memoria.
@@ -36,7 +39,7 @@ function __normalizePendingActions(actions as Object) as Object
 
     sanitized = []
     for each item in actions
-        if item <> invalid and item.action <> invalid and item.action.run <> invalid then
+        if item <> invalid then
             sanitized.push(item)
         end if
     end for
@@ -55,15 +58,6 @@ function __normalizePendingActions(actions as Object) as Object
     return trimmed
 end function
 
-' Obtiene el valor de un header de http response
-function __getHeaderValue(headers as Object, key as String) as Dynamic
-    ' Obtiene un header desde un objeto compatible (map o con método get).
-    if headers = invalid then return invalid
-    if headers.get <> invalid then return headers.get(key)
-    if headers.DoesExist(key) then return headers[key]
-    return invalid
-end function
-
 ' Registra todas las acciones que se vayan ejecutando en un historial
 sub __registerPendingAction(requestId, action as Object, apiTypeParam)
     if action = invalid or action.run = invalid then return
@@ -71,12 +65,12 @@ sub __registerPendingAction(requestId, action as Object, apiTypeParam)
     ' Validar que la misma acción no este registrada
     newActions = []
     for each item in actions
-        if item <> invalid and item.action <> invalid and item.action.responseMethod <> action.responseMethod and item.action.run <> invalid then 
+        if item <> invalid and item.action.responseMethod <> action.responseMethod and item.action.run <> invalid then 
             newActions.push(item)
         end if
     end for    
     ' Registrar la nueva acción
-    newActions.push({ id: requestId, action: action, apiTypeParam: apiTypeParam })
+    newActions.push({ id: requestId, action: action, apiTypeParam: apiTypeParam})
     __setPendingActions(newActions)
 end sub
 
@@ -89,7 +83,8 @@ sub removePendingAction(requestId as String)
             remaining.push(item)
         end if
     end for
-    m.pendingActions = remaining
+    print "second", remaining
+    __setPendingActions(remaining)
 end sub
 
 ' Cambiar el estado de una acción pendiente
@@ -104,13 +99,38 @@ sub changeStatusAction(requestId as String, status as String)
     __setPendingActions(pendingActions)
 end sub
 
+function __hasValidMethodAndScreen(action as Object) as Boolean
+    if action = invalid then return false
+    if type(action.methodname) <> "roString" or action.methodname = "" then return false
+    return true
+end function
+
+function __isCallableAction(action as Object) as Boolean
+    if action = invalid then return false
+    if action.run <> invalid then return true
+    return __hasValidMethodAndScreen(action)
+end function
 
 ' Ejecuta una acción y espera un resultado con { success, error }.
 function __runAction(action as Object) as Object
     result = { success: false, error: invalid }
-    if action = invalid or action.run = invalid then return result
-    
-    response = action.run()
+    if action = invalid then return result
+
+    response = invalid
+    if action.run <> invalid then
+        response = action.run()
+    else if __hasValidMethodAndScreen(action) then
+        if action.node <> invalid then
+            if action.paremeter <> invalid then
+                action.node.callFunc(action.methodName, ParseJson(action.paremeter))
+            else 
+                action.node.callFunc(action.methodName)
+            end if
+        end if
+    else
+        return result
+    end if
+
     if response <> invalid then
         if response.success <> invalid then result.success = response.success
         if response.error <> invalid then result.error = response.error
@@ -184,25 +204,31 @@ sub retryAll()
 
     wasEmpty = actions = invalid or actions.count() = 0
     if not wasEmpty then
-        response = changeMode()
-        if response then
+        started = changeMode("onRetryChangeModeResponse")
+    end if
+end sub
+
+sub onRetryChangeModeResponse(result as boolean)
+    if result = true then
+        actions = __getPendingActions("error")
+        if actions <> invalid then
             for each item in actions
-                if item <> invalid and item.action <> invalid then
-                    result = __runAction(item.action)
-                    if result.success = true then
+                if item <> invalid then
+                    response = __runAction(item.action)
+                    if response.success = true then
                         item.action.status = "success"
                     else
                         item.action.status = "error"
                     end if
                 end if
             end for
-        else 
-            showCdnErrorDialog()
         end if
-
-        ' Mantener solo errores pendientes para liberar memoria de acciones resueltas.
-        __setPendingActions(__getPendingActions("error"))
+    else 
+        showCdnErrorDialog()
     end if
+
+    ' Mantener solo errores pendientes para liberar memoria de acciones resueltas.
+    __setPendingActions(__getPendingActions("error"))
 end sub
 
 ' Ejecuta llamadas HTTP con failover y reconfiguración si es necesario.
@@ -220,7 +246,7 @@ sub updatePendingActionsApiUrl(previousApiUrl as Dynamic, nextApiUrl as Dynamic)
     actions = __getPendingActions()
     if actions = invalid then return
     for each item in actions
-        if item <> invalid and item.action <> invalid then
+        if item <> invalid then
             __updateActionUrl(item.action, previousApiUrl, nextApiUrl)
         end if
     end for
