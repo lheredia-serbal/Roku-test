@@ -145,6 +145,7 @@ sub initFocus()
         requestId = createRequestId()
 
         action = {
+          node: m.top
           apiRequestManager: m.apiRequestManager
           url: urlProgramAction(m.program.key, m.program.id)
           method: "GET"
@@ -152,6 +153,8 @@ sub initFocus()
           body: invalid
           token: invalid
           publicApi: false
+          methodName: "initFocus"
+          parameter: invalid
           requestId: requestId
           dataAux: invalid
           run: function() as Object
@@ -284,13 +287,16 @@ sub onWatchValidateResponse()
           requestId = createRequestId()
 
           action = {
+            node: m.top
             apiRequestManager: m.apiRequestManager
-            url: urlStreaming(m.apiUrl, m.program.key, m.program.id, m.streamingAction)
+            url: urlStreaming(m.program.key, m.program.id, m.streamingAction)
             method: "GET"
             responseMethod: "onStreamingsResponse"
             body: invalid
             token: invalid
             publicApi: false
+            methodName: "onWatchValidateResponse"
+            parameter: invalid
             requestId: requestId
             dataAux: invalid
             run: function() as Object
@@ -480,13 +486,16 @@ sub onPinDialogLoad()
     requestId = createRequestId()
 
      action = {
+      node: m.top
       apiRequestManager: m.apiRequestManager
-      url: urlParentalControlPin(m.apiUrl, resp.pin)
+      url: urlParentalControlPin(resp.pin)
       method: "GET"
       responseMethod: "onParentalControlResponse"
       body: invalid
       token: invalid
       publicApi: false
+      methodName: "onPinDialogLoad"
+      parameter: invalid
       requestId: requestId
       dataAux: invalid
       run: function() as Object
@@ -527,13 +536,16 @@ sub onParentalControlResponse()
           requestId = createRequestId()
 
           action = {
+            node: m.top
             apiRequestManager: m.apiRequestManager
-            url: urlWatchValidate(m.apiUrl, watchSessionId, m.program.key, m.program.id)
+            url: urlWatchValidate(watchSessionId, m.program.key, m.program.id)
             method: "GET"
             responseMethod: "onWatchValidateResponse"
             body: invalid
             token: invalid
             publicApi: false
+            methodName: "onParentalControlResponse"
+            parameter: invalid
             requestId: requestId
             dataAux: invalid
             run: function() as Object
@@ -596,6 +608,7 @@ sub __getProgramDetail(key, id)
   requestId = createRequestId()
 
   action = {
+    node: m.top
     apiRequestManager: m.apiRequestManager
     url: urlProgramById(m.lastKey, m.lastId, getCarouselImagesTypes().POSTER_PORTRAIT, getCarouselImagesTypes().SCENIC_LANDSCAPE)
     method: "GET"
@@ -603,6 +616,8 @@ sub __getProgramDetail(key, id)
     body: invalid
     token: invalid
     publicApi: false
+    methodName: "__getProgramDetail"
+    parameter: [FormatJson(key), FormatJson(id)]
     requestId: requestId
     dataAux: invalid
     run: function() as Object
@@ -763,6 +778,7 @@ sub __loadProgramInfo(program)
   if m.openFromNews then relatedUrl = urlProgramRelatedFromNews(newsRedirectKey, m.program.id)
 
   action = {
+    node: m.top
     apiRequestManager: m.apiRequestManager
     ' Usa URL dinámica para respetar origen News vs flujo general.
     url: relatedUrl
@@ -771,6 +787,8 @@ sub __loadProgramInfo(program)
     body: invalid
     token: invalid
     publicApi: false
+    methodName: "__loadProgramInfo"
+    parameter: FormatJson(program)
     dataAux: invalid
     requestId: requestId
     run: function() as Object
@@ -822,13 +840,16 @@ sub __openPlayer(streamingAction)
         requestId = createRequestId()
 
         action = {
+          node: m.top
           apiRequestManager: m.apiRequestManager
-          url: urlWatchValidate(m.apiUrl, watchSessionId, m.program.key, m.program.id)
+          url: urlWatchValidate(watchSessionId, m.program.key, m.program.id)
           method: "GET"
           responseMethod: "onWatchValidateResponse"
           body: invalid
           token: invalid
           publicApi: false
+          methodName: "__openPlayer"
+          parameter: FormatJson(streamingAction)
           dataAux: invalid
           requestId: requestId
           run: function() as Object
@@ -992,13 +1013,16 @@ sub __saveActionLog(actionLog as object)
     requestId = createRequestId()
 
     action = {
+      node: m.top
       apiRequestManager: m.apiLogRequestManager
-      url: urlActionLogsToken(m.apiUrl)
+      url: urlActionLogsToken()
       method: "GET"
       responseMethod: "onActionLogTokenResponse"
       body: invalid
       token: invalid
       publicApi: false
+      methodName: "__saveActionLog"
+      parameter: FormatJson(actionLog)
       requestId: requestId
       dataAux: FormatJson(actionLog)
       run: function() as Object
@@ -1037,13 +1061,16 @@ sub __sendActionLog(actionLog as object)
   if (beaconToken <> invalid and m.beaconUrl <> invalid)
     requestId = createRequestId()
     action = {
+      node: m.top
       apiRequestManager: m.apiLogRequestManager
-      url: urlActionLogs(m.beaconUrl)
+      url: urlActionLogs()
       method: "POST"
       responseMethod: "onActionLogResponse"
       body: FormatJson(actionLog)
       token: beaconToken
       publicApi: false
+      methodName: "__sendActionLog"
+      parameter: FormatJson(actionLog)
       requestId: requestId
       dataAux: invalid
       run: function() as Object

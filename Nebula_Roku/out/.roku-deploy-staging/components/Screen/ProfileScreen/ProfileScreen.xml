@@ -34,6 +34,8 @@
     
     <!-- Paramentros de Salida -->
     <field id="finished" alwaysnotify="true" type="boolean" value="false" />
+    <function name="cacheFocusBeforeCdnDialog" />
+    <function name="restoreFocusAfterCdnDialog" />
   </interface>
   
   <children>

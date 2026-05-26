@@ -12,6 +12,7 @@
   <script type="text/brightscript" uri="pkg:/source/Enums.brs" />
   <script type="text/brightscript" uri="pkg:/source/Storage.brs" />
   <script type="text/brightscript" uri="pkg:/source/BasicColor.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Utils/RetryUtils.brs" />
 
   <script type="text/brightscript" uri="pkg:/source/Services/Health.brs" />
   <script type="text/brightscript" uri="pkg:/source/Services/Platforms.brs" />

@@ -52,6 +52,9 @@
     <field id="openGuide" type="boolean" value="false"/>
     <field id="onExit" type="boolean" value="false"/>
     <field id="forceExit" type="boolean" value="false" />
+    <function name="cacheFocusBeforeCdnDialog" />
+    <function name="restoreFocusAfterCdnDialog" />
+    <function name="getProgramInfo" />
   </interface>
 
   <children>

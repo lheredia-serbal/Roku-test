@@ -1,6 +1,7 @@
 
 
-function urlEpgCarouselGuide(apiUrl, channelId)
-    return apiUrl + "/" + m.global.apiVersions.V2 + "/Epg/CarouselGuide?c=" + channelId.ToStr()
+function urlEpgCarouselGuide(channelId)
+    baseUrl = getServiceBaseUrl()
+    return baseUrl + "/" + m.global.apiVersions.V3 + "/Epg/CarouselGuide?c=" + channelId.ToStr()
 end function
 

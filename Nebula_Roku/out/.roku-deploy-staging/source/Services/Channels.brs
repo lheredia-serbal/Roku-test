@@ -1,7 +1,9 @@
-function urlChannelsLastWatched(apiUrl)
-    return apiUrl + "/"+ m.global.apiVersions.V2 + "/Channels/LastWatched"
+function urlChannelsLastWatched()
+    baseUrl = getServiceBaseUrl()
+    return baseUrl + "/"+ m.global.apiVersions.V3 + "/Channels/LastWatched"
 end function
 
-function urlChannels(apiUrl)
-    return apiUrl + "/"+ m.global.apiVersions.V2 +"/Channels"
+function urlChannels()
+    baseUrl = getServiceBaseUrl()
+    return baseUrl + "/"+ m.global.apiVersions.V3 +"/Channels"
 end function

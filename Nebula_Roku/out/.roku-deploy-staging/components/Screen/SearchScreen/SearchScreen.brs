@@ -769,7 +769,7 @@ sub onWatchValidateResponse()
       setWatchToken(resp.watchToken)
       if m.itemSelected <> invalid then
         ' Solicito URL de reproducción para el canal elegido.
-        m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlStreaming(m.apiUrl, m.itemSelected.redirectKey, m.itemSelected.redirectId), "GET", "onStreamingsResponse")
+        m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlStreaming(m.itemSelected.redirectKey, m.itemSelected.redirectId), "GET", "onStreamingsResponse")
       end if
     else
       ' Oculto loading cuando backend rechaza la validación funcional.
@@ -893,7 +893,7 @@ end sub
 sub __saveActionLog(actionLog as object)
 
   if beaconTokenExpired() and m.apiUrl <> invalid then
-    m.apiLogRequestManager = sendApiRequest(m.apiLogRequestManager, urlActionLogsToken(m.apiUrl), "GET", "onActionLogTokenResponse", invalid, invalid, invalid, false, FormatJson(actionLog))
+    m.apiLogRequestManager = sendApiRequest(m.apiLogRequestManager, urlActionLogsToken(), "GET", "onActionLogTokenResponse", invalid, invalid, invalid, false, FormatJson(actionLog))
   else
     __sendActionLog(actionLog)
   end if
@@ -933,6 +933,7 @@ sub __getSearchPrograms(query as string)
   requestId = createRequestId()
   ' Construyo la acción HTTP de búsqueda.
   action = {
+    node: m.top
     apiRequestManager: m.apiRequestManager
     url: urlSearch()
     method: "POST"
@@ -940,6 +941,8 @@ sub __getSearchPrograms(query as string)
     body: FormatJson({ "searchText": query.trim() })
     token: invalid
     publicApi: false
+    methodName: "__getSearchPrograms"
+    parameter: FormatJson(query)
     dataAux: invalid
     requestId: requestId
     run: function() as object
@@ -984,6 +987,7 @@ sub __getRecommendedCarousel()
   requestId = createRequestId()
   ' Construyo la acción HTTP con el mismo patrón de ProgramDetail.
   action = {
+    node: m.top
     apiRequestManager: m.apiRequestManager
     url: urlErrorPage()
     method: "GET"
@@ -991,6 +995,8 @@ sub __getRecommendedCarousel()
     body: invalid
     token: invalid
     publicApi: false
+    methodName: "__getRecommendedCarousel"
+    parameter: invalid
     dataAux: invalid
     requestId: requestId
     run: function() as object
@@ -1161,13 +1167,16 @@ sub __navigateToSelectedItem(carouselItem)
     requestId = createRequestId()
     ' Construyo acción HTTP para validar sesión de reproducción.
     action = {
+      node: m.top
       apiRequestManager: m.apiRequestManager
-      url: urlWatchValidate(m.apiUrl, watchSessionId, carouselItem.redirectKey, carouselItem.redirectId)
+      url: urlWatchValidate(watchSessionId, carouselItem.redirectKey, carouselItem.redirectId)
       method: "GET"
       responseMethod: "onWatchValidateResponse"
       body: invalid
       token: invalid
       publicApi: false
+      methodName: "__navigateToSelectedItem"
+      parameter: FormatJson(carouselItem)
       dataAux: invalid
       requestId: requestId
       run: function() as object
@@ -1240,7 +1249,7 @@ sub __sendActionLog(actionLog as object)
   beaconToken = getBeaconToken()
 
   if (beaconToken <> invalid and m.beaconUrl <> invalid)
-    m.apiLogRequestManager = sendApiRequest(m.apiLogRequestManager, urlActionLogs(m.beaconUrl), "POST", "onActionLogResponse", invalid, FormatJson(actionLog), beaconToken, false)
+    m.apiLogRequestManager = sendApiRequest(m.apiLogRequestManager, urlActionLogs(), "POST", "onActionLogResponse", invalid, FormatJson(actionLog), beaconToken, false)
   end if
 end sub
 
@@ -1404,13 +1413,16 @@ sub onPinDialogLoad()
   if (resp.option = 0 and resp.pin <> invalid and Len(resp.pin) = 4) then 
     if m.top.loading <> invalid then m.top.loading.visible = true
     action = {
+      node: m.top
       apiRequestManager: m.apiRequestManager
-      url: urlParentalControlPin(m.apiUrl, resp.pin)
+      url: urlParentalControlPin(resp.pin)
       method: "GET"
       responseMethod: "onParentalControlResponse"
       body: invalid
       token: invalid
       publicApi: false
+      methodName: "onPinDialogLoad"
+      parameter: invalid
       dataAux: invalid
       requestId: requestId
       run: function() as object
@@ -1435,13 +1447,16 @@ sub __requestGuideLastWatched()
   requestId = createRequestId()
   ' Construyo acción HTTP de últimos canales vistos.
   action = {
+    node: m.top
     apiRequestManager: m.apiRequestManager
-    url: urlChannelsLastWatched(m.apiUrl)
+    url: urlChannelsLastWatched()
     method: "GET"
     responseMethod: "onLastWatchedResponse"
     body: invalid
     token: invalid
     publicApi: false
+    methodName: "__requestGuideLastWatched"
+    parameter: invalid
     dataAux: invalid
     requestId: requestId
     run: function() as object
@@ -1468,13 +1483,16 @@ sub onParentalControlResponse()
         watchSessionId = getWatchSessionId()
         requestId = createRequestId()
         action = {
+          node: m.top
           apiRequestManager: m.apiRequestManager
-          url: urlWatchValidate(m.apiUrl, watchSessionId, m.itemSelected.redirectKey, m.itemSelected.redirectId)
+          url: urlWatchValidate(watchSessionId, m.itemSelected.redirectKey, m.itemSelected.redirectId)
           method: "GET"
           responseMethod: "onWatchValidateResponse"
           body: invalid
           token: invalid
           publicApi: false
+          methodName: "onParentalControlResponse"
+          parameter: invalid
           dataAux: invalid
           requestId: requestId
           run: function() as Object

@@ -407,10 +407,12 @@ sub onLoadInstallationByDeviceResponse()
       ' Lee la URL remota de la imagen QR
       loginByCodeUrlQr = getConfigVariable(m.global.configVariablesKeys.LOGIN_BY_CODE_URL_QR)
 
-      activationCode = loginByCodeUrlQr.replace("[RegistrationCode]", registerCode)
-      m.qrCodePoster.uri = "https://api.qrserver.com/v1/create-qr-code/?size=256x260&data=" + activationCode 
+      if loginByCodeUrlQr <> invalid then
+        activationCode = loginByCodeUrlQr.replace("[RegistrationCode]", registerCode)
+        m.qrCodePoster.uri = "https://api.qrserver.com/v1/create-qr-code/?size=256x260&data=" + activationCode 
 
-      __showLoginMethod(true)
+        __showLoginMethod(true)
+      end if
 
     else 
       m.LoginQrisEnabled = false
@@ -590,13 +592,16 @@ sub validateRegisterCodeLogin()
   }
 
   action = {
+    node: m.top
     apiRequestManager: m.apiRegisterCodeRequestManager 
-    url: urlRegisterCode(m.apiUrl)
+    url: urlRegisterCode()
     method: "POST"
     responseMethod: "onValidateRegisterCodeLoginResponse" 
     body: FormatJson(registerCodeLoginPayload)
     token: invalid
     publicApi: true
+    methodName: "validateRegisterCodeLogin"
+    parameter: invalid
     requestId: requestId 
     dataAux: invalid 
     run: function() as Object 
@@ -734,13 +739,16 @@ sub __loadInstallationByDevice()
   requestId = createRequestId()
 
   action = {
+    node: m.top
     apiRequestManager: m.apiInstallationRequestManager
-    url: urlInstallation(m.apiUrl)
+    url: urlInstallation()
     method: "POST"
     responseMethod: "onLoadInstallationByDeviceResponse"
     body: FormatJson(m.global.device)
     token: invalid
     publicApi: true
+    methodName: "__loadInstallationByDevice"
+    parameter: invalid
     requestId: requestId
     dataAux: invalid
     run: function() as Object
@@ -819,13 +827,16 @@ sub __login(user as String, password as String)
     requestId = createRequestId()
 
     action = {
+      node: m.top
       apiRequestManager: m.apiRequestManager
-      url: urlAuthCredentialsLogin(m.apiUrl)
+      url: urlAuthCredentialsLogin()
       method: "POST"
       responseMethod: "onLoginResponse"
       body: FormatJson(credentials)
       token: invalid
       publicApi: true
+      methodName: "__login"
+      parameter: [user, password]
       requestId: requestId
       dataAux: invalid
       run: function() as Object
@@ -901,13 +912,16 @@ sub __saveActionLog(actionLog as object)
     requestId = createRequestId()
 
     action = {
+      node: m.top
       apiRequestManager: m.apiLogRequestManager
-      url: urlActionLogsToken(m.apiUrl)
+      url: urlActionLogsToken()
       method: "GET"
       responseMethod: "onActionLogTokenResponse"
       body: invalid
       token: invalid
       publicApi: false
+      methodName: "__saveActionLog"
+      parameter: FormatJson(actionLog)
       requestId: requestId
       dataAux: FormatJson(actionLog)
       run: function() as Object
@@ -952,13 +966,16 @@ sub __sendActionLog(actionLog as object)
     requestId = createRequestId()
 
     action = {
+      node: m.top
       apiRequestManager: m.apiLogRequestManager
-      url: urlActionLogs(m.beaconUrl)
+      url: urlActionLogs()
       method: "POST"
       responseMethod: "onActionLogResponse"
       body: FormatJson(actionLog)
       token: beaconToken
       publicApi: false
+      methodName: "__sendActionLog"
+      parameter: FormatJson(actionLog)
       dataAux: invalid
       requestId: requestId
       run: function() as Object

@@ -15,6 +15,8 @@ sub init()
 
   m.top.observeField("visible", "onVisibleChange")
 
+  onVisibleChange()
+
   onShowSpinnerChange()
   onButtonDisabledChange()
   ' Cambio agregado: aplicar overlay transparente cuando el diálogo lo indique.
@@ -75,9 +77,13 @@ end sub
 
 sub onVisibleChange()
   if m.top.visible then
+    m.top.focusable = true
     __refreshFromGlobal()
     m.retryButton.setFocus(true)
   else
+    m.retryButton.setFocus(false)
+    m.top.setFocus(false)
+    m.top.focusable = false
     m.top.retry = false
   end if
 end sub
@@ -95,6 +101,10 @@ end sub
 
 sub onButtonDisabledChange()
   m.retryButton.disable = m.top.buttonDisabled
+
+  if (m.top.buttonDisabled <> true) then
+      m.retryButton.setFocus(true)
+  end if
 end sub
 
 ' El overlay puede ser transparente para el Player.
@@ -120,6 +130,8 @@ end sub
 
 ' Maneja eventos de tecla.
 function onKeyEvent(key as String, press as Boolean) as Boolean
+  if not m.top.visible then return false
+
   if press and key = "OK" and m.retryButton.isInFocusChain() and not m.retryButton.disable then
     m.top.retry = true
     m.top.showSpinner = true

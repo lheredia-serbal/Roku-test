@@ -47,6 +47,7 @@ function __getDomainManagerState() as Object
             _changeModeStatus: "idle"
             _changeModeCallback: invalid
             _changeModeHealthRequestManager: invalid
+            _changeModeDidRefreshConfig: false
         }
     end if
 
@@ -59,6 +60,7 @@ sub __finishChangeMode(success as Boolean)
     state._changeModeStatus = "idle"
     state._changeModeCallback = invalid
     state._changeModeHealthRequestManager = clearApiRequest(state._changeModeHealthRequestManager)
+    state._changeModeDidRefreshConfig = false
     __syncDomainManagerState(state)
 
     if callback <> invalid then
@@ -260,6 +262,7 @@ sub __notifyInitialConfigResult(success as Boolean)
     if state._initialConfigCallback <> invalid then
         m.top.callFunc(state._initialConfigCallback, { success: success })
         state._initialConfigCallback = invalid
+        state._initialConfigStatus = "idle"
     end if
 
     retryAll()
@@ -304,6 +307,7 @@ function changeMode(responseHandler = invalid as Dynamic) as Boolean
     if state._changeModeStatus = "pending" then return false
     state._changeModeStatus = "pending"
     state._changeModeCallback = responseHandler
+    state._changeModeDidRefreshConfig = false
     __syncDomainManagerState(state)
 
     __requestChangeModeHealth(ConfigMode().PRIMARY, "onChangeModeInitialPrimaryHealthResponse")
@@ -328,7 +332,6 @@ sub onChangeModeInitialSecondaryHealthResponse()
     state = __getDomainManagerState()
     success = validateStatusCode(state._changeModeHealthRequestManager.statusCode)
     state._changeModeHealthRequestManager = clearApiRequest(state._changeModeHealthRequestManager)
-    state._changeModeStatus = "idle"
     __syncDomainManagerState(state)
 
     if success then
@@ -336,6 +339,14 @@ sub onChangeModeInitialSecondaryHealthResponse()
         return
     end if
 
+    if state._changeModeDidRefreshConfig then
+        showCdnErrorDialog()
+        __finishChangeMode(false)
+        return
+    end if
+
+    state._changeModeDidRefreshConfig = true
+    __syncDomainManagerState(state)
     getInitialConfiguration(ConfigMode().PRIMARY, "onChangeModeRefreshConfigResponse")
 end sub
 
@@ -345,9 +356,7 @@ sub onChangeModeRefreshConfigResponse(result as Object)
         return
     end if
 
-    if not __requestChangeModeHealth(ConfigMode().PRIMARY, "onChangeModeRefreshPrimaryHealthResponse") then
-        __finishChangeMode(false)
-    end if
+    __requestChangeModeHealth(ConfigMode().PRIMARY, "onChangeModeInitialPrimaryHealthResponse")
 end sub
 
 sub onChangeModeRefreshPrimaryHealthResponse()

@@ -1,27 +1,34 @@
-function urlWatchValidate(apiUrl, watchSessionId, key, id)
-    return apiUrl + "/"+ m.global.apiVersions.V2 +"/Watch/Validate?ws=" + watchSessionId.toStr() + "&key=" + key + "&id=" + id.toStr()
+function urlWatchValidate(watchSessionId, key, id)
+    baseUrl = getServiceBaseUrl()
+    return baseUrl + "/"+ m.global.apiVersions.V3 +"/Watch/Validate?ws=" + watchSessionId.toStr() + "&key=" + key + "&id=" + id.toStr()
 end function
 
-function urlWatchKill(apiUrl)
-    return apiUrl + "/"+ m.global.apiVersions.V2 +"/Watch/Kill"
+function urlWatchKill()
+    baseUrl = getServiceBaseUrl()
+    return baseUrl + "/"+ m.global.apiVersions.V3 +"/Watch/Kill"
 end function
 
-function urlWatchAll(apiUrl)
-    return apiUrl + "/"+ m.global.apiVersions.V2 +"/Watch/All"
+function urlWatchAll()
+    baseUrl = getServiceBaseUrl()
+    return baseUrl + "/"+ m.global.apiVersions.V3 +"/Watch/All"
 end function
 
-function urlWatchKiller(apiUrl, profileId, deviceId)
-    return apiUrl + "/"+ m.global.apiVersions.V2 +"/Watch/Killer?p=" + profileId.ToStr() + "&d="+ deviceId.ToStr()
+function urlWatchKiller(profileId, deviceId)
+    baseUrl = getServiceBaseUrl()
+    return baseUrl + "/"+ m.global.apiVersions.V3 +"/Watch/Killer?p=" + profileId.ToStr() + "&d="+ deviceId.ToStr()
 end function
 
-function urlWatchEnd(apiUrl)
-    return apiUrl + "/"+ m.global.apiVersions.V2 +"/Watch/End"
+function urlWatchEnd()
+    baseUrl = getServiceBaseUrl()
+    return baseUrl + "/"+ m.global.apiVersions.V3 +"/Watch/End"
 end function
 
-function urlWatchKeepAlive(apiUrl)
-    return apiUrl + "/"+ m.global.apiVersions.V1 +"/Watch/KeepAlive"
+function urlWatchKeepAlive()
+    baseUrl = getBeaconBaseUrl()
+    return baseUrl + "/"+ m.global.apiVersions.V1 +"/Watch/KeepAlive"
 end function
 
-function urlUpdateWatchSession(apiUrl, key, id)
-    return apiUrl + "/"+ m.global.apiVersions.V1 +"/Watch/Update?key=" + key + "&id=" + id.toStr()
+function urlUpdateWatchSession(key, id)
+    baseUrl = getServiceBaseUrl()
+    return baseUrl + "/"+ m.global.apiVersions.V1 +"/Watch/Update?key=" + key + "&id=" + id.toStr()
 end function

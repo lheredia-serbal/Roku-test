@@ -64,7 +64,7 @@ sub __startCdnInitialization(keepDialogVisible = false)
   m.cdnIndex = 0
 
   setConfigUrls(m.cdnUrls[0], m.cdnUrls[1])
-  getInitialConfiguration("Primary")
+  getInitialConfiguration(ConfigMode().PRIMARY)
   __startDomainManagerPolling()
 end sub
 
@@ -100,14 +100,14 @@ sub __handleInitialConfigSuccess()
   __requestClientsApiHealth()
 end sub
 
-
-sub __requestClientsApiHealth()
+sub __requestClientsApiHealth(statusCode = invalid)
   if m.clientsApiCandidates = invalid or m.clientsApiIndex >= m.clientsApiCandidates.count() then
+    setCdnErrorCodeFromStatus(statusCode, ApiType().CLIENTS_API_URL)
     __showCdnErrorDialog()
     return
   end if
 
-  url = urlClientsHealth(m.clientsApiCandidates[m.clientsApiIndex])
+  url = urlHealth(m.clientsApiCandidates[m.clientsApiIndex])
   m.clientsHealthRequestManager = sendApiRequest(m.clientsHealthRequestManager, url, "GET", "onClientsApiHealthResponse", invalid, invalid, invalid, true)
 end sub
 
@@ -118,12 +118,19 @@ sub onClientsApiHealthResponse()
     m.apiUrl = baseUrl
     m.clientsHealthRequestManager = clearApiRequest(m.clientsHealthRequestManager)
     __hideCdnErrorDialog()
+
+    if m.clientsApiIndex = 0 then
+      __setChangeModeSuccess(ConfigMode().PRIMARY)
+    else 
+      __setChangeModeSuccess(ConfigMode().SECONDARY)
+    end if
     __validateInternetConnection()
   else
     printError("ClientsApiUrl health: ", m.clientsHealthRequestManager.errorResponse)
+    statusCode = m.clientsHealthRequestManager.statusCode
     m.clientsHealthRequestManager = clearApiRequest(m.clientsHealthRequestManager)
     m.clientsApiIndex = m.clientsApiIndex + 1
-    __requestClientsApiHealth()
+    __requestClientsApiHealth(statusCode)
   end if
 end sub
 
@@ -151,7 +158,7 @@ sub onValdiateConnectionResponse()
   
   if validateStatusCode(m.apiRequestManager.statusCode) then
     apiUrl = getActiveApiUrl()
-    m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlPlatformsVariables(apiUrl, m.global.appCode, getVersionCode()), "GET", "onPlatformResponse", invalid, invalid, invalid, true)
+    m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlPlatformsVariables(m.global.appCode, getVersionCode()), "GET", "onPlatformResponse", invalid, invalid, invalid, true)
   else 
     printError("Launcher Connection: " , m.apiRequestManager.errorResponse)
     m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.global.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogClosed", [i18n_t(m.global.i18n, "button.retry"), i18n_t(m.global.i18n, "button.exit")])
@@ -168,7 +175,7 @@ sub onPlatformResponse()
     
     if isLoginUser() then
       if m.apiUrl = invalid then m.apiUrl = getConfigVariable(m.global.configVariablesKeys.API_URL) 
-      m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlAuthRegenerateSession(m.apiUrl), "POST", "onRegenerateSession", invalid, FormatJson({device: m.global.device}))
+      m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlAuthRegenerateSession(), "POST", "onRegenerateSession", invalid, FormatJson({device: m.global.device}))
     else
       __validateAutoUpgrade(true)
     end if
@@ -234,7 +241,7 @@ sub __validateAutoUpgrade(isPublicApi)
     signedByGooglePlay: true,
     startUp: true
   }
-  m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlAutoUpgradeValidate(m.apiUrl), "POST", "onAutoUpgradeResponse", invalid, FormatJson(body), invalid, isPublicApi)
+  m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlAutoUpgradeValidate(), "POST", "onAutoUpgradeResponse", invalid, FormatJson(body), invalid, isPublicApi)
 end sub
 
 ' Procesa la respuesta del AutoUpgrade y continua con el flujo actual
@@ -326,7 +333,7 @@ sub __validateInternetConnection()
     __showCdnErrorDialog()
     return
   end if
-  m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlHealth(apiUrl), "GET", "onValdiateConnectionResponse", invalid, invalid, invalid, true)
+  m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlHealth(), "GET", "onValdiateConnectionResponse", invalid, invalid, invalid, true)
 end sub
 
 ' Crea un Poster solo lógico (no visible) para validar la carga de una imagen.
@@ -334,12 +341,7 @@ sub __validateImageTSL()
   domainManagerState = __getDomainManagerState()
 
   checks = []
-    currentInitialConfig = ""
   m.hiddenImageValidationQueue = []
-
-  if domainManagerState <> invalid and domainManagerState._currentInitialConfig <> invalid then
-    currentInitialConfig = LCase(domainManagerState._currentInitialConfig)
-  end if
 
   ' Recorrer los recursos y obtener las imágenes a validar
   for each item in domainManagerState._resources
@@ -351,14 +353,13 @@ sub __validateImageTSL()
   ' Recorrer los items obtenidos
   for each item in checks
     if item <> invalid and hasUseHttpAction(item) then
-      if currentInitialConfig = "primary" then
-        if item.primary <> invalid and getHealthCheckPrimary(item) <> "" then
-          __createImageValidation(item, item.primary, getHealthCheckPrimary(item))
-        end if
-      else if currentInitialConfig = "secondary" then
-        if item.secondary <> invalid and getHealthCheckSecondary(item) <> "" then
-          __createImageValidation(item, item.secondary, getHealthCheckSecondary(item))
-        end if
+
+      if item.primary <> invalid and getHealthCheckPrimary(item) <> "" then
+        __createImageValidation(item, item.primary, getHealthCheckPrimary(item), LCase(ConfigMode().PRIMARY))
+      end if
+
+      if item.secondary <> invalid and getHealthCheckSecondary(item) <> "" then
+        __createImageValidation(item, item.secondary, getHealthCheckSecondary(item), LCase(ConfigMode().SECONDARY))
       end if
     end if
   end for
@@ -366,7 +367,7 @@ sub __validateImageTSL()
   __processNextImageValidation()
 end sub
 
-sub __createImageValidation(item, resourceUrl as String, imageValidationUri as String)
+sub __createImageValidation(item, resourceUrl as String, imageValidationUri as String, mode as String)
   if item = invalid or resourceUrl = "" or imageValidationUri = "" then return
 
   if m.hiddenImageValidationQueue = invalid then
@@ -376,7 +377,8 @@ sub __createImageValidation(item, resourceUrl as String, imageValidationUri as S
   validationItem = {
     item: item
     resourceUrl: resourceUrl
-    imageValidationUri: imageValidationUri
+    imageValidationUri: imageValidationUri,
+    mode: mode
   }
 
   m.hiddenImageValidationQueue.push(validationItem)
@@ -429,7 +431,7 @@ sub onHiddenImageValidationLoadStatus()
       for each actionInfo in item.on_failure.actions ' Recorre las acciones declaradas para la falla actual.
         if actionInfo <> invalid and actionInfo.action <> invalid and LCase(actionInfo.action) = "use_http" then ' Busca la acción use_http solicitada.
           imageProtocolOverride = getOppositeImageProtocol(m.hiddenImageValidation.uri) ' Calcula el protocolo opuesto según la URL actual.
-          if imageProtocolOverride <> invalid then setImageProtocolOverride(item.name, validationItem.resourceUrl, imageProtocolOverride) ' Persiste el protocolo a nivel global para futuras imágenes.
+          if imageProtocolOverride <> invalid then setImageProtocolOverride(item.name, validationItem.resourceUrl, imageProtocolOverride, validationItem.mode) ' Persiste el protocolo a nivel global para futuras imágenes.
           exit for ' Detiene el recorrido al encontrar la primera acción válida.
         end if
       end for
@@ -481,11 +483,11 @@ function hasUseHttpAction(item as Object) as Boolean
 end function
 
 ' Persiste el protocolo de imágenes en el global node.
-sub setImageProtocolOverride(variableKey as String, url as String, protocol as Dynamic)
+sub setImageProtocolOverride(variableKey as String, url as String, protocol as Dynamic, mode as String)
 
   finalUrl = applyImageProtocolOverride(url, protocol)
 
-  setConfigVariable(variableKey, finalUrl)
+  setConfigVariable(variableKey, finalUrl, mode)
 end sub
 
 ' Obtiene el protocolo opuesto para el fallback global de imágenes.

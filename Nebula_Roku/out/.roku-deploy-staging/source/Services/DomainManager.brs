@@ -35,18 +35,19 @@ function __getDomainManagerState() as Object
             ]
             _initialConfigRequestManager: invalid
             _initialConfigSuccess: false
-            _mode: "Primary"
+            _mode: ConfigMode().PRIMARY
             _primaryDns: ""
             _secondaryDns: ""
-            _currentConfig: "Primary"
+            _currentConfig: ConfigMode().PRIMARY
             _fetchInitialConfig: true
             _existSecondary: false
-            _currentInitialConfig: "Primary"
+            _currentInitialConfig: ConfigMode().PRIMARY
             _initialConfigStatus: "idle"
             _initialConfigCallback: invalid
             _changeModeStatus: "idle"
             _changeModeCallback: invalid
             _changeModeHealthRequestManager: invalid
+            _changeModeDidRefreshConfig: false
         }
     end if
 
@@ -59,6 +60,7 @@ sub __finishChangeMode(success as Boolean)
     state._changeModeStatus = "idle"
     state._changeModeCallback = invalid
     state._changeModeHealthRequestManager = clearApiRequest(state._changeModeHealthRequestManager)
+    state._changeModeDidRefreshConfig = false
     __syncDomainManagerState(state)
 
     if callback <> invalid then
@@ -71,30 +73,38 @@ sub __finishChangeMode(success as Boolean)
 end sub
 
 ' Obtiene la base URL de API para servicios.
-' Si apiUrl viene por parámetro y es válida, la respeta.
 ' Si no viene, usa activeApiUrl y como fallback usa la URL del modo actual.
-function getServiceBaseUrl(apiUrl = invalid as Dynamic) as String
-    if apiUrl <> invalid and apiUrl <> "" then return apiUrl
-
-    if m.global <> invalid and m.global.activeApiUrl <> invalid and m.global.activeApiUrl <> "" then
-        return m.global.activeApiUrl
-    end if
-
+function getServiceBaseUrl() as String
     state = __getDomainManagerState()
     baseUrl = __getApiUrlForMode(state._mode)
     if baseUrl = invalid then return ""
     return baseUrl
 end function
 
-function __requestChangeModeHealth(mode as String, responseHandler as String) as Boolean
+' Obtiene la base URL de API para servicios.
+function getBeaconBaseUrl() as String
+    state = __getDomainManagerState()
+    baseUrl = __getBeaconUrlForMode(state._mode)
+    if baseUrl = invalid then return ""
+    return baseUrl
+end function
+
+' Obtiene la base URL de API para servicios.
+function getAuthBaseUrl() as String
+    state = __getDomainManagerState()
+    baseUrl = __getAuthUrlForMode(state._mode)
+    if baseUrl = invalid then return ""
+    return baseUrl
+end function
+
+sub __requestChangeModeHealth(mode as String, responseHandler as String)
     state = __getDomainManagerState()
     baseUrl = __getApiUrlForMode(mode)
-    if baseUrl = invalid or baseUrl = "" then return false
-    healthUrl = urlClientsHealth(baseUrl)
+    if baseUrl = invalid or baseUrl = "" then return
+    healthUrl = urlHealth(baseUrl)
     state._changeModeHealthRequestManager = sendApiRequest(state._changeModeHealthRequestManager, healthUrl, "GET", responseHandler, invalid, invalid, invalid, true)
     __syncDomainManagerState(state)
-    return true
-end function
+end sub
 
 sub __setChangeModeSuccess(mode as String)
     baseUrl = __getApiUrlForMode(mode)
@@ -146,8 +156,26 @@ end function
 function __getApiUrlForMode(mode as String) as String
     resource = getResourceByName("ClientsApiUrl")
     if resource = invalid then return ""
-    if mode = "Primary" then return resource.primary + "1"
-    if mode = "Secondary" then return resource.secondary
+    if mode = ConfigMode().PRIMARY then return resource.primary
+    if mode = ConfigMode().SECONDARY then return resource.secondary
+    return ""
+end function
+
+' Obtener la Beacon Url primaria y secundaria
+function __getBeaconUrlForMode(mode as String) as String
+    resource = getResourceByName("LogsApiUrl")
+    if resource = invalid then return ""
+    if mode = ConfigMode().PRIMARY then return resource.primary
+    if mode = ConfigMode().SECONDARY then return resource.secondary
+    return ""
+end function
+
+' Obtener la Auth Url primaria y secundaria
+function __getAuthUrlForMode(mode as String) as String
+    resource = getResourceByName("AuthApiUrl")
+    if resource = invalid then return ""
+    if mode = ConfigMode().PRIMARY then return resource.primary
+    if mode = ConfigMode().SECONDARY then return resource.secondary
     return ""
 end function
 
@@ -165,7 +193,7 @@ end sub
 function __validateHealthForMode(mode as String) as Boolean
     baseUrl = __getApiUrlForMode(mode)
     if baseUrl = invalid or baseUrl = "" then return false
-    healthUrl = urlClientsHealth(baseUrl)
+    healthUrl = urlHealth(baseUrl)
     success = performHealthCheck(healthUrl)
     if success then __updateActiveApiUrl(baseUrl)
     return success
@@ -207,9 +235,9 @@ function __refreshConfigFromCdns() as Boolean
     state = __getDomainManagerState()
     primaryResponse = __fetchConfigFromUrl(state.initialConfigPrimaryUrl)
     if primaryResponse.success then
-        setConfigResponse(primaryResponse.data, "Primary")
+        setConfigResponse(primaryResponse.data, ConfigMode().PRIMARY, ConfigMode().PRIMARY)
         state = __getDomainManagerState()
-        state._currentInitialConfig = "Primary"
+        state._currentInitialConfig = ConfigMode().PRIMARY
         state._fetchInitialConfig = false
         __syncDomainManagerState(state)
         return true
@@ -217,9 +245,9 @@ function __refreshConfigFromCdns() as Boolean
 
     secondaryResponse = __fetchConfigFromUrl(state.initialConfigSecondaryUrl)
     if secondaryResponse.success then
-        setConfigResponse(secondaryResponse.data, "Primary")
+        setConfigResponse(secondaryResponse.data, ConfigMode().PRIMARY, ConfigMode().SECONDARY)
         state = __getDomainManagerState()
-        state._currentInitialConfig = "Secondary"
+        state._currentInitialConfig = ConfigMode().SECONDARY
         state._fetchInitialConfig = false
         __syncDomainManagerState(state)
         return true
@@ -234,6 +262,7 @@ sub __notifyInitialConfigResult(success as Boolean)
     if state._initialConfigCallback <> invalid then
         m.top.callFunc(state._initialConfigCallback, { success: success })
         state._initialConfigCallback = invalid
+        state._initialConfigStatus = "idle"
     end if
 
     retryAll()
@@ -278,30 +307,25 @@ function changeMode(responseHandler = invalid as Dynamic) as Boolean
     if state._changeModeStatus = "pending" then return false
     state._changeModeStatus = "pending"
     state._changeModeCallback = responseHandler
+    state._changeModeDidRefreshConfig = false
     __syncDomainManagerState(state)
 
-    if not __requestChangeModeHealth("Primary", "onChangeModeInitialPrimaryHealthResponse") then
-        __finishChangeMode(false)
-        return false
-    end if
-
-    return true
+    __requestChangeModeHealth(ConfigMode().PRIMARY, "onChangeModeInitialPrimaryHealthResponse")
 end function
 
 sub onChangeModeInitialPrimaryHealthResponse()
     state = __getDomainManagerState()
+    if state._changeModeHealthRequestManager = invalid then return 
     success = validateStatusCode(state._changeModeHealthRequestManager.statusCode)
     state._changeModeHealthRequestManager = clearApiRequest(state._changeModeHealthRequestManager)
     __syncDomainManagerState(state)
 
     if success then
-        __setChangeModeSuccess("Primary")
+        __setChangeModeSuccess(ConfigMode().PRIMARY)
         return
     end if
 
-    if not __requestChangeModeHealth("Secondary", "onChangeModeInitialSecondaryHealthResponse") then
-        getInitialConfiguration("Primary", "onChangeModeRefreshConfigResponse")
-    end if
+    __requestChangeModeHealth(ConfigMode().SECONDARY, "onChangeModeInitialSecondaryHealthResponse")
 end sub
 
 sub onChangeModeInitialSecondaryHealthResponse()
@@ -311,11 +335,19 @@ sub onChangeModeInitialSecondaryHealthResponse()
     __syncDomainManagerState(state)
 
     if success then
-        __setChangeModeSuccess("Secondary")
+        __setChangeModeSuccess(ConfigMode().SECONDARY)
         return
     end if
 
-    getInitialConfiguration("Primary", "onChangeModeRefreshConfigResponse")
+    if state._changeModeDidRefreshConfig then
+        showCdnErrorDialog()
+        __finishChangeMode(false)
+        return
+    end if
+
+    state._changeModeDidRefreshConfig = true
+    __syncDomainManagerState(state)
+    getInitialConfiguration(ConfigMode().PRIMARY, "onChangeModeRefreshConfigResponse")
 end sub
 
 sub onChangeModeRefreshConfigResponse(result as Object)
@@ -324,9 +356,7 @@ sub onChangeModeRefreshConfigResponse(result as Object)
         return
     end if
 
-    if not __requestChangeModeHealth("Primary", "onChangeModeRefreshPrimaryHealthResponse") then
-        __finishChangeMode(false)
-    end if
+    __requestChangeModeHealth(ConfigMode().PRIMARY, "onChangeModeInitialPrimaryHealthResponse")
 end sub
 
 sub onChangeModeRefreshPrimaryHealthResponse()
@@ -336,11 +366,11 @@ sub onChangeModeRefreshPrimaryHealthResponse()
     __syncDomainManagerState(state)
 
     if success then
-        __setChangeModeSuccess("Primary")
+        __setChangeModeSuccess(ConfigMode().PRIMARY)
         return
     end if
 
-    if not __requestChangeModeHealth("Secondary", "onChangeModeRefreshSecondaryHealthResponse") then
+    if not __requestChangeModeHealth(ConfigMode().SECONDARY, "onChangeModeRefreshSecondaryHealthResponse") then
         __finishChangeMode(false)
     end if
 end sub
@@ -352,7 +382,7 @@ sub onChangeModeRefreshSecondaryHealthResponse()
     __syncDomainManagerState(state)
 
     if success then
-        __setChangeModeSuccess("Secondary")
+        __setChangeModeSuccess(ConfigMode().SECONDARY)
         return
     end if
 
@@ -427,24 +457,6 @@ function existSecondary() as Boolean
     return state._existSecondary
 end function
 
-' Obtener las URLs de las APIs a partir de los resources.
-function getVariable(key as String) as String
-    state = __getDomainManagerState()
-    if state._resources <> invalid then
-        for each item in state._resources
-            if item <> invalid and item.name = key then
-                if state._mode = "Primary" or item.secondary = invalid then
-                    return item.primary
-                else
-                    return item.secondary
-                end if
-            end if
-        end for
-    end if
-
-    return ""
-end function
-
 ' Obtiene el resource desde el listado usando el nombre.
 function getResourceByName(name as String) as Object
     state = __getDomainManagerState()
@@ -475,7 +487,7 @@ sub onInitialConfigPrimaryResponse()
             setCdnErrorCodeFromStatus(101, ApiType().CONFIGURATION_URL, "CL")
         else
             ' JSON correcto: guardar configuración y notificar éxito.
-            setConfigResponse(response, state._mode)
+            setConfigResponse(response, state._mode, ConfigMode().PRIMARY)
             __notifyInitialConfigResult(true)
             return
         end if
@@ -507,9 +519,9 @@ sub onInitialConfigSecondaryResponse()
             __notifyInitialConfigResult(false)
         else
             ' JSON correcto en CDN secundario: aplicar modo Secondary y notificar éxito.
-            setConfigResponse(response, state._mode)
+            setConfigResponse(response, state._mode, ConfigMode().SECONDARY)
             state._fetchInitialConfig = false
-            state._currentInitialConfig = "Secondary"
+            state._currentInitialConfig = ConfigMode().SECONDARY
             state._initialConfigSuccess = true
             state._initialConfigStatus = "success"
             __notifyInitialConfigResult(true)
@@ -529,12 +541,12 @@ sub onInitialConfigSecondaryResponse()
 end sub
 
 ' Setea la respuesta del config en el estado y actualiza el modo actual.
-sub setConfigResponse(response as Object, mode as String)
+sub setConfigResponse(response as Object, mode as String, configDomain as String)
     state = __getDomainManagerState()
     state._currentConfig = mode
     state._mode = mode
     state._fetchInitialConfig = false
-    state._currentInitialConfig = "Primary"
+    state._currentInitialConfig = configDomain
     state._initialConfigSuccess = true
     state._initialConfigStatus = "success"
 
@@ -583,8 +595,8 @@ end sub
 ' Retorna el indicador de configuración actual según el JSON activo.
 function getCurrentInitalConfig() As String
     state = __getDomainManagerState()
-    if state._currentInitialConfig = "Primary" then return "P"
-    if state._currentInitialConfig = "Secondary" then return "S"
+    if state._currentInitialConfig = ConfigMode().PRIMARY then return "P"
+    if state._currentInitialConfig = ConfigMode().SECONDARY then return "S"
     return ""
 end function
 
@@ -592,6 +604,6 @@ end function
 function getCode() As String
     state = __getDomainManagerState()
     modeSuffix = "P"
-    if state._mode = "Secondary" then modeSuffix = "S"
+    if state._mode = ConfigMode().SECONDARY then modeSuffix = "S"
     return state._code + modeSuffix
 end function

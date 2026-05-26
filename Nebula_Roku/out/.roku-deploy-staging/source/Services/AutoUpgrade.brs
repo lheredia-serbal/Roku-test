@@ -1,3 +1,4 @@
-function urlAutoUpgradeValidate(apiUrl)
-    return apiUrl + "/"+ m.global.apiVersions.V2 +"/AutoUpgrade/Validate"
+function urlAutoUpgradeValidate()
+    baseUrl = getServiceBaseUrl()
+    return baseUrl + "/"+ m.global.apiVersions.V3 +"/AutoUpgrade/Validate"
 end function

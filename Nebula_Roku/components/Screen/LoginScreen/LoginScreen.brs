@@ -407,10 +407,12 @@ sub onLoadInstallationByDeviceResponse()
       ' Lee la URL remota de la imagen QR
       loginByCodeUrlQr = getConfigVariable(m.global.configVariablesKeys.LOGIN_BY_CODE_URL_QR)
 
-      activationCode = loginByCodeUrlQr.replace("[RegistrationCode]", registerCode)
-      m.qrCodePoster.uri = "https://api.qrserver.com/v1/create-qr-code/?size=256x260&data=" + activationCode 
+      if loginByCodeUrlQr <> invalid then
+        activationCode = loginByCodeUrlQr.replace("[RegistrationCode]", registerCode)
+        m.qrCodePoster.uri = "https://api.qrserver.com/v1/create-qr-code/?size=256x260&data=" + activationCode 
 
-      __showLoginMethod(true)
+        __showLoginMethod(true)
+      end if
 
     else 
       m.LoginQrisEnabled = false

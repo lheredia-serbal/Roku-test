@@ -55,6 +55,7 @@ sub getProgramInfo()
   ' Generamos identificador de acción para retry tracking.
   requestId = createRequestId() 
   action = { 
+    node: m.top
     apiSummaryRequestManager: m.apiSummaryRequestManager
     url: urlProgramSummary(m.itemfocused.redirectKey, m.itemfocused.redirectId, mainImageTypeId, getCarouselImagesTypes().SCENIC_LANDSCAPE)
     method: "GET" 
@@ -62,6 +63,8 @@ sub getProgramInfo()
     body: invalid 
     token: invalid 
     publicApi: false
+    methodName: "getProgramInfo"
+    parameter: invalid
     dataAux: invalid
     requestId: requestId
     run: function() as Object
@@ -269,13 +272,16 @@ sub onSelectItem()
       ' Creamos requestId para retries del servicio.
       requestId = createRequestId() 
       action = {
+        node: m.top
         apiRequestManager: m.apiRequestManager
-        url: urlWatchValidate(m.apiUrl, watchSessionId, m.itemSelected.redirectKey, m.itemSelected.redirectId)
+        url: urlWatchValidate(watchSessionId, m.itemSelected.redirectKey, m.itemSelected.redirectId)
         method: "GET"
         responseMethod: "onWatchValidateResponse"
         body: invalid
         token: invalid
         publicApi: false
+        methodName: "onSelectItem"
+        parameter: invalid
         dataAux: invalid
         requestId: requestId
         run: function() as Object
@@ -307,13 +313,16 @@ sub onPinDialogLoad()
   if (resp.option = 0 and resp.pin <> invalid and Len(resp.pin) = 4) then 
     if m.top.loading <> invalid then m.top.loading.visible = true
     action = {
+      node: m.top
       apiRequestManager: m.apiRequestManager
-      url: urlParentalControlPin(m.apiUrl, resp.pin)
+      url: urlParentalControlPin(resp.pin)
       method: "GET"
       responseMethod: "onParentalControlResponse"
       body: invalid
       token: invalid
       publicApi: false
+      methodName: "onPinDialogLoad"
+      parameter: invalid
       dataAux: invalid
       requestId: requestId
       run: function() as object
@@ -344,13 +353,16 @@ sub onParentalControlResponse()
         watchSessionId = getWatchSessionId()
         requestId = createRequestId()
         action = {
+          node: m.top
           apiRequestManager: m.apiRequestManager
-          url: urlWatchValidate(m.apiUrl, watchSessionId, m.itemSelected.redirectKey, m.itemSelected.redirectId)
+          url: urlWatchValidate(watchSessionId, m.itemSelected.redirectKey, m.itemSelected.redirectId)
           method: "GET"
           responseMethod: "onWatchValidateResponse"
           body: invalid
           token: invalid
           publicApi: false
+          methodName: "onParentalControlResponse"
+          parameter: invalid
           dataAux: invalid
           requestId: requestId
           run: function() as Object
@@ -537,7 +549,7 @@ sub onWatchValidateResponse()
         setWatchToken(resp.watchToken) 
         if m.itemSelected <> invalid then
           ' Solicitamos streaming del item canal seleccionado.
-          m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlStreaming(m.apiUrl, m.itemSelected.redirectKey, m.itemSelected.redirectId), "GET", "onStreamingsResponse") 
+          m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlStreaming(m.itemSelected.redirectKey, m.itemSelected.redirectId), "GET", "onStreamingsResponse") 
         end if
       else
         ' Ocultamos loading porque no se podrá reproducir.
@@ -760,6 +772,7 @@ sub __getViewAllCarousel()
   ' Creamos id único para registrar acción pendiente.
   requestId = createRequestId() 
   action = {
+    node: m.top
     apiRequestManager: m.apiRequestManager
     url: requestConfig.url
     method: requestConfig.method
@@ -767,6 +780,8 @@ sub __getViewAllCarousel()
     body: requestConfig.body
     token: invalid
     publicApi: false
+    methodName: "__getViewAllCarousel"
+    parameter: invalid
     requestId: requestId
     dataAux: FormatJson(m.viewAllPayload)
     run: function() as Object
@@ -791,7 +806,7 @@ function __getViewAllRequestConfig() as Object
   if m.viewAllPayload.menuSelectedItemId = invalid then return invalid 
   ' Mantenemos el flujo original para ViewAll cuando no aplica SearchById.
   return { 
-    url: urlViewAllCarousels(m.apiUrl, m.viewAllPayload.menuSelectedItemId, m.viewAllPayload.carouselId) 
+    url: urlViewAllCarousels(m.viewAllPayload.menuSelectedItemId, m.viewAllPayload.carouselId) 
     method: "GET" 
     body: invalid
   }
@@ -900,7 +915,7 @@ end sub
 sub __saveActionLog(actionLog as object)
 
   if beaconTokenExpired() and m.apiUrl <> invalid then
-    m.apiLogRequestManager = sendApiRequest(m.apiLogRequestManager, urlActionLogsToken(m.apiUrl), "GET", "onActionLogTokenResponse", invalid, invalid, invalid, false, FormatJson(actionLog))
+    m.apiLogRequestManager = sendApiRequest(m.apiLogRequestManager, urlActionLogsToken(), "GET", "onActionLogTokenResponse", invalid, invalid, invalid, false, FormatJson(actionLog))
   else
       __sendActionLog(actionLog)
   end if
@@ -918,7 +933,7 @@ sub __sendActionLog(actionLog as object)
   beaconToken = getBeaconToken()
 
   if (beaconToken <> invalid and m.beaconUrl <> invalid)
-    m.apiLogRequestManager = sendApiRequest(m.apiLogRequestManager, urlActionLogs(m.beaconUrl), "POST", "onActionLogResponse", invalid, FormatJson(actionLog), beaconToken, false)
+    m.apiLogRequestManager = sendApiRequest(m.apiLogRequestManager, urlActionLogs(), "POST", "onActionLogResponse", invalid, FormatJson(actionLog), beaconToken, false)
   end if
 end sub
 

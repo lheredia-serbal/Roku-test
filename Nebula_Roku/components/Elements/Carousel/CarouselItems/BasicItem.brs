@@ -61,7 +61,6 @@ sub itemContentChanged()
         if m.top.itemContent.imageURL <> invalid and m.top.itemContent.imageURL <> "" then 
             m.imageItem.loadSync = false
             m.showBackgroundImage = false
-            print m.top.itemContent.imageURL
             m.imageItem.uri = m.top.itemContent.imageURL
         else 
             m.imageItem.loadSync = false

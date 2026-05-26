@@ -699,7 +699,6 @@ sub initData()
 
     if m.timelineBar <> invalid then
       isLiveTimeline = (LCase(m.streaming.type) = getVideoType().LIVE) or (LCase(m.streaming.type) = getVideoType().LIVE_REWIND and m.streaming.streamingType = getStreamingType().DEFAULT)
-      print isLiveTimeline.toStr()
       m.timelineBar.isLive = isLiveTimeline
     end if
 

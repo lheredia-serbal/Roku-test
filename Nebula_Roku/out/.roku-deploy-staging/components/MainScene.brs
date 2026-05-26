@@ -60,7 +60,6 @@ function onKeyEvent(key as string, press as boolean) as boolean
 
         __backManager(m.StackOfScreens.Peek())
 
-
       else if m.StackOfScreens.Peek() = "ProgramDetailScreen" then 
         m.StackOfScreens.Pop()
 
@@ -722,7 +721,6 @@ sub __hideEmissions(clearData = true)
   ' Limpia payload de entrada solo cuando corresponde resetear completamente la pantalla.
   if clearData then m.EmissionsScreen.data = invalid
 end sub
-
 
 ' Esconde la pantalla Ver todos
 sub __hideViewAll(clearData = true)

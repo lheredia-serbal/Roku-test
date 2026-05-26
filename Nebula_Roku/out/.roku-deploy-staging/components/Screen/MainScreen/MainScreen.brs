@@ -58,11 +58,6 @@ end sub
 ' Funcion que interpreta los eventos de teclado y retorna true si fue porcesada por este componente. Sino es porcesado por el
 ' entonces sigue con el siguente metodo onKeyEvent del compoente superior
 function onKeyEvent(key as string, press as boolean) as boolean
-    if press and key = "options" then
-    __appendOneToGlobalActiveApiUrl()
-    return true
-  end if
-
   if m.top.loading.visible <> false and key <> KeyButtons().BACK then 
     return true
   end if
@@ -136,15 +131,6 @@ function onKeyEvent(key as string, press as boolean) as boolean
   
   return handled
 end function 
-
-sub __appendOneToGlobalActiveApiUrl()
-  currentApiUrl = m.global.activeApiUrl
-  if currentApiUrl = invalid then currentApiUrl = ""
-
-  addAndSetFields(m.global, { activeApiUrl: "asdasdasd" + currentApiUrl })
-
-  m.apiUrl = "asdasdasd" + currentApiUrl
-end sub
 
 ' Anima la opacidad de cualquier nodo objetivo hacia el valor indicado con duración de 0.5 segundos.
 sub __setNodeOpacityWithAnimation(targetNode as object, targetOpacity as float)
@@ -443,17 +429,20 @@ sub onSelectItem()
       requestId = createRequestId()
 
       action = {
+        node: m.top
         apiRequestManager: m.apiRequestManager
-        url: urlChannelsLastWatched(m.apiUrl)
+        url: urlChannelsLastWatched()
         method: "GET"
         responseMethod: "onLastWatchedResponse"
         body: invalid
         token: invalid
         publicApi: false
         dataAux: invalid
+        methodName: "onSelectItem"
+        parameter: invalid
         requestId: requestId
         run: function() as Object
-          m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux)
+          m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux, m.methodName)
           return { success: true, error: invalid }
         end function
       }
@@ -504,17 +493,20 @@ sub onSelectItem()
         requestId = createRequestId()
 
         action = {
+          node: m.top
           apiRequestManager: m.apiRequestManager
-          url: urlWatchValidate(m.apiUrl, watchSessionId, m.itemSelected.redirectKey, m.itemSelected.redirectId)
+          url: urlWatchValidate(watchSessionId, m.itemSelected.redirectKey, m.itemSelected.redirectId)
           method: "GET"
           responseMethod: "onWatchValidateResponse"
           body: invalid
           token: invalid
           publicApi: false
           dataAux: invalid
+          methodName: "onSelectItem"
+          parameter: invalid
           requestId: requestId
           run: function() as Object
-            m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux)
+            m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux, m.methodName)
             return { success: true, error: invalid }
           end function
         }
@@ -576,18 +568,21 @@ function __handleNewsOkAction() as boolean
 
     ' Define acción de validación para reproducir canal exactamente como en selección normal.
     action = {
+      node: m.top
       apiRequestManager: m.apiRequestManager
-      url: urlWatchValidate(m.apiUrl, watchSessionId, m.itemSelected.redirectKey, m.itemSelected.redirectId)
+      url: urlWatchValidate(watchSessionId, m.itemSelected.redirectKey, m.itemSelected.redirectId)
       method: "GET"
       responseMethod: "onWatchValidateResponse"
       body: invalid
       token: invalid
       publicApi: false
       dataAux: invalid
+      methodName: "__handleNewsOkAction"
+      parameter: invalid
       requestId: requestId
       run: function() as Object
         ' Ejecuta request reutilizando el helper estándar del proyecto.
-        m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux)
+        m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux, m.methodName)
         ' Retorna resultado exitoso para el orquestador de acciones.
         return { success: true, error: invalid }
       end function
@@ -698,17 +693,20 @@ sub onLastWatchedResponse()
       requestId = createRequestId()
 
       action = {
+        node: m.top
         apiRequestManager: m.apiRequestManager
-        url: urlWatchValidate(m.apiUrl, watchSessionId.toStr(), resp.key, resp.id)
+        url: urlWatchValidate(watchSessionId.toStr(), resp.key, resp.id)
         method: "GET"
         responseMethod: "onWatchValidateResponse"
         body: invalid
         token: invalid
         publicApi: false
         dataAux: invalid
+        methodName: "onLastWatchedResponse"
+        parameter: invalid
         requestId: requestId
         run: function() as Object
-          m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux)
+          m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux, m.methodName)
           return { success: true, error: invalid }
         end function
       }
@@ -770,7 +768,7 @@ sub onWatchValidateResponse()
         setWatchSessionId(resp.watchSessionId)
         setWatchToken(resp.watchToken)
         if m.itemSelected <> invalid then
-          m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlStreaming(m.apiUrl, m.itemSelected.redirectKey, m.itemSelected.redirectId), "GET", "onStreamingsResponse")
+          m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlStreaming(m.itemSelected.redirectKey, m.itemSelected.redirectId), "GET", "onStreamingsResponse")
         end if
       else 
         m.top.loading.visible = false
@@ -914,7 +912,7 @@ end sub
 
 ' Dispara la busqueda del programa que esta teniendo el foco. Usa un timer para buscarlo una vez que el 
 ' usuario se detuvo en la navegacion
-sub getProgramInfo()
+function getProgramInfo() as boolean
   try 
   clearTimer(m.programTimer)
 
@@ -930,14 +928,14 @@ sub getProgramInfo()
 
       if not __isNewsFocused() and (m.program.infoKey <> "ChannelId") or (m.program.infoKey = "ChannelId" and endTime.AsSeconds() > nowDate.AsSeconds()) then 
         __showProgramInfoWithAnimation()   
-        return
+        return true
       end if
     end if
 
     if m.apiSummaryRequestManager <> invalid then
       m.programTimer.ObserveField("fire","getProgramInfo")
       m.programTimer.control = "start"
-      return 
+      return true
     end if
     mainImageTypeId = getCarouselImagesTypes().NONE.toStr()
 
@@ -948,6 +946,7 @@ sub getProgramInfo()
     requestId = createRequestId()
 
     action = {
+      node: m.top
       apiSummaryRequestManager: m.apiSummaryRequestManager
       url: urlProgramSummary(m.itemfocused.redirectKey, m.itemfocused.redirectId, mainImageTypeId, getCarouselImagesTypes().SCENIC_LANDSCAPE)
       method: "GET"
@@ -956,9 +955,11 @@ sub getProgramInfo()
       token: invalid
       publicApi: false
       dataAux: invalid
+      methodName: "getProgramInfo"
+      parameter: invalid
       requestId: requestId
       run: function() as Object
-        m.apiSummaryRequestManager = sendApiRequest(m.apiSummaryRequestManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux)
+        m.apiSummaryRequestManager = sendApiRequest(m.apiSummaryRequestManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux, m.methodName)
         return { success: true, error: invalid }
       end function
     }
@@ -969,7 +970,7 @@ sub getProgramInfo()
   catch error
     printError("Error al cargar la programa summary", error)
   end try
-end sub
+end function
 
 ' Procesa la respuesta de la peticion del Summay del programa
 sub onProgramSummaryResponse()
@@ -1004,7 +1005,7 @@ sub onProgramSummaryResponse()
       errorResponse = m.apiSummaryRequestManager.errorResponse
 
       if m.apiSummaryRequestManager.serverError then
-        '__validateError(statusCode, 9000, errorResponse)
+        __validateError(statusCode, 9000, errorResponse)
         changeStatusAction(m.apiSummaryRequestManager.requestId, "error")
         retryAll()
       else
@@ -1146,17 +1147,20 @@ sub onPinDialogLoad()
   if (resp.option = 0 and resp.pin <> invalid and Len(resp.pin) = 4) then 
     m.top.loading.visible = true
     action = {
+      node: m.top
       apiRequestManager: m.apiRequestManager
-      url: urlParentalControlPin(m.apiUrl, resp.pin)
+      url: urlParentalControlPin(resp.pin)
       method: "GET"
       responseMethod: "onParentalControlResponse"
       body: invalid
       token: invalid
       publicApi: false
       dataAux: invalid
+      methodName: "onPinDialogLoad"
+      parameter: invalid
       requestId: requestId
       run: function() as Object
-        m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux)
+        m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux, m.methodName)
         return { success: true, error: invalid }
       end function
     }
@@ -1182,17 +1186,20 @@ sub onParentalControlResponse()
         watchSessionId = getWatchSessionId()
         requestId = createRequestId()
         action = {
+          node: m.top
           apiRequestManager: m.apiRequestManager
-          url: urlWatchValidate(m.apiUrl, watchSessionId, m.itemSelected.redirectKey, m.itemSelected.redirectId)
+          url: urlWatchValidate(watchSessionId, m.itemSelected.redirectKey, m.itemSelected.redirectId)
           method: "GET"
           responseMethod: "onWatchValidateResponse"
           body: invalid
           token: invalid
           publicApi: false
           dataAux: invalid
+          methodName: "onParentalControlResponse"
+          parameter: invalid
           requestId: requestId
           run: function() as Object
-              m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux)
+              m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux, m.methodName)
               return { success: true, error: invalid }
             end function
           }
@@ -1261,17 +1268,20 @@ sub __getMenu()
   requestId = createRequestId()
 
   action = {
+    node: m.top
     apiRequestManager: m.apiRequestManager
-    url: urlMenu(m.apiUrl, m.productCode)
+    url: urlMenu(m.productCode)
     method: "GET"
     responseMethod: "onMenuResponse"
     body: invalid
     token: invalid
     publicApi: false
     dataAux: invalid
+    methodName: "__getMenu"
+    parameter: invalid
     requestId: requestId
     run: function() as Object
-      m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux)
+      m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux, m.methodName)
       return { success: true, error: invalid }
     end function
   }
@@ -1338,8 +1348,9 @@ sub __selectMenuItem(menuSelectedItem)
     requestId = createRequestId()
 
     action = {
+      node: m.top
       apiRequestManager: m.apiRequestManager
-      url: urlContentViewsCarousels(m.apiUrl, menuSelectedItem.id)
+      url: urlContentViewsCarousels(menuSelectedItem.id)
       method: "GET"
       responseMethod: "onContentViewResponse"
       body: invalid
@@ -1366,8 +1377,9 @@ sub __selectMenuItem(menuSelectedItem)
     requestId = createRequestId()
 
     action = {
+      node: m.top
       apiRequestManager: m.apiRequestManager
-      url: urlChannelsLastWatched(m.apiUrl)
+      url: urlChannelsLastWatched()
       method: "GET"
       responseMethod: "onLastWatchedResponse"
       body: invalid
@@ -1877,17 +1889,20 @@ sub __validateAutoUpgrade()
   requestId = createRequestId()
 
   action = {
+    node: m.top
     apiRequestManager: m.autoUpgradeRequestManager
-    url: urlAutoUpgradeValidate(m.apiUrl)
+    url: urlAutoUpgradeValidate()
     method: "POST"
     responseMethod: "onAutoUpgradeResponse"
     body: FormatJson(body)
     token: invalid
     publicApi: false
     dataAux: invalid
+    methodName: "__validateAutoUpgrade"
+    parameter: invalid
     requestId: requestId
     run: function() as Object
-      m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux)
+      m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux, m.methodName)
       return { success: true, error: invalid }
     end function
   }
@@ -2000,17 +2015,20 @@ sub __validateVariables()
     requestId = createRequestId()
 
     action = {
+      node: m.top
       apiRequestManager: m.apiVariableRequest
-      url: urlPlatformsVariables(m.apiUrl, m.global.appCode, getVersionCode())
+      url: urlPlatformsVariables(m.global.appCode, getVersionCode())
       method: "GET"
       responseMethod: "onPlatformResponse"
       body: invalid
       token: invalid
       publicApi: false
       dataAux: invalid
+      methodName: "__validateVariables"
+      parameter: invalid
       requestId: requestId
       run: function() as Object
-        m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux)
+        m.apiRequestManager = sendApiRequest(m.apiRequestManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux, m.methodName)
         return { success: true, error: invalid }
       end function
     }
@@ -2078,6 +2096,42 @@ sub __markLastFocus()
   end if
 end sub
 
+' Guarda el nodo enfocado en MainScreen antes de abrir CdnErrorDialog.
+function cacheFocusBeforeCdnDialog() as boolean
+  if not m.top.visible then return false
+
+  if (m.lastMainScreenFocusBeforeCdnDialog <> invalid) then return false
+  m.lastMainScreenFocusBeforeCdnDialog = invalid
+  if __isNewsFocused() and m.newsCarouselItem <> invalid then
+    m.lastMainScreenFocusBeforeCdnDialog = m.newsCarouselItem
+    return true
+  end if
+
+  if m.carouselContainer <> invalid and m.carouselContainer.focusedChild <> invalid then
+    carouselList = m.carouselContainer.focusedChild.findNode("carouselList")
+    if carouselList <> invalid then
+      m.lastMainScreenFocusBeforeCdnDialog = carouselList
+    end if
+  end if
+  return m.lastMainScreenFocusBeforeCdnDialog <> invalid
+end function
+
+' Restaura el foco previo de MainScreen al cerrar CdnErrorDialog.
+function restoreFocusAfterCdnDialog() as boolean
+  if not m.top.visible then return false
+
+  if m.lastMainScreenFocusBeforeCdnDialog <> invalid then
+    m.lastMainScreenFocusBeforeCdnDialog.setFocus(true)
+  else
+    __focusCarousels()
+  end if
+
+  __updateOverlayVisibilityByFocus()
+  __updateSelectedIndicator()
+  m.lastMainScreenFocusBeforeCdnDialog = invalid
+  return true
+end function
+
 ' Guardar el log cuandos se cambia una opción del menú 
 sub __saveActionLog(actionLog as object)
 
@@ -2085,13 +2139,16 @@ sub __saveActionLog(actionLog as object)
     requestId = createRequestId()
 
     action = {
+      node: m.top
       apiRequestManager: m.apiLogRequestManager
-      url: urlActionLogsToken(m.apiUrl)
+      url: urlActionLogsToken()
       method: "GET"
       responseMethod: "onActionLogTokenResponse"
       body: invalid
       token: invalid
       publicApi: false
+      methodName: "__saveActionLog"
+      parameter: FormatJson(actionLog)
       requestId: requestId
       dataAux: FormatJson(actionLog)
       run: function() as Object
@@ -2133,12 +2190,15 @@ sub __sendActionLog(actionLog as object)
 
   if (beaconToken <> invalid and m.beaconUrl <> invalid)
     action = {
+      node: m.top
       apiRequestManager: m.apiLogRequestManager
-      url: urlActionLogs(m.beaconUrl)
+      url: urlActionLogs()
       method: "POST"
       responseMethod: "onActionLogResponse"
       body: FormatJson(actionLog)
       token: beaconToken
+      methodName: "__saveActionLog"
+      parameter: FormatJson(actionLog)
       publicApi: false
       dataAux: invalid
       requestId: requestId
