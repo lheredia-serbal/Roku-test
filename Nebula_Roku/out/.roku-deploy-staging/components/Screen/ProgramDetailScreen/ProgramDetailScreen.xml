@@ -63,7 +63,7 @@
       layoutDirection="vert"
       horizAlignment="custom"
       vertAlignment="top"
-      itemSpacings="[20]"> 
+      itemSpacings="[10]"> 
       <LayoutGroup 
         layoutDirection="horiz"
         horizAlignment="left"
@@ -98,9 +98,9 @@
           layoutDirection="vert"
           horizAlignment="left"
           vertAlignment="top"
-          itemSpacings="[10]">
+          itemSpacings="[5]">
           
-          <ProgramSummary id="programInfo" visible="false" width="50"/>
+          <ProgramSummary id="programInfo" visible="false"/>
           
           <LayoutGroup 
             id="actionsBtn"
@@ -113,7 +113,7 @@
           <Rectangle
             id="creditsSpacer"
             width="1"
-            height="10"
+            height="5"
             opacity="0" >
           </Rectangle>
 
@@ -121,7 +121,8 @@
             id="creditsContainer"
             layoutDirection="vert"
             horizAlignment="left"
-            vertAlignment="top">
+            vertAlignment="top"
+            itemSpacings="[5]">
           </LayoutGroup>
 
         </LayoutGroup>

@@ -29,7 +29,6 @@ sub initFocus()
     m.orgNameLabel.text = i18n_t(m.global.i18n, "configPage.orgName")
 
     if m.apiUrl = invalid then m.apiUrl = getConfigVariable(m.global.configVariablesKeys.API_URL) 
-    if m.beaconUrl = invalid then m.beaconUrl = getConfigVariable(m.global.configVariablesKeys.BEACON_URL) 
     actionLog = getActionLog({ actionCode: ActionLogCode().OPEN_PAGE, pageUrl: "Config" })
     __saveActionLog(actionLog)
   end if
@@ -74,7 +73,7 @@ end sub
 sub __sendActionLog(actionLog as object)
   beaconToken = getBeaconToken()
 
-  if (beaconToken <> invalid and m.beaconUrl <> invalid)
+  if (beaconToken <> invalid)
     m.apiLogRequestManager = sendApiRequest(m.apiLogRequestManager, urlActionLogs(), "POST", "onActionLogResponse", invalid, FormatJson(actionLog), beaconToken, false)
   end if
 end sub

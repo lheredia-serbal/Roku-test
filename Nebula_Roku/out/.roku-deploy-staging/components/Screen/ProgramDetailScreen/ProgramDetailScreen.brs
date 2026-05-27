@@ -45,6 +45,24 @@ function onKeyEvent(key as string, press as boolean) as boolean
     return true
   end if
 
+  ' Recupera foco por defecto cuando esta pantalla tiene foco pero ningún subcomponente navegable lo tiene.
+  if press and m.top.hasFocus() and not m.actionsBtn.isInFocusChain() and not m.related.isInFocusChain() then
+    ' Referencia defensiva al carrusel de relacionados.
+    relatedList = invalid
+    if m.related <> invalid then relatedList = m.related.findNode("carouselList")
+
+    ' Prioriza recuperar foco en relacionados si existe y está visible.
+    if relatedList <> invalid and m.relatedContainer.visible then
+      relatedList.setFocus(true)
+      m.selectedIndicator.size = m.related.size
+      m.selectedIndicator.visible = true
+    ' Si no hay related disponible, vuelve el foco al grupo de acciones.
+    else if m.actionsBtn <> invalid then
+      m.actionsBtn.setFocus(true)
+      m.selectedIndicator.visible = false
+    end if
+  end if
+
   handled = false
 
   if m.actionsBtn.isInFocusChain() then 
@@ -118,7 +136,6 @@ sub initData()
     __configProgramDetail()
 
     if m.apiUrl = invalid then m.apiUrl = getConfigVariable(m.global.configVariablesKeys.API_URL) 
-    if m.beaconUrl = invalid then m.beaconUrl = getConfigVariable(m.global.configVariablesKeys.BEACON_URL) 
 
     data = ParseJson(m.top.data)
     ' Guarda redirectKey recibido desde Home para conservar contexto de navegación.
@@ -879,7 +896,7 @@ sub __configProgramDetail()
   height = m.scaleInfo.height
 
   m.programInfo.width = (m.scaleInfo.width - scaleValue(400, m.scaleInfo))
-  m.programInfo.translation = [300, 0]
+  m.programInfo.translation = scaleSize([300, 0], m.scaleInfo)
   m.programInfo.initConfig = true
 
   m.infoGradient.width = width
@@ -1058,7 +1075,7 @@ end sub
 sub __sendActionLog(actionLog as object)
   beaconToken = getBeaconToken()
 
-  if (beaconToken <> invalid and m.beaconUrl <> invalid)
+  if (beaconToken <> invalid)
     requestId = createRequestId()
     action = {
       node: m.top

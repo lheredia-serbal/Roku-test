@@ -139,7 +139,6 @@ end sub
 
 ' Procesa payload de entrada y dispara servicio de episodios.
 sub initData()
-  if m.beaconUrl = invalid then m.beaconUrl = getConfigVariable(m.global.configVariablesKeys.BEACON_URL) 
   ' Evita ejecución cuando no hay payload.
   if m.top.data = invalid or m.top.data = "" then return
   ' Resuelve apiUrl reutilizando la misma lógica del resto de pantallas.
@@ -1138,7 +1137,7 @@ end sub
 sub __sendActionLog(actionLog as object)
   beaconToken = getBeaconToken()
 
-  if (beaconToken <> invalid and m.beaconUrl <> invalid)
+  if (beaconToken <> invalid)
     requestId = createRequestId()
 
     action = {

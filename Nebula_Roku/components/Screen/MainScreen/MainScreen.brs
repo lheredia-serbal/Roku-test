@@ -63,6 +63,38 @@ function onKeyEvent(key as string, press as boolean) as boolean
   end if
 
   handled = false
+
+  ' Verifica que el foco global actual pertenezca al árbol de MainScreen.
+  hasFocusInMainScreen = m.top <> invalid and m.top.isInFocusChain()
+  ' Confirma que no haya foco en News, contenedor News, carrusel sobre News, carruseles ni menú.
+  isFocusOutsideMainTargets = not __isNewsFocused() and not __isNewsContainerFocused() and not __isFocusedCarouselAboveNews() and (m.carouselContainer = invalid or not m.carouselContainer.isInFocusChain()) and (m.myMenu = invalid or not m.myMenu.isInFocusChain())
+
+  ' Si MainScreen está activa y no hay foco en destinos válidos, intenta recuperar foco por defecto.
+  if hasFocusInMainScreen and isFocusOutsideMainTargets and m.myMenu <> invalid then
+    defaultMenuItem = invalid
+    ' Busca el contenedor principal del menú para obtener su primer ítem navegable.
+    principalMenuLayoutGroup = m.myMenu.findNode("principalMenuLayoutGroup")
+    ' Si existe el grupo principal y tiene hijos, toma el primer elemento del menú.
+    if principalMenuLayoutGroup <> invalid and principalMenuLayoutGroup.getChildCount() > 0 then
+      ' Asigna como objetivo de foco el primer elemento del menú principal.
+      defaultMenuItem = principalMenuLayoutGroup.getChild(0)
+    end if
+
+    ' Si no hay ítems principales, usa el avatar como fallback de foco seguro.
+    if defaultMenuItem = invalid then
+      ' Obtiene el nodo de avatar para recuperar foco cuando no hay ítems de menú.
+      defaultMenuItem = m.myMenu.findNode("avatarImage")
+    end if
+
+    ' Si se encontró un nodo válido, aplica foco y consume el evento de teclado.
+    if defaultMenuItem <> invalid then
+      ' Mueve el foco al objetivo por defecto del menú.
+      defaultMenuItem.setFocus(true)
+      ' Evita propagación adicional del evento una vez recuperado el foco.
+      return true
+    end if
+  end if
+
   ' Si el foco está en NewsItem o en newsContainer vacío, replica la misma bajada al primer carrusel.
   if key = KeyButtons().DOWN and press and (__isNewsFocused() or __isNewsContainerFocused()) then
     __focusFirstCarouselFromNews()
@@ -215,7 +247,6 @@ sub initData()
 
     if m.productCode = invalid then m.productCode = getConfigVariable(m.global.configVariablesKeys.PRODUCT_CODE)
     if m.apiUrl = invalid then m.apiUrl = getConfigVariable(m.global.configVariablesKeys.API_URL) 
-    if m.beaconUrl = invalid then m.beaconUrl = getConfigVariable(m.global.configVariablesKeys.BEACON_URL) 
     if m.productName = invalid then m.productName = getConfigVariable(m.global.configVariablesKeys.PRODUCT_NAME) 
     if m.mainLogoDisplayType = invalid then m.mainLogoDisplayType = getConfigVariable(m.global.configVariablesKeys.LOGO_DISPLAY_TYPE) 
 
@@ -2188,7 +2219,7 @@ sub __sendActionLog(actionLog as object)
 
   requestId = createRequestId()
 
-  if (beaconToken <> invalid and m.beaconUrl <> invalid)
+  if (beaconToken <> invalid)
     action = {
       node: m.top
       apiRequestManager: m.apiLogRequestManager

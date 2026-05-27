@@ -727,7 +727,6 @@ sub __initData()
   if m.platformCode = invalid then m.platformCode = getConfigVariable(m.global.configVariablesKeys.PLATFORM_CODE)
   if m.enviroment = invalid then m.enviroment = getConfigVariable(m.global.configVariablesKeys.ENVIRONMENT) 
   if m.apiUrl = invalid then m.apiUrl = getConfigVariable(m.global.configVariablesKeys.API_URL) 
-  if m.beaconUrl = invalid then m.beaconUrl = getConfigVariable(m.global.configVariablesKeys.BEACON_URL) 
 end sub
 
 ' Llama al servicio para registrar la instalación
@@ -962,7 +961,7 @@ end sub
 sub __sendActionLog(actionLog as object)
   beaconToken = getBeaconToken()
 
-  if (beaconToken <> invalid and m.beaconUrl <> invalid)
+  if (beaconToken <> invalid)
     requestId = createRequestId()
 
     action = {

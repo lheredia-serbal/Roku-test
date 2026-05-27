@@ -721,7 +721,6 @@ end sub
 ' Carga la configuracion inicial del componente, escuchando los observable y obteniendo las 
 ' referencias de compenentes necesarios para su uso
 sub __initConfig()
-  if m.beaconUrl = invalid then m.beaconUrl = getConfigVariable(m.global.configVariablesKeys.BEACON_URL) 
 
   width = m.scaleInfo.width
   height = m.scaleInfo.height
@@ -1250,7 +1249,7 @@ end sub
 sub __sendActionLog(actionLog as object)
   beaconToken = getBeaconToken()
 
-  if (beaconToken <> invalid and m.beaconUrl <> invalid)
+  if (beaconToken <> invalid)
     requestId = createRequestId()
 
     action = {

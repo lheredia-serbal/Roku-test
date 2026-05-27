@@ -12,6 +12,8 @@ sub init()
   m.infoGradient = m.top.findNode("infoGradient") 
   ' Referencia al poster de fondo dinámico.
   m.programImageBackground = m.top.findNode("programImageBackground") 
+  ' Referencia al carrusel de ViewAll.
+  m.carousels = m.top.findNode("carousels")
   ' Referencia al contenedor donde vive el carrusel de ViewAll.
   m.carouselContainer = m.top.findNode("carouselContainer")
   ' Referencia al indicador de selección del carrusel.
@@ -22,7 +24,6 @@ end sub
 
 ' Maneja la lógica de foco para la pantalla.
 sub initFocus()
-  if m.beaconUrl = invalid then m.beaconUrl = getConfigVariable(m.global.configVariablesKeys.BEACON_URL) 
   ' Siempre que ViewAll vuelva a estar visible, reposicionamos foco al primer item del primer carrusel.
   if m.top.onFocus then __focusFirstCarousel()
 end sub
@@ -932,7 +933,7 @@ end sub
 sub __sendActionLog(actionLog as object)
   beaconToken = getBeaconToken()
 
-  if (beaconToken <> invalid and m.beaconUrl <> invalid)
+  if (beaconToken <> invalid)
     m.apiLogRequestManager = sendApiRequest(m.apiLogRequestManager, urlActionLogs(), "POST", "onActionLogResponse", invalid, FormatJson(actionLog), beaconToken, false)
   end if
 end sub

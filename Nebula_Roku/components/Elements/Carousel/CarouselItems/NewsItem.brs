@@ -264,14 +264,16 @@ function onKeyEvent(key as string, press as boolean) as boolean
 
     if key = KeyButtons().RIGHT then
         if m.top.currentIndex < (totalItems - 1) then
-            ' Al ir a la derecha, el actual sale a la izquierda y el siguiente entra desde la derecha.
-            startSlideTransition(m.top.currentIndex + 1, 1)
+            ' Navega sin animación al siguiente item de News.
+            m.top.currentIndex = m.top.currentIndex + 1
+            renderCurrentItem()
         end if
         return true
     else if key = KeyButtons().LEFT then
         if m.top.currentIndex > 0 then
-            ' Al ir a la izquierda, el actual sale a la derecha y el anterior entra desde la izquierda.
-            startSlideTransition(m.top.currentIndex - 1, -1)
+            ' Navega sin animación al item anterior de News.
+            m.top.currentIndex = m.top.currentIndex - 1
+            renderCurrentItem()
             return true
         end if
 
@@ -281,6 +283,7 @@ function onKeyEvent(key as string, press as boolean) as boolean
 
     return false
 end function
+
 
 ' Inicia una transición horizontal y actualiza el item activo.
 sub startSlideTransition(newIndex as integer, direction as integer)

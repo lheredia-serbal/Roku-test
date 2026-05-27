@@ -152,6 +152,8 @@ sub init()
   m.isReloadStreaming = false
   ' Bandera que habilita el botón "Ir al vivo"
   m.enableGoLive = false
+  ' Bandera que indica que hay un dialog visible
+  m.dialogShowing = false
 
   ' Todas estas variables es para evitar que el usuario presiona mucha veces el botón atrás cuando el stream es en vivo y evitar llamadas multiples
   m.reloadInputBlockUntilMs = -1 ' tiempo limite (ms) para bloquear entradas tras recargar stream
@@ -174,6 +176,10 @@ sub init()
   m.lastKey = invalid
   ' Guardar el Id del último stream
   m.lastId = 0
+  ' Guarda la marca temporal (ms) de la última solicitud de streaming enviada.
+  m.lastStreamingRequestAtMs = -1
+  ' Bandera para indicar que hay una solicitud de streaming HTTP en curso.
+  m.isLoadingStreamingRequest = false
   ' Guardar el canal seleccinado, por lista de canales o por guía
   m.itemSelected = invalid
   m.repositionChannnelList = false
@@ -667,8 +673,6 @@ sub initData()
     m.streamingType = m.streaming.streamingType
     openGuide = m.top.openGuide
     m.top.openGuide = false
-
-    if m.beaconUrl = invalid then m.beaconUrl = getConfigVariable(m.global.configVariablesKeys.BEACON_URL) 
     
     m.guide.loading = m.top.loading
     
@@ -959,6 +963,17 @@ sub onSelectItemChannelList()
         m.channelList.selected = invalid
         m.pinDialog = createAndShowPINDialog(m.top, i18n_t(m.global.i18n, "shared.parentalControlModal.title"), "onPinDialogLoad", [i18n_t(m.global.i18n, "button.ok"), i18n_t(m.global.i18n, "button.cancel")])
       else
+
+        isSameStreaming = (m.lastKey = itemSelected.redirectKey and itemSelected.redirectId = m.lastId)
+        nowMs = __getNowMilliseconds()
+        isProcessingHttpRequest = m.isLoadingStreamingRequest
+        hasWaitedEnoughSinceLastRequest = (m.lastStreamingRequestAtMs = invalid or m.lastStreamingRequestAtMs < 0 or (nowMs - m.lastStreamingRequestAtMs) >= 3000)
+
+        if isSameStreaming and (isProcessingHttpRequest or not hasWaitedEnoughSinceLastRequest) then
+          m.channelList.selected = invalid
+          return
+        end if
+
         m.channelList.selected = invalid 
         __refreshWatchTokenData(itemSelected.redirectKey, itemSelected.redirectId)
         __loadStreamingURL(itemSelected.redirectKey, itemSelected.redirectId, getStreamingAction().PLAY)
@@ -1066,6 +1081,8 @@ end sub
 
 ' Procesa la respuesta al obtener la url de lo que se quiere ver
 sub onStreamingsResponse() 
+  m.isLoadingStreamingRequest = false
+
   if validateStatusCode(m.apiRequestManager.statusCode) then
     resp = ParseJson(m.apiRequestManager.response)
     if resp <> invalid and resp.data <> invalid then
@@ -1450,7 +1467,8 @@ sub onParentalControlResponse()
       m.itemSelected = invalid
       m.repositionChannnelList = true
       m.top.loading.visible = false
-      m.dialog = createAndShowDialog(m.top, "", i18n_t(m.global.i18n, "shared.parentalControlModal.error.invalid"), "onDialogClosedLastFocus")
+      m.dialogShowing = true
+      m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.parentalControlModal.error.invalid"), "", "onDialogClosedLastFocus")
     end if
   else
     if m.apiRequestManager <> invalid and not m.apiRequestManager.serverError then
@@ -1473,6 +1491,8 @@ end sub
 sub onDialogClosedLastFocus()
   option = clearDialogAndGetOption(m.top, m.dialog)
   m.dialog = invalid
+
+  m.dialogShowing = false
   
   if option = 0 then
     if m.lastButtonSelect <> invalid then m.lastButtonSelect.setFocus(true)
@@ -1531,7 +1551,7 @@ sub onHideChannelListTimerFired()
   ' Solo tiene sentido ocultar si está visible
   if m.channelListContainer.visible then
       m.channelListContainer.visible = false
-      m.videoPlayer.setFocus(true)
+      if m.dialogShowing = false then m.videoPlayer.setFocus(true)
   end if
 end sub
 
@@ -2355,6 +2375,8 @@ sub __loadStreamingURL(key, id, streamingAction, streamingType = getStreamingTyp
   m.lastKey = key
   m.lastId = id
   m.newStreamingType = streamingType
+  m.lastStreamingRequestAtMs = __getNowMilliseconds()
+  m.isLoadingStreamingRequest = true
 
   m.playerLoaded = false
   
@@ -2432,7 +2454,7 @@ end sub
 sub __sendActionLog(actionLog as object)
   beaconToken = getBeaconToken()
 
-  if (beaconToken <> invalid and m.beaconUrl <> invalid)
+  if (beaconToken <> invalid)
     m.apiLogRequestManager = sendApiRequest(m.apiLogRequestManager, urlActionLogs(), "POST", "onActionLogResponse", invalid, FormatJson(actionLog), beaconToken, false)
   end if
 end sub
