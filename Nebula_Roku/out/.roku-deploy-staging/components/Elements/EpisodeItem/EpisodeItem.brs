@@ -2,6 +2,8 @@
 sub init()
   ' Guarda fondo semitransparente para estado de foco.
   m.focusBackground = m.top.findNode("focusBackground")
+  ' Guarda marco de selección individual del episodio.
+  m.selectionBox = m.top.findNode("selectionBox")
   ' Guarda contenedor horizontal principal.
   m.episodeContainer = m.top.findNode("episodeContainer")
   ' Guarda contenedor de superposición de medios del episodio.
@@ -77,6 +79,7 @@ end sub
 sub onFocusStateChanged()
   if m.focusBackground = invalid then return
   m.focusBackground.visible = m.top.isFocused
+  if m.selectionBox <> invalid then m.selectionBox.visible = m.top.isFocused
 end sub
 
 ' Ajusta posiciones y tamaños para cumplir el diseño solicitado.
@@ -128,7 +131,7 @@ sub __updateLayout()
   m.episodeTitle.width = infoWidth
   ' Aplica ancho del texto a la sinopsis.
   m.episodeSynopsis.width = infoWidth
-' Ajusta tamaño del fondo para cubrir todo el item visible.
+  ' Ajusta tamaño del fondo para cubrir todo el item visible.
   __syncFocusBackgroundSize()
 end sub
 
@@ -149,4 +152,14 @@ sub __syncFocusBackgroundSize()
   else
     m.focusBackground.translation = [0, 0]
   end if
+
+' Sincroniza el SelectionBox para que quede por encima del item correspondiente.
+  __syncSelectionBoxLayout(backgroundWidth, backgroundHeight)
+end sub
+
+' Ajusta tamaño y posición del SelectionBox individual del episodio.
+sub __syncSelectionBoxLayout(itemWidth as integer, itemHeight as integer)
+  if m.selectionBox = invalid then return
+  m.selectionBox.size = [itemWidth, itemHeight]
+  m.selectionBox.translation = [0, 0]
 end sub

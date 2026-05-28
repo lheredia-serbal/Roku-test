@@ -180,7 +180,8 @@
     "parentalControlModal": {
       "title": "Enter your PIN",
       "error": {
-        "invalid": "Invalid PIN"
+        "invalid": "Invalid PIN",
+        "description": "The PIN entered is not valid"
       }
     }
   },

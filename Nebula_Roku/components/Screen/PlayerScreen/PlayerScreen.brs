@@ -1468,7 +1468,7 @@ sub onParentalControlResponse()
       m.repositionChannnelList = true
       m.top.loading.visible = false
       m.dialogShowing = true
-      m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.parentalControlModal.error.invalid"), "", "onDialogClosedLastFocus")
+      m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.parentalControlModal.error.invalid"), i18n_t(m.global.i18n, "shared.parentalControlModal.error.description"), "onDialogClosedLastFocus")
     end if
   else
     if m.apiRequestManager <> invalid and not m.apiRequestManager.serverError then

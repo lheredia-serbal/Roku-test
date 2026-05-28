@@ -576,7 +576,7 @@ sub onParentalControlResponse()
         end if
       else
         m.top.loading.visible = false
-        m.dialog = createAndShowDialog(m.top, "", i18n_t(m.global.i18n, "shared.parentalControlModal.error.invalid"), "onDialogClosedLastFocus")
+        m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.parentalControlModal.error.invalid"), i18n_t(m.global.i18n, "shared.parentalControlModal.error.description"), "onDialogClosedLastFocus")
       end if
     else     
       m.top.loading.visible = false

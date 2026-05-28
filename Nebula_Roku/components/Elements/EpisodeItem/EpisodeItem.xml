@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8" ?>
+<?xml version="1.0" encoding="utf-8"?>
 <component
   name="EpisodeItem"
   extends="Group"
@@ -25,11 +25,12 @@
     <field id="programTitle" type="string" onChange="onEpisodeInputChanged" />
     <!-- Índice del fallback de poster recibido desde EmissionsScreen. -->
     <field id="index" type="integer" value="1" onChange="onEpisodeInputChanged" />
-     <!-- Flag para activar fondo oscuro cuando el item está seleccionado. -->
+    <!-- Flag para activar fondo oscuro cuando el item está seleccionado. -->
     <field id="isFocused" type="boolean" value="false" onChange="onFocusStateChanged" />
   </interface>
 
   <children>
+
     <!-- Fondo de foco para resaltar todo el item con negro semitransparente. -->
     <Rectangle
       id="focusBackground"
@@ -51,7 +52,7 @@
         <Poster
           id="imageNotFound"
           loadDisplayMode="scaleToZoom"
-          uri="pkg:/images/shared/show_image_empty_1.jpg"/>
+          uri="pkg:/images/shared/show_image_empty_1.jpg" />
 
         <Label
           id="emissionTitleOverlay"
@@ -65,7 +66,7 @@
 
         <Poster
           id="emissionImage"
-          loadDisplayMode="scaleToZoom"/>
+          loadDisplayMode="scaleToZoom" />
 
         <!-- Ícono play superpuesto al centro de emissionImage. -->
         <!-- Inicia oculto y se muestra solo cuando play=true. -->
@@ -100,24 +101,31 @@
         vertAlignment="top"
         itemSpacings="[10]">
 
-        <Rectangle height="20">
+        <Rectangle height="5">
         </Rectangle>
 
         <!-- Título del episodio con tipografía grande. -->
         <Label
           id="episodeTitle"
           text=""
+          translation="[0,0]"
           wrap="true"
           maxLines="2"
-          font="font:LargeBoldSystemFont" />
+          font="font:MediumBoldSystemFont" />
 
         <!-- Sinopsis del episodio con tipografía menor. -->
         <Label
           id="episodeSynopsis"
           text=""
           wrap="true"
-          font="font:SmallSystemFont" />
+          font="font:SmallestBoldSystemFont" />
       </LayoutGroup>
     </LayoutGroup>
+
+    <!-- Marco de selección siempre visible para cada episodio. -->
+    <SelectionBox
+      id="selectionBox"
+      visible="false" />
+
   </children>
 </component>

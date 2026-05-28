@@ -65,10 +65,6 @@
           itemSpacings="[24]"/>
       </Group>
 
-      <SelectionBox
-        id="selectedIndicator"
-        visible="false" />
-
       <Label
         id="emissionsTitle"
         text=""

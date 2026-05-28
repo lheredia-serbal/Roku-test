@@ -16,16 +16,10 @@ sub init()
   m.episodesList = m.top.findNode("episodesList")
   ' Guarda referencia del viewport que recorta la lista bajo el título.
   m.episodesViewport = m.top.findNode("episodesViewport")
-  ' Guarda referencia del indicador de selección fijo.
-  m.selectedIndicator = m.top.findNode("selectedIndicator")
   ' Guarda referencia del fondo visual que usa la primera imagen de emisiones.
   m.programImageBackground = m.top.findNode("programImageBackground")
   ' Guarda referencia del gradiente superpuesto para mejorar legibilidad del contenido.
   m.infoGradient = m.top.findNode("infoGradient")
-  ' Cachea el ancho fijo del indicador para reutilizarlo al recalcular su alto dinámico.
-  m.selectedIndicatorWidth = scaleValue(1100, m.scaleInfo)
-  ' Cachea alto fallback del indicador para usarlo cuando no se pueda medir el EpisodeItem.
-  m.selectedIndicatorFallbackHeight = scaleValue(237, m.scaleInfo)
   m.episodesMoveAnimation = m.top.findNode("episodesMoveAnimation")
   m.episodesMoveInterpolator = m.top.findNode("episodesMoveInterpolator")
   ' Índice lógico del episodio actualmente enfocado por la selección.
@@ -125,16 +119,6 @@ sub __applyScaledLayout()
     ' Reinicia posición de lista dentro del viewport sin desplazar el viewport.
     __setEpisodesListTranslation([0, 0], false)
   end if
-
-if m.selectedIndicator <> invalid then
-    m.selectedIndicator.translation = scaleSize([80, 148], m.scaleInfo)
-    ' Actualiza ancho cacheado con el valor escalado vigente para mantener consistencia visual.
-    m.selectedIndicatorWidth = scaleValue(1100, m.scaleInfo)
-    ' Actualiza alto fallback cacheado con el valor escalado vigente para mantener consistencia visual.
-    m.selectedIndicatorFallbackHeight = scaleValue(237, m.scaleInfo)
-    ' Mantiene tamaño inicial del indicador antes de poder medir el EpisodeItem enfocado.
-    m.selectedIndicator.size = [m.selectedIndicatorWidth, m.selectedIndicatorFallbackHeight]
-  end if
 end sub
 
 ' Procesa payload de entrada y dispara servicio de episodios.
@@ -180,12 +164,12 @@ function onKeyEvent(key as string, press as boolean) as boolean
     return true
   end if
 
-  ' Navega episodio anterior manteniendo fijo el SelectionBox.
+  ' Navega episodio anterior.
   if key = KeyButtons().UP then
     return __moveSelection(-1)
   end if
 
-  ' Navega episodio siguiente manteniendo fijo el SelectionBox.
+  ' Navega episodio siguiente.
   if key = KeyButtons().DOWN then
     if m.selectedEpisodeIndex + 1 < m.episodesCount then 
       return __moveSelection(1)
@@ -210,8 +194,6 @@ sub __getEpisodes(key, id)
   m.lastKey = key
   ' Guarda id para posibles reintentos.
   m.lastId = id
-  ' Oculta indicador mientras se carga contenido para evitar selección visual desfasada.
-  if m.selectedIndicator <> invalid then m.selectedIndicator.visible = false
   ' Activa loading compartido mientras se consulta API.
   if m.top.loading <> invalid then m.top.loading.visible = true
   ' Crea identificador de acción para retry manager.
@@ -539,7 +521,7 @@ sub onEpisodeParentalControlResponse()
       ' Oculta loading al no poder continuar con reproducción.
       if m.top.loading <> invalid then m.top.loading.visible = false
       ' Muestra mensaje de PIN inválido replicando MainScreen.
-      m.dialog = createAndShowDialog(m.top, "", i18n_t(m.global.i18n, "shared.parentalControlModal.error.invalid"), "onEpisodePinErrorDialogClosed")
+      m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.parentalControlModal.error.invalid"), i18n_t(m.global.i18n, "shared.parentalControlModal.error.description"), "onEpisodePinErrorDialogClosed")
     end if
   else
     ' Captura status de error HTTP para logging y logout.
@@ -770,7 +752,6 @@ sub __clearEpisodes()
     m.episodesList.removeChild(m.episodesList.getChild(0))
   end while
 
-  ' Oculta el SelectionBox cuando no quedan episodios visibles.
   ' Limpia posters de fondo al vaciar emisiones para evitar arrastrar imagen anterior.
   __hideEpisodeBackground()
 end sub
@@ -834,7 +815,7 @@ sub __hideEpisodeBackground()
   if m.infoGradient <> invalid then m.infoGradient.visible = false
 end sub
 
-' Mueve la selección vertical y desplaza los EpisodeItem para mantener fijo el indicador.
+' Mueve la selección vertical y desplaza los EpisodeItem.
 function __moveSelection(direction as integer) as boolean
   ' Evita navegación cuando no existen episodios en pantalla.
   if m.episodesList = invalid or m.episodesCount <= 0 then return false
@@ -850,15 +831,13 @@ function __moveSelection(direction as integer) as boolean
   return true
 end function
 
-' Aplica índice seleccionado y reposiciona la lista para dejar fijo el SelectionBox.
+' Aplica índice seleccionado y reposiciona la lista.
 sub __updateSelection(newIndex as integer)
   ' Corta actualización cuando no existe la lista visual.
   if m.episodesList = invalid then return
 
-  ' Si no hay episodios, oculta indicador y termina sin mover lista.
+  ' Si no hay episodios, termina sin mover lista.
   if m.episodesCount <= 0 then
-    ' Garantiza que el marco no quede visible cuando la lista está vacía.
-    if m.selectedIndicator <> invalid then m.selectedIndicator.visible = false
     ' Sale temprano para evitar cálculos de desplazamiento sin contenido.
     return
   end if
@@ -881,47 +860,10 @@ sub __updateSelection(newIndex as integer)
   ' Obtiene el paso vertical real para desplazar exactamente un item.
   stepY = __getEpisodeStepY()
 
-  ' Mueve la lista verticalmente mientras el SelectionBox permanece fijo.
   targetTranslation = [baseTranslation[0], baseTranslation[1] - (m.selectedEpisodeIndex * stepY) + (m.selectedEpisodeIndex * 0.5)]
   animateTransition = previousIndex <> newIndex
-  ' Sincroniza el alto del indicador con el EpisodeItem actualmente enfocado.
-  __syncSelectedIndicatorSize()
-  ' Obtiene la posición superior base del indicador según el layout escalado.
-  indicatorTopTranslation = scaleSize([80, 98], m.scaleInfo)
-  ' Captura coordenada X fija del indicador para mantener alineación horizontal.
-  indicatorX = indicatorTopTranslation[0]
-  ' Captura límite superior (Y) desde donde el indicador debe quedar fijo.
-  indicatorTopY = indicatorTopTranslation[1]
-  ' Calcula altura visible del viewport para ubicar el indicador al fondo de la pantalla.
-  episodesViewportHeight = scaleValue(600, m.scaleInfo)
-  ' Usa alto fallback del indicador para robustez cuando aún no se pueda medir.
-  indicatorHeight = m.selectedIndicatorFallbackHeight
-  ' Prioriza alto real del indicador ya sincronizado con el EpisodeItem seleccionado.
-  if m.selectedIndicator <> invalid and m.selectedIndicator.size <> invalid and m.selectedIndicator.size.count() > 1 then indicatorHeight = cint(m.selectedIndicator.size[1])
-  ' Define un margen inferior mínimo para mantener el indicador abajo pero completamente visible.
-  indicatorBottomPadding = scaleValue(6, m.scaleInfo)
-  ' Calcula límite inferior del indicador dejando un respiro muy sutil en la parte baja.
-  indicatorBottomY = indicatorTopY + episodesViewportHeight - indicatorHeight - indicatorBottomPadding
-  ' Evita invertir límites cuando el alto del indicador supera el viewport.
-  if indicatorBottomY < indicatorTopY then indicatorBottomY = indicatorTopY
-
-  ' Mantiene el indicador fijo abajo por defecto para que el foco se vea en la parte baja.
-  indicatorTargetY = indicatorBottomY
-  ' Recalcula desplazamiento de la lista para mantener alineado el item seleccionado con el indicador.
-  targetTranslation = [baseTranslation[0], (indicatorTargetY - indicatorTopY) + baseTranslation[1] - (m.selectedEpisodeIndex * stepY) + (m.selectedEpisodeIndex * 0.5)]
-  ' Cuando se llega a la zona superior, fija la lista en su posición base.
-  if targetTranslation[1] > baseTranslation[1] then
-    targetTranslation = [baseTranslation[0], baseTranslation[1]]
-    ' Desacopla el indicador del fondo para acompañar al item mientras la lista queda fija.
-    indicatorTargetY = indicatorTopY + (m.selectedEpisodeIndex * stepY)
-    if indicatorTargetY > indicatorBottomY then indicatorTargetY = indicatorBottomY
-  end if
-  ' Aplica traducción final del indicador para reflejar la posición dinámica actual.
-  if m.selectedIndicator <> invalid then m.selectedIndicator.translation = [indicatorX, indicatorTargetY]
+  if targetTranslation[1] > baseTranslation[1] then targetTranslation = [baseTranslation[0], baseTranslation[1]]
   __setEpisodesListTranslation(targetTranslation, animateTransition)
-
-  ' Muestra el marco de selección al existir un episodio activo.
-  if m.selectedIndicator <> invalid then m.selectedIndicator.visible = true
 end sub
 
 ' Marca visualmente el EpisodeItem seleccionado y limpia el resto.
@@ -935,29 +877,6 @@ sub __updateEpisodeItemFocusedState()
       currentEpisodeIndex = currentEpisodeIndex + 1
     end if
   end for
-end sub
-
-' Sincroniza el tamaño del SelectionBox para igualar el alto del EpisodeItem enfocado.
-sub __syncSelectedIndicatorSize()
-  ' Evita cálculos cuando el indicador aún no está disponible en la pantalla.
-  if m.selectedIndicator = invalid then return
-  ' Usa ancho fallback como base en caso de que no se pueda medir el EpisodeItem activo.
-  indicatorWidth = m.selectedIndicatorWidth
-  ' Usa alto fallback como base en caso de que no se pueda medir el EpisodeItem activo.
-  indicatorHeight = m.selectedIndicatorFallbackHeight
-  ' Obtiene referencia del EpisodeItem correspondiente al índice actualmente seleccionado.
-  selectedEpisodeItem = __getEpisodeItemByIndex(m.selectedEpisodeIndex)
-  ' Intenta medir tamaño real solo cuando el EpisodeItem enfocado existe.
-  if selectedEpisodeItem <> invalid then
-    ' Lee el bounding rect del EpisodeItem para capturar su tamaño dinámico actual.
-    selectedEpisodeBounds = selectedEpisodeItem.boundingRect()
-    ' Reemplaza el ancho fallback solo cuando el ancho medido es válido y mayor a cero.
-    if selectedEpisodeBounds <> invalid and selectedEpisodeBounds.width <> invalid and cint(selectedEpisodeBounds.width) > 0 then indicatorWidth = cint(selectedEpisodeBounds.width)
-    ' Reemplaza el alto fallback solo cuando la altura medida es válida y mayor a cero.
-    if selectedEpisodeBounds <> invalid and selectedEpisodeBounds.height <> invalid and cint(selectedEpisodeBounds.height) > 0 then indicatorHeight = cint(selectedEpisodeBounds.height)
-  end if
-  ' Aplica tamaño final al SelectionBox usando ancho y alto sincronizados con el item seleccionado.
-  m.selectedIndicator.size = [indicatorWidth, indicatorHeight]
 end sub
 
 ' Obtiene el EpisodeItem visual asociado al índice lógico de selección.
@@ -1090,8 +1009,6 @@ sub onLogoutChange()
     if m.emissionsTitle <> invalid then m.emissionsTitle.text = ""
     ' Oculta labels de indisponibilidad al resetear estado por logout.
     __hideEpisodesUnavailableMessage()
-    ' Oculta el marco para evitar residuos visuales al salir de sesión.
-    if m.selectedIndicator <> invalid then m.selectedIndicator.visible = false
   end if
 end sub
 

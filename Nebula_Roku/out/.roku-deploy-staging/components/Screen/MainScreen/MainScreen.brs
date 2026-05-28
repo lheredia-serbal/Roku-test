@@ -1240,7 +1240,7 @@ sub onParentalControlResponse()
         else
           m.top.loading.visible = false
           __markLastFocus() 
-          m.dialog = createAndShowDialog(m.top, "", i18n_t(m.global.i18n, "shared.parentalControlModal.error.invalid"), "onDialogClosedFocusContainer")
+          m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.parentalControlModal.error.invalid"), i18n_t(m.global.i18n, "shared.parentalControlModal.error.description"), "onDialogClosedFocusContainer")
       end if
     else     
       m.top.loading.visible = false

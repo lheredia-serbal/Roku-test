@@ -61,7 +61,7 @@
       visible="false"/>
 
     <!-- Contenedor de listado inferior para el listado de programas de ViewAll. -->
-    <Group id="carousels" translation="[50, 135]">
+    <Group id="carousels">
       <!-- Contenedor interno del RowList de ViewAll. -->
       <Group id="carouselContainer" translation="[50, 20]">
       </Group>
