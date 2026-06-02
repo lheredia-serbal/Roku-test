@@ -34,7 +34,12 @@ sub currRectChanged()
 
     m.itemTitle.width = scaleValue(110, m.scaleInfo)
     m.itemTitle.height = scaleValue(48, m.scaleInfo)
-    m.itemTitle.translation = scaleSize([5, 72], m.scaleInfo)
+
+    if m.top.itemContent.id <> "0"  then
+        m.itemTitle.translation = scaleSize([5, 72], m.scaleInfo)
+    else
+        m.itemTitle.translation = scaleSize([5, 40], m.scaleInfo)
+    end if
 
     m.opacityLayout.width = scaledSize[0]
     m.opacityLayout.height = scaledSize[1]

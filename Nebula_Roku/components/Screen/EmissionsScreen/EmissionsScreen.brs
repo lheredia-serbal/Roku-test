@@ -24,6 +24,10 @@ sub init()
   m.episodesMoveInterpolator = m.top.findNode("episodesMoveInterpolator")
   ' Índice lógico del episodio actualmente enfocado por la selección.
   m.selectedEpisodeIndex = 0
+  ' Guarda el primer índice que recibió foco al cargar la lista de emisiones.
+  m.firstFocusedEpisodeIndex = invalid
+  ' Guarda el último índice que tuvo foco para poder restaurarlo tras cerrar modales.
+  m.lastFocusedEpisodeIndex = invalid
   ' Alto del separador para incluirlo en el desplazamiento vertical.
   m.episodeSeparatorHeight = 1
   ' Cantidad de episodios renderizados para navegación vertical.
@@ -323,6 +327,9 @@ sub __renderEpisodes(episodes)
   __setEpisodeBackgroundImage(episodes)
   ' Guarda la cantidad real de EpisodeItem para navegación con separadores.
   m.episodesCount = episodes.count()
+  ' Reinicia focos guardados para la nueva carga de emisiones.
+  m.firstFocusedEpisodeIndex = invalid
+  m.lastFocusedEpisodeIndex = invalid
   ' Recorre episodios para crear un EpisodeItem por cada uno.
   for i = 0 to episodes.count() - 1
     item = episodes[i]
@@ -398,6 +405,10 @@ function __openSelectedEpisode() as boolean
 
   ' Cachea el episodio seleccionado para usarlo en callbacks asíncronos.
   m.selectedEpisode = selectedEpisode
+  ' Guarda último foco antes de abrir el modal para poder restaurarlo al cerrarlo.
+  m.lastFocusedEpisodeIndex = m.selectedEpisodeIndex
+  ' Guarda primer foco si aún no fue inicializado durante el ciclo actual de carga.
+  if m.firstFocusedEpisodeIndex = invalid then m.firstFocusedEpisodeIndex = m.selectedEpisodeIndex
   ' Normaliza redirectKey para reutilizar contrato de MainScreen.
   m.selectedEpisode.redirectKey = selectedKey
   ' Normaliza redirectId para reutilizar contrato de MainScreen.
@@ -546,10 +557,22 @@ end sub
 
 ' Procesa cierre del diálogo de PIN inválido para liberar el modal.
 sub onEpisodePinErrorDialogClosed()
-  ' Limpia diálogo y descarta la opción porque solo hay botón de cierre.
-  clearDialogAndGetOption(m.top, m.dialog)
+  ' Limpia diálogo y obtiene opción elegida.
+  option = clearDialogAndGetOption(m.top, m.dialog)
   ' Limpia referencia del diálogo luego del cierre.
   m.dialog = invalid
+  ' Devuelve el foco al componente EmissionsScreen tras cerrar el modal.
+  if m.top <> invalid then m.top.setFocus(true)
+  ' Si el usuario cierra el diálogo, restaura foco en el último item o en su defecto en el primero.
+  if option = 0 then
+    focusIndex = m.lastFocusedEpisodeIndex
+    if focusIndex = invalid then focusIndex = m.firstFocusedEpisodeIndex
+    if focusIndex <> invalid then
+      __updateSelection(focusIndex)
+    else
+      __updateSelection(0)
+    end if
+  end if
 end sub
 
 ' Procesa respuesta de WatchValidate para continuar a streaming como MainScreen.
@@ -745,6 +768,10 @@ sub __clearEpisodes()
   m.episodesCount = 0
   ' Reinicia la selección al primer elemento para la próxima carga.
   __setEpisodesListTranslation(scaleSize([80, 100], m.scaleInfo), false)
+  ' Limpia primer foco guardado al vaciar la lista.
+  m.firstFocusedEpisodeIndex = invalid
+  ' Limpia último foco guardado al vaciar la lista.
+  m.lastFocusedEpisodeIndex = invalid
   ' Devuelve la lista a su posición base cuando se limpia la pantalla.
 
   while m.episodesList.getChildCount() > 0
@@ -854,6 +881,11 @@ sub __updateSelection(newIndex as integer)
   m.selectedEpisodeIndex = newIndex
   ' Actualiza estado visual de foco en los EpisodeItem para pintar fondo del seleccionado.
   __updateEpisodeItemFocusedState()
+
+  ' Guarda el primer foco efectivo de la carga actual.
+  if m.firstFocusedEpisodeIndex = invalid then m.firstFocusedEpisodeIndex = m.selectedEpisodeIndex
+  ' Actualiza el último foco efectivo para restauraciones posteriores.
+  m.lastFocusedEpisodeIndex = m.selectedEpisodeIndex
 
   ' Calcula la posición base (reposo) de la lista en la pantalla.
   baseTranslation = [0, 0]

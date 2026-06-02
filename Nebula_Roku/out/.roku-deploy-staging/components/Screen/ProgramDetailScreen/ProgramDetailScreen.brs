@@ -930,7 +930,7 @@ sub __configProgramDetail()
     m.programImageBackground.visible = true
   end if
 
-  m.selectedIndicator.translation = scaleSize([68, 30], m.scaleInfo)
+  m.selectedIndicator.translation = scaleSize([69, 28], m.scaleInfo)
 
   ' Limpia payload de navegación a emisiones para evitar re-disparos.
   m.top.emissions = invalid

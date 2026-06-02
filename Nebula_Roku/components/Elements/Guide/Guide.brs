@@ -43,6 +43,9 @@ sub init()
     m.currentCarouselGuide = invalid
     m.prevCarouselGuide = invalid
 
+    m.programDetailComponent = invalid
+    m.emissionsComponent = invalid
+
     m.nextChannel = invalid
     m.currentChannel = invalid
     m.prevChannel = invalid
@@ -551,6 +554,7 @@ sub onStreamingPlayer()
         
         m.top.selected = FormatJson({key: program.key, id: program.id, currentChannelId: program.channel.id, streamingAction: program.streamingAction})
     end if 
+    __removeEmissionsComponent()
     __removeProgramDetailComponent()
 end sub
 
@@ -565,6 +569,52 @@ end sub
 sub onBackDetail()
     m.carouselGuide.setFocus(true)
     if (m.guideContainer.visible = false) then m.guideContainer.visible = true
+    __removeEmissionsComponent()
+    __removeProgramDetailComponent()
+end sub
+
+' Metodo que abre EmissionsScreen desde el detalle creado dentro de Guide.
+sub onEmissions()
+    if m.programDetailComponent = invalid then return
+    if m.programDetailComponent.emissions = invalid or m.programDetailComponent.emissions = "" then return
+
+    emissionsData = m.programDetailComponent.emissions
+    m.programDetailComponent.emissions = invalid
+    __loadEmissions(emissionsData)
+end sub
+
+' Metodo que vuelve de EmissionsScreen al detalle embebido en Guide.
+sub onBackEmissions()
+    if m.emissionsComponent = invalid then return
+
+    if m.emissionsComponent.onBack then
+        __removeEmissionsComponent()
+
+        if m.programDetailComponent <> invalid then
+            m.programDetailComponent.visible = true
+            m.programDetailComponent.onFocus = true
+            m.programDetailComponent.setFocus(true)
+        else
+            m.carouselGuide.setFocus(true)
+            if (m.guideContainer.visible = false) then m.guideContainer.visible = true
+        end if
+    end if
+end sub
+
+' Reproduce una emision seleccionada desde EmissionsScreen sobre el player actual.
+sub onStreamingEmissions()
+    if m.emissionsComponent = invalid then return
+    if m.emissionsComponent.streaming = invalid or m.emissionsComponent.streaming = "" then return
+
+    streaming = ParseJson(m.emissionsComponent.streaming)
+    if streaming <> invalid and streaming.key <> invalid and streaming.id <> invalid then
+        currentChannelId = m.top.channelId
+        if currentChannelId = invalid then currentChannelId = 0
+        if m.currentChannel <> invalid and m.currentChannel.id <> invalid then currentChannelId = m.currentChannel.id
+        m.top.selected = FormatJson({key: streaming.key, id: streaming.id, currentChannelId: currentChannelId, streamingAction: invalid})
+    end if
+
+    __removeEmissionsComponent()
     __removeProgramDetailComponent()
 end sub
 
@@ -929,6 +979,7 @@ sub __loadDetail()
     m.programDetailComponent.observeField("programOpenInPlayer", "onStreamingPlayer")
     m.programDetailComponent.observeField("pendingStreamingSession", "onKillSession")
     m.programDetailComponent.observeField("onBack", "onBackDetail")
+    m.programDetailComponent.observeField("emissions", "onEmissions")
 
     ' Se acomoda para que lo interprete la pantalal de detalle
     m.programBySend.redirectKey = m.programBySend.key
@@ -938,6 +989,25 @@ sub __loadDetail()
     m.programDetailComponent.setFocus(true)
     m.programDetailComponent.data = FormatJson(m.programBySend)
     m.guideContainer.visible = false
+end sub
+
+' Define y muestra EmissionsScreen como modal sobre el player.
+sub __loadEmissions(emissionsData as string)
+    __removeEmissionsComponent()
+
+    if m.programDetailComponent <> invalid then
+        m.programDetailComponent.onFocus = false
+        m.programDetailComponent.visible = false
+    end if
+
+    m.emissionsComponent = m.detailGuideContainer.createChild("EmissionsScreen")
+    m.emissionsComponent.loading = m.top.loading
+    m.emissionsComponent.observeField("onBack", "onBackEmissions")
+    m.emissionsComponent.observeField("streaming", "onStreamingEmissions")
+    m.emissionsComponent.observeField("logout", "onLogoutEvent")
+    m.emissionsComponent.onFocus = true
+    m.emissionsComponent.setFocus(true)
+    m.emissionsComponent.data = emissionsData
 end sub
 
 ' Guarda la posicion donde se decidio deplazar hacia arriba o abajo para mantener 
@@ -962,18 +1032,38 @@ end sub
 
 ' Limpia el modal del detalle de programa que se abrio sobre el player.
 sub __removeProgramDetailComponent()
+    __removeEmissionsComponent()
+
     if m.programDetailComponent <> invalid then 
         m.detailGuideContainer.removeChild(m.programDetailComponent)
         m.programDetailComponent.unobserveField("logout")
         m.programDetailComponent.unobserveField("programOpenInPlayer")
         m.programDetailComponent.unobserveField("pendingStreamingSession")
         m.programDetailComponent.unobserveField("onBack")
+        m.programDetailComponent.unobserveField("emissions")
         m.programDetailComponent.onFocus = false
         m.programDetailComponent.data = invalid
         m.programDetailComponent.isOpenByPlayer = false
         m.programDetailComponent.loading = invalid
         m.programDetailComponent.programOpenInPlayer = invalid
+        m.programDetailComponent.emissions = invalid
     end if
     m.programDetailComponent = invalid
     m.guideContainer.visible = true
+end sub
+
+' Limpia EmissionsScreen embebido dentro de Guide.
+sub __removeEmissionsComponent()
+    if m.emissionsComponent <> invalid then
+        m.detailGuideContainer.removeChild(m.emissionsComponent)
+        m.emissionsComponent.unobserveField("onBack")
+        m.emissionsComponent.unobserveField("streaming")
+        m.emissionsComponent.unobserveField("logout")
+        m.emissionsComponent.onFocus = false
+        m.emissionsComponent.data = invalid
+        m.emissionsComponent.loading = invalid
+        m.emissionsComponent.streaming = invalid
+        m.emissionsComponent.onBack = false
+    end if
+    m.emissionsComponent = invalid
 end sub

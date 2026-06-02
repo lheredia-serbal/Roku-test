@@ -154,7 +154,7 @@ sub __syncFocusBackgroundSize()
   end if
 
 ' Sincroniza el SelectionBox para que quede por encima del item correspondiente.
-  __syncSelectionBoxLayout(backgroundWidth, backgroundHeight)
+  __syncSelectionBoxLayout(backgroundWidth - 5, backgroundHeight - 5)
 end sub
 
 ' Ajusta tamaño y posición del SelectionBox individual del episodio.
