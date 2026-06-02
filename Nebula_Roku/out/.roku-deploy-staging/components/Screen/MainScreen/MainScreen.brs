@@ -46,6 +46,10 @@ sub init()
   m.scaleInfo = m.global.scaleInfo
   ' Indica si el foco debe volver al NewsItem tras cerrar menú.
   m.returnFocusToNewsAfterMenu = false
+  ' Guarda el índice del último item de News enfocado antes de navegar a otra pantalla.
+  m.lastNewsFocusIndex = invalid ' Mantiene la posición seleccionada del carrusel News para restaurarla al regresar.
+  ' Indica si la restauración pendiente debe apuntar nuevamente al carrusel News.
+  m.restoreFocusToLastNews = false ' Evita restaurar News cuando la última navegación salió desde un carrusel estándar.
 
   ' Define cuánto se eleva el primer carrusel para que se vea detrás/arriba del bloque News cuando News tiene foco.
   m.newsPeekOffset = scaleValue(200, m.scaleInfo)
@@ -291,7 +295,9 @@ sub initFocus()
       end if
     end if
 
+    if m.restoreFocusToLastNews = true then __restoreNewsSelection() ' Asegura que News use el índice persistido antes de recuperar foco.
     if m.lastFocus <> invalid then m.lastFocus.setFocus(true)
+    if m.restoreFocusToLastNews = true then __updateOverlayVisibilityByFocus() ' Oculta selectedIndicator cuando el foco restaurado pertenece a News.
     m.top.loading.visible = false
   end if
 end sub
@@ -336,6 +342,8 @@ sub populateCarousels(data as Object)
       m.newsCarouselItem = newsCarouselItem
       ' Asigna el conjunto de items de noticias recibido del servidor.
       newsCarouselItem.items = carouselData.items
+      ' Restaura el índice de News guardado si el usuario regresó desde otra pantalla.
+      __restoreNewsSelection() ' Reposiciona el NewsItem recreado en el último item seleccionado cuando aplica.
       ' Setea un título fallback por si los items no traen title.
       newsCarouselItem.title = carouselData.title
       ' Fuerza que el bloque de noticias comience arriba de todo dentro del contenedor.
@@ -579,7 +587,7 @@ function __handleNewsOkAction() as boolean
   ' Si redirectKey es ChannelId, reutiliza exactamente el flujo normal hacia Player.
   if m.itemSelected.redirectKey = "ChannelId" then
     ' Guarda el foco en News para restaurarlo al volver desde Player y evitar loading infinito.
-    if m.newsCarouselItem <> invalid then m.lastFocus = m.newsCarouselItem
+    __markLastFocus() ' Persiste el NewsItem y su índice actual antes de redirigir al Player.
     ' Si aplica control parental, abre PIN antes de continuar.
     if m.itemSelected.parentalControl <> invalid and m.itemSelected.parentalControl then
       ' Guarda referencia de foco actual para restauración posterior.
@@ -1528,6 +1536,8 @@ sub __clearScreen()
   m.isHomeSelected = false
   m.lastFocus = invalid
   m.lastRefreshDate = invalid
+  m.lastNewsFocusIndex = invalid ' Limpia el índice de News al cerrar sesión o limpiar la pantalla completa.
+  m.restoreFocusToLastNews = false ' Cancela cualquier restauración pendiente del foco en News.
 
   m.apiVariableRequest = clearApiRequest(m.apiVariableRequest)
   m.apiRequestManager = clearApiRequest(m.apiRequestManager) 
@@ -1550,6 +1560,7 @@ sub __focusCarousels()
   if m.autoUpgradeDialogOpen = true then return 
 
   if m.returnFocusToNewsAfterMenu and m.newsCarouselItem <> invalid then
+    __restoreNewsSelection() ' Mantiene el item de News previamente seleccionado al cerrar el menú lateral.
     m.newsCarouselItem.setFocus(true)
     m.returnFocusToNewsAfterMenu = false
     __updateOverlayVisibilityByFocus()
@@ -2122,9 +2133,31 @@ end sub
 
 ' Guarda el ultimo utem que a tenido foco en los carouseles en la variable lastFocus
 sub __markLastFocus()
+  if __isNewsFocused() and m.newsCarouselItem <> invalid then ' Detecta cuando la navegación sale desde el carrusel News.
+    m.lastNewsFocusIndex = m.newsCarouselItem.currentIndex ' Persiste el índice exacto del item de News seleccionado.
+    m.lastFocus = m.newsCarouselItem ' Guarda el NewsItem como destino de foco al regresar a MainScreen.
+    m.restoreFocusToLastNews = true ' Marca que la restauración debe volver específicamente al carrusel News.
+    return ' Evita reemplazar el foco guardado con un carrusel estándar.
+  end if
   if m.carouselContainer.focusedChild <> invalid and  m.carouselContainer.focusedChild.findNode("carouselList") <> invalid then 
+    m.restoreFocusToLastNews = false ' Desactiva restauración de News cuando el último foco real fue un carrusel estándar.
     m.lastFocus = m.carouselContainer.focusedChild.findNode("carouselList")
   end if
+end sub
+
+' Restaura el índice seleccionado del carrusel News cuando MainScreen vuelve a tomar foco.
+sub __restoreNewsSelection()
+  if m.newsCarouselItem = invalid then return ' No hay NewsItem disponible para restaurar.
+  if m.lastNewsFocusIndex = invalid then return ' No existe un índice previo de News para aplicar.
+  newsItems = m.newsCarouselItem.items ' Lee los items actuales de News para validar el índice guardado.
+  if newsItems = invalid or newsItems.count() = 0 then return ' Evita restaurar cuando News no tiene contenido.
+  restoredNewsIndex = m.lastNewsFocusIndex ' Copia el índice persistido para normalizarlo sin perder el valor original.
+  if restoredNewsIndex < 0 then restoredNewsIndex = 0 ' Ajusta índices negativos al primer item disponible.
+  if restoredNewsIndex >= newsItems.count() then restoredNewsIndex = newsItems.count() - 1 ' Ajusta índices mayores al último item disponible.
+  m.newsCarouselItem.currentIndex = restoredNewsIndex ' Aplica el índice restaurado para mostrar el último item seleccionado de News.
+  if m.restoreFocusToLastNews = true then m.lastFocus = m.newsCarouselItem ' Actualiza lastFocus al NewsItem vigente si fue recreado.
+  if m.restoreFocusToLastNews = true and m.selectedIndicator <> invalid then m.selectedIndicator.visible = false ' Mantiene oculto selectedIndicator al restaurar foco sobre News.
+  __syncNewsDots() ' Refresca los indicadores externos para reflejar el item restaurado.
 end sub
 
 ' Guarda el nodo enfocado en MainScreen antes de abrir CdnErrorDialog.
