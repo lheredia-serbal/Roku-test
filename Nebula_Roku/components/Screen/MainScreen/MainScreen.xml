@@ -184,5 +184,6 @@
     
     <!-- Timers -->
     <Timer id="programTimer" repeat="false" duration="0.5"/>
+    <Timer id="visibleAutoHideTimer" repeat="false" duration="20"/>
   </children>
 </component>

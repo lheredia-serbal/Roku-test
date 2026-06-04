@@ -387,6 +387,7 @@ end function
 ' Recibir la respuesta del servicio que inserta la instalación
 sub onLoadInstallationByDeviceResponse()
 
+  m.top.loading.visible = false
   if m.apiInstallationRequestManager = invalid then
     __loadInstallationByDevice()
     return
@@ -405,13 +406,17 @@ sub onLoadInstallationByDeviceResponse()
       if data.data.token <> invalid and data.data.token <> "" then  setDeviceToken(data.data.token)
 
       ' Lee la URL remota de la imagen QR
-      loginByCodeUrlQr = getConfigVariable(m.global.configVariablesKeys.LOGIN_BY_CODE_URL_QR)
+      loginByCodeUrlQr = __getVariable(m.global.configVariablesKeys.LOGIN_BY_CODE_URL_QR)
 
       if loginByCodeUrlQr <> invalid then
         activationCode = loginByCodeUrlQr.replace("[RegistrationCode]", registerCode)
         m.qrCodePoster.uri = "https://api.qrserver.com/v1/create-qr-code/?size=256x260&data=" + activationCode 
 
         __showLoginMethod(true)
+      else
+        m.LoginQrisEnabled = false
+        __showLoginMethod(false)
+        m.loginMethodKeyboard.setFocus(true)
       end if
 
     else 
@@ -425,7 +430,7 @@ sub onLoadInstallationByDeviceResponse()
       else
         removePendingAction(m.apiInstallationRequestManager.requestId)
         if m.resultCodes = invalid then m.resultCodes = getResultCodes()
-        m.top.loading.visible = false
+        
       end if
     end if 
     onLoginMethodFocusChanged()
@@ -464,6 +469,7 @@ end sub
 ' Procesa la respuesta al tratar de loguear al usuario a traves de credenciales
 sub onLoginResponse()
 
+  m.top.loading.visible = false
   if m.apiRequestManager = invalid then
     user = m.userField.text
     password = m.passwordField.text
@@ -500,7 +506,6 @@ sub onLoginResponse()
       else
         removePendingAction(m.apiRequestManager.requestId)
         if m.resultCodes = invalid then m.resultCodes = getResultCodes()
-        m.top.loading.visible = false
 
         error = ParseJson(m.apiRequestManager.errorResponse)
 
@@ -788,7 +793,7 @@ sub __showLoginMethod(showQr as boolean)
     m.credentialsContainer.visible = false
 
     ' Lee la URL corta que se muestra como alternativa manual
-    loginByCodeUrlShort = getConfigVariable(m.global.configVariablesKeys.LOGIN_BY_CODE_URL_SHORT)
+    loginByCodeUrlShort = __getVariable(m.global.configVariablesKeys.LOGIN_BY_CODE_URL_SHORT)
 
     m.qrShortUrlLabel.text = loginByCodeUrlShort
 

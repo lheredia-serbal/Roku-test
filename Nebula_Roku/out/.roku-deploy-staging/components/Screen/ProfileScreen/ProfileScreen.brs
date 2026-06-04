@@ -292,6 +292,7 @@ end sub
 
 ' Procesa la respuesta de la lista de perfiles del usuario
 sub onGetAllProfileResponse()
+  m.top.loading.visible = false
   if m.apiRequestManager = invalid then 
     __getAllProfile()
     return
@@ -318,8 +319,6 @@ sub onGetAllProfileResponse()
         printError("GetAll Profile:", errorResponse)
         
         if validateLogout(statusCode, m.top) then return 
-        
-        m.top.loading.visible = false
 
         m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.global.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogReloadProfilesClosed", [i18n_t(m.global.i18n, "button.retry")])
 
@@ -333,6 +332,8 @@ end sub
 
 ' Procesa la respuesta de eleccion de nuevo perfil del usuario.
 sub onSuccessSelectResponse()
+  m.top.loading.visible = false
+
   if m.apiRequestManager = invalid then 
     __selectProfile(m.profilesElements.focusedChild.profileId, m.profilesElements.focusedChild.auxInfo)
     return
@@ -372,7 +373,6 @@ sub onSuccessSelectResponse()
         if validateLogout(statusCode, m.top) then return 
 
         m.auxInfo = invalid
-        m.top.loading.visible = false
         m.blockLoading = false
 
         m.lastItemFocus = m.focusedChild
@@ -390,6 +390,8 @@ end sub
 
 ' Procesa la respuesta que obtiene todos los de avatars disposnibles
 sub onGetAllAvatarsResponse()
+  m.top.loading.visible = false
+
   if m.apiRequestManager = invalid then
     __editAvatar()
     return
@@ -449,7 +451,6 @@ sub onGetAllAvatarsResponse()
           end if
         end if
       end if
-      m.top.loading.visible = false
     else
       statusCode = m.apiRequestManager.statusCode
       errorResponse = m.apiRequestManager.errorResponse
@@ -465,7 +466,6 @@ sub onGetAllAvatarsResponse()
 
         if validateLogout(statusCode, m.top) then return 
         
-        m.top.loading.visible = false
         m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.global.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogReturnProfileEditClosed", [i18n_t(m.global.i18n, "button.cancel")])
       end if 
 
@@ -555,6 +555,7 @@ end sub
 
 ' Procesa la respuesta de que se confirmo eliminar el perfil selecioando
 sub onSuccessDeleteResponse()
+  m.top.loading.visible = false
   if (m.apiRequestManager = invalid) then
     onDialogDeleteClosed(invalid)
     return
@@ -578,7 +579,6 @@ sub onSuccessDeleteResponse()
 
         if validateLogout(statusCode, m.top) then return 
 
-        m.top.loading.visible = false
         m.blockLoading = false
         m.lastItemFocus = m.btnDeleteProfile
 
@@ -592,6 +592,7 @@ end sub
 
 ' Procesa la respuesta de que se confirmo el guardado del perfil selecioando
 sub onSuccessSaveResponse()
+  m.top.loading.visible = false
   if m.apiRequestManager = invalid then
     __saveProfile()
     return
@@ -618,7 +619,6 @@ sub onSuccessSaveResponse()
 
         m.blockLoading = false
         m.lastItemFocus = m.btnSave
-        m.top.loading.visible = false
         
         m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.global.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogFocusToLastElementClosed", [i18n_t(m.global.i18n, "button.cancel")])
       end if 
@@ -629,6 +629,8 @@ end sub
 
 ' Procesa la respuesta del avatar por defecto para el nuevo perfil.
 sub onGetDefaultAvatarResponse()
+  m.top.loading.visible = false
+
   if m.apiRequestManager = invalid then
     __addProfile()
     return
@@ -654,8 +656,6 @@ sub onGetDefaultAvatarResponse()
         
         if validateLogout(statusCode, m.top) then return 
 
-        m.top.loading.visible = false
-        
         m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.global.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogReturnProfileListClosed", [i18n_t(m.global.i18n, "button.cancel")])
       end if
       m.apiRequestManager = clearApiRequest(m.apiRequestManager)
@@ -665,6 +665,8 @@ end sub
 
 ' Procesa la respuesta al obtener la informacion completa del perfil
 sub onGetByIdResponse()
+  m.top.loading.visible = false
+
   if m.apiRequestManager = invalid then
     __editProfile(m.profilesElements.focusedChild.profileId)
     return
@@ -686,8 +688,6 @@ sub onGetByIdResponse()
         printError("GetById Profile:", errorResponse)
 
         if validateLogout(statusCode, m.top) then return 
-
-        m.top.loading.visible = false
 
         m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.global.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogReturnProfileListClosed", [i18n_t(m.global.i18n, "button.cancel")])
       end if
@@ -804,6 +804,8 @@ end sub
 
 ' carga en pantalla cada uno de los perfiles de la lista de perfiles obtenido.
 sub __loadProfiles(profilesResp)
+  m.top.loading.visible = false
+
   fistElement = invalid
   lastProfile = invalid
 
@@ -848,8 +850,6 @@ sub __loadProfiles(profilesResp)
     fistElement.showManageProfile = m.showManageProfile
     fistElement.setFocus(true)
   end if
-  
-  m.top.loading.visible = false
 end sub
 
 ' Dispara la peticion para editar el perfil selecionado y carga la pantalla de edicion de perfiles
@@ -1053,6 +1053,7 @@ end sub
 
 ' Carga el perfil a editar y define la pantalla de edicion de perfiles 
 sub __loadEditProfile(profileByEdit)
+  m.top.loading.visible = false
   m.profileByEdit = profileByEdit
   m.profileImageEdit.uriImage = getImageUrl(m.profileByEdit.avatar.image) 
   m.keyboard.setFocus(true) 
@@ -1080,7 +1081,6 @@ sub __loadEditProfile(profileByEdit)
     m.btnDeleteProfile.size = [scaleValue(220, m.scaleInfo)]
     m.btnDeleteProfile.focusable = true
   end if 
-  m.top.loading.visible = false
 end sub  
 
 ' Limpia los carouseles de avatars, las referencias y elimina los escuchadores 
@@ -1123,6 +1123,8 @@ end sub
 
 ' Procesa el back de la pantalla de eleccion de perfiles.
 sub __backToSelectProfile(reloadProfile)
+  m.top.loading.visible = false
+
   m.keyboard.unobserveField("textEditBox")
   if not m.top.loading.visible then m.top.loading.visible = true
   m.screenProfileEdit.visible = false
@@ -1148,7 +1150,6 @@ sub __backToSelectProfile(reloadProfile)
     __getAllProfile()
   else 
     m.apiRequestManager = clearApiRequest(m.apiRequestManager)
-    m.top.loading.visible = false
 
     if m.lastProfileFocus  <> invalid then 
       m.lastProfileFocus.setFocus(true)

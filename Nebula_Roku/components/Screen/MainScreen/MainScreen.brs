@@ -24,6 +24,11 @@ sub init()
 
   'Program summary
   m.programTimer = m.top.findNode("programTimer")
+  m.visibleAutoHideTimer = m.top.findNode("visibleAutoHideTimer")
+  if m.visibleAutoHideTimer <> invalid then
+    m.visibleAutoHideTimer.observeField("fire", "onVisibleAutoHideTimerFired")
+  end if
+  m.top.observeField("visible", "onTopVisibleChanged")
   m.programInfo = m.top.findNode("programInfo")
 
   m.infoGradient = m.top.findNode("infoGradient")
@@ -56,6 +61,37 @@ sub init()
 
   if m.global <> invalid then
     m.global.observeField("activeApiUrl", "onActiveApiUrlChanged")
+  end if
+end sub
+
+' Reinicia el temporizador que oculta MainScreen automáticamente luego de 20 segundos visible.
+sub restartVisibleAutoHideTimer()
+  if m.visibleAutoHideTimer = invalid then return
+
+  m.visibleAutoHideTimer.control = "stop"
+  m.visibleAutoHideTimer.control = "start"
+end sub
+
+' Detiene el temporizador automático cuando MainScreen deja de estar visible.
+sub stopVisibleAutoHideTimer()
+  if m.visibleAutoHideTimer = invalid then return
+
+  m.visibleAutoHideTimer.control = "stop"
+end sub
+
+' Observa cambios de visibilidad para iniciar o cancelar el autocierre de MainScreen.
+sub onTopVisibleChanged()
+  if m.top.visible then
+    restartVisibleAutoHideTimer()
+  else
+    stopVisibleAutoHideTimer()
+  end if
+end sub
+
+' Oculta MainScreen si continúa visible cuando se cumple el timeout configurado.
+sub onVisibleAutoHideTimerFired()
+  if m.top.loading.visible then
+    m.top.loading.visible = false
   end if
 end sub
 

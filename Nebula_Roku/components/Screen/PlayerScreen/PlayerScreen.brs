@@ -1456,6 +1456,7 @@ end sub
 
 ' Procesa la respuesta de la validacion del PIN
 sub onParentalControlResponse()
+  m.top.loading.visible = false
   if validateStatusCode(m.apiRequestManager.statusCode) then
     resp = ParseJson(m.apiRequestManager.response)
 
@@ -1466,13 +1467,11 @@ sub onParentalControlResponse()
     else
       m.itemSelected = invalid
       m.repositionChannnelList = true
-      m.top.loading.visible = false
       m.dialogShowing = true
       m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.parentalControlModal.error.invalid"), i18n_t(m.global.i18n, "shared.parentalControlModal.error.description"), "onDialogClosedLastFocus")
     end if
   else
     if m.apiRequestManager <> invalid and not m.apiRequestManager.serverError then
-      m.top.loading.visible = false
       statusCode = m.apiRequestManager.statusCode
       errorResponse = m.apiRequestManager.errorResponse
       m.apiRequestManager = clearApiRequest(m.apiRequestManager)

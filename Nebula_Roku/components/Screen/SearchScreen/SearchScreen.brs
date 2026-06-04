@@ -312,10 +312,10 @@ end sub
 
 ' Procesa la respuesta de búsqueda.
 sub onGetSearchProgramsResponse()
+
+  if m.top.loading <> invalid then m.top.loading.visible = false
   ' Si no hay manager disponible, no puedo procesar respuesta.
   if m.apiRequestManager = invalid then
-    ' Si el manager no existe, cierro loading para evitar spinner colgado.
-    if m.top.loading <> invalid then m.top.loading.visible = false
     return
   end if
 
@@ -361,9 +361,6 @@ sub onGetSearchProgramsResponse()
     ' Limpio manager tras error.
     m.apiRequestManager = clearApiRequest(m.apiRequestManager)
   end if
-
-  ' Cierro loading al finalizar la consulta (éxito o error) de búsqueda.
-  if m.top.loading <> invalid then m.top.loading.visible = false
 end sub
 
 ' Sincroniza el texto y cursor del teclado con el input visible.
@@ -553,6 +550,8 @@ end sub ' Cierra callback del estado de animación del contenedor.
 
 ' Procesa respuesta de último canal visto para abrir player con guía.
 sub onLastWatchedResponse()
+  if m.top.loading <> invalid then m.top.loading.visible = false
+
   ' Si no hay manager activo, rehago selección para recuperar flujo.
   if m.apiRequestManager = invalid then
     onSelectItem()
@@ -568,14 +567,10 @@ sub onLastWatchedResponse()
     ' Si hay al menos un canal, preparo streaming mínimo para PlayerScreen.
     if resp <> invalid and resp.data <> invalid and resp.data.count() > 0 then
       m.top.streaming = FormatJson({ key: "ChannelId", id: resp.data[0].id })
-    else
-      ' Si no hay data, oculto loading y restauro foco navegable.
-      if m.top.loading <> invalid then m.top.loading.visible = false
+    else    
       __restoreLastFocus()
     end if
   else
-    ' Si falla HTTP, oculto loading y limpio estado.
-    if m.top.loading <> invalid then m.top.loading.visible = false
     removePendingAction(m.apiRequestManager.requestId)
     __restoreLastFocus()
   end if
@@ -621,6 +616,8 @@ end sub
 
 ' Función que se ejecuta cuando se presiona OK sobre algún item
 sub onSelectItem()
+  if m.top.loading <> invalid then m.top.loading.visible = false
+
   itemSelected = invalid
 
   ' Si hay foco en recomendados, tomo selección desde ese carrusel.
@@ -661,7 +658,6 @@ sub onSelectItem()
       })
     end if
 
-    if m.top.loading <> invalid then m.top.loading.visible = false
     return
   end if
 
@@ -695,18 +691,16 @@ sub onSelectItem()
     else if m.itemSelected.redirectKey = "viewall" then
       ' Notifico ViewAll directo cuando el backend marca redirectKey explícito.
       m.top.viewAll = FormatJson({ carouselId: m.carousels[m.carouselIndex].id })
-      ' Oculto loading al terminar navegación local.
-      if m.top.loading <> invalid then m.top.loading.visible = false
       return
     end if
   end if
 
-  ' Si no cayó en ningún caso navegable, oculto loading y restauro foco.
-  if m.top.loading <> invalid then m.top.loading.visible = false
   __restoreLastFocus()
 end sub
 
 sub onStreamingsResponse()
+  if m.top.loading <> invalid then m.top.loading.visible = false
+
   ' Si el manager se limpió, reingreso al flujo previo de validación.
   if m.apiRequestManager = invalid then
     onWatchValidateResponse()
@@ -728,13 +722,11 @@ sub onStreamingsResponse()
       ' Emitimos evento para que MainScene abra Player.
       m.top.streaming = FormatJson(streaming)
     else
-      if m.top.loading <> invalid then m.top.loading.visible = false
       ' Restauro foco para permitir nueva selección.
       __restoreLastFocus()
       printError("Streamings Empty Search:", m.apiRequestManager.response)
     end if
   else
-    if m.top.loading <> invalid then m.top.loading.visible = false
     ' Guardo status HTTP para telemetría/log.
     statusCode = m.apiRequestManager.statusCode
     errorResponse = m.apiRequestManager.errorResponse
@@ -750,6 +742,9 @@ end sub
 
 ' Obtener la respuesta del stream consultado
 sub onWatchValidateResponse()
+  ' Oculto loading cuando backend rechaza la validación funcional.
+  if m.top.loading <> invalid then m.top.loading.visible = false
+
   ' Si no hay manager activo, reintento desde la selección actual.
   if m.apiRequestManager = invalid then
     onSelectItem()
@@ -770,15 +765,12 @@ sub onWatchValidateResponse()
         m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlStreaming(m.itemSelected.redirectKey, m.itemSelected.redirectId), "GET", "onStreamingsResponse")
       end if
     else
-      ' Oculto loading cuando backend rechaza la validación funcional.
-      if m.top.loading <> invalid then m.top.loading.visible = false
       ' Restaura foco al item previo para continuidad de UX.
       __restoreLastFocus()
       printError("WatchValidate ResultCode Search:", resp.resultCode)
       m.apiRequestManager = clearApiRequest(m.apiRequestManager)
     end if
   else
-    if m.top.loading <> invalid then m.top.loading.visible = false
     ' Obtengo status HTTP fallido para logging.
     statusCode = m.apiRequestManager.statusCode
     errorResponse = m.apiRequestManager.errorResponse
@@ -1157,6 +1149,9 @@ end sub
 
 ' Navega al player o al detalle según redirectKey del item recibido.
 sub __navigateToSelectedItem(carouselItem)
+  ' Oculto loading al finalizar navegación por evento de detail.
+  if m.top.loading <> invalid then m.top.loading.visible = false
+
   ' Si el destino es canal, valido watch para luego pedir streamings.
   if carouselItem.redirectKey = "ChannelId" then
     ' Obtengo watchSessionId actual para validar reproducción.
@@ -1189,8 +1184,6 @@ sub __navigateToSelectedItem(carouselItem)
   else
     ' Si no es canal, redirecciono al detalle del programa con key/id.
     m.top.detail = FormatJson({ key: carouselItem.redirectKey, id: carouselItem.redirectId })
-    ' Oculto loading al finalizar navegación por evento de detail.
-    if m.top.loading <> invalid then m.top.loading.visible = false
   end if
 end sub
 
@@ -1469,6 +1462,8 @@ end sub
 
 ' Procesa la respuesta de la validacion del PIN
 sub onParentalControlResponse()
+  if m.top.loading <> invalid then m.top.loading.visible = false
+
   if m.apiRequestManager = invalid then
     onPinDialogLoad()
     return
@@ -1502,12 +1497,10 @@ sub onParentalControlResponse()
           runAction(requestId, action, ApiType().CLIENTS_API_URL)
           m.apiRequestManager = action.apiRequestManager
         else
-          m.top.loading.visible = false
           __markLastFocus() 
           m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.parentalControlModal.error.invalid"), i18n_t(m.global.i18n, "shared.parentalControlModal.error.description"), "onDialogClosedFocusContainer")
       end if
     else     
-      m.top.loading.visible = false
       statusCode = m.apiRequestManager.statusCode
       errorResponse = m.apiRequestManager.errorResponse
       m.apiRequestManager = clearApiRequest(m.apiRequestManager)

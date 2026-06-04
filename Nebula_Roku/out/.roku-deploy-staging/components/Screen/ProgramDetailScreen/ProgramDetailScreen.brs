@@ -192,6 +192,8 @@ end sub
 
 ' Procesa la respuesta al obtener la informacion completa del programa
 sub onGetByIdResponse() 
+  m.top.loading.visible = false
+
   if m.apiRequestManager = invalid then
     __getProgramDetail(m.lastKey, m.lastId)
     return
@@ -202,15 +204,11 @@ sub onGetByIdResponse()
       m.apiRequestManager = clearApiRequest(m.apiRequestManager) 
 
       if resp <> invalid and resp.data <> invalid then
-        m.top.loading.visible = false
         __loadProgramInfo(resp.data)
       else
         __showNotFound()
-        m.top.loading.visible = false
       end if 
     else
-      m.top.loading.visible = false
-
       error = m.apiRequestManager.errorResponse
       statusCode = m.apiRequestManager.statusCode
 
@@ -243,6 +241,7 @@ end sub
 
 ' Procesa la respuesta al obtener la acciones disposnibles para el programa actual
 sub onActionsResponse()
+  m.top.loading.visible = false
   if m.apiRequestManager = invalid then
     initFocus()
     return
@@ -257,10 +256,8 @@ sub onActionsResponse()
       if resp <> invalid and resp.data <> invalid then
         m.program.actions = resp.data 
         __processActions()
-        m.top.loading.visible = false
       end if 
     else
-      m.top.loading.visible = false
       statusCode = m.apiRequestManager.statusCode
       errorResponse = m.apiRequestManager.errorResponse
 
@@ -287,6 +284,8 @@ end sub
 
 ' Procesa la respuesta de si el ususario puede ver
 sub onWatchValidateResponse()
+  m.top.loading.visible = false
+
   if m.apiRequestManager = invalid then
     onParentalControlResponse()
     return
@@ -326,8 +325,6 @@ sub onWatchValidateResponse()
           m.apiRequestManager = action.apiRequestManager
         end if
       else
-        m.top.loading.visible = false
-
         if m.apiRequestManager.serverError then
           setCdnErrorCodeFromStatus(statusCode, ApiType().CLIENTS_API_URL)
           changeStatusAction(m.apiRequestManager.requestId, "error")
@@ -346,7 +343,6 @@ sub onWatchValidateResponse()
         changeStatusAction(m.apiRequestManager.requestId, "error")
         retryAll()
       else
-        m.top.loading.visible = false
         statusCode = m.apiRequestManager.statusCode
         errorResponse = m.apiRequestManager.errorResponse
         
@@ -366,6 +362,8 @@ end sub
 
 ' Procesa la respuesta al obtener la url de lo que se quiere ver
 sub onStreamingsResponse() 
+  m.top.loading.visible = false
+
   if m.apiRequestManager = invalid then
     onWatchValidateResponse()
     return
@@ -381,13 +379,11 @@ sub onStreamingsResponse()
         streaming.streamingType = getStreamingType().DEFAULT
         m.top.streaming = FormatJson(streaming)
       else
-        m.top.loading.visible = false
         printError("Streamings Emty:", m.apiRequestManager.response)
         m.apiRequestManager = clearApiRequest(m.apiRequestManager) 
         m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.global.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogClosedLastFocus", [i18n_t(m.global.i18n, "button.cancel")])
       end if
     else 
-      m.top.loading.visible = false
       statusCode = m.apiRequestManager.statusCode
       errorResponse = m.apiRequestManager.errorResponse
 
@@ -434,6 +430,8 @@ end sub
 
 ' Procesa la respuesta de programas relacionados al programa actual
 sub onGetRelatedResponse()
+  m.top.loading.visible = false
+
   if m.apiRequestManager = invalid then
     return
   else
@@ -443,7 +441,6 @@ sub onGetRelatedResponse()
       m.apiRequestManager = clearApiRequest(m.apiRequestManager) 
       
       if resp <> invalid and resp.data <> invalid then
-        m.top.loading.visible = false
         __loadRelatedCarousel(resp.data)
       end if 
     else
@@ -530,6 +527,8 @@ end sub
 
 ' Procesa la respuesta de la validacion del PIN
 sub onParentalControlResponse()
+  m.top.loading.visible = false
+
   if m.apiRequestManager = invalid then
     onPinDialogLoad()
     return
@@ -540,11 +539,9 @@ sub onParentalControlResponse()
 
       if resp <> invalid and resp.data <> invalid and resp.data then
         if m.top.isOpenByPlayer then
-          m.top.loading.visible = false
+          
           streamingAction = getStreamingAction().PLAY
-          
           if m.streamingAction <> invalid then streamingAction = m.streamingAction
-          
           m.program.streamingAction = streamingAction
           m.top.programOpenInPlayer = FormatJson(m.program)
         else
@@ -575,11 +572,9 @@ sub onParentalControlResponse()
           m.apiRequestManager = action.apiRequestManager
         end if
       else
-        m.top.loading.visible = false
         m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.parentalControlModal.error.invalid"), i18n_t(m.global.i18n, "shared.parentalControlModal.error.description"), "onDialogClosedLastFocus")
       end if
     else     
-      m.top.loading.visible = false
       statusCode = m.apiRequestManager.statusCode
       errorResponse = m.apiRequestManager.errorResponse
 

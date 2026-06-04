@@ -231,6 +231,7 @@ end sub
 
 ' Procesa respuesta del servicio de episodios.
 sub onEpisodesResponse()
+  hideLoading()
   ' Reintenta automáticamente si el manager quedó inválido.
   if m.apiRequestManager = invalid then
     ' Reintenta usando últimos parámetros válidos.
@@ -295,9 +296,6 @@ sub onEpisodesResponse()
 
   ' Limpia request manager al finalizar.
   m.apiRequestManager = clearApiRequest(m.apiRequestManager)
-
-  ' Oculta loading al finalizar cualquier resultado.
-  if m.top.loading <> invalid then m.top.loading.visible = false
 end sub
 
 
@@ -508,6 +506,7 @@ end sub
 
 ' Procesa respuesta de validación de PIN para habilitar WatchValidate del episodio.
 sub onEpisodeParentalControlResponse()
+  hideLoading()
   ' Reintenta flujo de PIN si el manager quedó inválido durante callback.
   if m.apiRequestManager = invalid then
     ' Reintenta la lectura del modal de PIN para sostener el flujo.
@@ -529,8 +528,6 @@ sub onEpisodeParentalControlResponse()
       ' Corta ejecución para esperar respuesta de WatchValidate.
       return
     else
-      ' Oculta loading al no poder continuar con reproducción.
-      if m.top.loading <> invalid then m.top.loading.visible = false
       ' Muestra mensaje de PIN inválido replicando MainScreen.
       m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.parentalControlModal.error.invalid"), i18n_t(m.global.i18n, "shared.parentalControlModal.error.description"), "onEpisodePinErrorDialogClosed")
     end if
@@ -539,8 +536,6 @@ sub onEpisodeParentalControlResponse()
     statusCode = m.apiRequestManager.statusCode
     ' Captura payload de error para diagnóstico.
     errorResponse = m.apiRequestManager.errorResponse
-    ' Oculta loading al fallar validación de PIN.
-    if m.top.loading <> invalid then m.top.loading.visible = false
     ' Limpia request manager al finalizar error de validación de PIN.
     m.apiRequestManager = clearApiRequest(m.apiRequestManager)
     ' Reutiliza validación global para logout cuando aplica.
@@ -577,6 +572,8 @@ end sub
 
 ' Procesa respuesta de WatchValidate para continuar a streaming como MainScreen.
 sub onEpisodeWatchValidateResponse()
+  hideLoading()
+
   ' Reintenta selección si el manager quedó inválido durante callback.
   if m.apiRequestManager = invalid then
     ' Reintenta abrir el episodio actualmente seleccionado.
@@ -605,8 +602,6 @@ sub onEpisodeWatchValidateResponse()
       ' Obtiene resultCode para diagnóstico cuando WatchValidate falla.
       resultCode = invalid
       if watchData <> invalid then resultCode = watchData.resultCode
-      ' Limpia loading al no poder continuar a streaming.
-      if m.top.loading <> invalid then m.top.loading.visible = false
       ' Limpia request manager al finalizar respuesta inválida.
       m.apiRequestManager = clearApiRequest(m.apiRequestManager)
       ' Reutiliza manejo global de errores funcionales.
@@ -620,8 +615,6 @@ sub onEpisodeWatchValidateResponse()
     statusCode = m.apiRequestManager.statusCode
     ' Obtiene payload de error para logging.
     errorResponse = m.apiRequestManager.errorResponse
-    ' Limpia loading al no poder continuar a streaming.
-    if m.top.loading <> invalid then m.top.loading.visible = false
     ' Limpia request manager al finalizar respuesta con error.
     m.apiRequestManager = clearApiRequest(m.apiRequestManager)
     ' Reutiliza manejo global de errores HTTP.
@@ -634,6 +627,7 @@ end sub
 
 ' Procesa respuesta de streaming del episodio y notifica navegación al player.
 sub onEpisodeStreamingResponse()
+  hideLoading()
   ' Reintenta apertura cuando el manager quedó inválido durante la respuesta.
   if m.apiRequestManager = invalid then
     ' Reintenta abrir el episodio actualmente seleccionado.
@@ -674,8 +668,6 @@ sub onEpisodeStreamingResponse()
     if validateLogout(statusCode, m.top) then
       ' Limpia manager antes de salir por logout.
       m.apiRequestManager = clearApiRequest(m.apiRequestManager)
-      ' Oculta loading al salir por logout.
-      if m.top.loading <> invalid then m.top.loading.visible = false
       ' Corta ejecución para no continuar con limpieza duplicada.
       return
     end if
@@ -683,8 +675,6 @@ sub onEpisodeStreamingResponse()
 
   ' Limpia request manager al finalizar procesamiento.
   m.apiRequestManager = clearApiRequest(m.apiRequestManager)
-  ' Oculta loading global al terminar el flujo de streaming.
-  if m.top.loading <> invalid then m.top.loading.visible = false
   ' Limpia episodio seleccionado al finalizar intento de reproducción.
   m.selectedEpisode = invalid
 end sub
@@ -1116,4 +1106,8 @@ end sub
 ' Limpiar la llamada del log
 sub onActionLogResponse() 
   m.apiLogRequestManager = clearApiRequest(m.apiLogRequestManager)
+end sub
+
+sub hideLoading()
+  if m.top.loading <> invalid then m.top.loading.visible = false
 end sub

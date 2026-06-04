@@ -95,6 +95,7 @@ end sub
 
 ' Procesa la respuesta de todos los que estan mirando actualemnte con la cuenta del usuario 
 sub onAllWhoAreWatchingResponse()
+  m.top.loading.visible = false
   if validateStatusCode(m.apiRequestManager.statusCode) then
     resp = ParseJson(m.apiRequestManager.response).data
     m.apiRequestManager = clearApiRequest(m.apiRequestManager)
@@ -126,13 +127,12 @@ sub onAllWhoAreWatchingResponse()
   end for
 
   if fistItem <> invalid and fistItem.findNode("CloseSession") <> invalid then fistItem.findNode("CloseSession").setFocus(true)
-    m.top.loading.visible = false
+    
   else 	
     statusCode = m.apiRequestManager.statusCode
     errorResponse = m.apiRequestManager.errorResponse
     m.apiRequestManager = clearApiRequest(m.apiRequestManager)
 
-    m.top.loading.visible = false
     printError("AllWhoAreWatching Stastus:", errorResponse)
     
     if validateLogout(statusCode, m.top) then return 
@@ -141,6 +141,7 @@ end sub
 
 ' Procesa la respuesta de si el ususario puede ver
 sub onWatchValidateResponse()
+    m.top.loading.visible = false
   if validateStatusCode(m.apiRequestManager.statusCode) then
     resp = ParseJson(m.apiRequestManager.response).data
     m.apiRequestManager = clearApiRequest(m.apiRequestManager)
@@ -150,14 +151,12 @@ sub onWatchValidateResponse()
       setWatchToken(resp.watchToken)
       m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlStreaming(m.redirectKey, m.redirectId), "GET", "onStreamingsResponse")
     else 
-      m.top.loading.visible = false
+
       m.apiRequestManager = clearApiRequest(m.apiRequestManager)
-      
       __validateError(0, resp.resultCode, invalid)
       printError("WatchValidate ResultCode:", resp.resultCode)
     end if
   else 
-    m.top.loading.visible = false
     statusCode = m.apiRequestManager.statusCode
     errorResponse = m.apiRequestManager.errorResponse
     m.apiRequestManager = clearApiRequest(m.apiRequestManager)
@@ -174,6 +173,7 @@ end sub
 
 ' Procesa la respuesta al obtener la url de lo que se quiere ver
 sub onStreamingsResponse() 
+  m.top.loading.visible = false
   if validateStatusCode(m.apiRequestManager.statusCode) then
     resp = ParseJson(m.apiRequestManager.response)
     if resp <> invalid and resp.data <> invalid then
@@ -184,13 +184,11 @@ sub onStreamingsResponse()
       streaming.streamingType = getStreamingType().DEFAULT
       m.top.streaming = FormatJson(streaming)
     else 
-      m.top.loading.visible = false
       printError("Streamings Emty:", m.apiRequestManager.response)
       m.apiRequestManager = clearApiRequest(m.apiRequestManager)
       m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.global.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogClosedLastFocus", [i18n_t(m.global.i18n, "button.cancel")])
     end if
   else 
-    m.top.loading.visible = false
     statusCode = m.apiRequestManager.statusCode
     errorResponse = m.apiRequestManager.errorResponse
     m.apiRequestManager = clearApiRequest(m.apiRequestManager)
@@ -218,11 +216,11 @@ end sub
 
 ' Procesa la respuesta de que se elimino una sesion
 sub onkillSessionResponse()
+  m.top.loading.visible = false
   if validateStatusCode(m.apiRequestManager.statusCode) then
     watchSessionId = getWatchSessionId()
     m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlWatchValidate(watchSessionId, m.redirectKey, m.redirectId), "GET", "onWatchValidateResponse")
   else 
-    m.top.loading.visible = false
     statusCode = m.apiRequestManager.statusCode
     errorResponse = m.apiRequestManager.errorResponse
     m.apiRequestManager = clearApiRequest(m.apiRequestManager)
@@ -239,6 +237,7 @@ end sub
 
 ' Procesa la respuesta de quien es que elimino mi sesion
 sub onKillerResponse()
+  m.top.loading.visible = false
   textError = i18n_t(m.global.i18n, "errorPlanSession.killer")
   if validateStatusCode(m.apiRequestManager.statusCode) then
     resp = ParseJson(m.apiRequestManager.response)
@@ -269,16 +268,12 @@ sub onKillerResponse()
 
       m.goToHomeTimer.ObserveField("fire","onGoToHome")
       m.goToHomeTimer.control = "start"
-
       m.backToHomeButton.setFocus(true)
-      m.top.loading.visible = false
     end if 
   else 
     statusCode = m.apiRequestManager.statusCode
     errorResponse = m.apiRequestManager.errorResponse
     m.apiRequestManager = clearApiRequest(m.apiRequestManager)
-
-    m.top.loading.visible = false
 
     printError("Killer:", errorResponse)
 

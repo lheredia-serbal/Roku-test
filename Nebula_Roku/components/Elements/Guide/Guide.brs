@@ -502,29 +502,29 @@ end sub
 
 ' Procesa la respuesta de la validacion del PIN
 sub onParentalControlResponse()
-  if validateStatusCode(m.apiRequestManager.statusCode) then
-    resp = ParseJson(m.apiRequestManager.response)
-
-    if resp <> invalid and resp.data <> invalid and resp.data then
-        __loadStreamingForPlayer()
-    else
-        if m.lastElementSelect <> invalid then m.lastElementSelect.setFocus(true)
-        if m.dialog <> invalid then
-            clearDialogAndGetOption(m.top, m.dialog)
-            m.dialog = invalid 
-        end if
-        m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.parentalControlModal.error.invalid"), i18n_t(m.global.i18n, "shared.parentalControlModal.error.description"), "onDialogClosedLastFocus")
-    end if
-  else     
     m.top.loading.visible = false
-    statusCode = m.apiRequestManager.statusCode
-    errorResponse = m.apiRequestManager.errorResponse
-    m.apiRequestManager = clearApiRequest(m.apiRequestManager)
+    if validateStatusCode(m.apiRequestManager.statusCode) then
+        resp = ParseJson(m.apiRequestManager.response)
 
-    printError("ParentalControl:", statusCode.toStr() + " " +  errorResponse)
+        if resp <> invalid and resp.data <> invalid and resp.data then
+            __loadStreamingForPlayer()
+        else
+            if m.lastElementSelect <> invalid then m.lastElementSelect.setFocus(true)
+            if m.dialog <> invalid then
+                clearDialogAndGetOption(m.top, m.dialog)
+                m.dialog = invalid 
+            end if
+            m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.parentalControlModal.error.invalid"), i18n_t(m.global.i18n, "shared.parentalControlModal.error.description"), "onDialogClosedLastFocus")
+        end if
+    else     
+        statusCode = m.apiRequestManager.statusCode
+        errorResponse = m.apiRequestManager.errorResponse
+        m.apiRequestManager = clearApiRequest(m.apiRequestManager)
 
-    if validateLogout(statusCode, m.top) then return
-  end if
+        printError("ParentalControl:", statusCode.toStr() + " " +  errorResponse)
+
+        if validateLogout(statusCode, m.top) then return
+    end if
 end sub
 
 ' Hace foco en objeto que lo tenia antes de que se abriera el modal

@@ -244,6 +244,9 @@ end sub
 
 ' Toma la selección del item enfocado y decide si abre Player o Detalle, igual que MainScreen.
 sub onSelectItem()
+    ' Ocultamos loading porque la navegación ya fue emitida.
+    if m.top.loading <> invalid then m.top.loading.visible = false
+
   ' Validamos que exista un carrusel activo con foco.
   if m.carouselContainer = invalid or not m.carouselContainer.isInFocusChain() or m.carouselContainer.focusedChild = invalid then return 
   ' Leemos payload del item seleccionado desde Carousel.
@@ -298,14 +301,14 @@ sub onSelectItem()
       m.apiRequestManager = clearApiRequest(m.apiRequestManager)
       ' Emitimos detalle para que MainScene abra ProgramDetailScreen.
       m.top.detail = FormatJson(m.itemSelected) 
-      ' Ocultamos loading porque la navegación ya fue emitida.
-      if m.top.loading <> invalid then m.top.loading.visible = false
     end if
   end if
 end sub
 
 ' Procesa callback del modal PIN reutilizando lógica de MainScreen.
 sub onPinDialogLoad()
+  if m.top.loading <> invalid then m.top.loading.visible = false
+
   ' Leo respuesta del PIN ingresado por el usuario.
   resp = clearPINDialogAndGetOption(m.top, m.pinDialog)
   ' Creo requestId para la validación del PIN.
@@ -334,14 +337,14 @@ sub onPinDialogLoad()
     runAction(requestId, action, ApiType().CLIENTS_API_URL)
     m.apiRequestManager = action.apiRequestManager
   else
-    ' Si se cancela o PIN inválido en formato, cierro loading y restauro foco.
-    if m.top.loading <> invalid then m.top.loading.visible = false
     __restoreLastFocus()
   end if
 end sub
 
 ' Procesa la respuesta de la validacion del PIN
 sub onParentalControlResponse()
+  if m.top.loading <> invalid then m.top.loading.visible = false
+
   if m.apiRequestManager = invalid then
     onPinDialogLoad()
     return
@@ -375,11 +378,9 @@ sub onParentalControlResponse()
           runAction(requestId, action, ApiType().CLIENTS_API_URL)
           m.apiRequestManager = action.apiRequestManager
         else
-          m.top.loading.visible = false
           m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.parentalControlModal.error.invalid"), i18n_t(m.global.i18n, "shared.parentalControlModal.error.description"), "onDialogClosedFocusContainer")
       end if
     else     
-      m.top.loading.visible = false
       statusCode = m.apiRequestManager.statusCode
       errorResponse = m.apiRequestManager.errorResponse
       m.apiRequestManager = clearApiRequest(m.apiRequestManager)
@@ -431,6 +432,9 @@ end sub
 
 ' Procesa la respuesta del servicio de streaming y emite salida hacia MainScene para abrir Player.
 sub onStreamingsResponse()
+  ' Ocultamos loading al no recibir data reproducible.
+  if m.top.loading <> invalid then m.top.loading.visible = false
+
   ' Si no hay manager activo, reintentamos validación.
   if m.apiRequestManager = invalid then 
     ' Reingresamos al flujo de validación previo.
@@ -454,15 +458,12 @@ sub onStreamingsResponse()
          ' Emitimos salida para que MainScene abra PlayerScreen.
         m.top.streaming = FormatJson(streaming)
       else
-         ' Ocultamos loading al no recibir data reproducible.
-        if m.top.loading <> invalid then m.top.loading.visible = false
          ' Devolvemos foco al elemento previo para continuidad de UX.
         __restoreLastFocus()
         printError("Streamings Empty ViewAll:", m.apiRequestManager.response)
         m.apiRequestManager = clearApiRequest(m.apiRequestManager)
       end if
     else
-      if m.top.loading <> invalid then m.top.loading.visible = false
       statusCode = m.apiRequestManager.statusCode 
       errorResponse = m.apiRequestManager.errorResponse 
       removePendingAction(m.apiRequestManager.requestId)
@@ -477,6 +478,8 @@ end sub
 
 ' Procesa la respuesta del servicio de ViewAll.
 sub onViewAllCarouselResponse()
+  if m.top.loading <> invalid then m.top.loading.visible = false
+
   if m.apiRequestManager = invalid then
     ' Re-disparamos la obtención del carrusel.
     __getViewAllCarousel() 
@@ -517,21 +520,21 @@ sub onViewAllCarouselResponse()
       ' Guardar el log de Error
       actionLog = createLogError(generateErrorDescription(error), generateErrorPageUrl("getCarousel", "ViewAllComponent"), getServerErrorStack(error))
       __saveActionLog(actionLog)
-
       ' Validamos si el error requiere forzar logout.
       if validateLogout(statusCode, m.top) then 
         m.apiRequestManager = clearApiRequest(m.apiRequestManager)
-        if m.top.loading <> invalid then m.top.loading.visible = false
+        
         return
       end if
     end if
   end if
   m.apiRequestManager = clearApiRequest(m.apiRequestManager)
-  if m.top.loading <> invalid then m.top.loading.visible = false
 end sub
 
 ' Procesa la respuesta de WatchValidate para decidir si continúa a streaming, igual que MainScreen.
 sub onWatchValidateResponse()
+  if m.top.loading <> invalid then m.top.loading.visible = false 
+
   ' Si el manager se limpió por retry, reintentamos selección actual.
   if m.apiRequestManager = invalid then 
     ' Reintentamos flujo desde el item seleccionado.
@@ -553,8 +556,6 @@ sub onWatchValidateResponse()
           m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlStreaming(m.itemSelected.redirectKey, m.itemSelected.redirectId), "GET", "onStreamingsResponse") 
         end if
       else
-        ' Ocultamos loading porque no se podrá reproducir.
-        if m.top.loading <> invalid then m.top.loading.visible = false 
         ' Limpiamos request manager al cortar el flujo.
         m.apiRequestManager = clearApiRequest(m.apiRequestManager) 
         ' Reutilizamos manejo de errores funcionales de MainScreen.
@@ -562,8 +563,6 @@ sub onWatchValidateResponse()
         printError("WatchValidate ResultCode ViewAll:", resp.resultCode)
       end if
     else
-      ' Ocultamos loading por error HTTP.
-      if m.top.loading <> invalid then m.top.loading.visible = false 
       statusCode = m.apiRequestManager.statusCode
       errorResponse = m.apiRequestManager.errorResponse
       m.apiRequestManager = clearApiRequest(m.apiRequestManager)
