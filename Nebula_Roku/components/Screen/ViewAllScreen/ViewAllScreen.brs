@@ -597,7 +597,7 @@ sub restoreFocus()
   m.selectedIndicator.size = targetCarousel.size 
   m.selectedIndicator.visible = true
   ' Reposicionamos contenedor para dejar visible la fila recuperada.  
-  m.carouselContainer.translation = [0, -(targetCarousel.translation[1] - m.yPosition)] 
+  m.carouselContainer.translation = [1, -(targetCarousel.translation[1] - m.yPosition)] 
 end sub
 
 ' ****** Funciones privadas ******
@@ -619,7 +619,7 @@ sub __applyLayout()
   m.programImageBackground.height = height
   m.programInfo.translation = [safeX + scaleValue(35, m.scaleInfo), safeY ]
   ' Aplicamos posición inicial del bloque de carruseles usando los valores cacheados.
-  m.carousels.translation = scaleSize([30, 80], m.scaleInfo)
+  m.carousels.translation = scaleSize([31, 80], m.scaleInfo)
   m.carouselContainer.translation = [0, m.yPosition] 
   m.selectedIndicator.translation = [safeX + scaleValue(5, m.scaleInfo), safeY + scaleValue(148, m.scaleInfo)]
 end sub

@@ -1,6 +1,7 @@
 ' Inicialización del componente (parte del ciclo de vida de Roku)
 sub init()
   m.programDetailContent = m.top.findNode("programDetailContent")
+  m.programInfoContent = m.top.findNode("programInfoContent")
   
   m.notFoundLayoutGroup = m.top.findNode("notFoundLayoutGroup")
   m.notFoundTitle = m.top.findNode("notFoundTitle")
@@ -19,6 +20,7 @@ sub init()
   m.selectedIndicator = m.top.findNode("selectedIndicator")
   m.related = m.top.findNode("related")
   m.isOpenEmissions = false
+  m.diffCarouselContent = 0
 
   m.infoGradient = m.top.findNode("infoGradient")
   m.programImageBackground = m.top.findNode("programImageBackground")
@@ -925,7 +927,7 @@ sub __configProgramDetail()
     m.programImageBackground.visible = true
   end if
 
-  m.selectedIndicator.translation = scaleSize([69, 28], m.scaleInfo)
+  m.selectedIndicator.translation = scaleSize([68.5, 28], m.scaleInfo)
 
   ' Limpia payload de navegación a emisiones para evitar re-disparos.
   m.top.emissions = invalid
@@ -1139,7 +1141,7 @@ sub __renderCreditGroups()
       lNames.text = namesText
       lNames.wrap = true
       lNames.font = "font:SmallerSystemFont"
-      lNames.maxLines = 2
+      lNames.maxLines = 3
       lNames.color = m.global.colors.LIGHT_GRAY
       ' opcional: para que no se te vaya infinito, poné un ancho razonable
       lNames.width = scaleValue(760, m.scaleInfo)

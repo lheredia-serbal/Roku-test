@@ -117,7 +117,7 @@ sub currRectChanged()
 
     m.imageItem.width = imageWidth
     m.imageItem.height = imageHeight
-    m.imageItem.translation = [imageX, imageY]
+    'm.imageItem.translation = [imageX, imageY]
 
     m.opacityLayout.width = imageWidth
     m.opacityLayout.height = imageHeight

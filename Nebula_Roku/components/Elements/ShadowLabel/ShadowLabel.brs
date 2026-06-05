@@ -58,16 +58,8 @@ sub syncLayout()
     widthValue = m.mainText.localBoundingRect().width + Abs(offsetX)
   end if
 
-  if m.top.height <> invalid and m.top.height > 0 then
-    heightValue = m.top.height
-  else
-    heightValue = m.mainText.localBoundingRect().height + Abs(offsetY)
-  end if
-
   m.mainText.width = widthValue
   m.shadowText.width = widthValue
-  m.mainText.height = heightValue
-  m.shadowText.height = heightValue
 
   m.mainText.translation = [0, 0]
   m.shadowText.translation = [offsetX, offsetY]

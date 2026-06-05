@@ -648,8 +648,8 @@ sub __initConfig()
         m.targetSet.focusIndex = 4
     end if 
 
-    m.selectedIndicator.size = scaleSize([153, 225], m.scaleInfo) 'Ajhuste del label y el espacio de separacion
-    m.selectedIndicator.translation = scaleSize([547, 21], m.scaleInfo)
+    m.selectedIndicator.size = scaleSize([153, 228], m.scaleInfo) 'Ajhuste del label y el espacio de separacion
+    m.selectedIndicator.translation = scaleSize([547, 20], m.scaleInfo)
 
     m.channelContainer.width = scaleValue(145, m.scaleInfo)
     m.channelContainer.height = scaleValue(262, m.scaleInfo)

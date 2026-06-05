@@ -42,7 +42,7 @@ sub changeSize()
     m.rectLeft.height = size[1] + m.borderSize
     
     'Superior
-    m.rectTop.width = size[0] + m.borderSize
+    m.rectTop.width = size[0] + m.borderSize + 1
     m.rectTop.height = m.borderSize
     
     'Derecha
@@ -51,7 +51,7 @@ sub changeSize()
     m.rectRight.translation = [(size[0] + m.borderSize), 0]
 
     'Inferior
-    m.rectBottom.width = size[0] + (m.borderSize * 2)
+    m.rectBottom.width = size[0] + (m.borderSize * 2) + 0.3
     m.rectBottom.height = m.borderSize
-    m.rectBottom.translation = [0, (size[1] + m.borderSize)] 
+    m.rectBottom.translation = [0, (size[1] + m.borderSize) - 2] 
 end sub

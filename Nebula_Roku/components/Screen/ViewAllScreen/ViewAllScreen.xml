@@ -63,7 +63,7 @@
     <!-- Contenedor de listado inferior para el listado de programas de ViewAll. -->
     <Group id="carousels">
       <!-- Contenedor interno del RowList de ViewAll. -->
-      <Group id="carouselContainer" translation="[50, 20]">
+      <Group id="carouselContainer">
       </Group>
       <!-- Indicador de selección reutilizado para el carrusel. -->
       <SelectionBox id="selectedIndicator" visible="false"/>

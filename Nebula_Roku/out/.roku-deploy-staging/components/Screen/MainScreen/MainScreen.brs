@@ -364,7 +364,7 @@ sub populateCarousels(data as Object)
   m.xPosition = m.carouselContainer.translation[0]
   m.yPosition = m.carouselContainer.translation[1]
 
-  m.selectedIndicator.translation = [scaleValue(124, m.scaleInfo), m.scaleInfo.safeZone.y + scaleValue(148, m.scaleInfo)]
+  m.selectedIndicator.translation = [scaleValue(123.6, m.scaleInfo), m.scaleInfo.safeZone.y + scaleValue(148, m.scaleInfo)]
 
   ' Asegura que el contenedor de noticias quede anclado al origen absoluto de MainScreen.
   m.newsContainer.translation = [0, 0]
