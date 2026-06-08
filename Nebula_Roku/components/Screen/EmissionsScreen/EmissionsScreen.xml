@@ -74,7 +74,7 @@
         font="font:LargeBoldSystemFont" />
 
       <!-- Label principal del estado sin emisiones o con error de servicio. -->
-      <Label
+      <ShadowLabel
         id="episodesUnavailableTitle"
         visible="false"
         text="Ups!"
@@ -83,14 +83,13 @@
         vertAlign="center"
         font="font:LargeBoldSystemFont" />
       <!-- Label secundario traducible para explicar indisponibilidad temporal. -->
-      <Label
+      <ShadowLabel
         id="episodesUnavailableDescription"
         visible="false"
         text=""
         width="1760"
         horizAlign="center"
         vertAlign="center"
-        numLines="3"
         font="font:MediumSystemFont" />
 
       <Animation

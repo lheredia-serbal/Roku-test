@@ -529,7 +529,7 @@ end function
 
 ' Crea un ActionLog a partir de un log existente + datos opcionales
 ' Equivalente a createLogError de TypeScript
-function CreateLogError(errorMessage as string, pageUrl as string, errorServer = invalid as object, key = invalid as string, id = invalid as integer, actionLog = invalid as object, program = invalid as object) as object
+function CreateLogError(errorMessage as string, pageUrl as string, errorServer = invalid as object, key = "" as string, id = 0 as integer, actionLog = invalid as object, program = invalid as object) as object
 
     ' Si viene un actionLog, partimos de él. Si no, creamos uno vacío.
     log = actionLog

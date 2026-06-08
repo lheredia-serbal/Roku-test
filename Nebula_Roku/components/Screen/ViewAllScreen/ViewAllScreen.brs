@@ -102,7 +102,12 @@ end sub
 ' Procesa el payload enviado desde MainScreen para cargar el carrusel completo.
 sub onDataChange()
   __configMain()
-  if m.top.data = invalid or m.top.data = "" then return
+   if m.top.data = invalid or m.top.data = "" then
+    ' Al salir de ViewAll, MainScene invalida data; limpiamos el listado para no mostrar carruseles viejos al reingresar.
+    m.viewAllPayload = invalid
+    __clearViewAllCarousel()
+    return
+  end if
   payload = ParseJson(m.top.data)
   if payload = invalid then return
   m.viewAllPayload = payload
@@ -513,12 +518,13 @@ sub onViewAllCarouselResponse()
       changeStatusAction(m.apiRequestManager.requestId, "error")
       retryAll()
     else
+      __populateViewAllCarousel([])
       ' Limpiamos acción pendiente no reintentable.
       removePendingAction(m.apiRequestManager.requestId) 
       printError("ViewAllCarousel:", error)
 
       ' Guardar el log de Error
-      actionLog = createLogError(generateErrorDescription(error), generateErrorPageUrl("getCarousel", "ViewAllComponent"), getServerErrorStack(error))
+      actionLog = createLogError("", "", invalid)
       __saveActionLog(actionLog)
       ' Validamos si el error requiere forzar logout.
       if validateLogout(statusCode, m.top) then 
@@ -686,6 +692,10 @@ end function
 
 ' Limpia el carrusel actual de ViewAll y resetea estado visual asociado.
 sub __clearViewAllCarousel()
+  ' Reseteamos la colección cacheada para que el componente quede sin carruseles al salir.
+  m.carousel = []
+  m.lastFocusedProgram = invalid
+  m.itemfocused = invalid
   if m.carouselContainer = invalid then return
   while m.carouselContainer.getChildCount() > 0 
     child = m.carouselContainer.getChild(0)

@@ -102,6 +102,13 @@
           itemSpacings="[5]">
           
           <ProgramSummary id="programInfo" visible="false"/>
+
+          <Rectangle
+            id="actionsSacer"
+            width="1"
+            height="15"
+            opacity="0" >
+          </Rectangle>
           
           <LayoutGroup 
             id="actionsBtn"
@@ -114,7 +121,7 @@
           <Rectangle
             id="creditsSpacer"
             width="1"
-            height="5"
+            height="15"
             opacity="0" >
           </Rectangle>
 

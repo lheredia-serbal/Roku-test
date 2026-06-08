@@ -82,6 +82,10 @@ sub __applyScaledLayout()
     m.emissionsTitle.translation = scaleSize([80, 40], m.scaleInfo)
   end if
 
+  if m.episodesUnavailableDescription <> invalid then
+    m.episodesUnavailableDescription.translation = scaleSize([0, 200], m.scaleInfo)
+  end if
+
   ' Define centro vertical compartido para mantener ambos labels alineados entre sí.
   unavailableCenterY = cint(m.scaleInfo.height / 2)
   ' Define separación vertical compacta entre título y descripción.
@@ -97,11 +101,9 @@ sub __applyScaledLayout()
   if m.episodesUnavailableDescription <> invalid then
     ' Asigna ancho total para permitir centrado horizontal exacto.
     m.episodesUnavailableDescription.width = m.scaleInfo.width
-    ' Posiciona descripción cerca del título manteniendo alineación horizontal/vertical.
-    m.episodesUnavailableDescription.translation = [0, unavailableCenterY]
   end if
 
-    if m.infoGradient <> invalid then
+  if m.infoGradient <> invalid then
     m.infoGradient.width = m.scaleInfo.width
     m.infoGradient.height = m.scaleInfo.height
   end if
@@ -306,17 +308,18 @@ sub __renderEpisodes(episodes)
   ' Limpia elementos previos antes de pintar nuevos episodios.
   __clearEpisodes()
   ' Corta render cuando la respuesta no contiene lista.
-    if episodes = invalid then
-    ' Muestra mensaje cuando la API no devuelve emisiones válidas.
-    __showEpisodesUnavailableMessage()
+  if episodes = invalid then
+    ' Muestra mensaje específico cuando la API responde exitosamente sin emisiones válidas.
+    __showEmptyEmissionsMessage()
     return
   end if
   ' Muestra mensaje cuando la API devuelve cero emisiones disponibles.
   if episodes.count() <= 0 then
-    ' Muestra mensaje cuando la API no trae episodios para el título.
-    __showEpisodesUnavailableMessage()
+    ' Muestra mensaje específico cuando la API no trae emisiones para el título.
+    __showEmptyEmissionsMessage()
     return
   end if
+
   ' Oculta mensaje de indisponibilidad cuando sí existen emisiones renderizables.
   __hideEpisodesUnavailableMessage()
   ' Guarda episodios originales para poder abrir player desde selección actual.
@@ -773,12 +776,34 @@ sub __clearEpisodes()
   __hideEpisodeBackground()
 end sub
 
-' Muestra ambos labels centrados cuando no hay emisiones o falla el servicio.
+' Muestra ambos labels centrados cuando falla el servicio.
 sub __showEpisodesUnavailableMessage()
   ' Muestra el label principal con el texto fijo "Ups!".
   if m.episodesUnavailableTitle <> invalid then m.episodesUnavailableTitle.visible = true
-  ' Muestra el label secundario con el texto traducido de indisponibilidad.
-  if m.episodesUnavailableDescription <> invalid then m.episodesUnavailableDescription.visible = true
+  ' Restaura el mensaje traducido de indisponibilidad para errores del servicio.
+  if m.episodesUnavailableDescription <> invalid then
+    if m.scaleInfo <> invalid then
+      m.episodesUnavailableDescription.width = m.scaleInfo.width
+      m.episodesUnavailableDescription.height = scaleValue(120, m.scaleInfo)
+    end if
+    m.episodesUnavailableDescription.text = i18n_t(m.global.i18n, "emissions.unavailableEpisodes")
+    m.episodesUnavailableDescription.visible = true
+  end if
+end sub
+
+' Muestra el mensaje centrado cuando el servicio responde exitosamente sin emisiones.
+sub __showEmptyEmissionsMessage()
+  ' Oculta el título "Ups!" porque este estado no es un error del servicio.
+  if m.episodesUnavailableTitle <> invalid then m.episodesUnavailableTitle.visible = false
+  ' Muestra solo el ShadowLabel traducido centrado vertical y horizontalmente.
+  if m.episodesUnavailableDescription <> invalid then
+    if m.scaleInfo <> invalid then
+      m.episodesUnavailableDescription.width = m.scaleInfo.width
+      m.episodesUnavailableDescription.height = m.scaleInfo.height
+    end if
+    m.episodesUnavailableDescription.text = i18n_t(m.global.i18n, "emissions.emptyEmissions")
+    m.episodesUnavailableDescription.visible = true
+  end if
 end sub
 
 ' Oculta ambos labels cuando existen emisiones para mostrar.

@@ -146,7 +146,8 @@
     }
   },
   "emissions": {
-    "unavailableEpisodes": "The episodes for this title are not available at this time."
+    "unavailableEpisodes": "The episodes for this title are not available at this time.",
+    "emptyEmissions": "There are no emissions available right now, please try again later."
   },
   "autoUpgrade": {
     "title": "Update available",

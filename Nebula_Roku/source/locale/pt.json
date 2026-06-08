@@ -146,7 +146,8 @@
     }
   },
   "emissions": {
-    "unavailableEpisodes": "Os episódios deste título não estão disponíveis no momento."
+    "unavailableEpisodes": "Os episódios deste título não estão disponíveis no momento.",
+    "emptyEmissions": "Não há emissões disponíveis no momento, tente novamente mais tarde."
   },
   "autoUpgrade":  {
     "title": "Atualização disponível",

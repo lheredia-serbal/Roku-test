@@ -30,7 +30,7 @@ end sub
 
 ' Actualiza el texto que se muestra como tooltip del boton
 sub updateTooltip()
-  size = 45
+  size = 46
   m.btnTooltip.text = m.top.tooltip
   if (m.scaleInfo = invalid) then m.scaleInfo = m.global.scaleInfo
 
@@ -65,7 +65,7 @@ sub updateTooltip()
 
   m.rectBottom.width = scaleValue(size, m.scaleInfo)
   m.rectBottom.height = scaleValue(1, m.scaleInfo)
-  m.rectBottom.translation = [scaleValue(0, m.scaleInfo), scaleValue(size, m.scaleInfo)] 
+  m.rectBottom.translation = [scaleValue(0, m.scaleInfo), scaleValue(size, m.scaleInfo) + 1] 
 end sub
 
 ' Dispara la validacion si el componente tiene o no el foco sobre él
