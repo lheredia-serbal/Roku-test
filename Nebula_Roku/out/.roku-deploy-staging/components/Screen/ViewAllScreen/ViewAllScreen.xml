@@ -69,6 +69,13 @@
       <SelectionBox id="selectedIndicator" visible="false"/>
     </Group>
 
+        <!-- Label cuando ViewAll no tiene resultados para mostrar. -->
+    <Label
+      id="noResultsLabel"
+      visible="false"
+      horizAlign="center"
+      font="font:MediumSystemFont" />
+
     <!-- Timer para diferir la llamada de Program Summary al cambiar el foco. -->
     <Timer id="programTimer" repeat="false" duration="0.5"/>
   </children>

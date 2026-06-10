@@ -775,6 +775,7 @@ end sub
 
 ' Dispara la peticion para obtener la lista de perfiles del usuario.
 sub __getAllProfile()
+  m.top.loading.visible = true
   m.apiRequestManager = clearApiRequest(m.apiRequestManager)
   __clearArrayProfile()
   requestId = createRequestId()
@@ -1126,7 +1127,6 @@ sub __backToSelectProfile(reloadProfile)
   m.top.loading.visible = false
 
   m.keyboard.unobserveField("textEditBox")
-  if not m.top.loading.visible then m.top.loading.visible = true
   m.screenProfileEdit.visible = false
   m.profileByEdit = invalid
   

@@ -295,9 +295,9 @@ sub getNeedRefresh()
     state = __getDomainManagerState()
     now = CreateObject("roDateTime")
     now.Mark()
-    if (now.AsSeconds() * 1000) >= state._refresh and state._fetchInitialConfig then
+    'if now.AsSeconds() >= state._refresh and state._fetchInitialConfig then
         getInitialConfiguration(state._mode)
-    end if
+    'end if
 end sub
 
 ' Esta función se ejecuta cuando alguna api dió error de conexión con el servidor.
@@ -559,7 +559,7 @@ sub setConfigResponse(response as Object, mode as String, configDomain as String
     now.Mark()
 
     state._code = response.code
-    state._refresh = (now.AsSeconds() * 1000) + (refreshSeconds * 1000)
+    state._refresh = now.AsSeconds() + refreshSeconds * 1000
 
     if response <> invalid and response.config <> invalid and response.config.enable_action_log <> invalid then
         state._enableLogs = response.config.enable_action_log

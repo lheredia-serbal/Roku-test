@@ -89,7 +89,7 @@ sub init()
   m.loginMethodSwitch.translation = [0, 0] 
   m.loginMethodSwitchSelected.width = scaleValue(180, m.scaleInfo)
   m.loginMethodSwitchSelected.height = scaleValue(34, m.scaleInfo)
-  m.loginMethodSwitchSelected.translation = scaleSize([0], m.scaleInfo)
+  m.loginMethodSwitchSelected.translation = [0, 0]
   m.loginMethodPhone.width = scaleValue(180, m.scaleInfo)
   m.loginMethodPhone.height = scaleValue(45, m.scaleInfo)
   m.loginMethodPhone.translation = [0, 4]

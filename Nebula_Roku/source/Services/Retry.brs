@@ -83,7 +83,6 @@ sub removePendingAction(requestId as String)
             remaining.push(item)
         end if
     end for
-    print "second", remaining
     __setPendingActions(remaining)
 end sub
 

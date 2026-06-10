@@ -18,6 +18,8 @@ sub init()
   m.carouselContainer = m.top.findNode("carouselContainer")
   ' Referencia al indicador de selección del carrusel.
   m.selectedIndicator = m.top.findNode("selectedIndicator")
+  ' Referencia al mensaje mostrado cuando ViewAll no tiene contenido.
+  m.noResultsLabel = m.top.findNode("noResultsLabel")
   ' Cacheamos último foco para restaurarlo tras errores de red/validación.
   m.lastFocusedProgram = invalid
 end sub
@@ -112,6 +114,9 @@ sub onDataChange()
   if payload = invalid then return
   m.viewAllPayload = payload
   __applyLayout()
+  __applyTranslations()
+  ' Ocultamos cualquier estado vacío anterior mientras se carga el nuevo contenido.
+  __showNoResults(false)
   ' Disparamos el consumo del servicio de ViewAll.
   __getViewAllCarousel() 
 
@@ -495,30 +500,35 @@ sub onViewAllCarouselResponse()
     ' Quitamos la acción del pool pendiente.
     removePendingAction(m.apiRequestManager.requestId) 
     resp = ParseJson(m.apiRequestManager.response)
-    viewAllItems = invalid 
-    ' Priorizamos data.carousels cuando viene en la respuesta.
-    if resp <> invalid and resp.data <> invalid and resp.data.carousels <> invalid and resp.data.carousels.count() > 0 then viewAllItems = resp.data.carousels 
-    ' Usamos data.items como fallback cuando carousels no existe.
-    if viewAllItems = invalid and resp <> invalid and resp.data <> invalid and resp.data.items <> invalid and resp.data.items.count() > 0 then viewAllItems = resp.data.items 
+    viewAllData = invalid
+    ' Extraemos data sólo cuando la respuesta parseada es válida.
+    if resp <> invalid then viewAllData = resp.data
     ' Reutilizamos la misma lógica de resolución para evitar duplicación.
-    viewAllItems = __getViewAllSourceItems(resp.data) 
+    viewAllItems = __getViewAllSourceItems(viewAllData)
     ' Validamos que exista una colección de items para pintar.
     if viewAllItems.count() > 0 then 
-      m.carousel = resp.data
+      m.carousel = viewAllData
       ' Renderizamos carrusel con datos de ViewAll.
-      __populateViewAllCarousel(resp.data) 
+      __populateViewAllCarousel(viewAllData)
+      ' Mostramos estado vacío si las colecciones recibidas no generaron filas con items.
+      hasRenderedRows = false
+      if m.carouselContainer <> invalid then hasRenderedRows = m.carouselContainer.getChildCount() > 0
+      __showNoResults(not hasRenderedRows)
     else
-      ' Limpiamos UI cuando la API no trae items.
-      __clearViewAllCarousel() 
+      ' Limpiamos UI y mostramos feedback cuando la API no trae items.
+      __clearViewAllCarousel()
+      __showNoResults(true)
     end if
   else
     error = m.apiRequestManager.errorResponse
     statusCode = m.apiRequestManager.statusCode
+    ' Limpiamos contenido previo y mostramos feedback ante cualquier error.
+    __clearViewAllCarousel()
+    __showNoResults(true)
     if m.apiRequestManager.serverError then
       changeStatusAction(m.apiRequestManager.requestId, "error")
       retryAll()
     else
-      __populateViewAllCarousel([])
       ' Limpiamos acción pendiente no reintentable.
       removePendingAction(m.apiRequestManager.requestId) 
       printError("ViewAllCarousel:", error)
@@ -529,7 +539,6 @@ sub onViewAllCarouselResponse()
       ' Validamos si el error requiere forzar logout.
       if validateLogout(statusCode, m.top) then 
         m.apiRequestManager = clearApiRequest(m.apiRequestManager)
-        
         return
       end if
     end if
@@ -628,6 +637,24 @@ sub __applyLayout()
   m.carousels.translation = scaleSize([31, 80], m.scaleInfo)
   m.carouselContainer.translation = [0, m.yPosition] 
   m.selectedIndicator.translation = [safeX + scaleValue(5, m.scaleInfo), safeY + scaleValue(148, m.scaleInfo)]
+  ' El ancho completo permite que horizAlign centre el texto en la pantalla.
+  if m.noResultsLabel <> invalid then
+    m.noResultsLabel.width = width
+    m.noResultsLabel.translation = scaleSize([0, safeY + 200], m.scaleInfo)
+    m.noResultsLabel.color = m.global.colors.WHITE
+  end if
+end sub
+
+' Aplica los textos traducidos de ViewAll.
+sub __applyTranslations()
+  if m.global.i18n = invalid then return
+  if m.noResultsLabel <> invalid then m.noResultsLabel.text = i18n_t(m.global.i18n, "viewAll.noResults")
+end sub
+
+' Muestra u oculta el mensaje de ViewAll sin resultados.
+sub __showNoResults(show as boolean)
+  if m.noResultsLabel = invalid then return
+  m.noResultsLabel.visible = show
 end sub
 
 ' Construye el string de tags del título usando formato: "tag" | Tag2 | Tag3.
@@ -709,6 +736,8 @@ sub __clearViewAllCarousel()
   m.programInfo.visible = false
   ' Limpiamos imagen de fondo del programa previo.
   m.programImageBackground.uri = "" 
+  ' Ocultamos el estado vacío; quien limpia por falta de datos lo vuelve a mostrar.
+  __showNoResults(false)
 end sub
 
 ' Carga la configuracion inicial de la ViewAll.

@@ -186,6 +186,9 @@
       }
     }
   },
+  "viewAll": {
+    "noResults": "Não há resultados para exibir."
+  },
   "search": {
     "noResultsDefaultSearch": "O que você quer assistir?",
     "noResultsRecomendations": "A sua pesquisa não retornou resultados.",

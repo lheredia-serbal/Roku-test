@@ -5,11 +5,13 @@ sub init()
 
     m.itemImage = m.top.findNode("itemImage")
     m.opacityByEdit = m.top.findNode("opacityByEdit")
+    m.profileByEdit = m.top.findNode("profileByEdit")
     m.selectedIndicator = m.top.findNode("selectedIndicator")
     
     m.scaleInfo = m.global.scaleInfo
     
     m.top.observeField("focusedChild", "onFocusChange")
+    m.top.observeField("showManageProfile", "onShowManageProfile")
 end sub
 
 ' Detecta y actualiza el cambio de nombre
@@ -42,13 +44,19 @@ sub onFocusChange()
         m.selectedIndicator.visible = true
         m.profileName.color = m.global.colors.WHITE
         if m.top.showManageProfile then m.opacityByEdit.visible = true
+        if m.top.showManageProfile then m.profileByEdit.visible = false
     else 
         ' No tiene foco 
         m.opacityLayout.opacity = 0.0
         m.selectedIndicator.visible = false
         m.opacityByEdit.visible = false
+        if m.top.showManageProfile then m.profileByEdit.visible = true
         m.profileName.color = m.global.colors.LIGHT_GRAY
     end if
+end sub
+
+sub onShowManageProfile() 
+    m.profileByEdit.visible = m.top.showManageProfile
 end sub
 
 ' Setea el tamaño del componente
@@ -63,6 +71,9 @@ sub setSize()
     m.opacityByEdit.width = scaledSize[0]
     m.opacityByEdit.height = scaledSize[1]
 
+    m.profileByEdit.width = scaledSize[0]
+    m.profileByEdit.height = scaledSize[1]
+
     m.selectedIndicator.size = [scaledSize[0] - 1 ,  scaledSize[1] - 1]
     
     m.profileName.width = scaledSize[0]
@@ -71,5 +82,6 @@ sub setSize()
     m.opacityLayout.opacity = 0.0
     m.selectedIndicator.visible = false
     m.opacityByEdit.visible = false
+    m.profileByEdit.visible = false
     m.profileName.color = m.global.colors.LIGHT_GRAY
 end sub

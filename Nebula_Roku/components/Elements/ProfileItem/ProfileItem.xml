@@ -14,10 +14,10 @@
         <field id="uriImage" type="string" onChange="imageChanged" value="" />
         <field id="name" type="string" onChange="nameChanged" value="" />
         <field id="profileId" type="integer" value="0" />
-        <field id="showManageProfile" type="boolean" value="false"/>
         
         <!-- Paramentros de entrada/Salida -->
         <field id="size" type="array" onChange="setSize"/>
+        <field id="showManageProfile" type="boolean" onChange="onShowManageProfile"/>
         <field id="auxInfo" type="string" value="" />
 
         <!-- Paramentros de Salida -->
@@ -39,7 +39,13 @@
                     translation="[0,0]"
                     visible="false"
                     loadDisplayMode="scaleToFit"
-                    uri="pkg:/images/shared/edit_profile.png"/> 
+                    uri="pkg:/images/shared/edit_profile_selected.png"/> 
+                <Poster 
+                    id="profileByEdit" 
+                    translation="[0,0]"
+                    visible="false"
+                    loadDisplayMode="scaleToFit"
+                    uri="pkg:/images/shared/edit_profile_unselected.png"/> 
             </Group>
 
             <SelectionBox
