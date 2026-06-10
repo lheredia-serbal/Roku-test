@@ -86,16 +86,16 @@ sub init()
   m.loginMethodSwitchLayout.translation = [0, 0]
   m.loginMethodSwitch.width = scaleValue(370, m.scaleInfo)
   m.loginMethodSwitch.height = scaleValue(50, m.scaleInfo)
-  m.loginMethodSwitch.translation = [0, 0] 
+  m.loginMethodSwitch.translation = scaleSize([0, 20] , m.scaleInfo)
   m.loginMethodSwitchSelected.width = scaleValue(180, m.scaleInfo)
   m.loginMethodSwitchSelected.height = scaleValue(34, m.scaleInfo)
   m.loginMethodSwitchSelected.translation = [0, 0]
   m.loginMethodPhone.width = scaleValue(180, m.scaleInfo)
   m.loginMethodPhone.height = scaleValue(45, m.scaleInfo)
-  m.loginMethodPhone.translation = [0, 4]
+  m.loginMethodPhone.translation = scaleSize([0, 15], m.scaleInfo)
   m.loginMethodKeyboard.width = scaleValue(180, m.scaleInfo)
   m.loginMethodKeyboard.height = scaleValue(45, m.scaleInfo)
-  m.loginMethodKeyboard.translation = scaleSize([180, 2], m.scaleInfo)
+  m.loginMethodKeyboard.translation = scaleSize([180, 15], m.scaleInfo)
   m.loginSwitchSelectedLeftX = scaleValue(8, m.scaleInfo)
   m.loginSwitchSelectedRightX = scaleValue(180, m.scaleInfo)
   m.loginSwitchSelectedY = scaleValue(8, m.scaleInfo)
@@ -128,31 +128,31 @@ sub init()
   m.step1BadgePoster.translation = scaleSize([0, stepY], m.scaleInfo)
   m.step1Badge.width = scaleValue(stepWidth, m.scaleInfo)
   m.step1Badge.height = scaleValue(stepHeight, m.scaleInfo)
-  m.step1Badge.translation = scaleSize([0, stepY + 3], m.scaleInfo)
+  m.step1Badge.translation = scaleSize([0, stepY + scaleValue(10, m.scaleInfo)], m.scaleInfo)
   m.step1Text.width = scaleValue(980, m.scaleInfo)
-  m.step1Text.translation = scaleSize([stepX, stepY - 5], m.scaleInfo)
+  m.step1Text.translation = scaleSize([stepX, stepY - scaleValue(5, m.safeZone)], m.scaleInfo)
   m.qrShortUrlLabel.width = scaleValue(980, m.scaleInfo)
-  m.qrShortUrlLabel.translation = scaleSize([stepX, stepY + 25], m.scaleInfo)
+  m.qrShortUrlLabel.translation = scaleSize([stepX, stepY + scaleValue(25, m.scaleInfo)], m.scaleInfo)
 
   m.step2BadgePoster.width = scaleValue(stepWidth, m.scaleInfo)
   m.step2BadgePoster.height = scaleValue(stepHeight, m.scaleInfo)
-  m.step2BadgePoster.translation = scaleSize([0, stepY + 80], m.scaleInfo)
+  m.step2BadgePoster.translation = scaleSize([0, stepY + scaleValue(80, m.scaleInfo)], m.scaleInfo)
   m.step2Badge.width = scaleValue(stepWidth, m.scaleInfo)
   m.step2Badge.height = scaleValue(40, m.scaleInfo)
-  m.step2Badge.translation = scaleSize([0, stepY + 83], m.scaleInfo)
+  m.step2Badge.translation = scaleSize([0, stepY + scaleValue(93, m.scaleInfo)], m.scaleInfo)
   m.step2Text.width = scaleValue(980, m.scaleInfo)
-  m.step2Text.translation = scaleSize([stepX, stepY + 75], m.scaleInfo)
+  m.step2Text.translation = scaleSize([stepX, stepY + scaleValue(75, m.scaleInfo)], m.scaleInfo)
   m.activationCodeLabel.width = scaleValue(980, m.scaleInfo)
-  m.activationCodeLabel.translation = scaleSize([stepX, stepY + 110], m.scaleInfo)
+  m.activationCodeLabel.translation = scaleSize([stepX, stepY + scaleValue(110, m.scaleInfo)], m.scaleInfo)
 
   m.step3BadgePoster.width = scaleValue(stepWidth, m.scaleInfo)
   m.step3BadgePoster.height = scaleValue(stepHeight, m.scaleInfo)
-  m.step3BadgePoster.translation = scaleSize([0, stepY + 160], m.scaleInfo)
+  m.step3BadgePoster.translation = scaleSize([0, stepY + scaleValue(160, m.scaleInfo)], m.scaleInfo)
   m.step3Badge.width = scaleValue(stepWidth, m.scaleInfo)
   m.step3Badge.height = scaleValue(40, m.scaleInfo)
-  m.step3Badge.translation = scaleSize([0, stepY + 163], m.scaleInfo)
+  m.step3Badge.translation = scaleSize([0, stepY + scaleValue(173, m.scaleInfo)], m.scaleInfo)
   m.step3Text.width = scaleValue(980, m.scaleInfo)
-  m.step3Text.translation = scaleSize([stepX, stepY + 160], m.scaleInfo)
+  m.step3Text.translation = scaleSize([stepX, stepY + scaleValue(160, m.scaleInfo)], m.scaleInfo)
 
   m.qrCodeBackground.width = scaleValue(300, m.scaleInfo)
   m.qrCodeBackground.height = scaleValue(300, m.scaleInfo)
@@ -280,6 +280,10 @@ end sub
 ' Funcion que interpreta los eventos de teclado y retorna true si fue porcesada por este componente. Sino es porcesado por el
 ' entonces sigue con el siguente metodo onKeyEvent del compoente superior
 function onKeyEvent(key as String, press as Boolean) as Boolean
+
+  if key = KeyButtons().BACK then
+    print "back Login"
+  endif
   if m.top.loading.visible <> false and key <> KeyButtons().BACK then 
     return true
   end if

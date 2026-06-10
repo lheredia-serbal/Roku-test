@@ -10,10 +10,6 @@ sub init()
 
   'carousel
   m.carouselContainer = m.top.findNode("carouselContainer")
-  ' Referencia a la animación que suaviza la transición vertical de carouselContainer.
-  m.carouselContainerMoveAnimation = m.top.findNode("carouselContainerMoveAnimation")
-  ' Referencia al interpolador que recibe origen/destino de translation para carouselContainer.
-  m.carouselContainerMoveInterpolator = m.top.findNode("carouselContainerMoveInterpolator")
   ' Referencia a la animación de opacidad para el nodo superior del carrusel enfocado.
   m.focusUpOpacityAnimation = m.top.findNode("focusUpOpacityAnimation")
   ' Referencia al interpolador de opacidad que se apunta dinámicamente al nodo focusUp.
@@ -98,6 +94,11 @@ end sub
 ' Funcion que interpreta los eventos de teclado y retorna true si fue porcesada por este componente. Sino es porcesado por el
 ' entonces sigue con el siguente metodo onKeyEvent del compoente superior
 function onKeyEvent(key as string, press as boolean) as boolean
+
+  if key = KeyButtons().BACK then
+    print "back MainScreen"
+  endif
+
   if m.top.loading.visible <> false and key <> KeyButtons().BACK then 
     return true
   end if

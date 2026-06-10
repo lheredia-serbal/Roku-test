@@ -50,8 +50,8 @@ sub init()
   end if
 
   ' Seteo la configuración del input de busqueda
-  m.searchInputDefaultWidth = m.scaleInfo.width - 150
-  m.searchInputManualWidth = m.scaleInfo.width - 450
+  m.searchInputDefaultWidth = m.scaleInfo.width - scaleValue(150, m.scaleInfo)
+  m.searchInputManualWidth = m.scaleInfo.width - scaleValue(320, m.scaleInfo)
   if m.searchInputManualWidth < scaleValue(420, m.scaleInfo) then m.searchInputManualWidth = scaleValue(420, m.scaleInfo)
   m.searchInput.width = m.searchInputDefaultWidth
   m.searchInput.translation = scaleSize([70, 50], m.scaleInfo)
@@ -109,7 +109,9 @@ sub init()
     m.searchKeyboardBackground.opacity = m.searchKeyboardBackgroundoOpacity
   end if
 
-  ' Observo cambios de foco del input para mostrar/ocultar teclado.
+  ' Mantengo oculto el cursor hasta que el input reciba foco.
+  m.searchInput.active = m.searchInput.hasFocus()
+  ' Observo cambios de foco del input para mostrar/ocultar teclado y cursor.
   m.searchInput.observeField("hasFocus", "onSearchInputFocusChanged")
   ' Observo el estado de animación de ocultar teclado para limpiar estado final.
   m.keyboardHideAnimation.observeField("state", "onKeyboardHideAnimationStateChanged")
@@ -373,6 +375,10 @@ end sub
 ' Maneja eventos de control remoto para navegación/foco.
 function onKeyEvent(key as string, press as boolean) as boolean
 
+  if key = KeyButtons().BACK then
+    print "back SearchScreen"
+  endif
+
   ' Si presionan BACK con teclado visible, cierro teclado y retorno foco al input.
   if key = KeyButtons().BACK and m.searchKeyboard <> invalid and m.searchKeyboard.visible and press then
     __hideKeyboard(true)
@@ -587,6 +593,9 @@ end sub
 sub onSearchInputFocusChanged()
   ' Si el input no existe, no hago nada.
   if m.searchInput = invalid then return
+
+  ' Muestro el cursor solo mientras el input conserva el foco.
+  m.searchInput.active = m.searchInput.hasFocus()
 
   ' Si el input tiene foco, muestro teclado (excepto en el primer ingreso).
   if m.searchInput.hasFocus() then
@@ -1617,8 +1626,8 @@ sub __syncSearchInputFromKeyboard()
   m.searchInput.cursorPosition = m.searchKeyboard.textEditBox.cursorPosition
   ' Copio el texto actual del teclado interno al input visible para evitar depender del observer del nodo completo.
   m.searchInput.text = m.searchKeyboard.textEditBox.text
-  ' Copio el estado activo del teclado interno al input visible para conservar consistencia visual.
-  m.searchInput.active = m.searchKeyboard.textEditBox.active
+  ' Mantengo el cursor visible únicamente si el input principal tiene foco.
+  m.searchInput.active = m.searchInput.hasFocus()
   ' Persisto el texto actual para restaurarlo correctamente cuando el teclado se oculta o se vuelve a mostrar.
   m.currentSearchText = m.searchInput.text
 

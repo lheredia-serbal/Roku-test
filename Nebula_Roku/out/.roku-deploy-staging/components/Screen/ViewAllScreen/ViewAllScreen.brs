@@ -154,6 +154,11 @@ end sub
 
 ' Procesa navegación vertical para mover foco entre filas de carruseles en ViewAll.
 function onKeyEvent(key as string, press as boolean) as boolean
+
+  if key = KeyButtons().BACK then
+    print "back ViewAllScreen"
+  endif
+
   handled = false
   if key = KeyButtons().UP then
     ' Validamos que exista una fila superior navegable.

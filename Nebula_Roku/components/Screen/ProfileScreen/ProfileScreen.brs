@@ -33,6 +33,7 @@ sub init()
   
   m.profiles = []
   m.lastProfileFocus = invalid
+  m.editMode = false
 
   m.profileByEdit = invalid
   m.blockLoading = false
@@ -108,6 +109,10 @@ end function
 ' Funcion que interpreta los eventos de teclado y retorna true si fue porcesada por este componente. Sino es porcesado por el
 ' entonces sigue con el siguente metodo onKeyEvent del compoente superior
 function onKeyEvent(key as string, press as boolean) as boolean
+  if key = KeyButtons().BACK then
+    print "back ProfileScreen"
+  endif
+
   if m.top.loading.visible <> false and key <> KeyButtons().BACK then 
     return true
   end if
@@ -168,6 +173,8 @@ function onKeyEvent(key as string, press as boolean) as boolean
           m.manageProfile.text = i18n_t(m.global.i18n, "button.ready")
           m.showManageProfile = true
         end if 
+
+        __updateProfilesManageState()
       end if
       handled = true
     end if
@@ -280,6 +287,13 @@ function onKeyEvent(key as string, press as boolean) as boolean
   
   return handled
 end function 
+
+' Sincroniza inmediatamente el modo de edición con todos los perfiles editables.
+sub __updateProfilesManageState()
+  for each profile in m.profiles
+    if profile.profileId <> -1 then profile.showManageProfile = m.showManageProfile
+  end for
+end sub
 
 ' Inicializa el foco del componente seteando los valores necesarios
 sub initFocus()
@@ -1055,7 +1069,9 @@ end sub
 ' Carga el perfil a editar y define la pantalla de edicion de perfiles 
 sub __loadEditProfile(profileByEdit)
   m.top.loading.visible = false
+  m.editMode = true
   m.profileByEdit = profileByEdit
+  m.profileImageEdit.showManageProfile = false
   m.profileImageEdit.uriImage = getImageUrl(m.profileByEdit.avatar.image) 
   m.keyboard.setFocus(true) 
 
@@ -1129,7 +1145,9 @@ sub __backToSelectProfile(reloadProfile)
   m.keyboard.unobserveField("textEditBox")
   m.screenProfileEdit.visible = false
   m.profileByEdit = invalid
-  
+
+  m.profileImageEdit.showManageProfile = true
+  m.profileImageEdit.visible = false
   m.profileImageEdit.uriImage = invalid 
   m.keyboard.text = ""
   m.profileName.text = ""

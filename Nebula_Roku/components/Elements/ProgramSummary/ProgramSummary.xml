@@ -23,17 +23,16 @@
       layoutDirection="vert"
       horizAlignment="left"
       vertAlignment="top"
-      itemSpacings="[1]">
+      itemSpacings="[2]">
+      
       <ShadowLabel 
         id="programTitle"
-        height="1"
         vertAlign="top"
         font="font:MediumBoldSystemFont"
         visible="false" />
 
       <ShadowLabel 
         id="programSubtitle"
-        height="1"
         vertAlign="top"
         font="font:SmallBoldSystemFont"
         visible="false" />
@@ -45,14 +44,12 @@
         
         <Label 
           id="programDateAndChannel"
-          height="1"
           vertAlign="top"
           font="font:TinySystemFont"
           visible="false" />
 
         <Label 
           id="programLive"
-          height="1"
           vertAlign="top"
           font="font:TinySystemFont"
           opacity="0.0"/>
@@ -60,7 +57,6 @@
 
       <ShadowLabel 
         id="programSynopsis"
-        height="1"
         vertAlign="top"
         wrap="true"
         maxLines="3"

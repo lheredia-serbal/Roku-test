@@ -130,6 +130,10 @@ end sub
 
 ' Maneja eventos de tecla.
 function onKeyEvent(key as String, press as Boolean) as Boolean
+  if key = "back" then
+      print "back CdnErrorDialog"
+  endif
+
   if not m.top.visible then return false
 
   if press and key = "OK" and m.retryButton.isInFocusChain() and not m.retryButton.disable then

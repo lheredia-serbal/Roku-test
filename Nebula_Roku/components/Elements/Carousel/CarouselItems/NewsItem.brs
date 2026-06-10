@@ -103,8 +103,7 @@ sub updateLayoutForResolution()
     ' Ajusta el label de título para ubicarlo abajo a la izquierda del bloque de News.
     if m.newsTitle <> invalid then
         m.newsTitle.width = scaleValue(760, m.scaleInfo)
-        m.newsTitle.height = scaleValue(190, m.scaleInfo)
-        m.newsTitle.translation = scaleSize([140, 300], m.scaleInfo)
+        m.newsTitle.translation = scaleSize([140, 460], m.scaleInfo)
         m.newsTitle.visible = true
     end if
 
@@ -257,6 +256,10 @@ end sub
 
 ' Maneja navegación horizontal del News hero.
 function onKeyEvent(key as string, press as boolean) as boolean
+    if key = KeyButtons().BACK then
+        print "back NewsItem"
+    endif
+
     if not press then return false
 
     totalItems = getItemsCount()

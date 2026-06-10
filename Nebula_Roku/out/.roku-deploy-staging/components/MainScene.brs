@@ -38,6 +38,10 @@ end sub
 ' entonces sigue con el siguente metodo onKeyEvent del compoente superior
 function onKeyEvent(key as string, press as boolean) as boolean
 
+  if key = KeyButtons().BACK then
+    print "back MainScene"; m.StackOfScreens
+  endif
+
   if press and key = KeyButtons().BACK then
     if m.StackOfScreens.count() = 0 or (m.StackOfScreens.count() = 1 and m.StackOfScreens.Peek() = "MainScreen") then 
       __showExitAsk()

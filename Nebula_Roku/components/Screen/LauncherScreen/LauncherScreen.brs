@@ -167,25 +167,40 @@ end sub
 
 ' Procesa la respuesta al obtener las variables de la plataforma
 sub onPlatformResponse()
-  if validateStatusCode(m.apiRequestManager.statusCode) then    
-    ' Validar si el servidor soporta imágenes TSL
-    __validateImageTSL()
+  ' Diferir el procesamiento sin bloquear el hilo de SceneGraph.
+    if validateStatusCode(m.apiRequestManager.statusCode) then
     addAndSetFields(m.global, {variables: ParseJson(m.apiRequestManager.response).data} )
-    m.apiRequestManager = clearApiRequest(m.apiRequestManager) 
-    
+    m.apiRequestManager = clearApiRequest(m.apiRequestManager)
+
     if isLoginUser() then
-      if m.apiUrl = invalid then m.apiUrl = getConfigVariable(m.global.configVariablesKeys.API_URL) 
+      if m.apiUrl = invalid then m.apiUrl = getConfigVariable(m.global.configVariablesKeys.API_URL)
       m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlAuthRegenerateSession(), "POST", "onRegenerateSession", invalid, FormatJson({device: m.global.device}))
     else
       __validateAutoUpgrade(true)
     end if
-  else 
+  else
     printError("Launcher variables: " , m.apiRequestManager.errorResponse)
     m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.global.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogClosed", [i18n_t(m.global.i18n, "button.retry"), i18n_t(m.global.i18n, "button.exit")])
   end if
 end sub
 
-' Dispara la regeneracion de la infromacion del usuario logueado
+' Continúa procesando la respuesta de plataforma cuando finaliza la validación de imágenes.
+sub __continuePlatformResponse()
+  if m.platformResponseAwaitingImageValidation <> true then return
+  m.platformResponseAwaitingImageValidation = false
+
+  addAndSetFields(m.global, {variables: ParseJson(m.apiRequestManager.response).data} )
+  m.apiRequestManager = clearApiRequest(m.apiRequestManager)
+
+  if isLoginUser() then
+    if m.apiUrl = invalid then m.apiUrl = getConfigVariable(m.global.configVariablesKeys.API_URL)
+    m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlAuthRegenerateSession(), "POST", "onRegenerateSession", invalid, FormatJson({device: m.global.device}))
+  else
+    __validateAutoUpgrade(true)
+  end if
+end sub
+
+' Dispara la regeneración de la información del usuario logueado
 sub onRegenerateSession()
   statusCode = m.apiRequestManager.statusCode
   if validateStatusCode(statusCode) then
@@ -335,187 +350,3 @@ sub __validateInternetConnection()
   end if
   m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlHealth(), "GET", "onValdiateConnectionResponse", invalid, invalid, invalid, true)
 end sub
-
-' Crea un Poster solo lógico (no visible) para validar la carga de una imagen.
-sub __validateImageTSL()
-  domainManagerState = __getDomainManagerState()
-
-  checks = []
-  m.hiddenImageValidationQueue = []
-
-  ' Recorrer los recursos y obtener las imágenes a validar
-  for each item in domainManagerState._resources
-    if shouldValidateImageUrl(item) then
-      checks.push(item)
-    end if
-  end for
-
-  ' Recorrer los items obtenidos
-  for each item in checks
-    if item <> invalid and hasUseHttpAction(item) then
-
-      if item.primary <> invalid and getHealthCheckPrimary(item) <> "" then
-        __createImageValidation(item, item.primary, getHealthCheckPrimary(item), LCase(ConfigMode().PRIMARY))
-      end if
-
-      if item.secondary <> invalid and getHealthCheckSecondary(item) <> "" then
-        __createImageValidation(item, item.secondary, getHealthCheckSecondary(item), LCase(ConfigMode().SECONDARY))
-      end if
-    end if
-  end for
-
-  __processNextImageValidation()
-end sub
-
-sub __createImageValidation(item, resourceUrl as String, imageValidationUri as String, mode as String)
-  if item = invalid or resourceUrl = "" or imageValidationUri = "" then return
-
-  if m.hiddenImageValidationQueue = invalid then
-    m.hiddenImageValidationQueue = []
-  end if
-
-  validationItem = {
-    item: item
-    resourceUrl: resourceUrl
-    imageValidationUri: imageValidationUri,
-    mode: mode
-  }
-
-  m.hiddenImageValidationQueue.push(validationItem)
-end sub
-
-sub __processNextImageValidation()
-  if m.hiddenImageValidation <> invalid then return
-  if m.hiddenImageValidationQueue = invalid then return
-  if m.hiddenImageValidationQueue.Count() = 0 then return
-
-  validationItem = m.hiddenImageValidationQueue.Shift()
-  if validationItem = invalid then return
-
-  m.hiddenImageValidation = CreateObject("roSGNode", "Poster")
-  if m.hiddenImageValidation = invalid then return
-
-  m.hiddenImageValidation.visible = false
-  m.hiddenImageValidation.opacity = 0.0
-  m.hiddenImageValidation.width = 1
-  m.hiddenImageValidation.height = 1
-
-  m.hiddenImageValidationItem = validationItem
-
-  m.hiddenImageValidation.uri = validationItem.imageValidationUri
-  m.hiddenImageValidation.observeField("loadStatus", "onHiddenImageValidationLoadStatus")
-  m.top.appendChild(m.hiddenImageValidation)
-end sub
-
-sub __clearHiddenImageValidation()
-  if m.hiddenImageValidation <> invalid then
-    m.hiddenImageValidation.unobserveField("loadStatus")
-    if m.hiddenImageValidation.getParent() <> invalid then
-      m.hiddenImageValidation.getParent().removeChild(m.hiddenImageValidation)
-    end if
-    m.hiddenImageValidation = invalid
-  end if
-end sub
-
-' Observa el resultado de carga de la imagen del poster lógico.
-sub onHiddenImageValidationLoadStatus()
-  if m.hiddenImageValidation = invalid then return
-
-  status = m.hiddenImageValidation.loadStatus
-  validationItem = m.hiddenImageValidationItem
-
-  ' Valida únicamente las fallas para decidir el cambio global de protocolo.
-  if status = "failed" and validationItem <> invalid then
-    item = validationItem.item ' Recupera el item asociado a la imagen validada.
-    if item <> invalid and item.on_failure <> invalid and item.on_failure.actions <> invalid then ' Verifica que existan acciones configuradas.
-      for each actionInfo in item.on_failure.actions ' Recorre las acciones declaradas para la falla actual.
-        if actionInfo <> invalid and actionInfo.action <> invalid and LCase(actionInfo.action) = "use_http" then ' Busca la acción use_http solicitada.
-          imageProtocolOverride = getOppositeImageProtocol(m.hiddenImageValidation.uri) ' Calcula el protocolo opuesto según la URL actual.
-          if imageProtocolOverride <> invalid then setImageProtocolOverride(item.name, validationItem.resourceUrl, imageProtocolOverride, validationItem.mode) ' Persiste el protocolo a nivel global para futuras imágenes.
-          exit for ' Detiene el recorrido al encontrar la primera acción válida.
-        end if
-      end for
-    end if
-  end if
-
-  __clearHiddenImageValidation()
-  m.hiddenImageValidationItem = invalid
-  __processNextImageValidation()
-end sub
-' Validar si es una imágen
-function shouldValidateImageUrl(item as Object) as Boolean
-  if item = invalid then return false
-
-  hasToCheck = false
-  if getHealthCheckPrimary(item) <> "" or getHealthCheckSecondary(item) <> "" then
-    hasToCheck = true
-  end if
-
-  ' Validar que tenga acciones
-  if hasToCheck = false then return false
-  if item.on_failure = invalid then return false
-  if item.on_failure.actions = invalid then return false
-  if item.on_failure.actions.Count() = 0 then return false
-
-  ' Validarq ue las acciones sean de http y https
-  for each actionInfo in item.on_failure.actions
-    if LCase(actionInfo.when) = "tls_error" and LCase(actionInfo.action) = "use_http" then
-      return true
-    end if
-  end for
-
-  return false
-end function
-
-' Validar si usa http
-function hasUseHttpAction(item as Object) as Boolean
-  if item = invalid then return false
-  if item.on_failure = invalid then return false
-  if item.on_failure.actions = invalid then return false
-
-  for each actionInfo in item.on_failure.actions
-    if LCase(actionInfo.action) = "use_http" then
-      return true
-    end if
-  end for
-
-  return false
-end function
-
-' Persiste el protocolo de imágenes en el global node.
-sub setImageProtocolOverride(variableKey as String, url as String, protocol as Dynamic, mode as String)
-
-  finalUrl = applyImageProtocolOverride(url, protocol)
-
-  setConfigVariable(variableKey, finalUrl, mode)
-end sub
-
-' Obtiene el protocolo opuesto para el fallback global de imágenes.
-function getOppositeImageProtocol(url as Dynamic) as Dynamic 
-  if url = invalid then return invalid
-  ' Si la URL actual usa HTTPS, cambia el override a HTTP.
-  if Left(LCase(url), 8) = "https://" then return "http" 
-  ' Si la URL actual usa HTTP, cambia el override a HTTPS.
-  if Left(LCase(url), 7) = "http://" then return "https" 
-  return invalid
-end function
-
-' Validar si el recurso tiene validación Primaria
-function getHealthCheckPrimary(item as Object) as String
-  if item = invalid then return ""
-  if item.health_check = invalid then return ""
-  if type(item.health_check) <> "roAssociativeArray" then return ""
-  if item.health_check.target = invalid then return ""
-  if item.health_check.target.primary = invalid then return ""
-  return item.health_check.target.primary
-end function
-
-' Validar si el recurso tiene validación Secundaria
-function getHealthCheckSecondary(item as Object) as String
-  if item = invalid then return ""
-  if item.health_check = invalid then return ""
-  if type(item.health_check) <> "roAssociativeArray" then return ""
-  if item.health_check.target = invalid then return ""
-  if item.health_check.target.secondary = invalid then return ""
-  return item.health_check.target.secondary
-end function

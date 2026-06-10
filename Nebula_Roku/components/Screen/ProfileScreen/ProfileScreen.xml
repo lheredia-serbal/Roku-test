@@ -108,7 +108,7 @@
 
         <LayoutGroup
           layoutDirection="vert"
-          horizAlignment="center"
+          horizAlignment="left"
           vertAlignment="center"
           itemSpacings="[40]" >
           <TextEditBox

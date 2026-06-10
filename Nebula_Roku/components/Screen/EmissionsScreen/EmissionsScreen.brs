@@ -159,6 +159,10 @@ end sub
 
 ' Captura eventos de teclado para volver a la pantalla anterior.
 function onKeyEvent(key as string, press as boolean) as boolean
+
+  if key = KeyButtons().BACK then
+    print "back Emissions"
+  endif
   ' Ignora eventos de liberación de tecla.
   if not press then return false
 
