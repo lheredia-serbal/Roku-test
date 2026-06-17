@@ -295,16 +295,16 @@ sub getNeedRefresh()
     state = __getDomainManagerState()
     now = CreateObject("roDateTime")
     now.Mark()
-    'if now.AsSeconds() >= state._refresh and state._fetchInitialConfig then
+    if now.AsSeconds() >= state._refresh and state._fetchInitialConfig then
         getInitialConfiguration(state._mode)
-    'end if
+    end if
 end sub
 
 ' Esta función se ejecuta cuando alguna api dió error de conexión con el servidor.
 ' Ahora trabaja de forma asíncrona y notifica resultado en callback.
 function changeMode(responseHandler = invalid as Dynamic) as Boolean
     state = __getDomainManagerState()
-    if state._changeModeStatus = "pending" then return false
+    'if state._changeModeStatus = "pending" then return false
     state._changeModeStatus = "pending"
     state._changeModeCallback = responseHandler
     state._changeModeDidRefreshConfig = false
@@ -339,11 +339,11 @@ sub onChangeModeInitialSecondaryHealthResponse()
         return
     end if
 
-    if state._changeModeDidRefreshConfig then
+    'if state._changeModeDidRefreshConfig then
         showCdnErrorDialog()
-        __finishChangeMode(false)
-        return
-    end if
+        '__finishChangeMode(false)
+        'return
+    'end if
 
     state._changeModeDidRefreshConfig = true
     __syncDomainManagerState(state)
@@ -486,9 +486,8 @@ sub onInitialConfigPrimaryResponse()
             ' JSON válido pero sin campos requeridos: mapear a PR-101.
             setCdnErrorCodeFromStatus(101, ApiType().CONFIGURATION_URL, "CL")
         else
-            ' JSON correcto: guardar configuración y notificar éxito.
+            ' JSON correcto: guardar configuración y notificar éxito al terminar de aplicarla.
             setConfigResponse(response, state._mode, ConfigMode().PRIMARY)
-            __notifyInitialConfigResult(true)
             return
         end if
     else
@@ -518,13 +517,8 @@ sub onInitialConfigSecondaryResponse()
             state._initialConfigStatus = "failed"
             __notifyInitialConfigResult(false)
         else
-            ' JSON correcto en CDN secundario: aplicar modo Secondary y notificar éxito.
+            ' JSON correcto en CDN secundario: aplicar modo Secondary y notificar éxito al terminar.
             setConfigResponse(response, state._mode, ConfigMode().SECONDARY)
-            state._fetchInitialConfig = false
-            state._currentInitialConfig = ConfigMode().SECONDARY
-            state._initialConfigSuccess = true
-            state._initialConfigStatus = "success"
-            __notifyInitialConfigResult(true)
             return
         end if
     else
@@ -547,8 +541,9 @@ sub setConfigResponse(response as Object, mode as String, configDomain as String
     state._mode = mode
     state._fetchInitialConfig = false
     state._currentInitialConfig = configDomain
-    state._initialConfigSuccess = true
-    state._initialConfigStatus = "success"
+    state._initialConfigSuccess = false
+    m.setConfigResponseShouldNotifyInitialResult = false
+    if state._initialConfigStatus = "pending" then m.setConfigResponseShouldNotifyInitialResult = true
 
     refreshSeconds = 14400
     if response <> invalid and response.config <> invalid and response.config.refresh_interval_seconds <> invalid then
@@ -590,7 +585,7 @@ sub setConfigResponse(response as Object, mode as String, configDomain as String
     end if
 
     __syncDomainManagerState(state)
-' Cancelar una validación anterior y crear la cola para la nueva configuración.
+    ' Cancelar una validación anterior y crear la cola para la nueva configuración.
     __clearHiddenImageValidation()
     m.hiddenImageValidationItem = invalid
     checks = []
@@ -616,6 +611,19 @@ sub setConfigResponse(response as Object, mode as String, configDomain as String
     __processNextImageValidation()
 end sub
 
+' Marca la configuración como lista únicamente cuando terminó toda validación asíncrona.
+sub __finishSetConfigResponse()
+    state = __getDomainManagerState()
+    state._initialConfigSuccess = true
+    state._initialConfigStatus = "success"
+    __syncDomainManagerState(state)
+
+    shouldNotifyInitialResult = false
+    if m.setConfigResponseShouldNotifyInitialResult = true then shouldNotifyInitialResult = true
+    m.setConfigResponseShouldNotifyInitialResult = false
+    if shouldNotifyInitialResult then __notifyInitialConfigResult(true)
+end sub
+
 sub __createImageValidation(item, resourceUrl as String, imageValidationUri as String, mode as String)
     if item = invalid or resourceUrl = "" or imageValidationUri = "" then return
 
@@ -635,8 +643,14 @@ end sub
 
 sub __processNextImageValidation()
     if m.hiddenImageValidation <> invalid then return
-    if m.hiddenImageValidationQueue = invalid then return
-    if m.hiddenImageValidationQueue.Count() = 0 then return
+    if m.hiddenImageValidationQueue = invalid then
+        __finishSetConfigResponse()
+        return
+    end if
+    if m.hiddenImageValidationQueue.Count() = 0 then
+        __finishSetConfigResponse()
+        return
+    end if
 
     validationItem = m.hiddenImageValidationQueue.Shift()
     if validationItem = invalid then
@@ -699,6 +713,7 @@ sub onHiddenImageValidationLoadStatus()
     m.hiddenImageValidationItem = invalid
     __processNextImageValidation()
 end sub
+
 ' Validar si es una imágen
 function shouldValidateImageUrl(item as Object) as Boolean
     if item = invalid then return false

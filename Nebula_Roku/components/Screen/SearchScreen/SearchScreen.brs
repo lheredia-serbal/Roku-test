@@ -109,8 +109,6 @@ sub init()
     m.searchKeyboardBackground.opacity = m.searchKeyboardBackgroundoOpacity
   end if
 
-  ' Mantengo oculto el cursor hasta que el input reciba foco.
-  m.searchInput.active = m.searchInput.hasFocus()
   ' Observo cambios de foco del input para mostrar/ocultar teclado y cursor.
   m.searchInput.observeField("hasFocus", "onSearchInputFocusChanged")
   ' Observo el estado de animación de ocultar teclado para limpiar estado final.
@@ -174,6 +172,7 @@ sub initFocus()
       __resetSearchState()
       m.hasLoadedRecommended = false
       m.searchInput.setFocus(true)
+      m.searchInput.active = true
       __loadRecommendedCarousel(invalid)
       __loadSearchCarousels(invalid)
       __getRecommendedCarousel()
@@ -192,6 +191,7 @@ sub initFocus()
     else if m.searchInput <> invalid then
       ' Fallback para entradas sin foco previo: dejamos el input listo sin borrar el texto.
       m.searchInput.setFocus(true)
+      m.searchInput.active = true
     end if
   else
     ' Si pierde foco, detengo debounce pendiente para evitar búsquedas fuera de pantalla.
@@ -383,6 +383,7 @@ function onKeyEvent(key as string, press as boolean) as boolean
   if key = KeyButtons().BACK and m.searchKeyboard <> invalid and m.searchKeyboard.visible and press then
     __hideKeyboard(true)
     m.searchInput.setFocus(true)
+    m.searchInput.active = true
     return true
   end if
 
@@ -400,6 +401,7 @@ function onKeyEvent(key as string, press as boolean) as boolean
       firstList = firstCarousel.findNode("carouselList")
       if firstList <> invalid then
         firstList.setFocus(true)
+        m.searchInput.active = false
         m.searchSelectedIndicator.size = firstCarousel.size
         m.searchSelectedIndicator.visible = true
         return true
@@ -407,6 +409,7 @@ function onKeyEvent(key as string, press as boolean) as boolean
     else if m.relatedContainer <> invalid and m.relatedContainer.visible and m.related <> invalid then
       ' Prioridad 2: bloque recomendado (fallback cuando no hay carousels de search).
       m.related.findNode("carouselList").setFocus(true)
+      m.searchInput.active = false
       m.selectedIndicator.size = m.related.size
       m.selectedIndicator.visible = true
       return true
@@ -421,16 +424,19 @@ function onKeyEvent(key as string, press as boolean) as boolean
         if focusItem <> invalid then
           __setNodeOpacityWithAnimation(m.carouselContainer.focusedChild.focusUp, 1.0) ' Animo la restauración de opacidad del carrusel superior.
           focusItem.setFocus(true)
+          m.searchInput.active = false
           __setCarouselContainerTranslationWithAnimation([m.carouselXPosition, - (m.carouselContainer.focusedChild.translation[1] - m.carouselYPosition)]) ' Animo la traslación vertical al subir.
           m.searchSelectedIndicator.size = m.carouselContainer.focusedChild.size
         end if
       else
         m.searchInput.setFocus(true)
+        m.searchInput.active = true
         m.searchSelectedIndicator.visible = false
       end if
       return true
     else if m.related <> invalid and m.related.isInFocusChain() then
       m.searchInput.setFocus(true)
+      m.searchInput.active = true
       m.selectedIndicator.visible = false
       return true
     end if
@@ -443,6 +449,7 @@ function onKeyEvent(key as string, press as boolean) as boolean
       if focusItem <> invalid then
         __setNodeOpacityWithAnimation(m.carouselContainer.focusedChild, 0.0) ' Animo la atenuación del carrusel actual al bajar.
         focusItem.setFocus(true)
+        m.searchInput.active = false
         __setCarouselContainerTranslationWithAnimation([m.carouselXPosition, - (m.carouselContainer.focusedChild.translation[1] - m.carouselYPosition)]) ' Animo la traslación vertical al bajar.
         m.searchSelectedIndicator.size = m.carouselContainer.focusedChild.size
       end if
@@ -452,11 +459,13 @@ function onKeyEvent(key as string, press as boolean) as boolean
 
   if key = KeyButtons().RIGHT and press and m.searchMode = SearchMode().MANUAL and m.searchInput <> invalid and m.searchInput.isInFocusChain() and m.searchActionButton <> invalid and m.searchActionButton.visible then
     m.searchActionButton.setFocus(true)
+    m.searchInput.active = false
     return true
   end if
 
   if key = KeyButtons().LEFT and press and m.searchMode = SearchMode().MANUAL and m.searchActionButton <> invalid and m.searchActionButton.isInFocusChain() and m.searchInput <> invalid then
     m.searchInput.setFocus(true)
+    m.searchInput.active = true
     return true
   end if
 
@@ -592,10 +601,7 @@ end sub
 ' Muestra/oculta teclado cuando cambia el foco del input.
 sub onSearchInputFocusChanged()
   ' Si el input no existe, no hago nada.
-  if m.searchInput = invalid then return
-
-  ' Muestro el cursor solo mientras el input conserva el foco.
-  m.searchInput.active = m.searchInput.hasFocus()
+  if m.searchInput = invalid then return  
 
   ' Si el input tiene foco, muestro teclado (excepto en el primer ingreso).
   if m.searchInput.hasFocus() then
@@ -687,6 +693,7 @@ sub onSelectItem()
     __getSearchPrograms(m.itemSelected.title)
 
     m.searchInput.setFocus(true)
+    m.searchInput.active = true
     return
   end if
 
@@ -798,6 +805,7 @@ sub restoreFocus()
   else if m.searchInput <> invalid then
     ' Fallback: si no hay historial de foco, regreso al input.
     m.searchInput.setFocus(true)
+    m.searchInput.active = true
   end if
 end sub
 
@@ -891,7 +899,7 @@ end sub
 ' Guardar el log cuandos se cambia una opción del menú
 sub __saveActionLog(actionLog as object)
 
-  if beaconTokenExpired() and m.apiUrl <> invalid then
+  if beaconTokenExpired() and getEnableLogs() then
     m.apiLogRequestManager = sendApiRequest(m.apiLogRequestManager, urlActionLogsToken(), "GET", "onActionLogTokenResponse", invalid, invalid, invalid, false, FormatJson(actionLog))
   else
     __sendActionLog(actionLog)
@@ -1554,6 +1562,7 @@ sub __restoreFocusFromProgramDetail()
     if firstList <> invalid then
       m.lastFocusedNode = firstCarousel
       firstList.setFocus(true)
+      m.searchInput.active = false
       m.searchSelectedIndicator.size = firstCarousel.size
       m.searchSelectedIndicator.visible = true
       return
@@ -1565,6 +1574,7 @@ sub __restoreFocusFromProgramDetail()
     relatedList = m.related.findNode("carouselList")
     if relatedList <> invalid then
       relatedList.setFocus(true)
+      m.searchInput.active = false
       m.selectedIndicator.size = m.related.size
       m.selectedIndicator.visible = true
       return
@@ -1572,7 +1582,10 @@ sub __restoreFocusFromProgramDetail()
   end if
 
   ' Fallback final para no dejar pantalla sin foco navegable.
-  if m.searchInput <> invalid then m.searchInput.setFocus(true)
+  if m.searchInput <> invalid then 
+    m.searchInput.setFocus(true)
+    m.searchInput.active = true
+  end if
 end sub
 
 ' Recompone el texto visible del input ante pérdidas de foco que vacían el valor.
@@ -1626,8 +1639,6 @@ sub __syncSearchInputFromKeyboard()
   m.searchInput.cursorPosition = m.searchKeyboard.textEditBox.cursorPosition
   ' Copio el texto actual del teclado interno al input visible para evitar depender del observer del nodo completo.
   m.searchInput.text = m.searchKeyboard.textEditBox.text
-  ' Mantengo el cursor visible únicamente si el input principal tiene foco.
-  m.searchInput.active = m.searchInput.hasFocus()
   ' Persisto el texto actual para restaurarlo correctamente cuando el teclado se oculta o se vuelve a mostrar.
   m.currentSearchText = m.searchInput.text
 
@@ -1694,7 +1705,10 @@ sub __restoreLastFocus()
   if m.lastFocusedNode.id = m.related.id then
     focusItem = m.related.findNode("carouselList")
     ' Si existe lista interna, reaplico foco directo.
-    if focusItem <> invalid then focusItem.setFocus(true)
+    if focusItem <> invalid then 
+      focusItem.setFocus(true)
+      m.searchInput.active = false
+    end if
     ' Muestro indicador de recomendados tras restaurar foco.
     m.selectedIndicator.visible = true
     return
@@ -1707,6 +1721,7 @@ sub __restoreLastFocus()
     m.lastFocusedNode.opacity = "1.0"
     ' Reaplico foco sobre la lista del carrusel objetivo.
     focusItem.setFocus(true)
+    m.searchInput.active = false
     ' Sincronizo tamaño del indicador con el carrusel restaurado.
     m.searchSelectedIndicator.size = m.lastFocusedNode.size
     ' Muestro indicador de selección de búsqueda.

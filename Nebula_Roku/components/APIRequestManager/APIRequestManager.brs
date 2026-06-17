@@ -183,7 +183,6 @@ end function
 
 ' Se encarga de actualziar el Token de acceso
 function __updateToken(accToken) as object
-    print "__updateToken " + accToken
     refToken = getRefreshToken()
 
     tokenBody = FormatJson({accessToken: accToken})
@@ -192,13 +191,11 @@ function __updateToken(accToken) as object
     
     'print "newAuxToken " + newAuxToken.statusCode
     if validateStatusCode(newAuxToken.statusCode) then
-        print "success "
         respToken = ParseJson(newAuxToken.response)
         saveTokens(respToken)
 
         return newAuxToken
     else
-        print "error "
         if newAuxToken.statusCode = 401 then 
             return __reAuthenticate(accToken, refToken)
         else 

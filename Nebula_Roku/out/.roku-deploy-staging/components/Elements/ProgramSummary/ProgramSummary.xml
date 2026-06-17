@@ -23,45 +23,7 @@
       layoutDirection="vert"
       horizAlignment="left"
       vertAlignment="top"
-      itemSpacings="[2]">
-      
-      <ShadowLabel 
-        id="programTitle"
-        vertAlign="top"
-        font="font:MediumBoldSystemFont"
-        visible="false" />
-
-      <ShadowLabel 
-        id="programSubtitle"
-        vertAlign="top"
-        font="font:SmallBoldSystemFont"
-        visible="false" />
-
-      <LayoutGroup
-        layoutDirection="horiz"
-        horizAlignment="left"
-        itemSpacings="[10]" >
-        
-        <Label 
-          id="programDateAndChannel"
-          vertAlign="top"
-          font="font:TinySystemFont"
-          visible="false" />
-
-        <Label 
-          id="programLive"
-          vertAlign="top"
-          font="font:TinySystemFont"
-          opacity="0.0"/>
-      </LayoutGroup>
-
-      <ShadowLabel 
-        id="programSynopsis"
-        vertAlign="top"
-        wrap="true"
-        maxLines="3"
-        font="font:SmallerSystemFont"
-        visible="false" />
+      itemSpacings="[0]">
     </LayoutGroup>
 
     <!-- Animations -->
@@ -71,10 +33,6 @@
         repeat="true"
         optional="true"
         easeFunction="linear" >
-      <FloatFieldInterpolator
-        fieldToInterp="programLive.opacity"
-        key="[0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]"
-        keyValue="[1.0, 0.8, 0.6, 0.4, 0.2, 0.0, 0.0, 0.2, 0.4, 0.8, 1.0]" />
     </Animation>
 
   </children>

@@ -959,7 +959,7 @@ end sub
 ' Guardar el log cuandos se cambia una opción del menú 
 sub __saveActionLog(actionLog as object)
 
-  if beaconTokenExpired() and m.apiUrl <> invalid then
+  if beaconTokenExpired() and getEnableLogs() then
     m.apiLogRequestManager = sendApiRequest(m.apiLogRequestManager, urlActionLogsToken(), "GET", "onActionLogTokenResponse", invalid, invalid, invalid, false, FormatJson(actionLog))
   else
       __sendActionLog(actionLog)

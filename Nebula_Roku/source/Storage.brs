@@ -167,7 +167,7 @@ Function getBeaconToken() As String
 End Function
 
 Function getWatchSessionId() As integer
-    watchSessionId = __RegRead("watchSessionId", "SessionData")
+    watchSessionId = __RegRead("watchSessionId", "WatchSessionData")
     if watchSessionId <> invalid and watchSessionId <> "" then
         return Val(watchSessionId)
     end if
@@ -176,7 +176,10 @@ End Function
 
 Sub setWatchSessionId(watchSessionId As integer)
     if watchSessionId = invalid then watchSessionId = 0
-    __RegWrite("watchSessionId", watchSessionId.toStr(), "SessionData")
+
+    ' Se usa una sección dedicada para evitar que escrituras concurrentes sobre
+    ' SessionData vuelvan a persistir un watchSessionId anterior.
+    __RegWrite("watchSessionId", watchSessionId.toStr(), "WatchSessionData")
 End Sub
 
 Sub setWatchToken(watchToken As string)
@@ -247,12 +250,9 @@ Sub deleteTokens()
 End Sub
 
 Sub deleteSessionData()
-    TokensToDelete = ["watchSessionId"]
-    sec = CreateObject("roRegistrySection", "SessionData")
-    for each item in TokensToDelete 
-        sec.Delete(item)
-    end for
-    sec.Flush()
+    ' Elimina tanto la ubicación actual como la legada.
+    __RegDelete("watchSessionId", "WatchSessionData")
+    __RegDelete("watchSessionId", "SessionData")
 End Sub
 
 Sub __setNextUpdateVariables(value)
@@ -262,20 +262,26 @@ end Sub
 ' Metodo privado. Lee y devuelve la informacion guardada en el Storage.
 ' Busca a traves de paramentro key, el paramentro section define a que conjuto pertenece el paramentro a buscar (por defecto se devine invalid), 
 ' el defaultValue es un valor que devolvera en caso de no encotnrarse la informacion (por defecto se devine invalid)
-Function __RegRead(key, section = invalid, defaultValue = invalid)
+Function __RegRead(key As String, section = invalid As Dynamic, defaultValue = invalid As Dynamic) As Dynamic
     if section = invalid then section = "Default"
-    sec = CreateObject("roRegistrySection", section)
-    if sec.Exists(key) then return sec.Read(key)
-    return defaultValue
+    sec = CreateObject("roRegistrySection", Box(section).ToStr())
+    
+    result = defaultValue
+    if sec.Exists(key) then result = sec.Read(key)
+    
+    sec = invalid ' <-- FIJATE ESTO: Forzamos la destrucción antes del return
+    return result
 End Function
 
 ' Metodo privado. Guarda informacion guardada en el Storage.
 ' Busca a traves de paramentro key, el paramentro section define a que conjuto pertenece el paramentro a buscar (por defecto se devine invalid)
-Sub __RegWrite(key, val, section=invalid)
+Sub __RegWrite(key As String, val As Dynamic, section = invalid As Dynamic)
     if section = invalid then section = "Default"
-    sec = CreateObject("roRegistrySection", section)
-    sec.Write(key, val)
-    sec.Flush() 'commit it
+    sec = CreateObject("roRegistrySection", Box(section).ToStr())
+    sec.Write(key, Box(val).ToStr())
+    sec.Flush() 
+    
+    sec = invalid ' <-- FIJATE ESTO: Forzamos la destrucción de la caché
 End Sub
 
 ' Metodo privado. Borra informacion guardada en el Storage.

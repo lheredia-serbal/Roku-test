@@ -1,223 +1,207 @@
 ' Inicialización del componente (parte del ciclo de vida de Roku)
 sub init()
     m.programContainer = m.top.findNode("programContainer")
-    m.programTitle = m.top.findNode("programTitle")
-    m.programSubtitle = m.top.findNode("programSubtitle")
-    m.programDateAndChannel = m.top.findNode("programDateAndChannel")
-    m.programLive = m.top.findNode("programLive")
-    m.programSynopsis = m.top.findNode("programSynopsis")
-
     m.animation = m.top.findNode("liveAnimation")
-    
-    m.scaleInfo = m.global.scaleInfo
+    m.liveOpacityInterpolator = invalid
 
-    m.HeightToHide = 1
+    m.scaleInfo = m.global.scaleInfo
     m.defaultHeight = scaleValue(32, m.scaleInfo)
     m.spacings = scaleValue(0, m.scaleInfo)
+    m.reservedWidth = m.scaleInfo.width - scaleValue(140, m.scaleInfo)
 end sub
 
-' Carga la configuracion inicial del componente, escuchando los observable y obteniendo las 
-' referencias de compenentes necesarios para su uso
+' Carga la configuracion inicial del componente.
 sub initConfig()
-    m.programLive.text = i18n_t(m.global.i18n, "time.live")
-
-    if m.top.initConfig then 
-        m.reservedWidth = (m.scaleInfo.width - scaleValue(140, m.scaleInfo))
+    if m.top.initConfig then
+        m.reservedWidth = m.scaleInfo.width - scaleValue(140, m.scaleInfo)
         if m.top.width <> 0 then m.reservedWidth = m.top.width
 
-        m.programTitle.width = m.reservedWidth
-        m.programSubtitle.width = m.reservedWidth
-        m.programSynopsis.width = m.reservedWidth
-        
-        m.programDateAndChannel.color = m.global.colors.LIGHT_GRAY
-        m.programLive.color = m.global.colors.LIVE_CONTENT
-
-        m.programContainer.itemSpacings = [0, 0, 0, 0]
+        if m.programTitle <> invalid then m.programTitle.width = m.reservedWidth
+        if m.programSubtitle <> invalid then m.programSubtitle.width = m.reservedWidth
+        if m.programSynopsis <> invalid then m.programSynopsis.width = m.reservedWidth
     end if
 end sub
 
-' Detecta y actualiza la informacion del programa a mostrar.
+' Detecta y genera solamente la informacion del programa que se debe mostrar.
 sub changeProgram()
-    if m.top.program <> invalid and m.top.program <> "" then
-        __clearProgramContainer()
+    __clearProgramContainer()
 
-        visibleLive = false
-        showTitle = false
-        showSubtitle = false
-        showChannelAndDateOrLive = false
-        showSynopsis = false
-        particularItemSpacings = [0, 0, 0, 0]
-        program = ParseJson(m.top.program)
+    if m.top.program = invalid or m.top.program = "" then return
 
+    program = ParseJson(m.top.program)
+    if program = invalid then return
 
-        if program.title <> invalid and program.title <> "" then
-            showTitle = true
-            particularItemSpacings[0] = m.spacings
-        else if program.channel <> invalid and program.channel.name <> invalid and program.channel.name <> "" then
-            showTitle = true
-            particularItemSpacings[0] = m.spacings
-        end if
-        
-        if program.subtitle <> invalid and program.subtitle <> "" then
-            showSubtitle = true
-            particularItemSpacings[1] = m.spacings
-        end if 
-        
-        if (program.startTime <> invalid and program.startTime <> "" and program.endTime <> invalid and program.endTime <> "") or (program.channel <> invalid and program.channel.name <> invalid and program.channel.name <> "") then
-            showChannelAndDateOrLive = true
-            particularItemSpacings[2] = m.spacings
-        end if
-        
-        if program.synopsis <> invalid and program.synopsis <> "" then
-            showSynopsis = true
-            particularItemSpacings[3] = m.spacings
-        end if
+    title = ""
+    if program.title <> invalid and program.title <> "" then
+        title = program.title
+    else if program.channel <> invalid and program.channel.name <> invalid and program.channel.name <> "" then
+        title = program.channel.name
+    end if
 
+    if title <> "" then
+        m.programTitle = __createShadowLabel("programTitle", title, "font:MediumBoldSystemFont", m.defaultHeight)
+        m.programContainer.appendChild(m.programTitle)
+    end if
 
-        m.programContainer.itemSpacings = particularItemSpacings
+    if program.subtitle <> invalid and program.subtitle <> "" then
+        m.programSubtitle = __createShadowLabel("programSubtitle", program.subtitle, "font:SmallBoldSystemFont", m.defaultHeight)
+        m.programContainer.appendChild(m.programSubtitle)
+    end if
 
+    infoText = ""
+    visibleLive = false
 
-        ' Title
-        if showTitle then
-            if program.title <> invalid and program.title <> "" then
-                m.programTitle.text = program.title
-                m.programTitle.height = m.defaultHeight
-                m.programTitle.visible = true
-            else if program.channel <> invalid and program.channel.name <> invalid and program.channel.name <> "" 
-                m.programTitle.text = program.channel.name
-                m.programTitle.height = m.defaultHeight
-                m.programTitle.visible = true
-            end if
-        end if
+    if program.startTime <> invalid and program.startTime <> "" and program.endTime <> invalid and program.endTime <> "" then
+        startTime = CreateObject("roDateTime")
+        endTime = CreateObject("roDateTime")
+        nowDate = CreateObject("roDateTime")
 
-        ' Subtitle
-        if showSubtitle then 
-            m.programSubtitle.text = program.subtitle
-            m.programSubtitle.height = m.defaultHeight
-            m.programSubtitle.visible = true
-        end if 
+        startTime.FromISO8601String(program.startTime)
+        startTime.ToLocalTime()
 
-        ' Channel - Date | Live 
-        if showChannelAndDateOrLive then
-            if (program.startTime <> invalid and program.startTime <> "" and program.endTime <> invalid and program.endTime <> "") then
-                startTime = CreateObject("roDateTime")
-                endTime = CreateObject("roDateTime")
-                nowDate = CreateObject("roDateTime")
-                
-                startTime.FromISO8601String(program.startTime)
-                startTime.ToLocalTime()
-    
-                endTime.FromISO8601String(program.endTime)
-                endTime.ToLocalTime()
-    
-                nowDate.ToLocalTime()
-    
-                durationStr = ""
-                if (program.durationInMinutes > 0) then durationStr = " - " + program.durationInMinutes.ToStr() + "min"
-    
-                nowSeconds = nowDate.AsSeconds()
-                startSeconds = startTime.AsSeconds()
-                endSeconds = endTime.AsSeconds()
-    
-                if (startSeconds <= nowSeconds and endSeconds >= nowSeconds) then
-                    ' El programa está en vivo
-                    remaining = program.remaining
-        
-                    if remaining <> invalid then
-                        if (remaining > 60) then
-                            modMinutes = remaining mod 60
-                            hours = remaining \ 60
-                            templateStr = i18n_t(m.global.i18n, "time.endsInHoursMin")
-                            m.programDateAndChannel.text = templateStr.Replace("{{hours}}", hours.ToStr()).Replace("{{minutes}}", modMinutes.ToStr())
-                        else
-                            modMinutes = remaining mod 60
-                            templateStr = i18n_t(m.global.i18n, "time.endsInMin")
-                            m.programDateAndChannel.text = templateStr.Replace("{{minutes}}", modMinutes.ToStr())
-                        end if
-                        visibleLive = true
-                    end if
-        
-                else if (IsToday(startSeconds)) then
-                    m.programDateAndChannel.text = i18n_t(m.global.i18n, "time.today") + " "  + dateConverter(startTime, i18n_t(m.global.i18n, "time.formatHours")) + durationStr
-                    m.programDateAndChannel.height = m.defaultHeight
-                    m.programDateAndChannel.visible = true
-                else if (IsToday(startSeconds + 86400)) then
-                    ' Si al sumar un día la fecha es hoy, el inicio fue ayer
-                    m.programDateAndChannel.text = i18n_t(m.global.i18n, "time.yesterday") + " "  + dateConverter(startTime, i18n_t(m.global.i18n, "time.formatHours")) + durationStr
-                    m.programDateAndChannel.height = m.defaultHeight
-                    m.programDateAndChannel.visible = true
-                else if (IsToday(startSeconds - 86400)) then
-                    ' Si al restar un día la fecha es hoy, el inicio será mañana
-                    m.programDateAndChannel.text = i18n_t(m.global.i18n, "time.tomorrow") + " "  + dateConverter(startTime, i18n_t(m.global.i18n, "time.formatHours")) + durationStr
-                    m.programDateAndChannel.height = m.defaultHeight
-                    m.programDateAndChannel.visible = true
+        endTime.FromISO8601String(program.endTime)
+        endTime.ToLocalTime()
+
+        nowDate.ToLocalTime()
+
+        durationStr = ""
+        if program.durationInMinutes <> invalid and program.durationInMinutes > 0 then durationStr = " - " + program.durationInMinutes.ToStr() + "min"
+
+        nowSeconds = nowDate.AsSeconds()
+        startSeconds = startTime.AsSeconds()
+        endSeconds = endTime.AsSeconds()
+
+        if startSeconds <= nowSeconds and endSeconds >= nowSeconds then
+            remaining = program.remaining
+            if remaining <> invalid then
+                if remaining > 60 then
+                    modMinutes = remaining mod 60
+                    hours = remaining \ 60
+                    templateStr = i18n_t(m.global.i18n, "time.endsInHoursMin")
+                    infoText = templateStr.Replace("{{hours}}", hours.ToStr()).Replace("{{minutes}}", modMinutes.ToStr())
                 else
-                    m.programDateAndChannel.text = dateConverter(startTime, i18n_t(m.global.i18n, "time.formatDate")) + " - " + dateConverter(startTime, i18n_t(m.global.i18n, "time.formatHours")) + durationStr
-                    m.programDateAndChannel.height = m.defaultHeight
-                    m.programDateAndChannel.visible = true
+                    modMinutes = remaining mod 60
+                    templateStr = i18n_t(m.global.i18n, "time.endsInMin")
+                    infoText = templateStr.Replace("{{minutes}}", modMinutes.ToStr())
                 end if
+                visibleLive = true
             end if
-    
-            if program.channel <> invalid and program.channel.name <> invalid and program.channel.name <> ""  then
-                if m.programDateAndChannel.text <> "" then m.programDateAndChannel.text = m.programDateAndChannel.text + " | "
-    
-                m.programDateAndChannel.text = m.programDateAndChannel.text + program.channel.name
-                m.programDateAndChannel.height = m.defaultHeight
-                m.programDateAndChannel.visible = true
-                
-                if visibleLive then 
-                    m.programLive.height = m.defaultHeight
-                    m.programLive.opacity = "1.0"
-                    m.animation.control = "start"
-                end if
-            end if
+        else if IsToday(startSeconds) then
+            infoText = i18n_t(m.global.i18n, "time.today") + " " + dateConverter(startTime, i18n_t(m.global.i18n, "time.formatHours")) + durationStr
+        else if IsToday(startSeconds + 86400) then
+            ' Si al sumar un día la fecha es hoy, el inicio fue ayer
+            infoText = i18n_t(m.global.i18n, "time.yesterday") + " " + dateConverter(startTime, i18n_t(m.global.i18n, "time.formatHours")) + durationStr
+        else if IsToday(startSeconds - 86400) then
+            ' Si al restar un día la fecha es hoy, el inicio será mañana
+            infoText = i18n_t(m.global.i18n, "time.tomorrow") + " " + dateConverter(startTime, i18n_t(m.global.i18n, "time.formatHours")) + durationStr
+        else
+            infoText = dateConverter(startTime, i18n_t(m.global.i18n, "time.formatDate")) + " - " + dateConverter(startTime, i18n_t(m.global.i18n, "time.formatHours")) + durationStr
         end if
-        
-        ' Sinopsis
-        if showSynopsis then
-            m.programSynopsis.text = program.synopsis
-            m.programSynopsis.height = scaleValue(90, m.scaleInfo)
-            m.programSynopsis.visible = true
+    end if
+
+    if program.channel <> invalid and program.channel.name <> invalid and program.channel.name <> "" then
+        if infoText <> "" then infoText += " | "
+        infoText += program.channel.name
+    end if
+
+    if infoText <> "" or visibleLive then
+        infoContainer = CreateObject("roSGNode", "LayoutGroup")
+        infoContainer.id = "programInfoContainer"
+        infoContainer.layoutDirection = "horiz"
+        infoContainer.horizAlignment = "left"
+        infoContainer.vertAlignment = "top"
+        infoContainer.itemSpacings = [scaleValue(10, m.scaleInfo)]
+
+        if infoText <> "" then
+            m.programDateAndChannel = CreateObject("roSGNode", "Label")
+            m.programDateAndChannel.id = "programDateAndChannel"
+            m.programDateAndChannel.text = infoText
+            m.programDateAndChannel.height = m.defaultHeight
+            m.programDateAndChannel.vertAlign = "top"
+            m.programDateAndChannel.font = "font:TinySystemFont"
+            m.programDateAndChannel.color = m.global.colors.LIGHT_GRAY
+            infoContainer.appendChild(m.programDateAndChannel)
         end if
 
-    else
-        __clearProgramContainer()
-    end if 
+        if visibleLive then
+            m.programLive = CreateObject("roSGNode", "Label")
+            m.programLive.id = "programLive"
+            m.programLive.text = i18n_t(m.global.i18n, "time.live")
+            m.programLive.height = m.defaultHeight
+            m.programLive.vertAlign = "top"
+            m.programLive.font = "font:TinySystemFont"
+            m.programLive.color = m.global.colors.LIVE_CONTENT
+            m.programLive.opacity = 1.0
+            infoContainer.appendChild(m.programLive)
+        end if
+
+        m.programContainer.appendChild(infoContainer)
+
+        if visibleLive then __startLiveAnimation()
+    end if
+
+    if program.synopsis <> invalid and program.synopsis <> "" then
+        m.programSynopsis = __createShadowLabel("programSynopsis", program.synopsis, "font:SmallerSystemFont", scaleValue(90, m.scaleInfo))
+        m.programSynopsis.wrap = true
+        m.programSynopsis.maxLines = 3
+        m.programContainer.appendChild(m.programSynopsis)
+    end if
+
+    __updateItemSpacings()
 end sub
 
-' Limpia el contenedor del programa
+' Crea un ShadowLabel con la estética compartida por el resumen.
+function __createShadowLabel(id as string, text as string, font as string, height as float) as object
+    label = CreateObject("roSGNode", "ShadowLabel")
+    label.id = id
+    label.text = text
+    label.width = m.reservedWidth
+    label.height = height
+    label.vertAlign = "top"
+    label.font = font
+    return label
+end function
+
+' Inicia la animación solamente cuando programLive ya puede resolverse desde el árbol.
+sub __startLiveAnimation()
+    liveNode = m.top.findNode("programLive")
+    if liveNode = invalid then return
+
+    m.liveOpacityInterpolator = CreateObject("roSGNode", "FloatFieldInterpolator")
+    m.liveOpacityInterpolator.id = "liveOpacityInterpolator"
+    m.liveOpacityInterpolator.key = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
+    m.liveOpacityInterpolator.keyValue = [1.0, 0.8, 0.6, 0.4, 0.2, 0.0, 0.0, 0.2, 0.4, 0.8, 1.0]
+    m.animation.appendChild(m.liveOpacityInterpolator)
+    m.liveOpacityInterpolator.fieldToInterp = liveNode.id + ".opacity"
+    m.animation.control = "start"
+end sub
+
+' Mantiene el espaciado vertical únicamente entre los componentes existentes.
+sub __updateItemSpacings()
+    itemSpacings = []
+    for i = 0 to m.programContainer.getChildCount() - 1
+        itemSpacings.push(m.spacings)
+    end for
+    m.programContainer.itemSpacings = itemSpacings
+end sub
+
+' Elimina los componentes generados para que los invisibles no ocupen espacio.
 sub __clearProgramContainer()
     m.animation.control = "stop"
-    m.programLive.opacity = "0.0"
 
-    if m.programTitle.visible then 
-        m.programTitle.text = ""
-        m.programTitle.height = m.HeightToHide
-        m.programTitle.visible = false
-    end if 
-
-    if m.programSubtitle.visible then
-        m.programSubtitle.text = ""
-        m.programSubtitle.height = m.HeightToHide
-        m.programSubtitle.visible = false
+    if m.liveOpacityInterpolator <> invalid then
+        m.animation.removeChild(m.liveOpacityInterpolator)
+        m.liveOpacityInterpolator = invalid
     end if
 
-    if m.programDateAndChannel.visible then
-        m.programDateAndChannel.text = ""
-        m.programDateAndChannel.height = m.HeightToHide
-        m.programDateAndChannel.visible = false
-    end if
+    while m.programContainer.getChildCount() > 0
+        m.programContainer.removeChild(m.programContainer.getChild(0))
+    end while
 
-    if m.programLive.visible then
-        m.programLive.height = m.HeightToHide
-        m.programLive.opacity = "0.0"
-    end if
-
-    if m.programSynopsis.visible then
-        m.programSynopsis.text = ""
-        m.programSynopsis.height = 120
-        m.programSynopsis.visible = false
-    end if
-
-    m.programContainer.itemSpacings = [0, 0, 0, 0]
+    m.programTitle = invalid
+    m.programSubtitle = invalid
+    m.programDateAndChannel = invalid
+    m.programLive = invalid
+    m.programSynopsis = invalid
+    m.programContainer.itemSpacings = []
 end sub

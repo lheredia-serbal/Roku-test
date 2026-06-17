@@ -10,10 +10,6 @@ sub init()
 
   'carousel
   m.carouselContainer = m.top.findNode("carouselContainer")
-  ' Referencia a la animación de opacidad para el nodo superior del carrusel enfocado.
-  m.focusUpOpacityAnimation = m.top.findNode("focusUpOpacityAnimation")
-  ' Referencia al interpolador de opacidad que se apunta dinámicamente al nodo focusUp.
-  m.focusUpOpacityInterpolator = m.top.findNode("focusUpOpacityInterpolator")
   ' Observa el estado de la animación para restaurar overlays cuando termine la transición.
   if m.carouselContainerMoveAnimation <> invalid then m.carouselContainerMoveAnimation.observeField("state", "onCarouselContainerMoveAnimationStateChanged")
   m.selectedIndicator = m.top.findNode("selectedIndicator")
@@ -158,7 +154,8 @@ function onKeyEvent(key as string, press as boolean) as boolean
     if press and m.carouselContainer <> invalid and m.carouselContainer.isInFocusChain() and m.carouselContainer.focusedChild <> invalid and m.carouselContainer.focusedChild.focusUp <> invalid then
       focusItem = m.carouselContainer.focusedChild.focusUp.findNode("carouselList")
       if focusItem <> invalid then 
-        __setNodeOpacityWithAnimation(m.carouselContainer.focusedChild.focusUp, 1.0) ' Anima la restauración de opacidad del carrusel superior al navegar hacia arriba.
+        ' Muestra inmediatamente el carrusel superior, sin animación de opacidad.
+        m.carouselContainer.focusedChild.focusUp.opacity = "1.0"
         focusItem.setFocus(true)
         ' Mueve carouselContainer con transición animada de 0.5s.
         __setCarouselContainerTranslationWithAnimation([m.xPosition, -(m.carouselContainer.focusedChild.translation[1] - m.yPosition)]) 
@@ -171,7 +168,8 @@ function onKeyEvent(key as string, press as boolean) as boolean
     if press and m.carouselContainer <> invalid and m.carouselContainer.isInFocusChain() and m.carouselContainer.focusedChild <> invalid and m.carouselContainer.focusedChild.focusDown <> invalid  then
       focusItem = m.carouselContainer.focusedChild.focusDown.findNode("carouselList")
       if focusItem <> invalid then 
-        __setNodeOpacityWithAnimation(m.carouselContainer.focusedChild, 0.0) ' Anima la atenuación del carrusel actual al navegar hacia abajo.
+        ' Oculta inmediatamente el carrusel actual, sin animación de opacidad.
+        m.carouselContainer.focusedChild.opacity = "0.0"
         focusItem.setFocus(true)
         ' Mueve carouselContainer con transición animada de 0.5s.
         __setCarouselContainerTranslationWithAnimation([m.xPosition, -(m.carouselContainer.focusedChild.translation[1] - m.yPosition)]) 
@@ -204,37 +202,6 @@ function onKeyEvent(key as string, press as boolean) as boolean
   
   return handled
 end function 
-
-' Anima la opacidad de cualquier nodo objetivo hacia el valor indicado con duración de 0.5 segundos.
-sub __setNodeOpacityWithAnimation(targetNode as object, targetOpacity as float)
-  ' Si no hay nodo objetivo, no hay nada para animar.
-  if targetNode = invalid then return
-
-  ' Si no existe animación o interpolador configurado, aplica el valor de inmediato como fallback.
-  if m.focusUpOpacityAnimation = invalid or m.focusUpOpacityInterpolator = invalid then
-    targetNode.opacity = targetOpacity.toStr()
-    return
-  end if
-
-  ' Valida que el nodo objetivo tenga id para poder interpolar un fieldToInterp válido.
-  targetNodeId = targetNode.id
-  if targetNodeId = invalid or targetNodeId = "" then
-    targetNode.opacity = targetOpacity.toStr()
-    return
-  end if
-
-  ' Define el campo de destino de la interpolación de opacidad (por ejemplo: "carouselA.opacity").
-  m.focusUpOpacityInterpolator.fieldToInterp = targetNodeId + ".opacity"
-  ' Toma la opacidad actual como origen para evitar saltos visuales al iniciar la transición.
-  currentOpacity = targetNode.opacity
-  if currentOpacity = invalid then currentOpacity = 1.0
-  ' Configura curva lineal de opacidad desde el estado actual hasta el destino solicitado.
-  m.focusUpOpacityInterpolator.keyValue = [currentOpacity, targetOpacity]
-
-  ' Reinicia y dispara la animación para garantizar que siempre se reproduzca completa.
-  m.focusUpOpacityAnimation.control = "stop"
-  m.focusUpOpacityAnimation.control = "start"
-end sub
 
 ' Carga los datos de componente, si no recibe datos o los recibe vacios entonces dispara la limpieza del componete
 sub initData()
@@ -1200,7 +1167,7 @@ sub onContentViewResponse()
         
         if validateLogout(statusCode, m.top) then return 
         
-        if (statusCode = 408) or (statusCode = 500) then 
+        if statusCode >= 400 and statusCode <= 500 then 
           m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.global.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogReloadContentViewClosed", [i18n_t(m.global.i18n, "button.retry"), i18n_t(m.global.i18n, "button.exit")])
         else 
           __validateError(statusCode, 0, error)
@@ -1408,7 +1375,7 @@ sub __selectMenuItem(menuSelectedItem)
     ' Colapso el menu antes de navegar a la pantalla de búsqueda.
     m.myMenu.action = "collapse"
     ' Mantengo el indicador de selección visible para consistencia visual.
-    m.selectedIndicator.visible = true
+    if m.withoutContentLayoutGroup.visible = false then m.selectedIndicator.visible = true
     ' Disparo la navegación a SearchScreen en MainScene.
     m.top.search = true
 
@@ -1681,8 +1648,7 @@ sub __focusNewsFromFirstCarousel()
   if m.newsCarouselItem = invalid then return ' Evita procesar si el NewsItem no existe.
   if m.carouselContainer = invalid then return ' Evita procesar si el contenedor de carruseles no está disponible.
   focusedCarousel = m.carouselContainer.focusedChild ' Toma referencia al carrusel actualmente enfocado para calcular desplazamientos.
-  if focusedCarousel = invalid then return ' Evita errores si no existe un hijo enfocado.
-  if focusedCarousel.focusUp <> invalid then focusedCarousel.focusUp.opacity = "1.0" ' Restaura opacidad del nodo superior replicando la navegación vertical estándar.
+   if focusedCarousel.focusUp <> invalid then focusedCarousel.focusUp.opacity = "1.0" ' Muestra inmediatamente el destino superior antes de volver a News.
   m.newsContainer.translation = [0, 0] ' Devuelve el bloque de noticias a su posición base con la misma transición visual.
   __setCarouselContainerTranslationWithAnimation([m.xPosition, m.yPosition]) ' Reestablece el contenedor de carruseles a su origen con animación de 0.5s.
   m.newsCarouselItem.setFocus(true) ' Posiciona foco en el carrusel de News al presionar UP en el primer carrusel no-News.
@@ -2236,7 +2202,7 @@ end function
 ' Guardar el log cuandos se cambia una opción del menú 
 sub __saveActionLog(actionLog as object)
 
-  if beaconTokenExpired() and m.apiUrl <> invalid then
+  if beaconTokenExpired() and getEnableLogs() then
     requestId = createRequestId()
 
     action = {

@@ -242,6 +242,8 @@ end sub
 ' entonces sigue con el siguente metodo onKeyEvent del compoente superior
 function onKeyEvent(key as String, press as Boolean) as Boolean
 
+  watchSessionId = getWatchSessionId()
+
   if key = KeyButtons().BACK then
     print "back Player"
   endif
@@ -1634,26 +1636,25 @@ sub __configurePlayer()
 
   m.programSummaryPlayer.initConfig = true
 
-  m.errorChannel.translation = [((m.scaleInfo.width - scaleValue(320, m.scaleInfo)) / 2), (m.scaleInfo.height - scaleValue(130, m.scaleInfo)) / 2]
+  m.errorChannel.translation = [((m.scaleInfo.width - scaleValue(300, m.scaleInfo)) / 2), (m.scaleInfo.height - scaleValue(130, m.scaleInfo)) / 2]
 
-  m.connectingGroup.width = scaleValue(320, m.scaleInfo)
+  m.connectingGroup.width = scaleValue(300, m.scaleInfo)
   m.connectingGroup.height = scaleValue(130, m.scaleInfo)
 
-  m.spinnerGroup.translation = scaleSize([145, 95], m.scaleInfo)
+  m.spinnerGroup.translation = scaleSize([130, 95], m.scaleInfo)
 
   m.connectingContainer.translation = scaleSize([25, 25], m.scaleInfo)
   
   m.errorChannelImage.width = scaleValue(70, m.scaleInfo)
   m.errorChannelImage.height = scaleValue(70, m.scaleInfo)
 
-  m.inactivityBackground.width = scaleValue(640, m.scaleInfo)
-  m.inactivityBackground.height = scaleValue(320, m.scaleInfo)
+  m.inactivityBackground.width = scaleValue(500, m.scaleInfo)
+  m.inactivityBackground.height = scaleValue(300, m.scaleInfo)
 
-  m.inactivityContent.translation = scaleSize([320, 32], m.scaleInfo)
-  m.inactivityOverlay.translation = [((m.scaleInfo.width - scaleValue(640, m.scaleInfo)) / 2), ( m.scaleInfo.height - scaleValue(320, m.scaleInfo)) / 2]
+  m.inactivityContent.translation = scaleSize([250, 32], m.scaleInfo)
+  m.inactivityOverlay.translation = [((m.scaleInfo.width - scaleValue(500, m.scaleInfo)) / 2), ( m.scaleInfo.height - scaleValue(300, m.scaleInfo)) / 2]
 
-  
-  m.inactivityContent.itemSpacings = scaleSize([32, 32], m.scaleInfo)
+  m.inactivityContent.itemSpacings = scaleSize([20, 20], m.scaleInfo)
 
   m.inactivityLogo.width = scaleValue(286, m.scaleInfo)
   m.inactivityLogo.height = scaleValue(100, m.scaleInfo)
@@ -2054,22 +2055,24 @@ end sub
 
 ' Inicializa el timer que enviara el beacon cada X segundos.
 sub __initBeacon()
-  time = 20
-  if m.streaming <> invalid and m.streaming.beacon <> invalid then
-    if m.streaming.beacon.type <> invalid and m.streaming.beacon.type <> "" then 
-    m.beaconType = m.streaming.beacon.type
-    end if
+  if getEnableBeaconLogs() then
+    time = 20
+    if m.streaming <> invalid and m.streaming.beacon <> invalid then
+      if m.streaming.beacon.type <> invalid and m.streaming.beacon.type <> "" then 
+      m.beaconType = m.streaming.beacon.type
+      end if
 
-    if m.streaming.beacon.time <> invalid and m.streaming.beacon.time > 0 then 
-      time = m.streaming.beacon.time
-    end if
-  end if 
+      if m.streaming.beacon.time <> invalid and m.streaming.beacon.time > 0 then 
+        time = m.streaming.beacon.time
+      end if
+    end if 
 
-  clearTimer(m.beaconTimer)
-  
-  m.beaconTimer.duration = time
-  m.beaconTimer.ObserveField("fire","onSendBeacon")
-  m.beaconTimer.control = "start"
+    clearTimer(m.beaconTimer)
+    
+    m.beaconTimer.duration = time
+    m.beaconTimer.ObserveField("fire","onSendBeacon")
+    m.beaconTimer.control = "start"
+  end if
 end sub
 
 ' Inicia el timer para guardar el ultimo canal visto.
@@ -2446,7 +2449,7 @@ end function
 
 ' Guardar el log cuandos se cambia una opción del menú 
 sub __saveActionLog(actionLog as object)
-  if beaconTokenExpired() and m.apiUrl <> invalid then
+  if beaconTokenExpired() and getEnableLogs() then
     m.apiLogRequestManager = sendApiRequest(m.apiLogRequestManager, urlActionLogsToken(), "GET", "onActionLogTokenResponse", invalid, invalid, invalid, false, FormatJson(actionLog))
   else
     __sendActionLog(actionLog)

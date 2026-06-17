@@ -105,7 +105,6 @@ function setConfigVariable(key as String, value as String, mode as String) as Dy
     if globalVariables <> invalid
         for each item in globalVariables._resources
             if item.name = key then
-
                 if item.primary <> invalid then item.primary = value
                 if item.secondary <> invalid then item.secondary = value
             end if

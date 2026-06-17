@@ -84,20 +84,20 @@ sub init()
   m.loginMethodTitle.height = scaleValue(55, m.scaleInfo)
   m.loginMethodTitle.translation = [0, 0]
   m.loginMethodSwitchLayout.translation = [0, 0]
-  m.loginMethodSwitch.width = scaleValue(370, m.scaleInfo)
+  m.loginMethodSwitch.width = scaleValue(340, m.scaleInfo)
   m.loginMethodSwitch.height = scaleValue(50, m.scaleInfo)
-  m.loginMethodSwitch.translation = scaleSize([0, 20] , m.scaleInfo)
-  m.loginMethodSwitchSelected.width = scaleValue(180, m.scaleInfo)
-  m.loginMethodSwitchSelected.height = scaleValue(34, m.scaleInfo)
-  m.loginMethodSwitchSelected.translation = [0, 0]
+  m.loginMethodSwitch.translation = scaleSize([-50, 20] , m.scaleInfo)
+  m.loginMethodSwitchSelected.width = scaleValue(155, m.scaleInfo)
+  m.loginMethodSwitchSelected.height = scaleValue(32, m.scaleInfo)
+  m.loginMethodSwitchSelected.translation = scaleSize([-5, 0], m.scaleInfo)
   m.loginMethodPhone.width = scaleValue(180, m.scaleInfo)
   m.loginMethodPhone.height = scaleValue(45, m.scaleInfo)
-  m.loginMethodPhone.translation = scaleSize([0, 15], m.scaleInfo)
+  m.loginMethodPhone.translation = scaleSize([-5, 15], m.scaleInfo)
   m.loginMethodKeyboard.width = scaleValue(180, m.scaleInfo)
   m.loginMethodKeyboard.height = scaleValue(45, m.scaleInfo)
-  m.loginMethodKeyboard.translation = scaleSize([180, 15], m.scaleInfo)
+  m.loginMethodKeyboard.translation = scaleSize([165, 15], m.scaleInfo)
   m.loginSwitchSelectedLeftX = scaleValue(8, m.scaleInfo)
-  m.loginSwitchSelectedRightX = scaleValue(180, m.scaleInfo)
+  m.loginSwitchSelectedRightX = scaleValue(175, m.scaleInfo)
   m.loginSwitchSelectedY = scaleValue(8, m.scaleInfo)
   m.loginMethodSwitchHasInitialized = false
   m.lastLoginMethodFocus = "phone"
@@ -118,41 +118,41 @@ sub init()
   m.phoneInstructionsTitle.width = scaleValue(1120, m.scaleInfo)
   m.phoneInstructionsTitle.translation = scaleSize([0, 0], m.scaleInfo)
 
-  stepWidth = 40
-  stepHeight = 40
-  stepX = 60
-  stepY = 60
+  stepWidth = 35
+  stepHeight = 35
+  stepX = 50
+  stepY = 70
 
   m.step1BadgePoster.width = scaleValue(stepWidth, m.scaleInfo)
   m.step1BadgePoster.height = scaleValue(stepHeight, m.scaleInfo)
   m.step1BadgePoster.translation = scaleSize([0, stepY], m.scaleInfo)
   m.step1Badge.width = scaleValue(stepWidth, m.scaleInfo)
   m.step1Badge.height = scaleValue(stepHeight, m.scaleInfo)
-  m.step1Badge.translation = scaleSize([0, stepY + scaleValue(10, m.scaleInfo)], m.scaleInfo)
+  m.step1Badge.translation = scaleSize([0, stepY + 8, m.scaleInfo], m.scaleInfo)
   m.step1Text.width = scaleValue(980, m.scaleInfo)
-  m.step1Text.translation = scaleSize([stepX, stepY - scaleValue(5, m.safeZone)], m.scaleInfo)
+  m.step1Text.translation = scaleSize([stepX, stepY - 5, m.safeZone], m.scaleInfo)
   m.qrShortUrlLabel.width = scaleValue(980, m.scaleInfo)
-  m.qrShortUrlLabel.translation = scaleSize([stepX, stepY + scaleValue(25, m.scaleInfo)], m.scaleInfo)
+  m.qrShortUrlLabel.translation = scaleSize([stepX, stepY + 25], m.scaleInfo)
 
   m.step2BadgePoster.width = scaleValue(stepWidth, m.scaleInfo)
   m.step2BadgePoster.height = scaleValue(stepHeight, m.scaleInfo)
-  m.step2BadgePoster.translation = scaleSize([0, stepY + scaleValue(80, m.scaleInfo)], m.scaleInfo)
+  m.step2BadgePoster.translation = scaleSize([0, stepY + 100], m.scaleInfo)
   m.step2Badge.width = scaleValue(stepWidth, m.scaleInfo)
   m.step2Badge.height = scaleValue(40, m.scaleInfo)
-  m.step2Badge.translation = scaleSize([0, stepY + scaleValue(93, m.scaleInfo)], m.scaleInfo)
+  m.step2Badge.translation = scaleSize([0, stepY + 110], m.scaleInfo)
   m.step2Text.width = scaleValue(980, m.scaleInfo)
-  m.step2Text.translation = scaleSize([stepX, stepY + scaleValue(75, m.scaleInfo)], m.scaleInfo)
+  m.step2Text.translation = scaleSize([stepX, stepY + 90], m.scaleInfo)
   m.activationCodeLabel.width = scaleValue(980, m.scaleInfo)
-  m.activationCodeLabel.translation = scaleSize([stepX, stepY + scaleValue(110, m.scaleInfo)], m.scaleInfo)
+  m.activationCodeLabel.translation = scaleSize([stepX, stepY + 120], m.scaleInfo)
 
   m.step3BadgePoster.width = scaleValue(stepWidth, m.scaleInfo)
   m.step3BadgePoster.height = scaleValue(stepHeight, m.scaleInfo)
-  m.step3BadgePoster.translation = scaleSize([0, stepY + scaleValue(160, m.scaleInfo)], m.scaleInfo)
+  m.step3BadgePoster.translation = scaleSize([0, stepY + 200], m.scaleInfo)
   m.step3Badge.width = scaleValue(stepWidth, m.scaleInfo)
   m.step3Badge.height = scaleValue(40, m.scaleInfo)
-  m.step3Badge.translation = scaleSize([0, stepY + scaleValue(173, m.scaleInfo)], m.scaleInfo)
+  m.step3Badge.translation = scaleSize([0, stepY + 210], m.scaleInfo)
   m.step3Text.width = scaleValue(980, m.scaleInfo)
-  m.step3Text.translation = scaleSize([stepX, stepY + scaleValue(160, m.scaleInfo)], m.scaleInfo)
+  m.step3Text.translation = scaleSize([stepX, stepY + 205], m.scaleInfo)
 
   m.qrCodeBackground.width = scaleValue(300, m.scaleInfo)
   m.qrCodeBackground.height = scaleValue(300, m.scaleInfo)
@@ -196,7 +196,7 @@ sub initFocus()
 
     m.buttonContainer.translation = [((width - scaleValue(380, m.scaleInfo)) / 2), 400]
     m.logo.translation = [(width - scaleValue(280, m.scaleInfo)), scaleValue(30, m.scaleInfo)]
-    m.loginMethodSwitchLayout.translation = [((width - m.loginMethodSwitch.width) / 2), 0]
+    m.loginMethodSwitchLayout.translation = [((width - m.loginMethodSwitch.width - 30) / 2), 0]
 
     ' Reinicia el contador del polling al entrar nuevamente a la pantalla
     m.validateRegisterCodeTimerExecutions = 0 
@@ -916,7 +916,7 @@ end sub
 ' Guardar el log cuandos se cambia una opción del menú 
 sub __saveActionLog(actionLog as object)
 
-  if beaconTokenExpired() and m.apiUrl <> invalid then
+  if beaconTokenExpired() and getEnableLogs() <> invalid then
     requestId = createRequestId()
 
     action = {
