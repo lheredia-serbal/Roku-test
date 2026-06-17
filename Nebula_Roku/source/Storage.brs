@@ -247,6 +247,7 @@ Sub deleteTokens()
         sec.Delete(item)
     end for
     sec.Flush()
+    sec = invalid
 End Sub
 
 Sub deleteSessionData()
@@ -269,7 +270,7 @@ Function __RegRead(key As String, section = invalid As Dynamic, defaultValue = i
     result = defaultValue
     if sec.Exists(key) then result = sec.Read(key)
     
-    sec = invalid ' <-- FIJATE ESTO: Forzamos la destrucción antes del return
+    sec = invalid
     return result
 End Function
 
@@ -291,6 +292,7 @@ Sub __RegDelete(key, section=invalid)
     sec = CreateObject("roRegistrySection", section)
     sec.Delete(key)
     sec.Flush()
+    sec = invalid
 End Sub
 
 

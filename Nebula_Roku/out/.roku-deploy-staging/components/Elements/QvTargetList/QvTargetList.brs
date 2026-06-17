@@ -2,10 +2,6 @@
 ' entonces sigue con el siguente metodo onKeyEvent del compoente superior
 function onKeyEvent(key as String, press as Boolean) as Boolean
 
-  if key = KeyButtons().BACK then
-    print "back QbTargetList"
-  endif
-
   if key = KeyButtons().LEFT then 
     m.top.leftEvent = press
     m.top.leftEvent = not press

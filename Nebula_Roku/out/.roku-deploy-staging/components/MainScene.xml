@@ -20,6 +20,8 @@
   <interface>
     <!-- Paramentros de Salida -->
     <field id="appExit" type="bool" alwaysnotify="true" value="false"/>
+    <function name="showCdnErrorScreen" />
+    <function name="hideCdnErrorScreen" />
   </interface>
 
   <children>

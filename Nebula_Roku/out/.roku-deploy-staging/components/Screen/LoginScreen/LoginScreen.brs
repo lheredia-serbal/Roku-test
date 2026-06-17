@@ -281,9 +281,6 @@ end sub
 ' entonces sigue con el siguente metodo onKeyEvent del compoente superior
 function onKeyEvent(key as String, press as Boolean) as Boolean
 
-  if key = KeyButtons().BACK then
-    print "back Login"
-  endif
   if m.top.loading.visible <> false and key <> KeyButtons().BACK then 
     return true
   end if

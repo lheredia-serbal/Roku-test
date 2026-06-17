@@ -1,5 +1,7 @@
 ' Inicialización del componente (parte del ciclo de vida de Roku)
 sub init()
+  m.opacityForMenu = m.top.findNode("opacityForMenu")
+  m.groupOpacityForMenu = m.top.findNode("groupOpacityForMenu")
   m.myMenu = m.top.findNode("myMenu")
 
   ' Referencia al contenedor de dots independiente del componente NewsItem.
@@ -90,10 +92,6 @@ end sub
 ' Funcion que interpreta los eventos de teclado y retorna true si fue porcesada por este componente. Sino es porcesado por el
 ' entonces sigue con el siguente metodo onKeyEvent del compoente superior
 function onKeyEvent(key as string, press as boolean) as boolean
-
-  if key = KeyButtons().BACK then
-    print "back MainScreen"
-  endif
 
   if m.top.loading.visible <> false and key <> KeyButtons().BACK then 
     return true
@@ -213,12 +211,17 @@ sub initData()
     safeY = m.scaleInfo.safeZone.y
     width = m.scaleInfo.width
     height = m.scaleInfo.height
+
+    m.opacityForMenu.width = width
+    m.opacityForMenu.height = height
    
     m.infoGradient.width = width
     m.infoGradient.height = height
    
     m.programImageBackground.width = width
     m.programImageBackground.height = height
+
+    m.groupOpacityForMenu.clippingRect = [0, 0, safeX + scaleValue(60, m.scaleInfo), height]
 
     ' Ajusta fondo de noticias para cubrir toda la pantalla.
     m.newsBackgroundPoster.width = width
@@ -234,6 +237,7 @@ sub initData()
     ' Ubica el poster inferior al borde inferior de la pantalla.
     m.bottomGradientPoster.translation = [0, height - bottomPosterHeight]
     m.bottomGradientPoster.opacity = 0.7
+    m.bottomGradientPoster.visible = false
 
     logoWidth = scaleValue(200, m.scaleInfo)
     logoHeight = scaleValue(100, m.scaleInfo)

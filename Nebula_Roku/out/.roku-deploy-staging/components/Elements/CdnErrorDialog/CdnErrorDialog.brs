@@ -130,8 +130,13 @@ end sub
 
 ' Maneja eventos de tecla.
 function onKeyEvent(key as String, press as Boolean) as Boolean
+
   if key = "back" then
       print "back CdnErrorDialog"
+      if press and m.top.visible then
+        hideCdnErrorDialog()
+        return true
+      end if
   endif
 
   if not m.top.visible then return false

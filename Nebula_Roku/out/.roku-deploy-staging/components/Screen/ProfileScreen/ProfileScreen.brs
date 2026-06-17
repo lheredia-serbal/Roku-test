@@ -109,9 +109,6 @@ end function
 ' Funcion que interpreta los eventos de teclado y retorna true si fue porcesada por este componente. Sino es porcesado por el
 ' entonces sigue con el siguente metodo onKeyEvent del compoente superior
 function onKeyEvent(key as string, press as boolean) as boolean
-  if key = KeyButtons().BACK then
-    print "back ProfileScreen"
-  endif
 
   if m.top.loading.visible <> false and key <> KeyButtons().BACK then 
     return true

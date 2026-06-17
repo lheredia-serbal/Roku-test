@@ -38,12 +38,11 @@ end sub
 ' entonces sigue con el siguente metodo onKeyEvent del compoente superior
 function onKeyEvent(key as string, press as boolean) as boolean
 
-  if key = KeyButtons().BACK then
-    print "back MainScene"; m.StackOfScreens
-  endif
-
   if press and key = KeyButtons().BACK then
-    if m.StackOfScreens.count() = 0 or (m.StackOfScreens.count() = 1 and m.StackOfScreens.Peek() = "MainScreen") then 
+    if m.StackOfScreens <> invalid and m.StackOfScreens.count() > 0 and m.StackOfScreens.Peek() = "CdnErrorDialog" then
+      hideCdnErrorDialog()
+      return true
+    else if m.StackOfScreens = invalid or m.StackOfScreens.count() = 0 or (m.StackOfScreens.count() = 1 and m.StackOfScreens.Peek() = "MainScreen") then
       __showExitAsk()
       return true
 
@@ -935,5 +934,39 @@ sub __backManager(ScreenFocus)
     m.MainScreen.ObserveField("viewAll", "onViewAll") 
     m.MainScreen.ObserveField("setting", "onSetting")
     m.MainScreen.ObserveField("search", "onSearch")
+  end if
+end sub
+
+' Redirige al componente CdnErrorDialog como una pantalla más dentro del stack.
+sub showCdnErrorScreen(overlayTransparent = false as Boolean)
+  if m.cdnErrorDialog = invalid then return
+  if m.StackOfScreens = invalid then m.StackOfScreens = []
+
+  m.cdnErrorDialog.overlayTransparent = overlayTransparent
+  m.cdnErrorDialog.showSpinner = false
+  m.cdnErrorDialog.buttonDisabled = false
+  m.cdnErrorDialog.focusable = true
+
+  if m.StackOfScreens.count() = 0 or m.StackOfScreens.Peek() <> "CdnErrorDialog" then
+    m.StackOfScreens.Push("CdnErrorDialog")
+  end if
+
+  m.cdnErrorDialog.visible = true
+  m.cdnErrorDialog.setFocus(true)
+end sub
+
+' Vuelve desde CdnErrorDialog a la pantalla anterior manteniendo el flujo de navegación existente.
+sub hideCdnErrorScreen()
+  if m.cdnErrorDialog = invalid then return
+  if m.StackOfScreens <> invalid and m.StackOfScreens.count() > 0 and m.StackOfScreens.Peek() = "CdnErrorDialog" then
+    m.StackOfScreens.Pop()
+  end if
+
+  m.cdnErrorDialog.setFocus(false)
+  m.cdnErrorDialog.visible = false
+  m.cdnErrorDialog.focusable = false
+
+  if m.StackOfScreens <> invalid and m.StackOfScreens.count() > 0 then
+    __backManager(m.StackOfScreens.Peek())
   end if
 end sub

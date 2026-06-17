@@ -37,10 +37,6 @@ end sub
 ' Captura todas las teclas en Settings; BACK dispara regreso a MainScreen.
 function onKeyEvent(key as string, press as boolean) as boolean
 
-  if key = KeyButtons().BACK then
-    print "back SettingScreen"
-  endif
-
   if press and key = KeyButtons().BACK then
     m.top.onBack = true
   end if

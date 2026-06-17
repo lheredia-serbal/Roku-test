@@ -256,10 +256,7 @@ end sub
 
 ' Maneja navegación horizontal del News hero.
 function onKeyEvent(key as string, press as boolean) as boolean
-    if key = KeyButtons().BACK then
-        print "back NewsItem"
-    endif
-
+    
     if not press then return false
 
     totalItems = getItemsCount()

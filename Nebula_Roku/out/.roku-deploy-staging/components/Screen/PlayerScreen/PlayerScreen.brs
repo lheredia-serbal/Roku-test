@@ -244,10 +244,6 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
 
   watchSessionId = getWatchSessionId()
 
-  if key = KeyButtons().BACK then
-    print "back Player"
-  endif
-
   nowMs = __getNowMilliseconds() ' timestamp actual en milisegundos para filtros de entrada
 
   ' Bloquea eventos mientras se esta recargando o por una pequeña ventana posterior

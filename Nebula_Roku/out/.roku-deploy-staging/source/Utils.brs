@@ -340,8 +340,13 @@ sub showCdnErrorDialog(overlayTransparent = false as Boolean)
     dialog.showSpinner = false
     dialog.buttonDisabled = false
     dialog.focusable = true
-    dialog.visible = true
-    dialog.setFocus(true)
+
+    if scene <> invalid then
+        scene.callFunc("showCdnErrorScreen", overlayTransparent)
+    else
+        dialog.visible = true
+        dialog.setFocus(true)
+    end if
 end sub
 
 sub hideCdnErrorDialog()
@@ -367,12 +372,16 @@ sub hideCdnErrorDialog()
         if ownerNode <> invalid then ownerScreen = { id: ownerId, node: ownerNode }
     end if
 
-    ' Resetea el overlay transparente al ocultar el diálogo CDN.
+    if scene <> invalid then
+        scene.callFunc("hideCdnErrorScreen")
+    else
+        dialog.setFocus(false)
+        dialog.visible = false
+    end if
+
     dialog.overlayTransparent = false
     dialog.showSpinner = false
     dialog.buttonDisabled = false
-    dialog.setFocus(false)
-    dialog.visible = false
     dialog.focusable = false
     if ownerScreen <> invalid and ownerScreen.node <> invalid then
         if ownerScreen.id = "MainScreen" or ownerScreen.id = "ProfileScreen" then

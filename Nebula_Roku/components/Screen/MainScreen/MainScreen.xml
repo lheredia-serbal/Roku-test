@@ -130,6 +130,17 @@
         font="font:SmallSystemFont" />
     </LayoutGroup>
 
+    <!--  Menu background -->
+    <Group
+      id="groupOpacityForMenu"
+      translation="[0, 0]">
+      <Poster
+        id="opacityForMenu"
+        opacity="0.7"
+        translation="[0,0]"
+        uri="pkg:/images/client/info_gradient.png" />
+    </Group>
+
     <!--  Menu contairner -->
     <Menu id="myMenu" />
 
