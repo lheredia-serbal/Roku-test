@@ -576,7 +576,7 @@ sub __applyLayout()
   m.programImageBackground.height = height
   m.programInfo.translation = [safeX + scaleValue(35, m.scaleInfo), safeY ]
   ' Bloque grilla nativa: configuramos medidas base de PosterGrid en la zona inferior de ViewAll.
-  m.posterGrid.translation = scaleSize([safeX + 35, safeY + 210], m.scaleInfo)
+  m.posterGrid.translation = scaleSize([safeX + 35, safeY + 190], m.scaleInfo)
   'm.posterGrid.itemSize = scaleSize([270, 405], m.scaleInfo)
   m.posterGrid.itemSize = __applyPosterGridItemLayout(m.viewAllCarouselStyle)'scaleSize([220, 124], m.scaleInfo)
   m.posterGrid.itemSpacing = scaleSize([22, 34], m.scaleInfo)
@@ -594,12 +594,11 @@ end sub
 function __applyPosterGridItemLayout(style as Dynamic)
   if m.posterGrid = invalid or m.scaleInfo = invalid then return 0
 
-  separator = 30
+  itemScale = 0.8
   itemSize = [180, 270]
 
   if style = -1 then
     itemSize = [120, 120]
-    separator = 20
   else if style = getCarouselStyles().PORTRAIT_FEATURED then
     itemSize = [270, 405]
   else if style = getCarouselStyles().LANDSCAPE_STANDARD then
@@ -612,8 +611,11 @@ function __applyPosterGridItemLayout(style as Dynamic)
     itemSize = [310, 110]
   end if
 
+  itemSize = [itemSize[0] * itemScale, itemSize[1] * itemScale]
+
   return scaleSize(itemSize, m.scaleInfo)
 end function
+
 
 ' Aplica los textos traducidos de ViewAll.
 sub __applyTranslations()
@@ -753,9 +755,14 @@ sub __configurePosterGridLayout(totalItems as integer)
   if totalItems > 0 and columns > totalItems then columns = totalItems
 
   visibleRows = 2
-  'if totalItems > 0 then
-    'visibleRows = totalItems / Int(__getMaxItemsPerRow(m.viewAllCarouselStyle))
-  'end if
+
+   visibleRows = 2
+  if itemHeightWithSpacing > 0 then visibleRows = Int((availableHeight + spacingY) / itemHeightWithSpacing)
+  if visibleRows < 1 then visibleRows = 2
+  if totalItems > 0 then
+    totalRows = Int((totalItems + columns - 1) / columns)
+    if visibleRows > totalRows then visibleRows = totalRows
+  end if
 
   m.posterGrid.numColumns = columns
   m.posterGrid.numRows = visibleRows
@@ -769,17 +776,6 @@ function __hasValidContentViewId() as boolean
   contentViewId = m.viewAllPayload.contentViewId.toStr().trim()
   ' Consideramos válido solo cuando el string no está vacío.
   return contentViewId <> ""
-end function
-
-' Devuelve la cantidad máxima de ítems por fila según el estilo del carrusel.
-function __getMaxItemsPerRow(style as integer) as integer
-  if style = getCarouselStyles().PORTRAIT_FEATURED then return 6
-  if style = getCarouselStyles().LANDSCAPE_STANDARD then return 5
-  if style = getCarouselStyles().LANDSCAPE_FEATURED then return 4
-  if style = getCarouselStyles().SQUARE_STANDARD then return 10
-  if style = getCarouselStyles().SQUARE_FEATURED then return 6
-  if style = -1 then return 12
-  return 8
 end function
 
 ' Solicita el detalle del carrusel seleccionado en la vista "Ver todos".

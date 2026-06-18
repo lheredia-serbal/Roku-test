@@ -189,7 +189,6 @@ function __updateToken(accToken) as object
     
     newAuxToken = __apiRequest(urlTokensUpdate(), "POST", tokenBody, refToken)
     
-    'print "newAuxToken " + newAuxToken.statusCode
     if validateStatusCode(newAuxToken.statusCode) then
         respToken = ParseJson(newAuxToken.response)
         saveTokens(respToken)
