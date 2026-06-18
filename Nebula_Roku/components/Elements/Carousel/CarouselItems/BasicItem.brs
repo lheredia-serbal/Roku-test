@@ -150,8 +150,6 @@ sub currRectChanged()
     metadataLabelsHeight = 0
     ' Obtiene altura real del contenido textual.
     if m.metadataLabels <> invalid then metadataLabelsHeight = m.metadataLabels.boundingRect().height 
-    ' Incluye padding superior/inferior en la altura total del bloque.
-    metadataGroupHeight = metadataLabelsHeight + (metadataVerticalPadding * 2)
     ' Desplaza levemente labels hacia abajo para acercarlos al borde inferior.
     metadataLabelsBottomOffset = scaleValue(6, m.scaleInfo)
     metadataLabelsY = imageHeight - scaleValue(40, m.scaleInfo) - metadataBottomSpacing + metadataVerticalPadding + metadataLabelsBottomOffset

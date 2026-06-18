@@ -246,7 +246,8 @@ sub initData()
     m.mainLogo.loadWidth = logoWidth
     m.mainLogo.loadHeight = logoHeight
     m.mainLogo.translation = [(width - scaleValue(250, m.scaleInfo)), scaleValue(30, m.scaleInfo)]
-    m.nameOrganization.translation = [(width - safeX - scaleValue(200, m.scaleInfo)), scaleValue(130, m.scaleInfo)]
+    m.nameOrganization.width = logoWidth
+    m.nameOrganization.translation = [(width - safeX - scaleValue(180, m.scaleInfo)), scaleValue(130, m.scaleInfo)]
     m.withoutContentLayoutGroup.translation = [(width / 2), (height / 2)]
     
     errorSafeZone = width - (safeX * 2) - scaleValue(230, m.scaleInfo)
@@ -436,7 +437,10 @@ sub populateCarousels(data as Object)
           ' Muestra el indicador visual de selección.
           m.selectedIndicator.visible = true
           ' Fuerza visibilidad del logo cuando no hay contenido en News al iniciar MainScreen.
-          if m.mainLogo <> invalid and not __hasNewsContent() then m.mainLogo.opacity = 1.0
+          if m.mainLogo <> invalid and not __hasNewsContent() then 
+            m.mainLogo.opacity = 1.0
+            m.nameOrganization.opacity = 1.0
+          end if
           ' Mantiene el estado interno de animación en modo visible para evitar fade-out incorrecto.
           if not __hasNewsContent() then m.mainLogoHiddenByNewsFocus = false
           __updateOverlayVisibilityByFocus()
@@ -1639,6 +1643,7 @@ sub __focusFirstCarouselFromNews()
       m.carouselContainer.translation = [m.xPosition, -(carouselNode.translation[1] - m.yPosition)] ' Sincroniza la traslación del contenedor de carruseles con el mismo patrón de animación.
       m.selectedIndicator.size = carouselNode.size ' Ajusta el tamaño del indicador al carrusel que tomó foco.
       __showProgramInfoWithAnimation() ' Muestra programInfo con animación de 0.5s al salir de News.
+      m.nameOrganization.visible = true
       m.mainLogo.visible = true
       m.selectedIndicator.visible = true ' Fuerza la visibilidad del indicador cuando el foco entra a carruseles estándar.
       __updateOverlayVisibilityByFocus() ' Revalida el estado final de overlays según la cadena de foco actual.
@@ -1762,6 +1767,9 @@ sub __updateOverlayVisibilityByFocus()
   ' Muestra el fondo dedicado de News solo cuando el foco está en el carrusel de noticias.
   if m.newsBackgroundPoster <> invalid then m.newsBackgroundPoster.visible = newsFocused
   ' Si el foco está en NewsItem, se ocultan overlays superiores del listado.
+   ' Alterna la máscara del menú y el gradiente inferior según el foco del carrusel de noticias.
+  if m.groupOpacityForMenu <> invalid then m.groupOpacityForMenu.visible = not newsFocused
+  if m.bottomGradientPoster <> invalid then m.bottomGradientPoster.visible = newsFocused
   if newsFocused then
     ' Busca el primer carrusel no-News para calcular el desplazamiento visual mientras News mantiene el foco.
     firstCarousel = __getFirstNonNewsCarousel()
@@ -1792,8 +1800,10 @@ sub __animateMainLogoByFocus(newsFocused as boolean)
   m.mainLogoHiddenByNewsFocus = newsFocused ' Persiste el estado recién aplicado para que solo se anime en transiciones reales.
   if newsFocused then ' Cuando el foco está en News, el logo debe desaparecer.
     m.mainLogo.opacity = 0.0
+    m.nameOrganization.opacity = 0.0
   else ' Cuando el foco no está en News, el logo debe volver a mostrarse.
     m.mainLogo.opacity = 1.0
+    m.nameOrganization.opacity = 1.0
   end if
 end sub
 
@@ -2336,7 +2346,7 @@ sub __loadOrganizationLogo()
     else 
 
       ' Por defecto mostrar la imágen de la organización o local
-      'm.nameOrganization.visible = false
+      m.nameOrganization.visible = false
 
       if organization.image <> invalid then
         m.mainLogo.uri = getImageUrl(organization.image)

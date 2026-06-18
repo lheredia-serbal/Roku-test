@@ -104,6 +104,12 @@ sub changeProgram()
                 end if 
                 
                 if showAvailableView then particularItemSpacings[4] = m.spacings
+            
+            else if ((m.top.program.startSeconds = invalid or m.top.program.startSeconds = 0) and (m.top.program.endSeconds = invalid or m.top.program.endSeconds = 0) and m.top.program.isNow <> invalid and m.top.program.isNow = true) 
+                if m.global.contact.forTest = invalid or (m.global.contact.forTest <> invalid and not m.global.contact.forTest) then 
+                    showAvailableView = true
+                end if 
+                if showAvailableView then particularItemSpacings[4] = m.spacings
             end if
         end if 
 

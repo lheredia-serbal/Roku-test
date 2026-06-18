@@ -720,7 +720,7 @@ sub onSelectItem()
     avatarSelected = ParseJson(m.carouselContainer.focusedChild.selected)
     m.carouselContainer.focusedChild.selected = invalid
     m.profileByEdit.avatar = avatarSelected 
-    m.profileImageInAvatars.uri = getImageUrl(m.profileByEdit.avatar.image) 
+    m.profileImageInAvatars.uri = getImageUrl(m.profileByEdit.avatar.image)
   end if
 end sub
 
@@ -762,7 +762,7 @@ sub __initConfig()
 
   m.carousels.translation = scaleSize([0, 20], m.scaleInfo)
   m.carouselContainer.translation = scaleSize([50, 20], m.scaleInfo)
-  m.selectedIndicator.translation = scaleSize([78, 148], m.scaleInfo)
+  m.selectedIndicator.translation = scaleSize([76, 148], m.scaleInfo)
 
   m.profileImageAndNameContainer.translation = [width - scaleValue(150, m.scaleInfo), scaleValue(20, m.scaleInfo)]
 

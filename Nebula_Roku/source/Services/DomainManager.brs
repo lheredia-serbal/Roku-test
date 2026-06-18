@@ -759,7 +759,7 @@ sub setImageProtocolOverride(variableKey as String, url as String, protocol as D
 
     finalUrl = applyImageProtocolOverride(url, protocol)
 
-    setConfigVariable(variableKey, finalUrl, mode)
+    setConfigVariable(variableKey, finalUrl)
 end sub
 
 ' Obtiene el protocolo opuesto para el fallback global de imágenes.

@@ -244,7 +244,7 @@ sub onDialogClosedLastFocus()
   ' Si existe dialog abierto, lo cerramos explícitamente.
   if m.dialog <> invalid then m.dialog.close = true
 
-  option = clearDialogAndGetOption(m.top, m.dialog)
+  clearDialogAndGetOption(m.top, m.dialog)
   m.dialog = invalid
   ' Restauramos foco para continuar navegación en Search.
   __restoreLastFocus()

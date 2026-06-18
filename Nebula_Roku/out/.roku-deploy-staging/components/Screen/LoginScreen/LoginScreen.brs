@@ -86,7 +86,7 @@ sub init()
   m.loginMethodSwitchLayout.translation = [0, 0]
   m.loginMethodSwitch.width = scaleValue(340, m.scaleInfo)
   m.loginMethodSwitch.height = scaleValue(50, m.scaleInfo)
-  m.loginMethodSwitch.translation = scaleSize([-50, 20] , m.scaleInfo)
+  m.loginMethodSwitch.translation = scaleSize([-48, 20] , m.scaleInfo)
   m.loginMethodSwitchSelected.width = scaleValue(155, m.scaleInfo)
   m.loginMethodSwitchSelected.height = scaleValue(32, m.scaleInfo)
   m.loginMethodSwitchSelected.translation = scaleSize([-5, 0], m.scaleInfo)

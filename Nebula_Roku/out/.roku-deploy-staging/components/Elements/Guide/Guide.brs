@@ -307,11 +307,9 @@ sub onCurrentCarouselResponse()
 
             m.programSummaryPlayer.catchupDuration = m.currentCatchupHours
 
-            if m.currentCarouselGuide.data <> invalid and m.currentCarouselGuide.data.programs.count() > 0 then 
-                __processAndLoadCarousel(m.currentCarouselGuide.data.programs)
-                __searchPrevChannel()
-                __searchNextChannel()
-            end if
+            __processAndLoadCarousel(m.currentCarouselGuide.data.programs)
+            __searchPrevChannel()
+            __searchNextChannel()
         end if
     else
         error = m.apiRequestCurrentChannel.errorResponse
@@ -382,7 +380,7 @@ sub onItemSelectedChanged()
     catchupDateSeconds = catchupDate.AsSeconds()
     catchupDateSeconds = catchupDateSeconds - (m.currentCatchupHours * 60 * 60) ' el catchup llega en horas 
     
-    if ((programNode.startSeconds = invalid and programNode.endSeconds = invalid) or (programNode.startSeconds <= nowSeconds and programNode.endSeconds >= nowSeconds)) then 
+    if (((programNode.startSeconds = invalid or programNode.startSeconds = 0) and (programNode.endSeconds = invalid or programNode.endSeconds = 0)) or (programNode.startSeconds <= nowSeconds and programNode.endSeconds >= nowSeconds)) then 
         ' Programa en vivo
         loadToPLayer = true
     else if m.currentCatchupHours <> 0 and catchupDateSeconds <= programNode.endSeconds and programNode.endSeconds <= nowSeconds then
@@ -447,10 +445,8 @@ sub onLoadChangeChannelUp()
 
             m.programSummaryPlayer.catchupDuration = m.currentCatchupHours
 
-            if m.currentCarouselGuide.data <> invalid and m.currentCarouselGuide.data.programs.count() > 0 then 
-                __processAndLoadCarousel(m.currentCarouselGuide.data.programs)
-                __searchPrevChannel()
-            end if
+            __processAndLoadCarousel(m.currentCarouselGuide.data.programs)
+            __searchPrevChannel()
         end if
     else 
         ' Se fue a mas de un salto 
@@ -475,11 +471,9 @@ sub onLoadChangeChannelDown()
             end if
 
             m.programSummaryPlayer.catchupDuration = m.currentCatchupHours
-
-            if m.currentCarouselGuide.data <> invalid and m.currentCarouselGuide.data.programs.count() > 0 then     
-                __processAndLoadCarousel(m.currentCarouselGuide.data.programs)
-                __searchNextChannel()
-            end if
+   
+            __processAndLoadCarousel(m.currentCarouselGuide.data.programs)
+            __searchNextChannel()
         end if
     else 
         ' Se fue a mas de un salto 
@@ -847,7 +841,7 @@ sub __processAndLoadCarousel(programs)
     endTime = CreateObject("roDateTime")
     now = CreateObject("roDateTime")
     now.ToLocalTime()
-    nowSeconds = now.AsSeconds() 
+    nowSeconds = now.AsSeconds()
     index = 0
     lastItem = programs.count() - 1
 
@@ -862,6 +856,24 @@ sub __processAndLoadCarousel(programs)
         if m.currentChannel.category <> invalid and m.currentChannel.category <> "" then
         channelCategory = m.currentChannel.category
         end if
+    end if
+
+    if m.currentCarouselGuide.data <> invalid and m.currentCarouselGuide.data.programs.count() = 0 then 
+
+        currentChannelProgram = {}
+        currentChannelProgram.key = "ChannelId"
+        currentChannelProgram.id = m.currentChannel.id
+        currentChannelProgram.title = m.currentChannel.name
+        currentChannelProgram.isNow = true
+        currentChannelProgram.imageURL = invalid
+        currentChannelProgram.programTime = invalid
+        currentChannelProgram.formattedDuration = invalid
+        currentChannelProgram.durationInMinutes = invalid
+        currentChannelProgram.startTime = invalid
+        currentChannelProgram.endTime = invalid
+        currentChannelProgram.parentalControl = m.currentChannel.parentalControl
+
+        m.currentCarouselGuide.data.programs.Push(currentChannelProgram)
     end if
 
     for each program in programs
@@ -922,17 +934,23 @@ sub __processAndLoadCarousel(programs)
                 else if (index = lastItem) and m.dateTimeByPosition > endSeconds then 
                     m.indexPosition = lastItem
                 end if
+                
             end if
+        else if (program.endTime = invalid and program.startTime = invalid and program.isNow = true) then
+            child.programTime = i18n_t(m.global.i18n, "player.guide.now")
+            child.isNow = true
+            if m.isNowPosition then m.indexPosition = index
         end if
 
         index++
     end for
 
+
     __setupTargetList(contentRoot)
 
     m.carouselGuide.jumpToItem = m.indexPosition
     
-    if m.lastElementSelect <> invalid then 
+    if m.lastElementSelect <> invalid then
         m.lastElementSelect = m.carouselGuide
     else 
         m.carouselGuide.setFocus(true)

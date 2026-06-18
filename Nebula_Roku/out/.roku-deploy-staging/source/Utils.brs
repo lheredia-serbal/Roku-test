@@ -99,7 +99,7 @@ function validateErrorServer() as boolean
 end function
 
 ' Obtiene las variables de configuracion del global
-function setConfigVariable(key as String, value as String, mode as String) as Dynamic
+function setConfigVariable(key as String, value as String) as Dynamic
     __setInitialValues()
     globalVariables = m.global.domainManagerState
     if globalVariables <> invalid

@@ -117,7 +117,7 @@ sub changeProgram()
             m.programDateAndChannel.id = "programDateAndChannel"
             m.programDateAndChannel.text = infoText
             m.programDateAndChannel.height = m.defaultHeight
-            m.programDateAndChannel.vertAlign = "top"
+            m.programDateAndChannel.vertAlign = "center"
             m.programDateAndChannel.font = "font:TinySystemFont"
             m.programDateAndChannel.color = m.global.colors.LIGHT_GRAY
             infoContainer.appendChild(m.programDateAndChannel)
@@ -128,7 +128,7 @@ sub changeProgram()
             m.programLive.id = "programLive"
             m.programLive.text = i18n_t(m.global.i18n, "time.live")
             m.programLive.height = m.defaultHeight
-            m.programLive.vertAlign = "top"
+            m.programLive.vertAlign = "center"
             m.programLive.font = "font:TinySystemFont"
             m.programLive.color = m.global.colors.LIVE_CONTENT
             m.programLive.opacity = 1.0
@@ -140,8 +140,15 @@ sub changeProgram()
         if visibleLive then __startLiveAnimation()
     end if
 
-    if program.synopsis <> invalid and program.synopsis <> "" then
-        m.programSynopsis = __createShadowLabel("programSynopsis", program.synopsis, "font:SmallerSystemFont", scaleValue(90, m.scaleInfo))
+    if ((program.synopsis <> invalid and program.synopsis <> "") or (program.category <> invalid and program.category <> "")) then
+
+        synopsis = ""
+        if program.synopsis <> invalid and program.synopsis <> "" then
+            synopsis = program.synopsis
+        else if program.category <> invalid and program.category <> ""
+            synopsis = program.category
+        end if
+        m.programSynopsis = __createShadowLabel("programSynopsis", synopsis, "font:SmallerSystemFont", scaleValue(90, m.scaleInfo))
         m.programSynopsis.wrap = true
         m.programSynopsis.maxLines = 3
         m.programContainer.appendChild(m.programSynopsis)

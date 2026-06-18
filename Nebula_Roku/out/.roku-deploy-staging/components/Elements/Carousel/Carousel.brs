@@ -64,7 +64,7 @@ sub initSyle()
     m.targetItems = 12
     m.styleItem = "AvatarItem"
     m.xInitial = scaleValue(-171, m.scaleInfo)
-    m.carouselTitle.translation = scalePoint([29, 110], m.scaleInfo)
+    m.carouselTitle.translation = scalePoint([29, 100], m.scaleInfo)
     m.targetRects = createTargetRects(m.targetItems, m.xInitial, (m.top.size[0] + m.separator), m.top.size[0], m.top.size[1])
 
   else if m.top.style = getCarouselStyles().PORTRAIT_FEATURED then ' carouselPortraitFeatured

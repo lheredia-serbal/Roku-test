@@ -157,7 +157,6 @@ sub onValdiateConnectionResponse()
   m.copyrightLabel.text = i18n_t(m.global.i18n, "launcherScreen.copyright").Replace("{{year}}",getCurrentYear())
   
   if validateStatusCode(m.apiRequestManager.statusCode) then
-    apiUrl = getActiveApiUrl()
     m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlPlatformsVariables(m.global.appCode, getVersionCode()), "GET", "onPlatformResponse", invalid, invalid, invalid, true)
   else 
     printError("Launcher Connection: " , m.apiRequestManager.errorResponse)

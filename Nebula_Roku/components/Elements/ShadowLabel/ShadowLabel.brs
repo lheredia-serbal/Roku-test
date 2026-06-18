@@ -51,7 +51,6 @@ sub syncLayout()
   offsetX = 1
   offsetY = 1
   widthValue = 0
-  heightValue = 0
   if m.top.width <> invalid and m.top.width > 0 then
     widthValue = m.top.width
   else

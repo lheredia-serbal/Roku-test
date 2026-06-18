@@ -203,7 +203,7 @@ sub retryAll()
 
     wasEmpty = actions = invalid or actions.count() = 0
     if not wasEmpty then
-        started = changeMode("onRetryChangeModeResponse")
+        changeMode("onRetryChangeModeResponse")
     end if
 end sub
 
