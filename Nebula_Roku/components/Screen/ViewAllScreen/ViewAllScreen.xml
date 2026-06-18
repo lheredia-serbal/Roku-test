@@ -60,16 +60,14 @@
       id="programInfo"
       visible="false"/>
 
-    <!-- Contenedor de listado inferior para el listado de programas de ViewAll. -->
-    <Group id="carousels">
-      <!-- Contenedor interno del RowList de ViewAll. -->
-      <Group id="carouselContainer">
-      </Group>
-      <!-- Indicador de selección reutilizado para el carrusel. -->
-      <SelectionBox id="selectedIndicator" visible="false"/>
-    </Group>
+    <!-- Bloque de grilla nativa: PosterGrid reemplaza el armado manual de carruseles para ViewAll. -->
+    <PosterGrid
+      id="posterGrid"
+      visible="false"
+      drawFocusFeedback="true"
+      vertFocusAnimationStyle="floatingFocus" />
 
-        <!-- Label cuando ViewAll no tiene resultados para mostrar. -->
+    <!-- Label cuando ViewAll no tiene resultados para mostrar. -->
     <Label
       id="noResultsLabel"
       visible="false"

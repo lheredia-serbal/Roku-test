@@ -6,18 +6,14 @@ sub init()
   m.scaleInfo = m.global.scaleInfo
   ' Referencia al timer que difiere el summary al mover foco.
   m.programTimer = m.top.findNode("programTimer")
-  ' Referencia al componente visual de Program Summary. 
-  m.programInfo = m.top.findNode("programInfo") 
+  ' Referencia al componente visual de Program Summary.
+  m.programInfo = m.top.findNode("programInfo")
   ' Referencia al gradiente superior como en MainScreen.
-  m.infoGradient = m.top.findNode("infoGradient") 
+  m.infoGradient = m.top.findNode("infoGradient")
   ' Referencia al poster de fondo dinámico.
-  m.programImageBackground = m.top.findNode("programImageBackground") 
-  ' Referencia al carrusel de ViewAll.
-  m.carousels = m.top.findNode("carousels")
-  ' Referencia al contenedor donde vive el carrusel de ViewAll.
-  m.carouselContainer = m.top.findNode("carouselContainer")
-  ' Referencia al indicador de selección del carrusel.
-  m.selectedIndicator = m.top.findNode("selectedIndicator")
+  m.programImageBackground = m.top.findNode("programImageBackground")
+  ' Bloque grilla nativa: referencia al PosterGrid de ViewAll.
+  m.posterGrid = m.top.findNode("posterGrid")
   ' Referencia al mensaje mostrado cuando ViewAll no tiene contenido.
   m.noResultsLabel = m.top.findNode("noResultsLabel")
   ' Cacheamos último foco para restaurarlo tras errores de red/validación.
@@ -27,7 +23,7 @@ end sub
 ' Maneja la lógica de foco para la pantalla.
 sub initFocus()
   ' Siempre que ViewAll vuelva a estar visible, reposicionamos foco al primer item del primer carrusel.
-  if m.top.onFocus then __focusFirstCarousel()
+  if m.top.onFocus then __focusPosterGrid()
 end sub
 
 ' Solicita Program Summary del item enfocado, emulando el flujo de MainScreen.
@@ -35,36 +31,35 @@ sub getProgramInfo()
   clearTimer(m.programTimer)
   if m.itemfocused = invalid then return
   ' Reutilizamos cache si ya tenemos ese summary.
-  if m.program <> invalid and m.program.infoKey = m.itemfocused.redirectKey and m.program.infoId = m.itemfocused.redirectId then 
+  if m.program <> invalid and m.program.infoKey = m.itemfocused.redirectKey and m.program.infoId = m.itemfocused.redirectId then
      ' Mostramos summary sin usar la API nuevamente.
     m.programInfo.visible = true
     return
   end if
   if m.apiSummaryRequestManager <> invalid then
     m.programTimer.ObserveField("fire", "getProgramInfo")
-    m.programTimer.control = "start" 
+    m.programTimer.control = "start"
     return
   end if
   ' Recuperamos API URL si aún no existe en memoria.
-  if m.apiUrl = invalid then m.apiUrl = getConfigVariable(m.global.configVariablesKeys.API_URL) 
+  if m.apiUrl = invalid then m.apiUrl = getConfigVariable(m.global.configVariablesKeys.API_URL)
   ' Cortamos si la app no tiene URL de API disponible.
-  if m.apiUrl = invalid then return 
+  if m.apiUrl = invalid then return
   ' Inicializamos tipo de imagen principal por defecto.
-  mainImageTypeId = getCarouselImagesTypes().NONE.toStr() 
+  mainImageTypeId = getCarouselImagesTypes().NONE.toStr()
   ' Usamos imageType del carrusel cuando está presente.
-  if m.carouselContainer.focusedChild <> invalid and m.carouselContainer.focusedChild.imageType <> invalid and m.carouselContainer.focusedChild.imageType <> 0 then 
-    mainImageTypeId = m.carouselContainer.focusedChild.imageType.ToStr()
-  end if 
+  ' Bloque Program Summary: PosterGrid no expone imageType por fila, usamos tipo base.
+  if m.viewAllImageType <> invalid and m.viewAllImageType <> 0 then mainImageTypeId = m.viewAllImageType.ToStr()
   ' Generamos identificador de acción para retry tracking.
-  requestId = createRequestId() 
-  action = { 
+  requestId = createRequestId()
+  action = {
     node: m.top
     apiSummaryRequestManager: m.apiSummaryRequestManager
     url: urlProgramSummary(m.itemfocused.redirectKey, m.itemfocused.redirectId, mainImageTypeId, getCarouselImagesTypes().SCENIC_LANDSCAPE)
-    method: "GET" 
+    method: "GET"
     responseMethod: "onProgramSummaryResponse"
-    body: invalid 
-    token: invalid 
+    body: invalid
+    token: invalid
     publicApi: false
     methodName: "getProgramInfo"
     parameter: invalid
@@ -76,12 +71,12 @@ sub getProgramInfo()
     end function
   }
   ' Ejecutamos acción con soporte de reintentos.
-  runAction(requestId, action, ApiType().CLIENTS_API_URL) 
+  runAction(requestId, action, ApiType().CLIENTS_API_URL)
   m.apiSummaryRequestManager = action.apiSummaryRequestManager
 end sub
 
 ' Obtener el beacon token
-sub onActionLogTokenResponse() 
+sub onActionLogTokenResponse()
 
   resp = ParseJson(m.apiLogRequestManager.response)
   actionLog = ParseJson(m.apiLogRequestManager.dataAux)
@@ -92,12 +87,12 @@ sub onActionLogTokenResponse()
   now.ToLocalTime()
   m.global.beaconTokenExpiresIn = now.asSeconds() + ((resp.expiresIn - 60) * 1000)
 
-  m.apiLogRequestManager = clearApiRequest(m.apiLogRequestManager) 
+  m.apiLogRequestManager = clearApiRequest(m.apiLogRequestManager)
   __sendActionLog(actionLog)
 end sub
 
 ' Limpiar la llamada del log
-sub onActionLogResponse() 
+sub onActionLogResponse()
   m.apiLogRequestManager = clearApiRequest(m.apiLogRequestManager)
 end sub
 
@@ -118,7 +113,7 @@ sub onDataChange()
   ' Ocultamos cualquier estado vacío anterior mientras se carga el nuevo contenido.
   __showNoResults(false)
   ' Disparamos el consumo del servicio de ViewAll.
-  __getViewAllCarousel() 
+  __getViewAllCarousel()
 
   ' Guardamos el log de ingreso
   actionLog = getActionLog({
@@ -129,23 +124,24 @@ sub onDataChange()
   __saveActionLog(actionLog)
 end sub
 
-' Reacciona al foco de un item del carrusel y prepara solicitud de Program Summary.
+' Bloque grilla nativa: reacciona al foco de un item del PosterGrid y prepara Program Summary.
 sub onFocusItem()
-  ' Validamos que el foco pertenezca al carrusel activo.
-  if m.carouselContainer = invalid or not m.carouselContainer.isInFocusChain() then return 
-  ' Validamos que exista carrusel enfocado.
-  if m.carouselContainer.focusedChild = invalid then return 
-  newFocus = ParseJson(m.carouselContainer.focusedChild.focused)
+  ' Validamos que el foco pertenezca al PosterGrid activo.
+  if m.posterGrid = invalid or not m.posterGrid.isInFocusChain() then return
+  focusedIndex = m.posterGrid.itemFocused
+  if focusedIndex = invalid or focusedIndex < 0 then return
+  if m.viewAllGridItems = invalid or focusedIndex >= m.viewAllGridItems.count() then return
+  newFocus = m.viewAllGridItems[focusedIndex]
   if newFocus = invalid then return
   ' Evitamos llamadas duplicadas para el mismo item.
-  if m.itemfocused = invalid or (newFocus.key <> m.itemfocused.key or newFocus.id <> m.itemfocused.id or newFocus.redirectKey <> m.itemfocused.redirectKey or newFocus.redirectId <> m.itemfocused.redirectId) then 
+  if m.itemfocused = invalid or (newFocus.key <> m.itemfocused.key or newFocus.id <> m.itemfocused.id or newFocus.redirectKey <> m.itemfocused.redirectKey or newFocus.redirectId <> m.itemfocused.redirectId) then
     ' Ocultamos summary mientras se carga el nuevo programa.
-    m.programInfo.visible = false 
+    m.programInfo.visible = false
     ' Limpiamos fondo para evitar mostrar data vieja.
-    m.programImageBackground.uri = "" 
+    m.programImageBackground.uri = ""
     ' Guardamos item enfocado que se usará en la consulta.
-    m.itemfocused = newFocus 
-    m.carouselContainer.focusedChild.focused = invalid
+    m.itemfocused = newFocus
+    m.lastFocusedProgramIndex = focusedIndex
     clearTimer(m.programTimer)
     m.programTimer.ObserveField("fire", "getProgramInfo")
     m.programTimer.control = "start"
@@ -153,96 +149,56 @@ sub onFocusItem()
 end sub
 
 ' Procesa navegación vertical para mover foco entre filas de carruseles en ViewAll.
+' Bloque grilla nativa: PosterGrid administra navegación direccional, no se interceptan flechas.
 function onKeyEvent(key as string, press as boolean) as boolean
-
-  handled = false
-  if key = KeyButtons().UP then
-    ' Validamos que exista una fila superior navegable.
-    if press and m.carouselContainer <> invalid and m.carouselContainer.isInFocusChain() and m.carouselContainer.focusedChild <> invalid and m.carouselContainer.focusedChild.focusUp <> invalid then 
-      ' Obtenemos la lista interna del carrusel de arriba para transferir foco.
-      focusItem = m.carouselContainer.focusedChild.focusUp.findNode("carouselList") 
-      ' Confirmamos que la lista destino sea válida.
-      if focusItem <> invalid then 
-        ' Aseguramos visibilidad completa del carrusel destino antes de enfocar.
-        m.carouselContainer.focusedChild.focusUp.opacity = "1.0" 
-        ' Movemos el foco real al carrusel superior.
-        focusItem.setFocus(true) 
-        ' Ajustamos desplazamiento del contenedor para mantener visible la fila enfocada.
-        m.carouselContainer.translation = [0, -(m.carouselContainer.focusedChild.translation[1] - m.yPosition)] 
-        ' Sincronizamos el indicador con el tamaño del carrusel recién enfocado.
-        m.selectedIndicator.size = m.carouselContainer.focusedChild.size 
-      end if
-    end if
-    handled = true 
-  else if key = KeyButtons().DOWN then
-    ' Validamos que exista una fila inferior navegable.
-    if press and m.carouselContainer <> invalid and m.carouselContainer.isInFocusChain() and m.carouselContainer.focusedChild <> invalid and m.carouselContainer.focusedChild.focusDown <> invalid then
-      ' Obtenemos la lista interna del carrusel de abajo para transferir foco.
-      focusItem = m.carouselContainer.focusedChild.focusDown.findNode("carouselList") 
-      ' Confirmamos que la lista destino sea válida.
-      if focusItem <> invalid then 
-        ' Atenuamos la fila saliente para evitar superposición visual durante el desplazamiento.
-        m.carouselContainer.focusedChild.opacity = "0.0" 
-        ' Movemos el foco real al carrusel inferior.
-        focusItem.setFocus(true) 
-        ' Ajustamos desplazamiento del contenedor para mantener visible la fila enfocada.
-        m.carouselContainer.translation = [0, -(m.carouselContainer.focusedChild.translation[1] - m.yPosition)] 
-        ' Sincronizamos el indicador con el tamaño del carrusel recién enfocado.
-        m.selectedIndicator.size = m.carouselContainer.focusedChild.size 
-      end if
-    end if
-    handled = true
-  end if
-  return handled
+  return false
 end function
 
 ' Procesa la respuesta de Program Summary para actualizar la franja superior.
 sub onProgramSummaryResponse()
   ' Si el manager se limpió, volvemos a intentar desde el foco actual.
-  if m.apiSummaryRequestManager = invalid then 
+  if m.apiSummaryRequestManager = invalid then
     ' Reintentamos solicitar summary del item vigente.
-    getProgramInfo() 
+    getProgramInfo()
     return
   end if
   if validateStatusCode(m.apiSummaryRequestManager.statusCode) then
     m.itemfocused = invalid
     resp = ParseJson(m.apiSummaryRequestManager.response)
-    if resp <> invalid and resp.data <> invalid then 
+    if resp <> invalid and resp.data <> invalid then
       removePendingAction(m.apiSummaryRequestManager.requestId)
       m.apiSummaryRequestManager = clearApiRequest(m.apiSummaryRequestManager)
       ' Guardamos programa actual para reutilización.
-      m.program = resp.data 
+      m.program = resp.data
       ' Validamos si el programa trae imagen de fondo.
-      if m.program.backgroundImage <> invalid then 
+      if m.program.backgroundImage <> invalid then
         m.programImageBackground.uri = getImageUrl(m.program.backgroundImage)
       else
         m.programImageBackground.uri = ""
       end if
       ' Enviamos summary al componente ProgramSummary.
-      m.programInfo.program = FormatJson(m.program) 
+      m.programInfo.program = FormatJson(m.program)
       ' Actualizamos nodo enfocado con info enriquecida.
-      if m.carouselContainer <> invalid and m.carouselContainer.focusedChild <> invalid then 
-        m.carouselContainer.focusedChild.updateNode = FormatJson(m.program) 
-      end if
+      ' Bloque grilla nativa: PosterGrid no requiere actualizar un nodo Carousel custom.
       ' Mostramos bloque superior con la información del programa.
-      m.programInfo.visible = true 
+      m.programInfo.visible = true
     else
       ' Ocultamos summary si respuesta llega sin data.
-      m.programInfo.visible = false 
+      m.programInfo.visible = false
       m.programImageBackground.uri = ""
       m.apiSummaryRequestManager = clearApiRequest(m.apiSummaryRequestManager)
     end if
   else
     statusCode = m.apiSummaryRequestManager.statusCode
     errorResponse = m.apiSummaryRequestManager.errorResponse
-    if m.apiSummaryRequestManager.serverError then 
+    if m.apiSummaryRequestManager.serverError then
       ' Marcamos acción para reintento.
-      changeStatusAction(m.apiSummaryRequestManager.requestId, "error") 
+      changeStatusAction(m.apiSummaryRequestManager.requestId, "error")
       ' Ejecutamos reintentos pendientes.
-      retryAll() 
+      retryAll()
     else
       ' Limpiamos pending action no reintentable.
-      removePendingAction(m.apiSummaryRequestManager.requestId) 
+      removePendingAction(m.apiSummaryRequestManager.requestId)
       printError("ProgramSummary ViewAll:", errorResponse)
        ' Delegamos si error obliga logout.
       if validateLogout(statusCode, m.top) then return
@@ -253,22 +209,23 @@ sub onProgramSummaryResponse()
   end if
 end sub
 
-' Toma la selección del item enfocado y decide si abre Player o Detalle, igual que MainScreen.
+' Bloque grilla nativa: toma la selección del PosterGrid y decide si abre Player o Detalle, igual que MainScreen.
 sub onSelectItem()
     ' Ocultamos loading porque la navegación ya fue emitida.
     if m.top.loading <> invalid then m.top.loading.visible = false
 
-  ' Validamos que exista un carrusel activo con foco.
-  if m.carouselContainer = invalid or not m.carouselContainer.isInFocusChain() or m.carouselContainer.focusedChild = invalid then return 
-  ' Leemos payload del item seleccionado desde Carousel.
-  m.itemSelected = ParseJson(m.carouselContainer.focusedChild.selected) 
-  ' Limpiamos el campo selected para evitar reprocesar la misma selección.
-  m.carouselContainer.focusedChild.selected = invalid 
-  ' Cortamos si el payload no pudo parsearse
+  ' Validamos que exista un PosterGrid activo con foco.
+  if m.posterGrid = invalid or not m.posterGrid.isInFocusChain() then return
+  selectedIndex = m.posterGrid.itemSelected
+  if selectedIndex = invalid or selectedIndex < 0 then return
+  if m.viewAllGridItems = invalid or selectedIndex >= m.viewAllGridItems.count() then return
+  ' Leemos payload del item seleccionado desde la colección normalizada de la grilla.
+  m.itemSelected = m.viewAllGridItems[selectedIndex]
+  ' Cortamos si el payload no pudo resolverse.
   if m.itemSelected = invalid then return
 
   ' Guardamos referencia del foco para restauración en caso de error.
-  __markLastFocus() 
+  __markLastFocus()
 
   if  m.itemSelected.parentalControl <> invalid and  m.itemSelected.parentalControl = true and  m.itemSelected.redirectKey = "ChannelId" then
 
@@ -278,14 +235,14 @@ sub onSelectItem()
   else
 
     ' Mostramos loading global mientras resolvemos la acción.
-    if m.top.loading <> invalid then m.top.loading.visible = true 
+    if m.top.loading <> invalid then m.top.loading.visible = true
 
     ' Si el item es canal, replicamos flujo WatchValidate + Streaming de MainScreen.
-    if m.itemSelected.redirectKey = "ChannelId" then 
+    if m.itemSelected.redirectKey = "ChannelId" then
       ' Recuperamos la sesión de visualización activa.
-      watchSessionId = getWatchSessionId() 
+      watchSessionId = getWatchSessionId()
       ' Creamos requestId para retries del servicio.
-      requestId = createRequestId() 
+      requestId = createRequestId()
       action = {
         node: m.top
         apiRequestManager: m.apiRequestManager
@@ -311,7 +268,7 @@ sub onSelectItem()
       ' Limpiamos cualquier request pendiente antes de navegar a detalle.
       m.apiRequestManager = clearApiRequest(m.apiRequestManager)
       ' Emitimos detalle para que MainScene abra ProgramDetailScreen.
-      m.top.detail = FormatJson(m.itemSelected) 
+      m.top.detail = FormatJson(m.itemSelected)
     end if
   end if
 end sub
@@ -325,7 +282,7 @@ sub onPinDialogLoad()
   ' Creo requestId para la validación del PIN.
   requestId = createRequestId()
   ' Si se confirma botón OK con PIN de 4 dígitos, valido contra backend.
-  if (resp.option = 0 and resp.pin <> invalid and Len(resp.pin) = 4) then 
+  if (resp.option = 0 and resp.pin <> invalid and Len(resp.pin) = 4) then
     if m.top.loading <> invalid then m.top.loading.visible = true
     action = {
       node: m.top
@@ -363,7 +320,7 @@ sub onParentalControlResponse()
     if validateStatusCode(m.apiRequestManager.statusCode) then
       resp = ParseJson(m.apiRequestManager.response)
 
-      if resp <> invalid and resp.data <> invalid and resp.data then 
+      if resp <> invalid and resp.data <> invalid and resp.data then
         removePendingAction(m.apiRequestManager.requestId)
         watchSessionId = getWatchSessionId()
         requestId = createRequestId()
@@ -385,13 +342,13 @@ sub onParentalControlResponse()
               return { success: true, error: invalid }
             end function
           }
-          
+
           runAction(requestId, action, ApiType().CLIENTS_API_URL)
           m.apiRequestManager = action.apiRequestManager
         else
           m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.parentalControlModal.error.invalid"), i18n_t(m.global.i18n, "shared.parentalControlModal.error.description"), "onDialogClosedFocusContainer")
       end if
-    else     
+    else
       statusCode = m.apiRequestManager.statusCode
       errorResponse = m.apiRequestManager.errorResponse
       m.apiRequestManager = clearApiRequest(m.apiRequestManager)
@@ -404,16 +361,16 @@ sub onParentalControlResponse()
         removePendingAction(m.apiRequestManager.requestId)
 
         printError("ParentalControl:", statusCode.toStr() + " " +  errorResponse)
-        
-        if validateLogout(statusCode, m.top) then return 
-      
+
+        if validateLogout(statusCode, m.top) then return
+
         if (statusCode = 408) then
-          __markLastFocus() 
+          __markLastFocus()
           m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.anErrorOcurred"), i18n_t(m.global.i18n, "shared.errorComponent.serverConnectionProblems"), "onDialogClosedLastFocus", [i18n_t(m.global.i18n, "button.cancel")])
-        else 
+        else
           __validateError(statusCode)
         end if
-    
+
         actionLog = createLogError(generateErrorDescription(errorResponse), generateErrorPageUrl("valdiatePin", "ParentalControlModalComponent"), getServerErrorStack(errorResponse))
         __saveActionLog(actionLog)
       end if
@@ -432,12 +389,12 @@ sub onDialogClosedLastFocus()
   __restoreLastFocus()
 end sub
 
-' Procesa el cierre de los modales de error para volver a dar foco sobre el elemento que lo 
+' Procesa el cierre de los modales de error para volver a dar foco sobre el elemento que lo
 ' tenia antes del error
 sub onDialogClosedFocusContainer()
   option = clearDialogAndGetOption(m.top, m.dialog)
   m.dialog = invalid
-  
+
   if option = 0 then __restoreLastFocus()
 end sub
 
@@ -447,20 +404,20 @@ sub onStreamingsResponse()
   if m.top.loading <> invalid then m.top.loading.visible = false
 
   ' Si no hay manager activo, reintentamos validación.
-  if m.apiRequestManager = invalid then 
+  if m.apiRequestManager = invalid then
     ' Reingresamos al flujo de validación previo.
-    onWatchValidateResponse() 
+    onWatchValidateResponse()
     return
   else
     ' Validamos respuesta exitosa del servicio de streaming.
-    if validateStatusCode(m.apiRequestManager.statusCode) then 
+    if validateStatusCode(m.apiRequestManager.statusCode) then
       ' Quitamos request del pool de acciones pendientes.
-      removePendingAction(m.apiRequestManager.requestId) 
+      removePendingAction(m.apiRequestManager.requestId)
       ' Parseamos respuesta JSON de streaming.
-      resp = ParseJson(m.apiRequestManager.response) 
+      resp = ParseJson(m.apiRequestManager.response)
       if resp <> invalid and resp.data <> invalid then
         ' Limpiamos request manager al obtener data válida.
-        m.apiRequestManager = clearApiRequest(m.apiRequestManager) 
+        m.apiRequestManager = clearApiRequest(m.apiRequestManager)
         streaming = resp.data
         streaming.key = m.itemSelected.redirectKey
         streaming.id = m.itemSelected.redirectId
@@ -475,12 +432,12 @@ sub onStreamingsResponse()
         m.apiRequestManager = clearApiRequest(m.apiRequestManager)
       end if
     else
-      statusCode = m.apiRequestManager.statusCode 
-      errorResponse = m.apiRequestManager.errorResponse 
+      statusCode = m.apiRequestManager.statusCode
+      errorResponse = m.apiRequestManager.errorResponse
       removePendingAction(m.apiRequestManager.requestId)
       m.apiRequestManager = clearApiRequest(m.apiRequestManager)
       ' Recuperamos foco para mantener navegabilidad.
-      __restoreLastFocus() 
+      __restoreLastFocus()
       __validateError(statusCode)
       printError("Streamings ViewAll:", errorResponse)
     end if
@@ -493,13 +450,13 @@ sub onViewAllCarouselResponse()
 
   if m.apiRequestManager = invalid then
     ' Re-disparamos la obtención del carrusel.
-    __getViewAllCarousel() 
+    __getViewAllCarousel()
     return
   end if
   ' Evaluamos si la respuesta HTTP es correcta.
-  if validateStatusCode(m.apiRequestManager.statusCode) then 
+  if validateStatusCode(m.apiRequestManager.statusCode) then
     ' Quitamos la acción del pool pendiente.
-    removePendingAction(m.apiRequestManager.requestId) 
+    removePendingAction(m.apiRequestManager.requestId)
     resp = ParseJson(m.apiRequestManager.response)
     viewAllData = invalid
     ' Extraemos data sólo cuando la respuesta parseada es válida.
@@ -507,13 +464,13 @@ sub onViewAllCarouselResponse()
     ' Reutilizamos la misma lógica de resolución para evitar duplicación.
     viewAllItems = __getViewAllSourceItems(viewAllData)
     ' Validamos que exista una colección de items para pintar.
-    if viewAllItems.count() > 0 then 
+    if viewAllItems.count() > 0 then
       m.carousel = viewAllData
       ' Renderizamos carrusel con datos de ViewAll.
       __populateViewAllCarousel(viewAllData)
       ' Mostramos estado vacío si las colecciones recibidas no generaron filas con items.
       hasRenderedRows = false
-      if m.carouselContainer <> invalid then hasRenderedRows = m.carouselContainer.getChildCount() > 0
+      if m.viewAllGridItems <> invalid then hasRenderedRows = m.viewAllGridItems.count() > 0
       __showNoResults(not hasRenderedRows)
     else
       ' Limpiamos UI y mostramos feedback cuando la API no trae items.
@@ -531,14 +488,14 @@ sub onViewAllCarouselResponse()
       retryAll()
     else
       ' Limpiamos acción pendiente no reintentable.
-      removePendingAction(m.apiRequestManager.requestId) 
+      removePendingAction(m.apiRequestManager.requestId)
       printError("ViewAllCarousel:", error)
 
       ' Guardar el log de Error
       actionLog = createLogError("", "", invalid)
       __saveActionLog(actionLog)
       ' Validamos si el error requiere forzar logout.
-      if validateLogout(statusCode, m.top) then 
+      if validateLogout(statusCode, m.top) then
         m.apiRequestManager = clearApiRequest(m.apiRequestManager)
         return
       end if
@@ -549,33 +506,33 @@ end sub
 
 ' Procesa la respuesta de WatchValidate para decidir si continúa a streaming, igual que MainScreen.
 sub onWatchValidateResponse()
-  if m.top.loading <> invalid then m.top.loading.visible = false 
+  if m.top.loading <> invalid then m.top.loading.visible = false
 
   ' Si el manager se limpió por retry, reintentamos selección actual.
-  if m.apiRequestManager = invalid then 
+  if m.apiRequestManager = invalid then
     ' Reintentamos flujo desde el item seleccionado.
-    onSelectItem() 
+    onSelectItem()
     return
   else
     if validateStatusCode(m.apiRequestManager.statusCode) then
       ' Parseamos payload de validación.
-      resp = ParseJson(m.apiRequestManager.response).data 
+      resp = ParseJson(m.apiRequestManager.response).data
 
       ' Si está autorizado, pedimos URL de streaming.
-      if resp.resultCode = 200 then 
+      if resp.resultCode = 200 then
         ' Actualizamos watchSessionId vigente.
-        setWatchSessionId(resp.watchSessionId) 
+        setWatchSessionId(resp.watchSessionId)
         ' Actualizamos watchToken vigente.
-        setWatchToken(resp.watchToken) 
+        setWatchToken(resp.watchToken)
         if m.itemSelected <> invalid then
           ' Solicitamos streaming del item canal seleccionado.
-          m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlStreaming(m.itemSelected.redirectKey, m.itemSelected.redirectId), "GET", "onStreamingsResponse") 
+          m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlStreaming(m.itemSelected.redirectKey, m.itemSelected.redirectId), "GET", "onStreamingsResponse")
         end if
       else
         ' Limpiamos request manager al cortar el flujo.
-        m.apiRequestManager = clearApiRequest(m.apiRequestManager) 
+        m.apiRequestManager = clearApiRequest(m.apiRequestManager)
         ' Reutilizamos manejo de errores funcionales de MainScreen.
-        __validateError(0) 
+        __validateError(0)
         printError("WatchValidate ResultCode ViewAll:", resp.resultCode)
       end if
     else
@@ -583,37 +540,15 @@ sub onWatchValidateResponse()
       errorResponse = m.apiRequestManager.errorResponse
       m.apiRequestManager = clearApiRequest(m.apiRequestManager)
       ' Delegamos el handling de error común.
-      __validateError(statusCode) 
+      __validateError(statusCode)
       printError("WatchValidate Status ViewAll:", statusCode.toStr() + " " + errorResponse)
     end if
   end if
 end sub
 
-' Restaura foco al último carrusel activo (o al primero disponible) al volver a ViewAll.
+' Bloque grilla nativa: restaura foco al último item activo (o al primero disponible) al volver a ViewAll.
 sub restoreFocus()
-  if m.carouselContainer = invalid then return ' Evitamos operar si el contenedor todavía no está listo.
-
-  targetCarousel = invalid 
-  ' Priorizamos el último carrusel usado antes de salir.
-  if m.lastFocusedProgram <> invalid then targetCarousel = m.lastFocusedProgram 
-  ' Fallback al carrusel que conserve foco interno.
-  if targetCarousel = invalid and m.carouselContainer.focusedChild <> invalid then targetCarousel = m.carouselContainer.focusedChild
-  ' Último fallback: primer carrusel renderizado.
-  if targetCarousel = invalid and m.carouselContainer.getChildCount() > 0 then targetCarousel = m.carouselContainer.getChild(0) 
-  if targetCarousel = invalid then return 
-
-  ' Buscamos la lista interna que realmente recibe eventos de control remoto.
-  focusItem = targetCarousel.findNode("carouselList")
-  ' Cortamos si no existe lista para enfocar.
-  if focusItem = invalid then return 
-
-  ' Garantizamos que la fila objetivo quede visible al restaurar foco.
-  targetCarousel.opacity = "1.0" 
-  focusItem.setFocus(true)
-  m.selectedIndicator.size = targetCarousel.size 
-  m.selectedIndicator.visible = true
-  ' Reposicionamos contenedor para dejar visible la fila recuperada.  
-  m.carouselContainer.translation = [1, -(targetCarousel.translation[1] - m.yPosition)] 
+  __focusPosterGrid()
 end sub
 
 ' ****** Funciones privadas ******
@@ -621,23 +556,26 @@ end sub
 ' Configura posiciones y tamaños principales igual que MainScreen.
 sub __applyLayout()
   if m.scaleInfo = invalid then return
-  safeX = m.scaleInfo.safeZone.x 
-  safeY = m.scaleInfo.safeZone.y 
+  safeX = m.scaleInfo.safeZone.x
+  safeY = m.scaleInfo.safeZone.y
   width = m.scaleInfo.width
   height = m.scaleInfo.height
   ' Guardamos X base del contenedor para reutilizarla al navegar entre filas.
-  m.xPosition = safeX + scaleValue(0, m.scaleInfo) 
+  m.xPosition = safeX + scaleValue(0, m.scaleInfo)
   ' Guardamos Y base del contenedor para recalcular desplazamiento vertical al cambiar de carrusel.
-  m.yPosition = safeY + scaleValue(20, m.scaleInfo) 
+  m.yPosition = safeY + scaleValue(20, m.scaleInfo)
   m.infoGradient.width = width
   m.infoGradient.height = height
   m.programImageBackground.width = width
   m.programImageBackground.height = height
   m.programInfo.translation = [safeX + scaleValue(35, m.scaleInfo), safeY ]
-  ' Aplicamos posición inicial del bloque de carruseles usando los valores cacheados.
-  m.carousels.translation = scaleSize([31, 80], m.scaleInfo)
-  m.carouselContainer.translation = [0, m.yPosition] 
-  m.selectedIndicator.translation = [safeX + scaleValue(5, m.scaleInfo), safeY + scaleValue(148, m.scaleInfo)]
+  ' Bloque grilla nativa: configuramos medidas base de PosterGrid en la zona inferior de ViewAll.
+  m.posterGrid.translation = scaleSize([safeX + 35, safeY + 210], m.scaleInfo)
+  m.posterGrid.itemSize = scaleSize([220, 124], m.scaleInfo)
+  m.posterGrid.itemSpacing = scaleSize([22, 34], m.scaleInfo)
+  m.posterGrid.height = scaleValue(500, m.scaleInfo)
+  ' Bloque foco: aplicamos el color primario al borde/bitmap de selección del PosterGrid.
+  if m.global.colors <> invalid and m.global.colors.PRIMARY <> invalid then m.posterGrid.focusBitmapBlendColor = m.global.colors.PRIMARY
   ' El ancho completo permite que horizAlign centre el texto en la pantalla.
   if m.noResultsLabel <> invalid then
     m.noResultsLabel.width = width
@@ -710,33 +648,32 @@ function __buildCarouselTitleTagsText(titleTags as Dynamic) as String
 end function
 
 ' Genera body JSON compartido para búsquedas.
-function __buildSearchBody(searchText as Dynamic) as string 
-  safeSearchText = "" 
+function __buildSearchBody(searchText as Dynamic) as string
+  safeSearchText = ""
   ' Convertimos a string y limpiamos espacios del texto de búsqueda.
-  if searchText <> invalid then safeSearchText = searchText.toStr().trim() 
+  if searchText <> invalid then safeSearchText = searchText.toStr().trim()
   ' Devolvemos el mismo formato de body usado por urlSearch.
-  return FormatJson({ searchText: safeSearchText }) 
+  return FormatJson({ searchText: safeSearchText })
 end function
 
-' Limpia el carrusel actual de ViewAll y resetea estado visual asociado.
+' Bloque grilla nativa: limpia el PosterGrid actual de ViewAll y resetea estado visual asociado.
 sub __clearViewAllCarousel()
-  ' Reseteamos la colección cacheada para que el componente quede sin carruseles al salir.
+  ' Reseteamos la colección cacheada para que el componente quede sin contenido al salir.
   m.carousel = []
+  m.viewAllGridItems = []
   m.lastFocusedProgram = invalid
+  m.lastFocusedProgramIndex = 0
   m.itemfocused = invalid
-  if m.carouselContainer = invalid then return
-  while m.carouselContainer.getChildCount() > 0 
-    child = m.carouselContainer.getChild(0)
-    child.unobserveField("focused")
-    child.unobserveField("selected")
-    m.carouselContainer.removeChild(child)
-  end while
-  ' Ocultamos indicador al no existir carrusel renderizado.
-  m.selectedIndicator.visible = false 
-   ' Ocultamos summary al limpiar contenido.
+  if m.posterGrid <> invalid then
+    m.posterGrid.unobserveField("itemFocused")
+    m.posterGrid.unobserveField("itemSelected")
+    m.posterGrid.content = invalid
+    m.posterGrid.visible = false
+  end if
+  ' Ocultamos summary al limpiar contenido.
   m.programInfo.visible = false
   ' Limpiamos imagen de fondo del programa previo.
-  m.programImageBackground.uri = "" 
+  m.programImageBackground.uri = ""
   ' Ocultamos el estado vacío; quien limpia por falta de datos lo vuelve a mostrar.
   __showNoResults(false)
 end sub
@@ -747,41 +684,63 @@ sub __configMain()
   m.programInfo.initConfig = true
 end sub
 
-' Posiciona el foco en el primer item del primer carrusel y resetea el desplazamiento vertical.
-sub __focusFirstCarousel()
-  ' Salimos si todavía no hay carruseles renderizados.
-  if m.carouselContainer = invalid or m.carouselContainer.getChildCount() = 0 then return 
+' Bloque grilla nativa: posiciona el foco en el último item recordado o en el primero del PosterGrid.
+sub __focusPosterGrid()
+  if m.posterGrid = invalid then return
+  if m.viewAllGridItems = invalid or m.viewAllGridItems.count() = 0 then return
+  targetIndex = 0
+  if m.lastFocusedProgramIndex <> invalid then targetIndex = m.lastFocusedProgramIndex
+  if targetIndex >= m.viewAllGridItems.count() then targetIndex = 0
+  m.posterGrid.visible = true
+  m.posterGrid.jumpToItem = targetIndex
+  m.posterGrid.setFocus(true)
+end sub
 
-  ' Tomamos el primer carrusel del listado.
-  firstCarousel = m.carouselContainer.getChild(0) 
-  if firstCarousel = invalid then return
+' Bloque grilla nativa: calcula columnas/filas visibles para evitar que PosterGrid quede como una sola fila.
+sub __configurePosterGridLayout(totalItems as integer)
+  if m.posterGrid = invalid or m.scaleInfo = invalid then return
 
-  ' Obtenemos la lista interna para controlar el item enfocado.
-  firstList = firstCarousel.findNode("carouselList") 
-  if firstList = invalid then return
+  itemSize = m.posterGrid.itemSize
+  itemSpacing = m.posterGrid.itemSpacing
+  if itemSize = invalid or itemSize.count() < 2 then return
 
-  ' Forzamos el foco sobre el primer item del carrusel.
-  firstList.jumpToItem = 0 
-  ' Garantizamos que la fila inicial quede completamente visible.
-  firstCarousel.opacity = "1.0" 
-  ' Aplicamos foco real al carrusel inicial.
-  firstList.setFocus(true) 
-  ' Sincronizamos indicador con la primera fila.
-  m.selectedIndicator.size = firstCarousel.size 
-  ' Mostramos indicador al tener foco activo.
-  m.selectedIndicator.visible = true 
-  ' Restauramos el contenedor a su posición inicial al reingresar.
-  m.carouselContainer.translation = [0, m.yPosition]
+  spacingX = 0
+  spacingY = 0
+  if itemSpacing <> invalid and itemSpacing.count() > 0 then spacingX = itemSpacing[0]
+  if itemSpacing <> invalid and itemSpacing.count() > 1 then spacingY = itemSpacing[1]
+
+  gridX = m.posterGrid.translation[0]
+  gridY = m.posterGrid.translation[1]
+  availableWidth = m.scaleInfo.width - gridX - m.scaleInfo.safeZone.x
+  availableHeight = m.scaleInfo.height - gridY - m.scaleInfo.safeZone.y
+  itemWidthWithSpacing = itemSize[0] + spacingX
+  itemHeightWithSpacing = itemSize[1] + spacingY
+
+  columns = 1
+  if itemWidthWithSpacing > 0 then columns = Int((availableWidth + spacingX) / itemWidthWithSpacing)
+  if columns < 1 then columns = 1
+  if totalItems > 0 and columns > totalItems then columns = totalItems
+
+  visibleRows = 1
+  if itemHeightWithSpacing > 0 then visibleRows = Int((availableHeight + spacingY) / itemHeightWithSpacing)
+  if visibleRows < 1 then visibleRows = 1
+  if totalItems > 0 then
+    totalRows = Int((totalItems + columns - 1) / columns)
+    if visibleRows > totalRows then visibleRows = totalRows
+  end if
+
+  m.posterGrid.numColumns = columns
+  m.posterGrid.numRows = visibleRows
 end sub
 
 ' Evalúa si el payload trae contentViewId utilizable.
-function __hasValidContentViewId() as boolean 
+function __hasValidContentViewId() as boolean
   ' Validamos existencia del campo contentViewId.
   if m.viewAllPayload = invalid or m.viewAllPayload.contentViewId = invalid then return false
   ' Normalizamos el valor recibido para evitar espacios.
-  contentViewId = m.viewAllPayload.contentViewId.toStr().trim() 
+  contentViewId = m.viewAllPayload.contentViewId.toStr().trim()
   ' Consideramos válido solo cuando el string no está vacío.
-  return contentViewId <> "" 
+  return contentViewId <> ""
 end function
 
 ' Devuelve la cantidad máxima de ítems por fila según el estilo del carrusel.
@@ -791,7 +750,7 @@ function __getMaxItemsPerRow(style as integer) as integer
   if style = getCarouselStyles().LANDSCAPE_FEATURED then return 4
   if style = getCarouselStyles().SQUARE_STANDARD then return 10
   if style = getCarouselStyles().SQUARE_FEATURED then return 6
-  if style = -1 then return 12 
+  if style = -1 then return 12
   return 8
 end function
 
@@ -801,17 +760,17 @@ sub __getViewAllCarousel()
   if m.viewAllPayload = invalid then return
   if m.viewAllPayload.carouselId = invalid then return
   ' Obtenemos API base si aún no está cacheada.
-  if m.apiUrl = invalid then m.apiUrl = getConfigVariable(m.global.configVariablesKeys.API_URL) 
+  if m.apiUrl = invalid then m.apiUrl = getConfigVariable(m.global.configVariablesKeys.API_URL)
   ' Abortamos si no hay URL de API disponible.
-  if m.apiUrl = invalid then return 
+  if m.apiUrl = invalid then return
   ' Mostramos loading durante la llamada.
-  if m.top.loading <> invalid and not m.top.loading.visible then m.top.loading.visible = true 
+  if m.top.loading <> invalid and not m.top.loading.visible then m.top.loading.visible = true
   ' Resolvemos configuración del request para reutilizar lógica entre ViewAll y SearchById.
-  requestConfig = __getViewAllRequestConfig() 
+  requestConfig = __getViewAllRequestConfig()
   ' Cortamos si no se pudo construir la configuración del servicio.
-  if requestConfig = invalid then return 
+  if requestConfig = invalid then return
   ' Creamos id único para registrar acción pendiente.
-  requestId = createRequestId() 
+  requestId = createRequestId()
   action = {
     node: m.top
     apiRequestManager: m.apiRequestManager
@@ -831,24 +790,24 @@ sub __getViewAllCarousel()
     end function
   }
   ' Registramos y ejecutamos acción con mecanismo de retry.
-  runAction(requestId, action, ApiType().CLIENTS_API_URL) 
+  runAction(requestId, action, ApiType().CLIENTS_API_URL)
   m.apiRequestManager = action.apiRequestManager
 end sub
 
 ' Construye la configuración HTTP reutilizable según el payload.
-function __getViewAllRequestConfig() as Object 
+function __getViewAllRequestConfig() as Object
   ' Si llega contentViewId válido, priorizamos el flujo SearchById.
-  if __hasValidContentViewId() then return { 
-    url: urlSearchById(m.viewAllPayload.carouselId) 
+  if __hasValidContentViewId() then return {
+    url: urlSearchById(m.viewAllPayload.carouselId)
     method: "POST"
     body: __buildSearchBody(m.viewAllPayload.contentViewId)
   }
   ' Evitamos llamar ViewAll tradicional sin menuSelectedItemId.
-  if m.viewAllPayload.menuSelectedItemId = invalid then return invalid 
+  if m.viewAllPayload.menuSelectedItemId = invalid then return invalid
   ' Mantenemos el flujo original para ViewAll cuando no aplica SearchById.
-  return { 
-    url: urlViewAllCarousels(m.viewAllPayload.menuSelectedItemId, m.viewAllPayload.carouselId) 
-    method: "GET" 
+  return {
+    url: urlViewAllCarousels(m.viewAllPayload.menuSelectedItemId, m.viewAllPayload.carouselId)
+    method: "GET"
     body: invalid
   }
 end function
@@ -857,102 +816,67 @@ end function
 function __getViewAllSourceItems(data as Dynamic) as Object
   sourceItems = []
   ' Priorizamos data.carousels cuando ya viene como lista de carruseles.
-  if data <> invalid and data.carousels <> invalid and data.carousels.count() > 0 and data.carousels[0] <> invalid and data.carousels[0].style <> invalid then sourceItems = data.carousels 
+  if data <> invalid and data.carousels <> invalid and data.carousels.count() > 0 and data.carousels[0] <> invalid and data.carousels[0].style <> invalid then sourceItems = data.carousels
   ' Usamos data.items cuando expone la misma estructura bajo otro campo.
-  if sourceItems.count() = 0 and data <> invalid and data.items <> invalid and data.items.count() > 0 and data.items[0] <> invalid and data.items[0].style <> invalid then sourceItems = data.items 
+  if sourceItems.count() = 0 and data <> invalid and data.items <> invalid and data.items.count() > 0 and data.items[0] <> invalid and data.items[0].style <> invalid then sourceItems = data.items
   ' Detectamos payload envuelto donde data representa un único carrusel.
-  if sourceItems.count() = 0 and data <> invalid and data.style <> invalid then 
+  if sourceItems.count() = 0 and data <> invalid and data.style <> invalid then
     ' Mantenemos compatibilidad con envoltura basada en data.carousels.
-    if data.carousels <> invalid and data.carousels.count() > 0 then sourceItems = [data] 
+    if data.carousels <> invalid and data.carousels.count() > 0 then sourceItems = [data]
     ' Mantenemos compatibilidad con envoltura basada en data.items.
-    if sourceItems.count() = 0 and data.items <> invalid and data.items.count() > 0 then sourceItems = [data] 
+    if sourceItems.count() = 0 and data.items <> invalid and data.items.count() > 0 then sourceItems = [data]
   end if
   ' Devolvemos siempre una lista para evitar chequeos duplicados.
-  return sourceItems 
+  return sourceItems
 end function
 
 ' Guarda referencia del último carrusel enfocado para restaurar foco tras errores.
 sub __markLastFocus()
   ' Persistimos nodo enfocado actual.
-  if m.carouselContainer <> invalid then m.lastFocusedProgram = m.carouselContainer.focusedChild 
+  if m.posterGrid <> invalid then m.lastFocusedProgramIndex = m.posterGrid.itemFocused
 end sub
 
-' Crea y configura el listado de carruseles inferior usando un flujo equivalente a populateCarousels de MainScreen.
+' Bloque grilla nativa: crea y configura el PosterGrid inferior usando los items normalizados de ViewAll.
 sub __populateViewAllCarousel(data as Object)
-  if m.carouselContainer = invalid then return
-  yPosition = 0
-  previousCarousel = invalid
-  ' Limpiamos carruseles previos antes de repintar contenido.
-  __clearViewAllCarousel() 
-  ' Reutilizamos la misma normalización de estructura para carousels/items.
-  sourceItems = __getViewAllSourceItems(data) 
-  ' Recorremos cada carrusel para crearlo igual que MainScreen.
-  for each carouselData in sourceItems 
-    ' Calculamos cuántos ítems entran en pantalla sin scroll horizontal.
-    itemsPerRow = __getMaxItemsPerRow(carouselData.style) 
-    ' Inicializamos índice de fila para distribuir items de izquierda a derecha y luego hacia abajo.
-    rowIndex = 0 
-    ' Inicializamos cursor para particionar items del carrusel en filas.
-    startIndex = 0 
-    ' Particionamos items del carrusel para evitar scroll lateral.
-    while carouselData.items <> invalid and startIndex < carouselData.items.count() 
-      rowItems = []
-      ' Definimos límite superior de la fila actual.
-      endExclusive = startIndex + itemsPerRow 
-      ' Ajustamos límite al total disponible.
-      if endExclusive > carouselData.items.count() then endExclusive = carouselData.items.count() 
-      ' Copiamos items de esta fila.
-      for i = startIndex to endExclusive - 1
-        rowItems.push(carouselData.items[i])
-      end for
-
-      ' Creamos una instancia del componente Carousel.
-      newCarousel = m.carouselContainer.createChild("Carousel") 
-      ' Inicializamos id base para evitar colisiones entre filas generadas.
-      carouselRowId = 0 
-      ' Reservamos bloque de ids por carrusel para cada fila.
-      if carouselData.id <> invalid then carouselRowId = carouselData.id * 1000 
-      ' Asignamos id único por fila derivado del carrusel original.
-      newCarousel.id = carouselRowId + rowIndex 
-      newCarousel.contentType = carouselData.contentType
-      newCarousel.style = carouselData.style
-      ' Mostramos título sólo en la primera fila.
-      if rowIndex = 0 then newCarousel.title = carouselData.title else newCarousel.title = "" 
-      ' Construimos tags sólo para la primera fila donde se renderiza el título del carrusel.
-      if rowIndex = 0 then newCarousel.titleTagsText = __buildCarouselTitleTagsText(carouselData.titleTags) else newCarousel.titleTagsText = "" 
-      newCarousel.code = carouselData.code
-      newCarousel.imageType = carouselData.imageType
-      newCarousel.redirectType = carouselData.redirectType
-      newCarousel.items = rowItems
-      ' Posicionamos carrusel en eje Y acumulado.
-      newCarousel.translation = [0, yPosition] 
-      newCarousel.ObserveField("focused", "onFocusItem")
-      newCarousel.ObserveField("selected", "onSelectItem")
-       ' Enlazamos foco hacia abajo desde carrusel anterior.
-      if previousCarousel <> invalid then previousCarousel.focusDown = newCarousel
-      ' Enlazamos foco hacia arriba hacia carrusel anterior.
-      if previousCarousel <> invalid then newCarousel.focusUp = previousCarousel 
-      ' Actualizamos referencia para la próxima iteración.
-      previousCarousel = newCarousel 
-      ' Avanzamos separación vertical como en MainScreen.
-      yPosition = yPosition + newCarousel.height + scaleValue(20, m.scaleInfo) 
-
-      ' Avanzamos a la siguiente fila visual.
-      rowIndex = rowIndex + 1 
-      ' Continuamos con los siguientes items del carrusel.
-      startIndex = endExclusive 
-    end while
+  if m.posterGrid = invalid then return
+  ' Limpiamos contenido previo antes de repintar la grilla.
+  __clearViewAllCarousel()
+  sourceItems = __getViewAllSourceItems(data)
+  contentRoot = createObject("roSGNode", "ContentNode")
+  gridItems = []
+  ' Bloque de normalización: aplanamos todos los carruseles recibidos en una sola grilla PosterGrid.
+  for each carouselData in sourceItems
+    if carouselData = invalid then continue for
+    if carouselData.imageType <> invalid then m.viewAllImageType = carouselData.imageType
+    if carouselData.items = invalid then continue for
+    for each item in carouselData.items
+      if item = invalid then continue for
+      gridItem = {
+        title: item.title
+        key: item.key
+        id: item.id
+        redirectKey: item.redirectKey
+        redirectId: item.redirectId
+        parentalControl: item.parentalControl
+      }
+      gridItems.push(gridItem)
+      child = contentRoot.createChild("ContentNode")
+      child.title = item.title
+      child.HDPosterUrl = getImageUrl(item.image)
+      child.ShortDescriptionLine1 = item.title
+    end for
   end for
-  if m.carouselContainer.getChildCount() > 0 then
-    ' Si la pantalla está visible, forzamos foco al primer item del primer carrusel.
-    if m.top.onFocus then __focusFirstCarousel() 
-  else
-    ' Ocultamos indicador cuando no hay carruseles válidos.
-    m.selectedIndicator.visible = false 
-  end if
+  m.viewAllGridItems = gridItems
+  ' Bloque layout dinámico: ajustamos columnas y filas visibles según el ancho disponible y cantidad de items.
+  __configurePosterGridLayout(gridItems.count())
+  m.posterGrid.content = contentRoot
+  m.posterGrid.ObserveField("itemFocused", "onFocusItem")
+  m.posterGrid.ObserveField("itemSelected", "onSelectItem")
+  m.posterGrid.visible = gridItems.count() > 0
+  if gridItems.count() > 0 and m.top.onFocus then __focusPosterGrid()
 end sub
 
-' Guardar el log cuandos se cambia una opción del menú 
+' Guardar el log cuandos se cambia una opción del menú
 sub __saveActionLog(actionLog as object)
 
   if beaconTokenExpired() and getEnableLogs() then
@@ -965,7 +889,7 @@ end sub
 ' Restaura foco del carrusel previamente guardado cuando una acción falla.
 sub __restoreLastFocus()
   ' Devolvemos foco al último carrusel recordado.
-  if m.lastFocusedProgram <> invalid then m.lastFocusedProgram.setFocus(true) 
+  __focusPosterGrid()
 end sub
 
 
@@ -981,5 +905,5 @@ end sub
 ' Reutiliza validación de errores estándar para resolver logout cuando aplica.
 sub __validateError(statusCode as integer)
   ' Si el error implica logout, delegamos y detenemos el flujo local.
-  if validateLogout(statusCode, m.top) then return 
+  if validateLogout(statusCode, m.top) then return
 end sub
