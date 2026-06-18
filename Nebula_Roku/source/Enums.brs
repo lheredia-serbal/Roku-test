@@ -60,7 +60,7 @@ function ActionLogCode() as Object
         CLOSE_PLAYER: "ClosePlayer"
         WATCH_LIVE: "WatchLive"
         WATCH_LIVE_REWIND:  "WatchLiveRewind"
-        WATCH_CARCHUP: "WatchCatchup"
+        WATCH_CATCHUP: "WatchCatchup"
         WATCH_RECORDED: "WatchRecorded"
         WATCH_VOD: "WatchVOD"
         LIVE_REWIND_GO_TO_START: "LiveRewindGoToStart"

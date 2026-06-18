@@ -1772,24 +1772,24 @@ sub __loadPlayer(streaming, focusPlayer = true)
       m.apiProgramManager = action.apiProgramManager
 
       if videoContent.live or LCase(m.streaming.type) = getVideoType().LIVE_REWIND then
-        actionLog = getActionLog({ actionCode: ActionLogCode().WATCH_LIVE, program: m.program, contentType: m.streaming.type })
-        __saveActionLog(actionLog)
+        m.pendingWatchActionLogCode = ActionLogCode().WATCH_LIVE
+        m.pendingWatchActionLogContentType = m.streaming.type
       else if LCase(m.streaming.type) = getVideoType().VOD or LCase(m.streaming.type) = getVideoType().DVR
 
         if m.actionPostChageState <> "restart" 
-          actionLog = getActionLog({ actionCode: ActionLogCode().WATCH_CARCHUP, program: m.program, contentType: m.streaming.type })
-          __saveActionLog(actionLog)
+          m.pendingWatchActionLogCode = ActionLogCode().WATCH_CATCHUP
+          m.pendingWatchActionLogContentType = m.streaming.type
         end if
       end if
     else 
 
       if (m.streaming.streamingType = getStreamingType().LIVE_REWIND) then
         if m.actionPostChageState <> "restart" 
-          actionLog = getActionLog({ actionCode: ActionLogCode().WATCH_LIVE_REWIND, program: m.program, contentType: m.streaming.type })
-          __saveActionLog(actionLog)
+          m.pendingWatchActionLogCode = ActionLogCode().WATCH_LIVE_REWIND
+          m.pendingWatchActionLogContentType = m.streaming.type
         else
-          actionLog = getActionLog({ actionCode: ActionLogCode().LIVE_REWIND_GO_TO_START, program: m.program, contentType: m.streaming.type })
-          __saveActionLog(actionLog)
+          m.pendingWatchActionLogCode = ActionLogCode().LIVE_REWIND_GO_TO_START
+          m.pendingWatchActionLogContentType = m.streaming.type
         end if
       end if
     end if
@@ -1942,6 +1942,13 @@ sub __loadProgramInfo(program)
       __saveActionLog(actionLog)
       m.saveOpenPlayer = false
     end if 
+
+    if m.pendingWatchActionLogCode <> invalid then
+      actionLog = getActionLog({ actionCode: m.pendingWatchActionLogCode, program: m.program, contentType: m.pendingWatchActionLogContentType })
+      __saveActionLog(actionLog)
+      m.pendingWatchActionLogCode = invalid
+      m.pendingWatchActionLogContentType = invalid
+    end if
   end if
 
   programNode = createObject("roSGNode", "ProgramNode")
