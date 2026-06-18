@@ -108,6 +108,12 @@ sub onDataChange()
   payload = ParseJson(m.top.data)
   if payload = invalid then return
   m.viewAllPayload = payload
+  m.viewAllCarouselStyle = invalid
+  if payload.carouselStyle <> invalid then
+    m.viewAllCarouselStyle = payload.carouselStyle
+  else if payload.style <> invalid then
+    m.viewAllCarouselStyle = payload.style
+  end if
   __applyLayout()
   __applyTranslations()
   ' Ocultamos cualquier estado vacío anterior mientras se carga el nuevo contenido.
@@ -571,9 +577,9 @@ sub __applyLayout()
   m.programInfo.translation = [safeX + scaleValue(35, m.scaleInfo), safeY ]
   ' Bloque grilla nativa: configuramos medidas base de PosterGrid en la zona inferior de ViewAll.
   m.posterGrid.translation = scaleSize([safeX + 35, safeY + 210], m.scaleInfo)
-  m.posterGrid.itemSize = scaleSize([220, 124], m.scaleInfo)
+  'm.posterGrid.itemSize = scaleSize([270, 405], m.scaleInfo)
+  m.posterGrid.itemSize = __applyPosterGridItemLayout(m.viewAllCarouselStyle)'scaleSize([220, 124], m.scaleInfo)
   m.posterGrid.itemSpacing = scaleSize([22, 34], m.scaleInfo)
-  m.posterGrid.height = scaleValue(500, m.scaleInfo)
   ' Bloque foco: aplicamos el color primario al borde/bitmap de selección del PosterGrid.
   if m.global.colors <> invalid and m.global.colors.PRIMARY <> invalid then m.posterGrid.focusBitmapBlendColor = m.global.colors.PRIMARY
   ' El ancho completo permite que horizAlign centre el texto en la pantalla.
@@ -583,6 +589,31 @@ sub __applyLayout()
     m.noResultsLabel.color = m.global.colors.WHITE
   end if
 end sub
+
+' Aplica al PosterGrid los mismos tamaños base que usa Carousel según style en MainScreen.
+function __applyPosterGridItemLayout(style as Dynamic)
+  if m.posterGrid = invalid or m.scaleInfo = invalid then return 0
+
+  separator = 30
+  itemSize = [180, 270]
+
+  if style = -1 then
+    itemSize = [120, 120]
+    separator = 20
+  else if style = getCarouselStyles().PORTRAIT_FEATURED then
+    itemSize = [270, 405]
+  else if style = getCarouselStyles().LANDSCAPE_STANDARD then
+    itemSize = [450, 253]
+  else if style = getCarouselStyles().LANDSCAPE_FEATURED then
+    itemSize = [450, 253]
+  else if style = getCarouselStyles().SQUARE_STANDARD then
+    itemSize = [120, 120]
+  else if style = getCarouselStyles().SQUARE_FEATURED then
+    itemSize = [310, 110]
+  end if
+
+  return scaleSize(itemSize, m.scaleInfo)
+end function
 
 ' Aplica los textos traducidos de ViewAll.
 sub __applyTranslations()
@@ -712,7 +743,7 @@ sub __configurePosterGridLayout(totalItems as integer)
   gridX = m.posterGrid.translation[0]
   gridY = m.posterGrid.translation[1]
   availableWidth = m.scaleInfo.width - gridX - m.scaleInfo.safeZone.x
-  availableHeight = m.scaleInfo.height - gridY - m.scaleInfo.safeZone.y
+  availableHeight = scaleValue(500, m.scaleInfo)
   itemWidthWithSpacing = itemSize[0] + spacingX
   itemHeightWithSpacing = itemSize[1] + spacingY
 
@@ -721,13 +752,10 @@ sub __configurePosterGridLayout(totalItems as integer)
   if columns < 1 then columns = 1
   if totalItems > 0 and columns > totalItems then columns = totalItems
 
-  visibleRows = 1
-  if itemHeightWithSpacing > 0 then visibleRows = Int((availableHeight + spacingY) / itemHeightWithSpacing)
-  if visibleRows < 1 then visibleRows = 1
-  if totalItems > 0 then
-    totalRows = Int((totalItems + columns - 1) / columns)
-    if visibleRows > totalRows then visibleRows = totalRows
-  end if
+  visibleRows = 2
+  'if totalItems > 0 then
+    'visibleRows = totalItems / Int(__getMaxItemsPerRow(m.viewAllCarouselStyle))
+  'end if
 
   m.posterGrid.numColumns = columns
   m.posterGrid.numRows = visibleRows
@@ -847,6 +875,7 @@ sub __populateViewAllCarousel(data as Object)
   ' Bloque de normalización: aplanamos todos los carruseles recibidos en una sola grilla PosterGrid.
   for each carouselData in sourceItems
     if carouselData = invalid then continue for
+    if m.viewAllCarouselStyle = invalid and carouselData.style <> invalid then m.viewAllCarouselStyle = carouselData.style
     if carouselData.imageType <> invalid then m.viewAllImageType = carouselData.imageType
     if carouselData.items = invalid then continue for
     for each item in carouselData.items

@@ -663,6 +663,7 @@ sub onSelectItem()
       ' Notifico a MainScene para navegar a ViewAllScreen.
       m.top.viewAll = FormatJson({ 
         contentViewId: contentViewId
+        carouselStyle: m.carousels[m.carouselIndex].style
         carouselId: m.carousels[m.carouselIndex].id
         carouselCode: m.itemSelected.carouselCode
         title: m.itemSelected.carouselTitle
@@ -702,7 +703,10 @@ sub onSelectItem()
       return
     else if m.itemSelected.redirectKey = "viewall" then
       ' Notifico ViewAll directo cuando el backend marca redirectKey explícito.
-      m.top.viewAll = FormatJson({ carouselId: m.carousels[m.carouselIndex].id })
+      m.top.viewAll = FormatJson({
+        carouselId: m.carousels[m.carouselIndex].id
+        carouselStyle: m.carousels[m.carouselIndex].style
+      })
       return
     end if
   end if

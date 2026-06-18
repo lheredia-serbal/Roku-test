@@ -511,8 +511,10 @@ sub onSelectItem()
       ' Obtenemos carouselId desde carouselData[carouselIndex].id como pide el flujo de Home -> ViewAll.
       carouselIndex = __getFocusedCarouselIndex()
       carouselId = invalid
+      carouselStyle = invalid
       if carouselIndex <> invalid and m.carouselData <> invalid and carouselIndex >= 0 and carouselIndex < m.carouselData.count() and m.carouselData[carouselIndex] <> invalid then
         carouselId = m.carouselData[carouselIndex].id
+        if m.carouselData[carouselIndex].style <> invalid then carouselStyle = m.carouselData[carouselIndex].style
       else if m.itemSelected.carouselId <> invalid then
         ' Fallback defensivo por si cambia la estructura del contenedor.
         carouselId = m.itemSelected.carouselId
@@ -526,6 +528,7 @@ sub onSelectItem()
       m.top.viewAll = FormatJson({
         menuSelectedItemId: menuSelectedItemId
         carouselId: carouselId
+        carouselStyle: carouselStyle
         carouselCode: m.itemSelected.carouselCode
         title: m.itemSelected.carouselTitle
       })
