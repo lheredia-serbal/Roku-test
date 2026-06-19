@@ -702,7 +702,7 @@ sub onHiddenImageValidationLoadStatus()
             for each actionInfo in item.on_failure.actions ' Recorre las acciones declaradas para la falla actual.
                 if actionInfo <> invalid and actionInfo.action <> invalid and LCase(actionInfo.action) = "use_http" then ' Busca la acción use_http solicitada.
                     imageProtocolOverride = getOppositeImageProtocol(m.hiddenImageValidation.uri) ' Calcula el protocolo opuesto según la URL actual.
-                    if imageProtocolOverride <> invalid then setImageProtocolOverride(item.name, validationItem.resourceUrl, imageProtocolOverride, validationItem.mode) ' Persiste el protocolo a nivel global para futuras imágenes.
+                    if imageProtocolOverride <> invalid then setImageProtocolOverride(item.name, validationItem.resourceUrl, imageProtocolOverride) ' Persiste el protocolo a nivel global para futuras imágenes.
                     exit for ' Detiene el recorrido al encontrar la primera acción válida.
                 end if
             end for
@@ -755,7 +755,7 @@ function hasUseHttpAction(item as Object) as Boolean
 end function
 
 ' Persiste el protocolo de imágenes en el global node.
-sub setImageProtocolOverride(variableKey as String, url as String, protocol as Dynamic, mode as String)
+sub setImageProtocolOverride(variableKey as String, url as String, protocol as Dynamic)
 
     finalUrl = applyImageProtocolOverride(url, protocol)
 

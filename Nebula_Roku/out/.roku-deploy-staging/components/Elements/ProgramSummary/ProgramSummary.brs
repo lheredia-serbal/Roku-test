@@ -140,13 +140,13 @@ sub changeProgram()
         if visibleLive then __startLiveAnimation()
     end if
 
-    if ((program.synopsis <> invalid and program.synopsis <> "") or (program.category <> invalid and program.category <> "")) then
+    if ((program.synopsis <> invalid and program.synopsis <> "") or (program.channel <> invalid and program.channel.category <> invalid and program.channel.category <> "")) then
 
         synopsis = ""
         if program.synopsis <> invalid and program.synopsis <> "" then
             synopsis = program.synopsis
-        else if program.category <> invalid and program.category <> ""
-            synopsis = program.category
+        else if (program.channel <> invalid and program.channel.category <> invalid and program.channel.category <> "")
+            synopsis = program.channel.category
         end if
         m.programSynopsis = __createShadowLabel("programSynopsis", synopsis, "font:SmallerSystemFont", scaleValue(90, m.scaleInfo))
         m.programSynopsis.wrap = true

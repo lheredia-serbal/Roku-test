@@ -573,10 +573,10 @@ sub __initMain()
   m.MainScreen.ObserveField("search", "onSearch")
 
   ' Performance Req 3.2: marca que el Home ya quedó visible y navegable.
-  if m.launchCompleteSignaled <> true then
-    m.launchCompleteSignaled = true
-    m.top.signalBeacon("AppLaunchComplete")
-  end if
+  'if m.launchCompleteSignaled <> true then
+    'm.launchCompleteSignaled = true
+    'm.top.signalBeacon("AppLaunchComplete")
+  'end if
 end sub
 
 ' Performance Req 3.2: marca el inicio de un diálogo interactivo antes del Home.

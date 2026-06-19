@@ -579,7 +579,7 @@ sub __applyLayout()
   m.posterGrid.translation = scaleSize([safeX + 35, safeY + 190], m.scaleInfo)
   'm.posterGrid.itemSize = scaleSize([270, 405], m.scaleInfo)
   m.posterGrid.itemSize = __applyPosterGridItemLayout(m.viewAllCarouselStyle)'scaleSize([220, 124], m.scaleInfo)
-  m.posterGrid.itemSpacing = scaleSize([22, 34], m.scaleInfo)
+  m.posterGrid.itemSpacing = scaleSize([20, 10], m.scaleInfo)
   ' Bloque foco: aplicamos el color primario al borde/bitmap de selección del PosterGrid.
   if m.global.colors <> invalid and m.global.colors.PRIMARY <> invalid then m.posterGrid.focusBitmapBlendColor = m.global.colors.PRIMARY
   ' El ancho completo permite que horizAlign centre el texto en la pantalla.
@@ -594,7 +594,7 @@ end sub
 function __applyPosterGridItemLayout(style as Dynamic)
   if m.posterGrid = invalid or m.scaleInfo = invalid then return 0
 
-  itemScale = 0.8
+  itemScale = 0.72
   itemSize = [180, 270]
 
   if style = -1 then
@@ -743,7 +743,6 @@ sub __configurePosterGridLayout(totalItems as integer)
   if itemSpacing <> invalid and itemSpacing.count() > 1 then spacingY = itemSpacing[1]
 
   gridX = m.posterGrid.translation[0]
-  gridY = m.posterGrid.translation[1]
   availableWidth = m.scaleInfo.width - gridX - m.scaleInfo.safeZone.x
   availableHeight = scaleValue(500, m.scaleInfo)
   itemWidthWithSpacing = itemSize[0] + spacingX

@@ -117,7 +117,6 @@ sub currRectChanged()
 
     m.imageItem.width = imageWidth
     m.imageItem.height = imageHeight
-    'm.imageItem.translation = [imageX, imageY]
 
     m.opacityLayout.width = imageWidth
     m.opacityLayout.height = imageHeight
@@ -146,10 +145,6 @@ sub currRectChanged()
     if m.title.width < 0 then m.title.width = 0
     if m.category.width < 0 then m.category.width = 0 
     if m.dateTime.width < 0 then m.dateTime.width = 0
-    ' Altura acumulada de labels para ubicar el bloque justo sobre la barra de progreso.
-    metadataLabelsHeight = 0
-    ' Obtiene altura real del contenido textual.
-    if m.metadataLabels <> invalid then metadataLabelsHeight = m.metadataLabels.boundingRect().height 
     ' Desplaza levemente labels hacia abajo para acercarlos al borde inferior.
     metadataLabelsBottomOffset = scaleValue(6, m.scaleInfo)
     metadataLabelsY = imageHeight - scaleValue(40, m.scaleInfo) - metadataBottomSpacing + metadataVerticalPadding + metadataLabelsBottomOffset
