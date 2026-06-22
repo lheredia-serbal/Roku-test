@@ -824,6 +824,9 @@ sub __clearEpisodes()
 
   ' Limpia posters de fondo al vaciar emisiones para evitar arrastrar imagen anterior.
   __hideEpisodeBackground()
+
+  if m.episodesUnavailableTitle <> invalid then m.episodesUnavailableTitle.visible = false
+  if m.episodesUnavailableDescription <> invalid then m.episodesUnavailableDescription.visible = false
 end sub
 
 ' Muestra ambos labels centrados cuando falla el servicio.

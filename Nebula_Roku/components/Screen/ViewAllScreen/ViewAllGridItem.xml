@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<component
+  name="ViewAllGridItem"
+  extends="Group"
+  xsi:noNamespaceSchemaLocation="https://devtools.web.roku.com/schema/RokuSceneGraph.xsd">
+
+  <script type="text/brightscript" uri="ViewAllGridItem.brs" />
+  <script type="text/brightscript" uri="pkg:/source/CarouselConstants.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Utils.brs" />
+
+  <interface>
+    <field id="itemContent" type="node" onChange="onItemContentChanged" />
+  </interface>
+
+  <children>
+    <Rectangle id="itemBackground" color="#000000" />
+    <Poster id="itemImage" loadDisplayMode="scaleToZoom" />
+    <Label
+      id="itemTitle"
+      visible="false"
+      wrap="true"
+      maxLines="2"
+      horizAlign="center"
+      vertAlign="center"
+      font="font:TinySystemFont"
+      color="#FFFFFFFF" />
+  </children>
+</component>

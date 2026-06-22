@@ -21,6 +21,8 @@ sub init()
   m.related = m.top.findNode("related")
   m.isOpenEmissions = false
   m.diffCarouselContent = 0
+  m.programDetailContentDefaultTranslation = invalid
+  m.relatedScrollApplied = false
 
   m.infoGradient = m.top.findNode("infoGradient")
   m.programImageBackground = m.top.findNode("programImageBackground")
@@ -57,6 +59,7 @@ function onKeyEvent(key as string, press as boolean) as boolean
     ' Prioriza recuperar foco en relacionados si existe y está visible.
     if relatedList <> invalid and m.relatedContainer.visible then
       relatedList.setFocus(true)
+      __scrollToRelatedContainer()
       m.selectedIndicator.size = m.related.size
       m.selectedIndicator.visible = true
     ' Si no hay related disponible, vuelve el foco al grupo de acciones.
@@ -110,6 +113,7 @@ function onKeyEvent(key as string, press as boolean) as boolean
         if m.actionsBtn.focusedChild <> invalid then m.lastButtonSelect = m.actionsBtn.focusedChild
  
         m.related.findNode("carouselList").setFocus(true)
+        __scrollToRelatedContainer()
         m.selectedIndicator.size = m.related.size
         m.selectedIndicator.visible = true
       end if
@@ -122,6 +126,7 @@ function onKeyEvent(key as string, press as boolean) as boolean
   else if key = KeyButtons().UP then
     if press and m.related.isInFocusChain() and m.lastButtonSelect <> invalid then 
       m.lastButtonSelect.setFocus(true)
+      __restoreProgramDetailScroll()
       m.selectedIndicator.visible = false
     end if
 
@@ -187,7 +192,10 @@ sub initFocus()
         m.apiRequestManager = action.apiRequestManager
       else
         m.isOpenEmissions = false
-        if m.lastButtonSelect <> invalid then m.lastButtonSelect.setFocus(true)
+        if m.lastButtonSelect <> invalid then
+          m.lastButtonSelect.setFocus(true)
+          __restoreProgramDetailScroll()
+        end if
       end if 
     end if
   end if 
@@ -273,6 +281,7 @@ sub onActionsResponse()
         
         if m.lastButtonSelect <> invalid then
           m.lastButtonSelect.setFocus(true)
+          __restoreProgramDetailScroll()
           m.lastButtonSelect = invalid
         end if 
         
@@ -471,7 +480,10 @@ sub onDialogClosedLastFocus()
   m.dialog = invalid
   
   if option = 0 then
-    if m.lastButtonSelect <> invalid then m.lastButtonSelect.setFocus(true)
+    if m.lastButtonSelect <> invalid then
+      m.lastButtonSelect.setFocus(true)
+      __restoreProgramDetailScroll()
+    end if
   end if
 end sub
 
@@ -831,6 +843,7 @@ sub __loadRelatedCarousel(carouselData)
     m.relatedContainer.visible = true
   else 
     m.relatedContainer.visible = false
+    __restoreProgramDetailScroll()
     m.related.items = invalid
     m.related.unobserveField("selected")
   end if 
@@ -910,6 +923,8 @@ sub __configProgramDetail()
   end if
 
   m.programDetailContent.translation = scaleSize([70, 50], m.scaleInfo)
+  m.programDetailContentDefaultTranslation = m.programDetailContent.translation
+  m.relatedScrollApplied = false
   m.programTitleContainerByError.translation = scaleSize([0, 162], m.scaleInfo)
 
   m.programTitleError.width = scaleValue(200, m.scaleInfo) 
@@ -933,8 +948,43 @@ sub __configProgramDetail()
   m.top.emissions = invalid
 end sub
 
+' Desplaza levemente el contenido cuando el carrusel de relacionados queda cortado abajo.
+sub __scrollToRelatedContainer()
+  if m.programDetailContent = invalid or m.relatedContainer = invalid or m.related = invalid then return
+  if not m.relatedContainer.visible then return
+
+  if m.programDetailContentDefaultTranslation = invalid then
+    m.programDetailContentDefaultTranslation = m.programDetailContent.translation
+  end if
+
+  baseTranslation = m.programDetailContentDefaultTranslation
+  relatedContainerTranslation = m.relatedContainer.translation
+  relatedTranslation = m.related.translation
+
+  carouselBottom = baseTranslation[1] + relatedContainerTranslation[1] + relatedTranslation[1] + scaleValue(80, m.scaleInfo) + m.related.height
+  visibleBottom = m.scaleInfo.height - scaleValue(25, m.scaleInfo)
+
+  if carouselBottom > visibleBottom then
+    scrollOffset = carouselBottom - visibleBottom + scaleValue(20, m.scaleInfo)
+    m.programDetailContent.translation = [baseTranslation[0], baseTranslation[1] - scrollOffset]
+    m.relatedScrollApplied = true
+  end if
+end sub
+
+' Restaura la posición original del detalle al volver el foco arriba del carrusel.
+sub __restoreProgramDetailScroll()
+  if m.programDetailContent = invalid then return
+  if m.programDetailContentDefaultTranslation = invalid then return
+
+  if m.relatedScrollApplied then
+    m.programDetailContent.translation = m.programDetailContentDefaultTranslation
+    m.relatedScrollApplied = false
+  end if
+end sub
+
 ' Metodo encargado de limpiar todas las dependecias, cancelar las peticiones y quitar los escuchadores de la pantalla
 sub _clearScreen()
+  __restoreProgramDetailScroll()
   m.programInfo.program = invalid
   m.programInfo.visible = false
   m.programDetailContent.visible = true
@@ -972,6 +1022,7 @@ end sub
 
 ' Muestra el mensaje de programa no encontrado.
 sub __showNotFound()
+  __restoreProgramDetailScroll()
   m.programDetailContent.visible = false
   m.notFoundLayoutGroup.visible = true
 end sub

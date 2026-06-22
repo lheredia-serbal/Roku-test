@@ -572,11 +572,11 @@ sub __applyLayout()
   m.programImageBackground.width = width
   m.programImageBackground.height = height
   m.programInfo.translation = [safeX + scaleValue(35, m.scaleInfo), safeY ]
-  ' Bloque grilla nativa: configuramos medidas base de PosterGrid en la zona inferior de ViewAll.
+  ' Bloque grilla nativa: configuramos medidas base de la grilla en la zona inferior de ViewAll.
   m.posterGrid.translation = scaleSize([safeX + 35, safeY + 190], m.scaleInfo)
-  'm.posterGrid.itemSize = scaleSize([270, 405], m.scaleInfo)
-  m.posterGrid.itemSize = __applyPosterGridItemLayout(m.viewAllCarouselStyle)'scaleSize([220, 124], m.scaleInfo)
+  m.posterGrid.itemSize = __applyPosterGridItemLayout(m.viewAllCarouselStyle)
   m.posterGrid.itemSpacing = scaleSize([22, 34], m.scaleInfo)
+  m.posterGrid.itemComponentName = "ViewAllGridItem"
   ' Bloque foco: aplicamos el color primario al borde/bitmap de selección del PosterGrid.
   if m.global.colors <> invalid and m.global.colors.PRIMARY <> invalid then m.posterGrid.focusBitmapBlendColor = m.global.colors.PRIMARY
   ' El ancho completo permite que horizAlign centre el texto en la pantalla.
@@ -603,7 +603,7 @@ function __applyPosterGridItemLayout(style as Dynamic)
   else if style = getCarouselStyles().LANDSCAPE_FEATURED then
     itemSize = [450, 253]
   else if style = getCarouselStyles().SQUARE_STANDARD then
-    itemSize = [120, 120]
+    itemSize = [140, 140]
   else if style = getCarouselStyles().SQUARE_FEATURED then
     itemSize = [310, 110]
   end if
@@ -863,6 +863,8 @@ sub __populateViewAllCarousel(data as Object)
   ' Limpiamos contenido previo antes de repintar la grilla.
   __clearViewAllCarousel()
   sourceItems = __getViewAllSourceItems(data)
+  if m.viewAllCarouselStyle = invalid and sourceItems.count() > 0 and sourceItems[0] <> invalid and sourceItems[0].style <> invalid then m.viewAllCarouselStyle = sourceItems[0].style
+  m.posterGrid.itemSize = __applyPosterGridItemLayout(m.viewAllCarouselStyle)
   contentRoot = createObject("roSGNode", "ContentNode")
   gridItems = []
   ' Bloque de normalización: aplanamos todos los carruseles recibidos en una sola grilla PosterGrid.
@@ -886,6 +888,11 @@ sub __populateViewAllCarousel(data as Object)
       child.title = item.title
       child.HDPosterUrl = getImageUrl(item.image)
       child.ShortDescriptionLine1 = item.title
+      child.addFields({
+        imageURL: getImageUrl(item.image)
+        size: m.posterGrid.itemSize
+        style: m.viewAllCarouselStyle
+      })
     end for
   end for
   m.viewAllGridItems = gridItems
