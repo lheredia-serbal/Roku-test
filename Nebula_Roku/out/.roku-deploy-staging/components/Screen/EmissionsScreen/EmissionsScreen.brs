@@ -22,6 +22,9 @@ sub init()
   m.infoGradient = m.top.findNode("infoGradient")
   m.episodesMoveAnimation = m.top.findNode("episodesMoveAnimation")
   m.episodesMoveInterpolator = m.top.findNode("episodesMoveInterpolator")
+  ' Indica que la pantalla aún debe mantener loading hasta que los items estén dibujados.
+  m.waitingEpisodesReady = false
+  if m.episodesMoveAnimation <> invalid then m.episodesMoveAnimation.observeField("state", "onEpisodesMoveAnimationStateChange")
   ' Índice lógico del episodio actualmente enfocado por la selección.
   m.selectedEpisodeIndex = 0
   ' Guarda el primer índice que recibió foco al cargar la lista de emisiones.
@@ -201,7 +204,9 @@ sub __getEpisodes(key, id)
   m.lastKey = key
   ' Guarda id para posibles reintentos.
   m.lastId = id
-  ' Activa loading compartido mientras se consulta API.
+    ' Activa loading compartido mientras se consulta API y oculta items hasta que terminen de dibujarse.
+  if m.top.loading <> invalid then m.top.loading.visible = true
+  __hideEpisodesItemsUntilReady()
   if m.top.loading <> invalid then m.top.loading.visible = true
   ' Crea identificador de acción para retry manager.
   requestId = createRequestId()
@@ -234,7 +239,8 @@ end sub
 
 ' Procesa respuesta del servicio de episodios.
 sub onEpisodesResponse()
-  hideLoading()
+  ' Indica si la respuesta produjo items que deben esperar animación y render antes de ocultar loading.
+  episodesRendered = false
   ' Reintenta automáticamente si el manager quedó inválido.
   if m.apiRequestManager = invalid then
     ' Reintenta usando últimos parámetros válidos.
@@ -260,7 +266,7 @@ sub onEpisodesResponse()
     ' Valida estructura esperada antes de acceder al arreglo de episodios.
     if episodes <> invalid and episodes.episodes <> invalid then episodeCollection = episodes.episodes
     ' Renderiza N EpisodeItem según cantidad recibida por servicio.
-    __renderEpisodes(episodeCollection)
+    episodesRendered = __renderEpisodes(episodeCollection)
     ' Remueve acción pendiente al completar correctamente.
     removePendingAction(m.apiRequestManager.requestId)
     ' Parsea respuesta para mostrar título en pantalla.
@@ -290,35 +296,42 @@ sub onEpisodesResponse()
       ' Loguea error para soporte.
       printError("Episodes:", errorResponse)
       ' Valida si corresponde logout por sesión expirada.
-      if validateLogout(statusCode, m.top) then return
+      if validateLogout(statusCode, m.top) then
+        hideLoading()
+        return
+      end if
     end if
     ' Guardar el log de Error
     actionLog = createLogError(generateErrorDescription(errorResponse), generateErrorPageUrl("getEmissions", "ProgramEmissionsComponent"), getServerErrorStack(errorResponse), m.lastKey, m.lastId)
     __saveActionLog(actionLog)
   end if
 
+    ' Si no hay items renderizados, no hay animación/dibujo que esperar para ocultar el loading.
+  if not episodesRendered then hideLoading()
+
   ' Limpia request manager al finalizar.
   m.apiRequestManager = clearApiRequest(m.apiRequestManager)
+  hideLoading()
 end sub
 
 
 ' Crea visualmente los EpisodeItem según la respuesta del servicio.
-sub __renderEpisodes(episodes)
+function __renderEpisodes(episodes)
   ' Evita render si el contenedor aún no existe.
-  if m.episodesList = invalid then return
+  if m.episodesList = invalid then return false
   ' Limpia elementos previos antes de pintar nuevos episodios.
   __clearEpisodes()
   ' Corta render cuando la respuesta no contiene lista.
   if episodes = invalid then
     ' Muestra mensaje específico cuando la API responde exitosamente sin emisiones válidas.
     __showEmptyEmissionsMessage()
-    return
+    return false
   end if
   ' Muestra mensaje cuando la API devuelve cero emisiones disponibles.
   if episodes.count() <= 0 then
     ' Muestra mensaje específico cuando la API no trae emisiones para el título.
     __showEmptyEmissionsMessage()
-    return
+    return false
   end if
 
   ' Oculta mensaje de indisponibilidad cuando sí existen emisiones renderizables.
@@ -374,6 +387,43 @@ sub __renderEpisodes(episodes)
   end for
   ' Aplica selección inicial para ubicar foco lógico e indicador sobre el último episodio reproducible.
   __updateSelection(initialSelectionIndex)
+' Mantiene el loading hasta que la animación inicial termine y los items queden listos para mostrarse.
+  __waitForEpisodesInitialRender()
+  return true
+end function
+
+' Oculta la lista de episodios mientras se espera respuesta y animación inicial.
+sub __hideEpisodesItemsUntilReady()
+  m.waitingEpisodesReady = false
+  if m.episodesViewport <> invalid then
+    m.episodesViewport.visible = true
+    m.episodesViewport.opacity = 0.0
+  end if
+end sub
+
+' Inicia la espera de la animación inicial antes de ocultar el loading.
+sub __waitForEpisodesInitialRender()
+  m.waitingEpisodesReady = true
+  if m.episodesMoveAnimation <> invalid and m.episodesMoveAnimation.state = "running" then return
+  __showEpisodesItemsAndHideLoading()
+end sub
+
+' Callback de la animación inicial: solo libera la pantalla cuando terminó el desplazamiento.
+sub onEpisodesMoveAnimationStateChange()
+  if not m.waitingEpisodesReady then return
+  if m.episodesMoveAnimation = invalid then return
+  if m.episodesMoveAnimation.state = "stopped" then __showEpisodesItemsAndHideLoading()
+end sub
+
+' Muestra los items ya listos y recién entonces oculta el loading compartido.
+sub __showEpisodesItemsAndHideLoading()
+  if not m.waitingEpisodesReady then return
+  m.waitingEpisodesReady = false
+  if m.episodesViewport <> invalid then
+    m.episodesViewport.visible = true
+    m.episodesViewport.opacity = 1.0
+  end if
+  hideLoading()
 end sub
 
 ' Intenta abrir player con el episodio seleccionado cuando playImage está visible.
@@ -596,8 +646,7 @@ sub onEpisodeWatchValidateResponse()
     ' Continúa a streaming solo cuando resultCode indica éxito funcional.
     if watchData <> invalid and watchData.resultCode = 200 then
       ' Persiste sesión/token para mantener contrato del player.
-      setWatchSessionId(watchData.watchSessionId)
-      setWatchToken(watchData.watchToken)
+      setWatchSession(watchData)
       ' Solicita streaming del episodio validado igual que MainScreen.
       m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlStreaming(m.selectedEpisode.redirectKey, m.selectedEpisode.redirectId), "GET", "onEpisodeStreamingResponse")
       ' Corta aquí para no limpiar loading hasta terminar streaming.

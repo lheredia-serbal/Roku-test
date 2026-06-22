@@ -20,15 +20,6 @@ sub init()
   ' Bandera visual: indica si la config SEARCH_MIN_CHARS está informada.
   m.hasSearchMinCharsConfig = true
 
-  ' Referencia a la animación que suaviza el desplazamiento vertical del contenedor.
-  m.carouselContainerMoveAnimation = m.top.findNode("carouselContainerMoveAnimation")
-  ' Referencia al interpolador que recibe origen/destino de translation.
-  m.carouselContainerMoveInterpolator = m.top.findNode("carouselContainerMoveInterpolator")
-  ' Referencia a la animación de opacidad para fila saliente/entrante.
-  m.focusUpOpacityAnimation = m.top.findNode("focusUpOpacityAnimation")
-  ' Referencia al interpolador de opacidad con fieldToInterp dinámico.
-  m.focusUpOpacityInterpolator = m.top.findNode("focusUpOpacityInterpolator")
-
   m.noResultsLabel = m.top.findNode("noResultsLabel")
   m.searchMinCharsLabel = m.top.findNode("searchMinCharsLabel")
 
@@ -113,7 +104,6 @@ sub init()
   m.searchInput.observeField("hasFocus", "onSearchInputFocusChanged")
   ' Observo el estado de animación de ocultar teclado para limpiar estado final.
   m.keyboardHideAnimation.observeField("state", "onKeyboardHideAnimationStateChanged")
-  if m.carouselContainerMoveAnimation <> invalid then m.carouselContainerMoveAnimation.observeField("state", "onCarouselContainerMoveAnimationStateChanged") ' Observo fin de animación para restaurar indicator.
 
   ' Observo cuando vence el debounce para disparar el servicio de búsqueda.
   if m.searchDebounceTimer <> invalid then m.searchDebounceTimer.observeField("fire", "onSearchDebounceTimerFire")
@@ -418,10 +408,10 @@ function onKeyEvent(key as string, press as boolean) as boolean
       if m.carouselContainer.focusedChild.focusUp <> invalid then
         focusItem = m.carouselContainer.focusedChild.focusUp.findNode("carouselList")
         if focusItem <> invalid then
-          __setNodeOpacityWithAnimation(m.carouselContainer.focusedChild.focusUp, 1.0) ' Animo la restauración de opacidad del carrusel superior.
+          __setNodeOpacity(m.carouselContainer.focusedChild.focusUp, 1.0)
           focusItem.setFocus(true)
           m.searchInput.active = false
-          __setCarouselContainerTranslationWithAnimation([m.carouselXPosition, - (m.carouselContainer.focusedChild.translation[1] - m.carouselYPosition)]) ' Animo la traslación vertical al subir.
+          __setCarouselContainerTranslation([m.carouselXPosition, - (m.carouselContainer.focusedChild.translation[1] - m.carouselYPosition)])
           m.searchSelectedIndicator.size = m.carouselContainer.focusedChild.size
         end if
       else
@@ -443,10 +433,10 @@ function onKeyEvent(key as string, press as boolean) as boolean
     if m.carouselContainer.focusedChild.focusDown <> invalid then
       focusItem = m.carouselContainer.focusedChild.focusDown.findNode("carouselList")
       if focusItem <> invalid then
-        __setNodeOpacityWithAnimation(m.carouselContainer.focusedChild, 0.0) ' Animo la atenuación del carrusel actual al bajar.
+        __setNodeOpacity(m.carouselContainer.focusedChild, 0.0)
         focusItem.setFocus(true)
         m.searchInput.active = false
-        __setCarouselContainerTranslationWithAnimation([m.carouselXPosition, - (m.carouselContainer.focusedChild.translation[1] - m.carouselYPosition)]) ' Animo la traslación vertical al bajar.
+        __setCarouselContainerTranslation([m.carouselXPosition, - (m.carouselContainer.focusedChild.translation[1] - m.carouselYPosition)])
         m.searchSelectedIndicator.size = m.carouselContainer.focusedChild.size
       end if
     end if
@@ -505,50 +495,22 @@ sub onKeyboardHideAnimationStateChanged()
   end if
 end sub
 
-' Anima la opacidad de un carrusel objetivo para mantener la misma transición visual de HomeScreen.
-sub __setNodeOpacityWithAnimation(targetNode as object, targetOpacity as float) ' Define helper de opacidad animada para navegación vertical.
-  if targetNode = invalid then return ' Evito ejecutar animación si no existe nodo objetivo.
-  if m.focusUpOpacityAnimation = invalid or m.focusUpOpacityInterpolator = invalid then ' Aplico fallback inmediato si faltan nodos de animación.
-    targetNode.opacity = targetOpacity.toStr() ' Fallback directo para no romper la navegación vertical.
-    return ' Salgo porque ya apliqué opacidad final.
-  end if
+' Aplica la opacidad de un carrusel objetivo de forma inmediata.
+sub __setNodeOpacity(targetNode as object, targetOpacity as float)
+  if targetNode = invalid then return
+  targetNode.opacity = targetOpacity.toStr()
+end sub
 
-  targetNodeId = targetNode.id ' Obtengo id del nodo para construir fieldToInterp dinámico.
-  if targetNodeId = invalid or targetNodeId = "" then ' Valido que el nodo tenga id utilizable.
-    targetNode.opacity = targetOpacity.toStr() ' Fallback inmediato cuando no existe id.
-    return ' Salgo para evitar interpoladores inválidos.
-  end if
+' Aplica la traslación vertical del contenedor de carruseles de forma inmediata.
+sub __setCarouselContainerTranslation(targetTranslation as object)
+  if m.carouselContainer = invalid then return
+  if targetTranslation = invalid or targetTranslation.count() < 2 then targetTranslation = m.carouselContainer.translation
 
-  m.focusUpOpacityInterpolator.fieldToInterp = targetNodeId + ".opacity" ' Defino el campo exacto a interpolar.
-  currentOpacity = targetNode.opacity ' Tomo opacidad actual como origen de la animación.
-  if currentOpacity = invalid then currentOpacity = 1.0 ' Uso opacidad por defecto cuando el valor actual no existe.
-  m.focusUpOpacityInterpolator.keyValue = [currentOpacity, targetOpacity] ' Configuro curva lineal entre estado actual y destino.
-  m.focusUpOpacityAnimation.control = "stop" ' Reinicio animación para permitir disparos consecutivos.
-  m.focusUpOpacityAnimation.control = "start" ' Inicio transición de opacidad.
-end sub ' Cierra helper de opacidad animada.
-
-' Anima la traslación vertical del contenedor de carruseles para replicar HomeScreen.
-sub __setCarouselContainerTranslationWithAnimation(targetTranslation as object) ' Define helper de desplazamiento vertical animado.
-  if m.carouselContainer = invalid then return ' Evito operar si no existe contenedor principal.
-  if targetTranslation = invalid or targetTranslation.count() < 2 then targetTranslation = m.carouselContainer.translation ' Corrijo destino inválido con posición actual.
-
-  currentTranslation = m.carouselContainer.translation ' Capturo origen para interpolación suave.
-  if currentTranslation = invalid or currentTranslation.count() < 2 then currentTranslation = [m.carouselXPosition, m.carouselYPosition] ' Aseguro origen válido.
-  if currentTranslation[0] = targetTranslation[0] and currentTranslation[1] = targetTranslation[1] then return ' Evito animaciones innecesarias si no hay cambio.
-
-  if m.carouselContainerMoveAnimation = invalid or m.carouselContainerMoveInterpolator = invalid then ' Fallback inmediato cuando falta animación.
-    m.isCarouselContainerAnimating = false ' Marco que no hay transición activa en fallback.
-    m.carouselContainer.translation = targetTranslation ' Aplico posición final sin animación.
-    return ' Finalizo porque el fallback ya movió el contenedor.
-  end if
-
-  m.isCarouselContainerAnimating = true ' Marco transición activa para gestionar visibilidad del indicator.
-  if m.searchInput <> invalid then m.searchInput.opacity = 1.0 ' Fuerzo opacidad del input durante toda la animación vertical.
-  if m.searchSelectedIndicator <> invalid then m.searchSelectedIndicator.visible = false ' Oculto indicator mientras el contenedor se desplaza.
-  m.carouselContainerMoveInterpolator.keyValue = [currentTranslation, targetTranslation] ' Defino origen/destino vectorial de la transición.
-  m.carouselContainerMoveAnimation.control = "stop" ' Reinicio estado para permitir relanzar animación.
-  m.carouselContainerMoveAnimation.control = "start" ' Inicio transición de 0.5 segundos.
-end sub ' Cierra helper de traslación animada del contenedor.
+  m.isCarouselContainerAnimating = false
+  m.carouselContainer.translation = targetTranslation
+  if m.searchInput <> invalid then m.searchInput.opacity = 1.0
+  if m.searchSelectedIndicator <> invalid and m.carouselContainer.isInFocusChain() then m.searchSelectedIndicator.visible = true
+end sub
 
 ' Restaura visibilidad del indicador cuando termina el movimiento animado del contenedor.
 sub onCarouselContainerMoveAnimationStateChanged() ' Maneja el fin de la animación del contenedor para restaurar indicator.
@@ -774,8 +736,7 @@ sub onWatchValidateResponse()
 
     ' Si resultCode es 200, habilito reproducción y pido streamings.
     if resp.resultCode = 200 then
-      setWatchSessionId(resp.watchSessionId)
-      setWatchToken(resp.watchToken)
+        setWatchSession(resp)
       if m.itemSelected <> invalid then
         ' Solicito URL de reproducción para el canal elegido.
         m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlStreaming(m.itemSelected.redirectKey, m.itemSelected.redirectId), "GET", "onStreamingsResponse")

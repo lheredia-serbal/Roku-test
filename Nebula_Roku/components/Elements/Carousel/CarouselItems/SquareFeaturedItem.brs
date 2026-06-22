@@ -44,6 +44,7 @@ sub itemContentChanged()
 
         ' Limpia imagen/progreso para asegurar fondo negro en todos los variantes SquareFeatured.
         if m.imageItem <> invalid then
+            m.imageItem.visible = false
             m.imageItem.uri = ""
         end if
 

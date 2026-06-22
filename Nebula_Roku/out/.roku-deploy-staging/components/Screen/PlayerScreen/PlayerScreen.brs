@@ -923,8 +923,7 @@ sub onUpdateWatchSessionResponse()
   if validateStatusCode(m.apiSessionRequestManager.statusCode) then
     resp = ParseJson(m.apiSessionRequestManager.response)
     if resp <> invalid and resp.data <> invalid then
-      if resp.data.watchToken <> invalid then setWatchToken(resp.data.watchToken)
-      if resp.data.watchSessionId <> invalid then setWatchSessionId(resp.data.watchSessionId)
+      setWatchSession(resp.data)
     else
     printError("WatchSesionToken:", m.apiRequestManager.errorResponse)
     end if
@@ -1153,6 +1152,7 @@ sub onStreamingsResponse()
 		  
       m.errorChannel.visible = false
       m.spinner.visible = false
+      m.focusplayerByload = false
 
       ' Obtener el inicio del stream, el programa inicia despues del inicio del stream, usar el incio del programa
       if m.streaming.streamStartDate <> invalid and m.streaming.streamStartDate <> "" then
@@ -1407,8 +1407,7 @@ sub onWatchValidateResponse()
     resp = ParseJson(m.apiBeaconRequestManager.response).data
     m.apiRequestManager = clearApiRequest(m.apiRequestManager)
     if resp.resultCode = 200 then
-      setWatchSessionId(resp.watchSessionId)
-      setWatchToken(resp.watchToken)
+      setWatchSession(resp)
       onSendBeacon()
     else 
       m.apiBeaconRequestManager = clearApiRequest(m.apiBeaconRequestManager)
@@ -3322,7 +3321,32 @@ end sub
 
 ' Actualizar al watch token
 sub __refreshWatchTokenData(key as string, id as integer)
-  m.apiSessionRequestManager = sendApiRequest(m.apiSessionRequestManager, urlUpdateWatchSession(key,  id), "GET", "onUpdateWatchSessionResponse", invalid, getWatchToken())
+    requestId = createRequestId()
+
+  ' Define request siguiendo el patrón existente del proyecto.
+  action = {
+    node: m.top
+    apiRequestManager: m.apiSessionRequestManager
+    url: urlUpdateWatchSession(key,  id)
+    method: "GET"
+    responseMethod: "onUpdateWatchSessionResponse"
+    body: invalid
+    token: getWatchToken()
+    publicApi: false
+    methodName: "__refreshWatchTokenData"
+    parameter: [key, id]
+    requestId: requestId
+    dataAux: invalid
+    run: function() as Object
+      m.apiSessionRequestManager = sendApiRequest(m.apiSessionRequestManager, m.url, m.method, m.responseMethod, m.requestId, m.body, m.token, m.publicApi, m.dataAux) 
+      return { success: true, error: invalid }
+    end function
+  }
+
+  ' Ejecuta request con soporte de retry global.
+  runAction(requestId, action, ApiType().CLIENTS_API_URL)
+  ' Actualiza referencia local del request manager.
+  m.apiSessionRequestManager = action.apiSessionRequestManager
 end sub
 
 ' Obtiene le tiempo actual

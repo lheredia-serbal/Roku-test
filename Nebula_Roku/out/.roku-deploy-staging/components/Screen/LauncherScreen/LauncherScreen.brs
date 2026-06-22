@@ -3,8 +3,13 @@ sub init()
   m.top.finished = false
   deviceInfo = CreateObject("roDeviceInfo")
 
+  if getValidateChangeStorage() then 
+    migrationOk = migrateRegistrySectionToPrefixed()
+  end if
+
+  appCode = getAppCode()
   scaleInfo = getScaleInfo(deviceInfo)
-  device = getDevice(deviceInfo, scaleInfo, getVersion(), getVersionCode(), getAppCode(), m.global.language)
+  device = getDevice(deviceInfo, scaleInfo, getVersion(), getVersionCode(), appCode, m.global.language)
 
   addAndSetFields(m.global, {
     configVariablesKeys: getAppConfigVariable(),
@@ -12,7 +17,7 @@ sub init()
     device: device,
     scaleInfo: scaleInfo,
     colors: mergeAssociativeArrays(getBasicColors(), getSpecialColors()),
-    appCode: getAppCode(),
+    appCode: appCode,
     beaconTokenExpiresIn: 0
   })
 

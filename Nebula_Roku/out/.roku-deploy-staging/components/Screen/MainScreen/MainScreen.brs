@@ -819,8 +819,7 @@ sub onWatchValidateResponse()
       resp = ParseJson(m.apiRequestManager.response).data
 
       if resp.resultCode = 200 then
-        setWatchSessionId(resp.watchSessionId)
-        setWatchToken(resp.watchToken)
+        setWatchSession(resp)
         if m.itemSelected <> invalid then
           m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlStreaming(m.itemSelected.redirectKey, m.itemSelected.redirectId), "GET", "onStreamingsResponse")
         end if

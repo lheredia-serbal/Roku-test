@@ -1070,6 +1070,7 @@ sub __loadEditProfile(profileByEdit)
   m.profileByEdit = profileByEdit
   m.profileImageEdit.showManageProfile = false
   m.profileImageEdit.uriImage = getImageUrl(m.profileByEdit.avatar.image) 
+  m.profileImageEdit.visible = true
   m.keyboard.setFocus(true) 
 
   m.keyboard.textEditBox.text = m.profileByEdit.name

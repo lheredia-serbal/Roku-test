@@ -148,8 +148,7 @@ sub onWatchValidateResponse()
     m.apiRequestManager = clearApiRequest(m.apiRequestManager)
 
     if resp.resultCode = 200 then
-      setWatchSessionId(resp.watchSessionId)
-      setWatchToken(resp.watchToken)
+      setWatchSession(resp)
       m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlStreaming(m.redirectKey, m.redirectId), "GET", "onStreamingsResponse")
     else 
 

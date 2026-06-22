@@ -32,6 +32,7 @@ sub itemContentChanged()
         m.programTitle.font = "font:MediumSystemFont"
         m.imageItem.loadingBitmapUri = ""
         m.imageItem.failedBitmapUri = ""
+        m.imageItem.visible = false
         m.programTitleByError.visible = true
 
         m.showBackgroundImage = false
@@ -43,6 +44,10 @@ sub itemContentChanged()
         if m.metadataGroup <> invalid then m.metadataGroup.visible = false 
         return
     else
+        m.imageItem.visible = true
+        m.imageItem.loadingBitmapUri = m.backgroundImage
+        m.imageItem.failedBitmapUri = m.backgroundImage
+        
         if m.top.itemContent.title <> invalid and m.top.itemContent.title <> "" then 
             m.programTitle.text = m.top.itemContent.title
             if m.top.itemContent.style = getCarouselStyles().PORTRAIT_FEATURED then 
@@ -117,6 +122,7 @@ sub currRectChanged()
 
     m.imageItem.width = imageWidth
     m.imageItem.height = imageHeight
+    'm.imageItem.translation = [imageX, imageY]
 
     m.opacityLayout.width = imageWidth
     m.opacityLayout.height = imageHeight
@@ -145,6 +151,10 @@ sub currRectChanged()
     if m.title.width < 0 then m.title.width = 0
     if m.category.width < 0 then m.category.width = 0 
     if m.dateTime.width < 0 then m.dateTime.width = 0
+    ' Altura acumulada de labels para ubicar el bloque justo sobre la barra de progreso.
+    metadataLabelsHeight = 0
+    ' Obtiene altura real del contenido textual.
+    if m.metadataLabels <> invalid then metadataLabelsHeight = m.metadataLabels.boundingRect().height 
     ' Desplaza levemente labels hacia abajo para acercarlos al borde inferior.
     metadataLabelsBottomOffset = scaleValue(6, m.scaleInfo)
     metadataLabelsY = imageHeight - scaleValue(40, m.scaleInfo) - metadataBottomSpacing + metadataVerticalPadding + metadataLabelsBottomOffset

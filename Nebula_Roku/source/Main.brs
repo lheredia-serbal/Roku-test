@@ -6,9 +6,6 @@ sub Main(args as Object)
     screen.setMessagePort(m.port)
     ' Inicializa el monitoreo de memoria recomendado por Roku
     InitMemoryMonitoring(m.port)
-    m.runtimeClock = CreateObject("roTimespan")
-    m.runtimeClock.Mark()
-    printLog("Application started; diagnostic heartbeat enabled every 60 seconds.")
 
     if args <> invalid
         if args.reason <> invalid then
@@ -29,20 +26,10 @@ sub Main(args as Object)
     scene.setFocus(true)
 
     while(true)
-        ' El timeout permite emitir diagnósticos aunque no lleguen eventos al puerto.
-        msg = wait(1000, m.port)
+        msg = wait(0, m.port)
         msgType = type(msg)
-
-        if m.runtimeClock.TotalSeconds() >= 60 then
-            LogMemorySnapshot("heartbeat")
-            m.runtimeClock.Mark()
-        end if
-
         if msgType = "roSGScreenEvent"
-            if msg.isScreenClosed() then
-                printLog("Main loop exiting: SceneGraph screen closed.")
-                return
-            end if
+            if msg.isScreenClosed() then return
         'respond to the appExit field on MainScene
         else if HandleSystemEvents(msg)
             ' Evento de sistema/memoria ya gestionado
@@ -50,10 +37,7 @@ sub Main(args as Object)
         else if msgType = "roSGNodeEvent" then
             field = msg.getField()
             'if the scene's appExit field was changed in any way, exit the channel
-            if field = "appExit" then
-                printLog("Main loop exiting: appExit requested by MainScene.")
-                return
-            end if
+            if field = "appExit" then return
         end if
     end while
 end sub
@@ -105,9 +89,6 @@ function HandleSystemEvents(msg as Object) as Boolean
         ' Evento de memoria general del sistema
         info = msg.GetInfo()
         if info <> invalid and info.generalMemoryLevel <> invalid then
-            printLog("Low general memory event - level: " + info.generalMemoryLevel.toStr())
-        else
-            printLog("Device info event received without generalMemoryLevel data.")
         end if
         return true
     end if

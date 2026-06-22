@@ -1,6 +1,27 @@
+'*************************************************************
+'*************************************************************
+'*************************************************************
+'
+'  EN ESTE ARCHIVO SE DEFINE LA CONFIGURACION POR CLIENTE
+'
+'*************************************************************
+'*************************************************************
+'*************************************************************
+
 function  getAppCode() As String
     return "NebulaRoku"
-End function 
+End function
+
+function  getValidateChangeStorage() As boolean
+    '*************************************************************
+    '
+    '                   ¡¡¡¡¡IMPORTANTE!!!!!
+    '
+    ' Este metodo solo debe devolver True para el caso las 
+    ' aplciaciones que tuvieron problemas con el estorage 
+    '*************************************************************
+    return false
+End function
 
 function getCdnConfigUrls() As Object
     return [
@@ -16,7 +37,3 @@ function getSpecialColors()
         SECONDARY: "#ffb522",
     }
 end function
-
-'*************************************************************
-'  EN ESTE ARCHIVO SE DEFINE LA CONFIGURACION POR CLIENTE
-'*************************************************************

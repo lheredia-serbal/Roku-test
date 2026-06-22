@@ -299,8 +299,7 @@ sub onWatchValidateResponse()
       m.apiRequestManager = clearApiRequest(m.apiRequestManager) 
 
       if resp.resultCode = 200 then
-        setWatchSessionId(resp.watchSessionId)
-        setWatchToken(resp.watchToken)
+        setWatchSession(resp)
         if m.program <> invalid then
           if m.streamingAction = invalid then m.streamingAction = getStreamingAction().PLAY
           requestId = createRequestId()
