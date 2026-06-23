@@ -573,7 +573,7 @@ sub __applyLayout()
   m.programImageBackground.height = height
   m.programInfo.translation = [safeX + scaleValue(35, m.scaleInfo), safeY ]
   ' Bloque grilla nativa: configuramos medidas base de la grilla en la zona inferior de ViewAll.
-  m.posterGrid.translation = scaleSize([safeX + 35, safeY + 190], m.scaleInfo)
+  m.posterGrid.translation = scaleSize([safeX + 10, safeY + 190], m.scaleInfo)
   m.posterGrid.itemSize = __applyPosterGridItemLayout(m.viewAllCarouselStyle)
   m.posterGrid.itemSpacing = scaleSize([22, 34], m.scaleInfo)
   m.posterGrid.itemComponentName = "ViewAllGridItem"
@@ -886,12 +886,16 @@ sub __populateViewAllCarousel(data as Object)
       gridItems.push(gridItem)
       child = contentRoot.createChild("ContentNode")
       child.title = item.title
-      child.HDPosterUrl = getImageUrl(item.image)
-      child.ShortDescriptionLine1 = item.title
+      itemCategory = ""
+      if item.category <> invalid then itemCategory = item.category
+      itemPercentageElapsed = 0
+      if item.percentageElapsed <> invalid then itemPercentageElapsed = item.percentageElapsed
       child.addFields({
         imageURL: getImageUrl(item.image)
         size: m.posterGrid.itemSize
         style: m.viewAllCarouselStyle
+        category: itemCategory
+        percentageElapsed: itemPercentageElapsed
       })
     end for
   end for

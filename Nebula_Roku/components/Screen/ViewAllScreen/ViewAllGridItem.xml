@@ -11,11 +11,47 @@
 
   <interface>
     <field id="itemContent" type="node" onChange="onItemContentChanged" />
+    <field id="focusPercent" type="float" value="0" onChange="onFocusPercentChanged" />
   </interface>
 
   <children>
     <Rectangle id="itemBackground" color="#000000" />
     <Poster id="itemImage" loadDisplayMode="scaleToZoom" />
+    <Group id="metadataGroup" visible="false">
+      <Poster
+        id="metadataGradient"
+        uri="pkg:/images/shared/gradient_bg.png"
+        loadDisplayMode="scaleToFill" />
+      <LayoutGroup
+        id="progressGroup"
+        layoutDirection="horiz"
+        horizAlignment="left"
+        vertAlignment="bottom">
+        <Rectangle id="progressLeft" />
+        <Rectangle id="progressRight" />
+      </LayoutGroup>
+      <LayoutGroup
+        id="metadataLabels"
+        layoutDirection="vert"
+        horizAlignment="left"
+        vertAlignment="bottom"
+        itemSpacings="[1]">
+        <Label
+          id="programName"
+          wrap="true"
+          maxLines="2"
+          visible="false"
+          lineSpacing="2"
+          font="font:TinySystemFont"
+          color="#FFFFFFFF" />
+        <Label
+          id="programCategory"
+          wrap="false"
+          maxLines="1"
+          visible="false"
+          font="font:TinySystemFont" />
+      </LayoutGroup>
+    </Group>
     <Label
       id="itemTitle"
       visible="false"
