@@ -94,7 +94,7 @@
     </Group>
 
     <!-- Contenedor para múltiples carouseles y foco -->
-    <Group id="carousels" translation="[0, 120]">
+    <Group id="carousels" translation="[0, 100]">
       <Group id="carouselContainer" translation="[50, 20]"/>
 
       <SelectionBox id="selectedIndicator" visible="false"/>

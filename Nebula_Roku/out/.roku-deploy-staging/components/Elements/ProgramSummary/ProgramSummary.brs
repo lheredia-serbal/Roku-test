@@ -6,7 +6,7 @@ sub init()
 
     m.scaleInfo = m.global.scaleInfo
     m.defaultHeight = scaleValue(32, m.scaleInfo)
-    m.spacings = scaleValue(0, m.scaleInfo)
+    m.spacings = scaleValue(5, m.scaleInfo)
     m.reservedWidth = m.scaleInfo.width - scaleValue(140, m.scaleInfo)
 end sub
 
@@ -17,6 +17,7 @@ sub initConfig()
         if m.top.width <> 0 then m.reservedWidth = m.top.width
 
         if m.programTitle <> invalid then m.programTitle.width = m.reservedWidth
+        if m.programTitle <> invalid then m.programTitle.height = scaleValue(50, m.scaleInfo)
         if m.programSubtitle <> invalid then m.programSubtitle.width = m.reservedWidth
         if m.programSynopsis <> invalid then m.programSynopsis.width = m.reservedWidth
     end if

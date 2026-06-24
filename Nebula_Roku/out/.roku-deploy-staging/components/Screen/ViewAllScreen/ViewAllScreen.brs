@@ -597,7 +597,8 @@ function __applyPosterGridItemLayout(style as Dynamic)
   if style = -1 then
     itemSize = [120, 120]
   else if style = getCarouselStyles().PORTRAIT_FEATURED then
-    itemSize = [270, 405]
+    itemSize = [243, 364]
+    return scaleSize(itemSize, m.scaleInfo)
   else if style = getCarouselStyles().LANDSCAPE_STANDARD then
     itemSize = [450, 253]
   else if style = getCarouselStyles().LANDSCAPE_FEATURED then
@@ -606,6 +607,7 @@ function __applyPosterGridItemLayout(style as Dynamic)
     itemSize = [140, 140]
   else if style = getCarouselStyles().SQUARE_FEATURED then
     itemSize = [310, 110]
+    return scaleSize(itemSize, m.scaleInfo)
   end if
 
   itemSize = [itemSize[0] * itemScale, itemSize[1] * itemScale]
@@ -756,7 +758,6 @@ sub __configurePosterGridLayout(totalItems as integer)
 
    visibleRows = 2
   if itemHeightWithSpacing > 0 then visibleRows = Int((availableHeight + spacingY) / itemHeightWithSpacing)
-  if visibleRows < 1 then visibleRows = 2
   if totalItems > 0 then
     totalRows = Int((totalItems + columns - 1) / columns)
     if visibleRows > totalRows then visibleRows = totalRows
@@ -868,6 +869,8 @@ sub __populateViewAllCarousel(data as Object)
   m.posterGrid.itemSize = __applyPosterGridItemLayout(m.viewAllCarouselStyle)
   contentRoot = createObject("roSGNode", "ContentNode")
   gridItems = []
+  startTime = CreateObject("roDateTime")
+  endTime = CreateObject("roDateTime")
   ' Bloque de normalización: aplanamos todos los carruseles recibidos en una sola grilla PosterGrid.
   for each carouselData in sourceItems
     if carouselData = invalid then continue for
@@ -887,6 +890,17 @@ sub __populateViewAllCarousel(data as Object)
       gridItems.push(gridItem)
       child = contentRoot.createChild("ContentNode")
       child.title = item.title
+      itemDate = ""
+      if item.endTime <> invalid then
+        endTime.FromISO8601String(item.endTime)
+        endTime.ToLocalTime()
+
+        if item.startTime <> invalid then
+          startTime.FromISO8601String(item.startTime)
+          startTime.ToLocalTime()
+          itemDate = dateConverter(startTime, i18n_t(m.global.i18n, "time.formatHours")) + " - " + dateConverter(endTime, i18n_t(m.global.i18n, "time.formatHours"))
+        end if
+      end if
       itemCategory = ""
       if item.category <> invalid then itemCategory = item.category
       itemPercentageElapsed = 0
@@ -895,7 +909,9 @@ sub __populateViewAllCarousel(data as Object)
         imageURL: getImageUrl(item.image)
         size: m.posterGrid.itemSize
         style: m.viewAllCarouselStyle
+        contentType: carouselData.contentType
         category: itemCategory
+        date: itemDate
         percentageElapsed: itemPercentageElapsed
       })
     end for
