@@ -607,7 +607,7 @@ function __applyPosterGridItemLayout(style as Dynamic)
   if style = -1 then
     itemSize = [120, 120]
   else if style = getCarouselStyles().PORTRAIT_FEATURED then
-    itemSize = [243, 364]
+    itemSize = [218, 328]
   else if style = getCarouselStyles().LANDSCAPE_STANDARD then
     itemSize = [450, 253]
   else if style = getCarouselStyles().LANDSCAPE_FEATURED then

@@ -837,7 +837,7 @@ sub __loadRelatedCarousel(carouselData)
     m.related.contentType = carouselData.contentType
     m.related.imageType = carouselData.imageType
     m.related.redirectType = carouselData.redirectType
-    m.related.items = carouselData.items
+    m.related.items = __getProgramDetailRelatedItems(carouselData.items)
   
     m.related.ObserveField("selected", "onSelectItem")
     m.relatedContainer.visible = true
@@ -848,6 +848,17 @@ sub __loadRelatedCarousel(carouselData)
     m.related.unobserveField("selected")
   end if 
 end sub
+
+
+function __getProgramDetailRelatedItems(items) as object
+  if items = invalid then return invalid
+
+  for each item in items
+    if item <> invalid then item.showProgramDetailMetadataOnFocus = true
+  end for
+
+  return items
+end function
 
 ' Dispara la obtencion de la URL para abrir el player o la validacion de control parental en caso de ser necesario.
 sub __openPlayer(streamingAction)

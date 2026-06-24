@@ -45,6 +45,7 @@
           visible="false" />
 
         <LayoutGroup
+          id="categoryGroup"
           layoutDirection="horiz"
           horizAlignment="left"
           itemSpacings="[10]" >

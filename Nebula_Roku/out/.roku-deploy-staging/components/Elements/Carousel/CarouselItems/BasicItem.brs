@@ -22,6 +22,7 @@ sub init()
     m.showBackgroundImage = false
     m.showMetadataGroup = false
     m.isSearchScreenContext = false
+    m.isProgramDetailScreenContext = false
     __initConfig()
 end sub
 
@@ -79,8 +80,10 @@ sub itemContentChanged()
 
     ' Mostrar la información del programa cuando se encuentra en la pantalla de Busqueda
     m.isSearchScreenContext = __isSearchScreenContext()
+    ' ProgramDetailScreen siempre muestra la información del BasicItem al hacer foco.
+    m.isProgramDetailScreenContext = __isProgramDetailScreenContext()
 
-    if (m.isSearchScreenContext) then 
+    if (m.isSearchScreenContext or m.isProgramDetailScreenContext) then
         __updateMetadataVisibility()
     end if
 
@@ -251,20 +254,30 @@ end function
     __applyMetadataGroupVisibility()
 end sub
 
-' NUEVO: Determina si este item vive dentro de SearchScreen recorriendo el árbol de padres.
+' Determina si este item vive dentro de SearchScreen recorriendo el árbol de padres.
 function __isSearchScreenContext() as boolean
     currentNode = m.top
     ' Recorre padres hasta llegar a la raíz.
-    while currentNode <> invalid 
+    while currentNode <> invalid
         ' Confirma contexto de SearchScreen cuando encuentra el subtipo.
-        if currentNode.subtype() = "SearchScreen" then return true 
+        if currentNode.subtype() = "SearchScreen" then return true
         ' Avanza al siguiente padre en la jerarquía.
-        currentNode = currentNode.getParent() 
+        currentNode = currentNode.getParent()
     end while
     return false
 end function
 
-' Determina si este item pertenece al contenedor principal de carruseles de SearchScreen.
+' Determina si ProgramDetailScreen está activo sin depender de la jerarquía de padres del item.
+function __isProgramDetailScreenContext() as boolean
+    scene = invalid
+    if m.top <> invalid then scene = m.top.getScene()
+    if scene = invalid then return false
+
+    programDetailScreen = scene.findNode("ProgramDetailScreen")
+    if programDetailScreen = invalid then return false
+
+    return programDetailScreen.visible = true and programDetailScreen.onFocus = true
+end function
 
 ' Unifica la condición final de visibilidad para metadataGroup.
 sub __applyMetadataGroupVisibility()
@@ -286,8 +299,8 @@ sub __applyMetadataGroupVisibility()
         ' Las tarjetas "Ver todos/Guía" nunca deben mostrar información de programa, incluso al recibir foco.
         if isSeeMoreOrGuideItem then
             m.metadataGroup.visible = false
-        else if m.isSearchScreenContext then
-            ' En SearchScreen solo mostramos metadata cuando item y carrusel tienen foco.
+        else if m.isSearchScreenContext or m.isProgramDetailScreenContext then
+            ' En SearchScreen y ProgramDetail related solo mostramos metadata cuando item y carrusel tienen foco.
             m.metadataGroup.visible = (m.showMetadataGroup and hasItemFocus and hasCarouselFocus)
         else
             ' Fuera de SearchScreen mantenemos el comportamiento estándar.

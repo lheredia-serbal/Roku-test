@@ -45,9 +45,9 @@
           visible="false" />
 
         <LayoutGroup
+          id="categoryGroup"
           layoutDirection="horiz"
-          horizAlignment="left"
-          itemSpacings="[10]" >
+          horizAlignment="left">
           
           <Label 
             id="programCategory"

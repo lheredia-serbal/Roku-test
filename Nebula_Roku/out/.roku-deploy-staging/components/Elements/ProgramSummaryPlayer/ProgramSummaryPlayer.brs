@@ -4,6 +4,7 @@ sub init()
     m.programRectangleContainer = m.top.findNode("programRectangleContainer")
     m.programTitle = m.top.findNode("programTitle")
     m.programSubtitle = m.top.findNode("programSubtitle")
+    m.categoryGroup = m.top.findNode("categoryGroup")
     m.programCategory = m.top.findNode("programCategory")
     m.programDate = m.top.findNode("programDate")
     m.programSynopsis = m.top.findNode("programSynopsis")
@@ -148,6 +149,7 @@ sub changeProgram()
                  m.programCategory.text = m.top.program.channelCategory
                 m.programCategory.height = m.defaultHeight
                 m.programCategory.visible = true
+                m.categoryGroup.itemSpacings = [0]
             end if 
             
             date = invalid

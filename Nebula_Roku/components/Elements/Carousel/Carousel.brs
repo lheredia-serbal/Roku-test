@@ -68,12 +68,12 @@ sub initSyle()
     m.targetRects = createTargetRects(m.targetItems, m.xInitial, (m.top.size[0] + m.separator), m.top.size[0], m.top.size[1])
 
   else if m.top.style = getCarouselStyles().PORTRAIT_FEATURED then ' carouselPortraitFeatured
-    m.top.size = scaleSize([243, 365], m.scaleInfo)
+    m.top.size = scaleSize([218, 328], m.scaleInfo)
     __defaultConfig()
     m.top.height = (m.top.size[1] + m.labelSpace)
     m.targetItems = 6
     m.styleItem = "BasicItem"
-    m.xInitial = scaleValue(-395, m.scaleInfo)
+    m.xInitial = scaleValue(-345, m.scaleInfo)
     m.targetRects = createTargetRects(m.targetItems, m.xInitial, (m.top.size[0] + m.separator), m.top.size[0], m.top.size[1])
 
   else if m.top.style = getCarouselStyles().LANDSCAPE_STANDARD then ' carouselLandscapeStandard

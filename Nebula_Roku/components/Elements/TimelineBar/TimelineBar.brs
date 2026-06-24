@@ -75,7 +75,8 @@ end sub
 
 sub onPositionChanged()
   if m.top.position <> invalid then 
-    if (m.top.position) = -1 then return
+    if (m.top.position = -1) then return
+    if m.top.position = 0 then return
     m.currentPosition = m.top.position
   end if 
   __updateProgress()
@@ -167,6 +168,7 @@ sub __updateProgress()
   end if
 
   ' Progreso
+
   if (m.currentPosition > 0 and m.currentDuration > 0) then  
     progressWidth = (m.currentPosition / m.currentDuration) * m.totalWidth
   else
@@ -196,6 +198,7 @@ sub __updateProgress()
       if m.maxWidth <> invalid and thumbX > m.maxWidth then thumbX = m.maxWidth
       if (thumbX <> invalid) then
         if thumbX < 0 then thumbX = 0
+
         m.thumb.translation = [thumbX, thumbY]
       end if
     end if

@@ -380,25 +380,7 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
     if key = KeyButtons().OK then
       m.enableGoLive = false
 
-      restartVideo(true)
-      if m.isLiveRewind and m.videoPlayer <> invalid  and press then
-        if LCase(m.streaming.type) = getVideoType().LIVE_REWIND and m.streaming.streamingType = getStreamingType().LIVE_REWIND then
-
-          m.timelineBar.isLive = true
-          m.streaming.streamingType = getStreamingType().LIVE_REWIND
-          __togglePlayPause()
-          __loadStreamingURL(m.lastKey, m.lastId, getStreamingAction().PLAY, getStreamingType().DEFAULT)
-          m.videoPlayer.control = "play"
-        else
-          ' en live-rewind, normalmente "live edge" es duration (ventana) o el final
-          dur = m.timelineBar.duration
-          if dur <> invalid and dur > 0 then
-            m.videoPlayer.seek = dur
-
-          end if
-          m.videoPlayer.control = "play"
-        end if
-      end if
+      __goToLive()
     end if
 
     handled = true
@@ -1080,6 +1062,7 @@ end sub
 
 ' Procesa la respuesta al obtener la url de lo que se quiere ver
 sub onStreamingsResponse() 
+  print "onStreamingsResponse inicio"
   m.isLoadingStreamingRequest = false
 
   if validateStatusCode(m.apiRequestManager.statusCode) then
@@ -1227,6 +1210,8 @@ sub onStreamingsResponse()
   end if
 
   m.apiRequestManager = clearApiRequest(m.apiRequestManager)
+
+  print "onStreamingsResponse fin"
 end sub
 
 ' Procesa la respuesta al obtener el Summary de un programa
@@ -2091,7 +2076,6 @@ sub __updateTimeline()
   ' Si el stream es un Live, n o hacer nada
   if m.streaming = invalid or (m.streaming <> invalid and LCase(m.streaming.type) = getVideoType().LIVE) then return
   if m.streaming <> invalid and LCase(m.streaming.type) = getVideoType().LIVE_REWIND and m.streaming.streamingType = getStreamingType().DEFAULT then return
-
 																					  
   ' Si hay seek pendiente, mantenemos el preview y no pisamos con position real
   if m.pendingSeekActive and m.pendingSeekPosition <> invalid then
@@ -2108,6 +2092,10 @@ sub __updateTimeline()
   duration = m.videoPlayer.duration
   position = m.videoPlayer.position
 
+  if (m.videoPlayer.position = 0) then
+    position = m.videoPlayer.duration
+  end if
+  
   ' Si el contenido es un Live Rewind, setear la posición
   if m.isLiveRewind and m.liveRewindDuration <> invalid then
     duration = m.liveRewindDuration
@@ -2129,6 +2117,7 @@ sub __updateTimeline()
   ' Setear la posición del timelinebar
   if position <> invalid and position >= 0 then 
     m.timelineBar.position = position
+    print "Position D ;" position
    end if
 end sub
 
@@ -2386,6 +2375,7 @@ sub __loadStreamingURL(key, id, streamingAction, streamingType = getStreamingTyp
 
   m.playerLoaded = false
   
+  print "__loadStreamingURL"
   ' Falta agregar el update Session
   requestId = createRequestId()
   action = {
@@ -2849,7 +2839,7 @@ sub __commitPendingSeek()
         m.pendingSeekPosition = invalid
         if m.timelineBar <> invalid then m.timelineBar.seeking = false
 
-        __reconnectStream(false)
+        __reloadLive()
         return
       end if
     end if
@@ -3826,3 +3816,27 @@ if m.streaming = invalid then return invalid
   if selectedStartSeconds = invalid then return invalid
   return selectedStartSeconds
 end function
+
+sub __reloadLive()
+
+  m.enableGoLive = false
+  restartVideo(true)
+  if m.isLiveRewind and m.videoPlayer <> invalid then
+    if LCase(m.streaming.type) = getVideoType().LIVE_REWIND and m.streaming.streamingType = getStreamingType().LIVE_REWIND then
+
+      m.timelineBar.isLive = true
+      m.streaming.streamingType = getStreamingType().LIVE_REWIND
+      __togglePlayPause()
+      __loadStreamingURL(m.lastKey, m.lastId, getStreamingAction().PLAY, getStreamingType().DEFAULT)
+      m.videoPlayer.control = "play"
+    else
+      ' en live-rewind, normalmente "live edge" es duration (ventana) o el final
+      dur = m.timelineBar.duration
+      if dur <> invalid and dur > 0 then
+        m.videoPlayer.seek = dur
+
+      end if
+      m.videoPlayer.control = "play"
+    end if
+  end if
+end sub
