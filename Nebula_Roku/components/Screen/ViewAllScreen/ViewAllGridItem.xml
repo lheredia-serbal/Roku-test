@@ -21,6 +21,7 @@
       <Poster
         id="metadataGradient"
         uri="pkg:/images/shared/gradient_bg.png"
+        opacity="0.8"
         loadDisplayMode="scaleToFill" />
       <LayoutGroup
         id="progressGroup"

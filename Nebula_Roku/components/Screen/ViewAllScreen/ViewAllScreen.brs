@@ -14,6 +14,8 @@ sub init()
   m.programImageBackground = m.top.findNode("programImageBackground")
   ' Bloque grilla nativa: referencia al PosterGrid de ViewAll.
   m.posterGrid = m.top.findNode("posterGrid")
+  ' Referencia al título del carrusel mostrado sobre la grilla.
+  m.carouselTitle = m.top.findNode("carouselTitle")
   ' Referencia al mensaje mostrado cuando ViewAll no tiene contenido.
   m.noResultsLabel = m.top.findNode("noResultsLabel")
   ' Cacheamos último foco para restaurarlo tras errores de red/validación.
@@ -115,6 +117,7 @@ sub onDataChange()
     m.viewAllCarouselStyle = payload.style
   end if
   __applyLayout()
+  __applyCarouselTitle()
   __applyTranslations()
   ' Ocultamos cualquier estado vacío anterior mientras se carga el nuevo contenido.
   __showNoResults(false)
@@ -572,11 +575,19 @@ sub __applyLayout()
   m.programImageBackground.width = width
   m.programImageBackground.height = height
   m.programInfo.translation = [safeX + scaleValue(35, m.scaleInfo), safeY ]
+    ' Título del carrusel alineado al margen izquierdo de la grilla y ubicado sobre ella.
+  if m.carouselTitle <> invalid then
+    m.carouselTitle.translation = [safeX + scaleValue(35, m.scaleInfo), safeY + scaleValue(220, m.scaleInfo)]
+    m.carouselTitle.width = width - safeX - scaleValue(20, m.scaleInfo)
+    m.carouselTitle.height = scaleValue(40, m.scaleInfo)
+  end if
   ' Bloque grilla nativa: configuramos medidas base de la grilla en la zona inferior de ViewAll.
-  m.posterGrid.translation = scaleSize([safeX + 10, safeY + 190], m.scaleInfo)
+  m.posterGrid.translation = [safeX + scaleValue(40, m.scaleInfo), safeY + scaleValue(260, m.scaleInfo)]
   m.posterGrid.itemSize = __applyPosterGridItemLayout(m.viewAllCarouselStyle)
+  m.posterGrid.vertFocusAnimationStyle = __applyPosterGridItemVerticalFocus(m.viewAllCarouselStyle)
   m.posterGrid.itemSpacing = scaleSize([22, 34], m.scaleInfo)
   m.posterGrid.itemComponentName = "ViewAllGridItem"
+  m.posterGrid.vertFocusAnimationStyle = "fixedFocus"
   ' Bloque foco: aplicamos el color primario al borde/bitmap de selección del PosterGrid.
   if m.global.colors <> invalid and m.global.colors.PRIMARY <> invalid then m.posterGrid.focusBitmapBlendColor = m.global.colors.PRIMARY
   ' El ancho completo permite que horizAlign centre el texto en la pantalla.
@@ -591,30 +602,41 @@ end sub
 function __applyPosterGridItemLayout(style as Dynamic)
   if m.posterGrid = invalid or m.scaleInfo = invalid then return 0
 
-  itemScale = 0.8
   itemSize = [180, 270]
 
   if style = -1 then
     itemSize = [120, 120]
   else if style = getCarouselStyles().PORTRAIT_FEATURED then
     itemSize = [243, 364]
-    return scaleSize(itemSize, m.scaleInfo)
   else if style = getCarouselStyles().LANDSCAPE_STANDARD then
     itemSize = [450, 253]
   else if style = getCarouselStyles().LANDSCAPE_FEATURED then
     itemSize = [450, 253]
   else if style = getCarouselStyles().SQUARE_STANDARD then
-    itemSize = [140, 140]
+    itemSize = [120, 120]
   else if style = getCarouselStyles().SQUARE_FEATURED then
     itemSize = [310, 110]
     return scaleSize(itemSize, m.scaleInfo)
   end if
 
-  itemSize = [itemSize[0] * itemScale, itemSize[1] * itemScale]
-
   return scaleSize(itemSize, m.scaleInfo)
 end function
 
+' Aplica al PosterGrid cuales son los filas que puede scrollear
+function __applyPosterGridItemVerticalFocus(style as Dynamic)
+
+  vertFocusAnimationStyle = "floatingFocus"
+
+  if style = getCarouselStyles().PORTRAIT_FEATURED then
+    vertFocusAnimationStyle = "fixedFocus"
+  else if style = getCarouselStyles().LANDSCAPE_STANDARD then
+    vertFocusAnimationStyle = "fixedFocus"
+  else if style = getCarouselStyles().LANDSCAPE_FEATURED then
+    vertFocusAnimationStyle = "fixedFocus"
+  end if
+
+  return vertFocusAnimationStyle
+end function
 
 ' Aplica los textos traducidos de ViewAll.
 sub __applyTranslations()
@@ -626,6 +648,15 @@ end sub
 sub __showNoResults(show as boolean)
   if m.noResultsLabel = invalid then return
   m.noResultsLabel.visible = show
+end sub
+
+' Aplica el nombre del carrusel recibido en el payload de navegación.
+sub __applyCarouselTitle()
+  if m.carouselTitle = invalid then return
+  carouselTitleText = ""
+  if m.viewAllPayload <> invalid and m.viewAllPayload.title <> invalid then carouselTitleText = m.viewAllPayload.title.toStr().trim()
+  m.carouselTitle.text = carouselTitleText
+  m.carouselTitle.visible = carouselTitleText <> ""
 end sub
 
 ' Construye el string de tags del título usando formato: "tag" | Tag2 | Tag3.
@@ -696,6 +727,10 @@ sub __clearViewAllCarousel()
   m.lastFocusedProgram = invalid
   m.lastFocusedProgramIndex = 0
   m.itemfocused = invalid
+  if m.carouselTitle <> invalid then
+    m.carouselTitle.text = ""
+    m.carouselTitle.visible = false
+  end if
   if m.posterGrid <> invalid then
     m.posterGrid.unobserveField("itemFocused")
     m.posterGrid.unobserveField("itemSelected")
@@ -756,11 +791,15 @@ sub __configurePosterGridLayout(totalItems as integer)
 
   visibleRows = 2
 
-   visibleRows = 2
   if itemHeightWithSpacing > 0 then visibleRows = Int((availableHeight + spacingY) / itemHeightWithSpacing)
+  if visibleRows < 1 then visibleRows = 1
+
   if totalItems > 0 then
     totalRows = Int((totalItems + columns - 1) / columns)
     if visibleRows > totalRows then visibleRows = totalRows
+    ' MarkupGrid se comporta como carrusel horizontal cuando numRows queda en 1.
+    ' Si hay más de una fila de contenido, forzamos al menos 2 filas para mantener navegación/scroll de grilla.
+    if visibleRows = 1 and totalRows > 1 then visibleRows = 2
   end if
 
   m.posterGrid.numColumns = columns
@@ -864,8 +903,13 @@ sub __populateViewAllCarousel(data as Object)
   if m.posterGrid = invalid then return
   ' Limpiamos contenido previo antes de repintar la grilla.
   __clearViewAllCarousel()
+  __applyCarouselTitle()
   sourceItems = __getViewAllSourceItems(data)
   if m.viewAllCarouselStyle = invalid and sourceItems.count() > 0 and sourceItems[0] <> invalid and sourceItems[0].style <> invalid then m.viewAllCarouselStyle = sourceItems[0].style
+  if m.carouselTitle <> invalid and m.carouselTitle.text = "" and sourceItems.count() > 0 and sourceItems[0] <> invalid and sourceItems[0].title <> invalid then
+    m.carouselTitle.text = sourceItems[0].title.toStr().trim()
+    m.carouselTitle.visible = m.carouselTitle.text <> ""
+  end if
   m.posterGrid.itemSize = __applyPosterGridItemLayout(m.viewAllCarouselStyle)
   contentRoot = createObject("roSGNode", "ContentNode")
   gridItems = []

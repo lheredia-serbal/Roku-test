@@ -246,9 +246,9 @@ sub initData()
     m.mainLogo.height = logoHeight
     m.mainLogo.loadWidth = logoWidth
     m.mainLogo.loadHeight = logoHeight
-    m.mainLogo.translation = [(width - scaleValue(250, m.scaleInfo)), scaleValue(30, m.scaleInfo)]
+    m.mainLogo.translation = [(width - scaleValue(275, m.scaleInfo)), scaleValue(30, m.scaleInfo)]
     m.nameOrganization.width = logoWidth
-    m.nameOrganization.translation = [(width - safeX - scaleValue(180, m.scaleInfo)), scaleValue(130, m.scaleInfo)]
+    m.nameOrganization.translation = [(width - safeX - scaleValue(205, m.scaleInfo)), scaleValue(130, m.scaleInfo)]
     m.withoutContentLayoutGroup.translation = [(width / 2), (height / 2)]
     
     errorSafeZone = width - (safeX * 2) - scaleValue(230, m.scaleInfo)
@@ -1486,7 +1486,7 @@ end sub
 
 ' Carga la configuracion inicial de la Main.
 sub __configMain()
-  m.programInfo.width = (m.scaleInfo.width - scaleValue(400, m.scaleInfo))
+  m.programInfo.width = (m.scaleInfo.width - scaleValue(450, m.scaleInfo))
   m.programInfo.initConfig = true
 
   m.myMenu.initConfig = true

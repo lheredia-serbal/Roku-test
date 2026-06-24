@@ -1618,7 +1618,7 @@ sub __updateSearchMinCharsFeedback()
     if not m.hasSearchMinCharsConfig then
       m.searchActionButton.disable = false
     else
-      m.searchActionButton.disable = typedChars > 0 and typedChars < m.searchMinChars
+      m.searchActionButton.disable = typedChars > -1 and typedChars < m.searchMinChars
     end if
   end if
 

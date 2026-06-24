@@ -7,6 +7,7 @@ sub init()
     m.scaleInfo = m.global.scaleInfo
     m.defaultHeight = scaleValue(32, m.scaleInfo)
     m.spacings = scaleValue(5, m.scaleInfo)
+    m.titleBottomSpacing = scaleValue(10, m.scaleInfo)
     m.reservedWidth = m.scaleInfo.width - scaleValue(140, m.scaleInfo)
 end sub
 
@@ -17,7 +18,6 @@ sub initConfig()
         if m.top.width <> 0 then m.reservedWidth = m.top.width
 
         if m.programTitle <> invalid then m.programTitle.width = m.reservedWidth
-        if m.programTitle <> invalid then m.programTitle.height = scaleValue(50, m.scaleInfo)
         if m.programSubtitle <> invalid then m.programSubtitle.width = m.reservedWidth
         if m.programSynopsis <> invalid then m.programSynopsis.width = m.reservedWidth
     end if
@@ -40,12 +40,12 @@ sub changeProgram()
     end if
 
     if title <> "" then
-        m.programTitle = __createShadowLabel("programTitle", title, "font:MediumBoldSystemFont", m.defaultHeight)
+        m.programTitle = __createShadowLabel("programTitle", title, "font:LargeBoldSystemFont", m.defaultHeight)
         m.programContainer.appendChild(m.programTitle)
     end if
 
     if program.subtitle <> invalid and program.subtitle <> "" then
-        m.programSubtitle = __createShadowLabel("programSubtitle", program.subtitle, "font:SmallBoldSystemFont", m.defaultHeight)
+        m.programSubtitle = __createShadowLabel("programSubtitle", program.subtitle, "font:MediumBoldSystemFont", m.defaultHeight)
         m.programContainer.appendChild(m.programSubtitle)
     end if
 
@@ -187,9 +187,19 @@ end sub
 ' Mantiene el espaciado vertical únicamente entre los componentes existentes.
 sub __updateItemSpacings()
     itemSpacings = []
-    for i = 0 to m.programContainer.getChildCount() - 1
-        itemSpacings.push(m.spacings)
+    childCount = m.programContainer.getChildCount()
+
+    for i = 0 to childCount - 2
+        currentChild = m.programContainer.getChild(i)
+        nextChild = m.programContainer.getChild(i + 1)
+
+        if currentChild <> invalid and currentChild.id = "programTitle" and nextChild <> invalid and nextChild.id = "programSubtitle" then
+            itemSpacings.push(m.titleBottomSpacing)
+        else
+            itemSpacings.push(m.spacings)
+        end if
     end for
+
     m.programContainer.itemSpacings = itemSpacings
 end sub
 

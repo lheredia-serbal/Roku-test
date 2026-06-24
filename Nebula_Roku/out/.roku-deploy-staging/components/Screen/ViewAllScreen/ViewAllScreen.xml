@@ -61,6 +61,17 @@
       id="programInfo"
       visible="false"/>
 
+    <!-- Título del carrusel seleccionado, alineado al inicio de la grilla. -->
+    <ShadowLabel
+      id="carouselTitle"
+      visible="false"
+      font="font:MediumBoldSystemFont"
+      color="0xFFFFFFFF"
+      horizAlign="left"
+      vertAlign="bottom"
+      wrap="false"
+      maxLines="1" />
+
     <!-- Bloque de grilla nativa: MarkupGrid permite customizar la imagen interna de cada item. -->
     <MarkupGrid
       id="posterGrid"

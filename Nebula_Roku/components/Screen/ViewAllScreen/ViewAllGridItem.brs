@@ -49,12 +49,12 @@ sub onItemContentChanged()
     imageSize = scaleSize([60, 60], m.scaleInfo)
     imageTranslation = [
       (itemSize[0] - imageSize[0]) / 2,
-      scaleValue(6, m.scaleInfo)
+      scaleValue(15, m.scaleInfo)
     ]
 
     m.itemTitle.text = m.top.itemContent.title
     m.itemTitle.width = itemSize[0]
-    titleY = scaleValue(52, m.scaleInfo)
+    titleY = scaleValue(70, m.scaleInfo)
     m.itemTitle.height = itemSize[1] - titleY
     m.itemTitle.translation = [0, titleY]
     m.itemTitle.visible = true
@@ -161,7 +161,6 @@ end sub
 sub __showSquareFeaturedCarouselItem(itemSize as Object)
   componentName = "SquareFeaturedItem"
   if m.top.itemContent.contentType = getCarouselContentType().PROGRAMS then
-    m.metadataGroup.width = scaleValue(100, m.scaleInfo)
     componentName = "SquareFeaturedProgramItem"
   else 
     
