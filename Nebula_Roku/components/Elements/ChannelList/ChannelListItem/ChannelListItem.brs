@@ -54,9 +54,9 @@ sub currRectChanged()
     m.theRect.width = m.top.currRect.width 'Ya fue cambiado en el componente padre
     m.theRect.height = m.top.currRect.height 'Ya fue cambiado en el componente padre
 
-    m.channelInfo.width = scaleValue(190, m.scaleInfo)
-    m.programInfo.width = scaleValue(190, m.scaleInfo)
-    m.programTime.width = scaleValue(190, m.scaleInfo)
+    m.channelInfo.width = scaleValue(170, m.scaleInfo)
+    m.programInfo.width = scaleValue(170, m.scaleInfo)
+    m.programTime.width = scaleValue(170, m.scaleInfo)
 
     m.channelImage.width = scaleValue(60, m.scaleInfo)
     m.channelImage.height = scaleValue(60, m.scaleInfo)

@@ -629,6 +629,7 @@ sub onSelectItem()
         carouselId: m.carousels[m.carouselIndex].id
         carouselCode: m.itemSelected.carouselCode
         title: m.itemSelected.carouselTitle
+        titleTagsText: m.itemSelected.carouselTitleTagsText
       })
     end if
 

@@ -577,12 +577,12 @@ sub __applyLayout()
   m.programInfo.translation = [safeX + scaleValue(35, m.scaleInfo), safeY ]
     ' Título del carrusel alineado al margen izquierdo de la grilla y ubicado sobre ella.
   if m.carouselTitle <> invalid then
-    m.carouselTitle.translation = [safeX + scaleValue(35, m.scaleInfo), safeY + scaleValue(220, m.scaleInfo)]
+    m.carouselTitle.translation = [safeX + scaleValue(35, m.scaleInfo), safeY + scaleValue(200, m.scaleInfo)]
     m.carouselTitle.width = width - safeX - scaleValue(20, m.scaleInfo)
     m.carouselTitle.height = scaleValue(40, m.scaleInfo)
   end if
   ' Bloque grilla nativa: configuramos medidas base de la grilla en la zona inferior de ViewAll.
-  m.posterGrid.translation = [safeX + scaleValue(40, m.scaleInfo), safeY + scaleValue(260, m.scaleInfo)]
+  m.posterGrid.translation = [safeX + scaleValue(35, m.scaleInfo), safeY + scaleValue(260, m.scaleInfo)]
   m.posterGrid.itemSize = __applyPosterGridItemLayout(m.viewAllCarouselStyle)
   m.posterGrid.vertFocusAnimationStyle = __applyPosterGridItemVerticalFocus(m.viewAllCarouselStyle)
   m.posterGrid.itemSpacing = scaleSize([22, 34], m.scaleInfo)
@@ -653,9 +653,31 @@ end sub
 ' Aplica el nombre del carrusel recibido en el payload de navegación.
 sub __applyCarouselTitle()
   if m.carouselTitle = invalid then return
+
   carouselTitleText = ""
-  if m.viewAllPayload <> invalid and m.viewAllPayload.title <> invalid then carouselTitleText = m.viewAllPayload.title.toStr().trim()
-  m.carouselTitle.text = carouselTitleText
+  carouselTitleTagsText = ""
+
+  if m.viewAllPayload <> invalid then
+    if m.viewAllPayload.title <> invalid then carouselTitleText = m.viewAllPayload.title.toStr().trim()
+
+    if m.viewAllPayload.titleTagsText <> invalid then
+      carouselTitleTagsText = m.viewAllPayload.titleTagsText.toStr().trim()
+    else if m.viewAllPayload.titleTags <> invalid then
+      carouselTitleTagsText = __buildCarouselTitleTagsText(m.viewAllPayload.titleTags)
+    end if
+  end if
+
+  m.carouselTitle.drawingStyles = {
+    "default": { "fontUri": "font:MediumBoldSystemFont", "color": "0xFFFFFFFF" }
+    "titleTags": { "fontUri": "font:MediumBoldSystemFont", "color": "0xFFA500FF" }
+  }
+
+  if carouselTitleTagsText <> "" then
+    m.carouselTitle.text = carouselTitleText + " <titleTags> " + carouselTitleTagsText + "</titleTags>"
+  else
+    m.carouselTitle.text = carouselTitleText
+  end if
+
   m.carouselTitle.visible = carouselTitleText <> ""
 end sub
 

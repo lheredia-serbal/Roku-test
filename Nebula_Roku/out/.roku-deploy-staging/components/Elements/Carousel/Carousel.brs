@@ -320,6 +320,7 @@ sub __populateList()
       carouselId: m.top.id
       carouselCode: m.top.code
       carouselTitle: m.top.title
+      carouselTitleTagsText: m.top.titleTagsText
     })
   end if
 

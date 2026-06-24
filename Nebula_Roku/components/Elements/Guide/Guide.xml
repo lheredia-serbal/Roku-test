@@ -106,8 +106,7 @@
                                 vertAlign="center"
                                 horizAlign="center"
                                 focusable="true"
-                                font="font:TinySystemFont" />
-
+                                font="font:MediumSystemFont" />
 
                             <Poster 
                                 id="currentChannelImage"

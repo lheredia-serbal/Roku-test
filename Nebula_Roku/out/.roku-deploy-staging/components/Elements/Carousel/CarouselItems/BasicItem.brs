@@ -40,6 +40,8 @@ sub itemContentChanged()
 
         m.progressLeft.width = 0
         m.progressRight.width = 0
+        ' Oculta metadatos en tarjetas "Ver más/Guía" y limpia estado para que el foco no los vuelva a mostrar.
+        m.showMetadataGroup = false
         ' Oculta metadatos en tarjetas "Ver más/Guía".
         if m.metadataGroup <> invalid then m.metadataGroup.visible = false 
         return
@@ -275,12 +277,18 @@ sub __applyMetadataGroupVisibility()
     if m.top.groupHasFocus <> invalid and m.top.groupHasFocus = true then hasCarouselFocus = true
 
     if m.metadataGroup <> invalid then
-        ' En el carrusel principal de SearchScreen solo mostramos metadata cuando item y carrusel tienen foco.
-        if m.isSearchScreenContext then
-            m.metadataGroup.visible = (m.showMetadataGroup and hasItemFocus and hasCarouselFocus)
-        else if m.isSearchScreenContext then
-            ' En otros carruseles de SearchScreen ocultamos metadata.
+        isSeeMoreOrGuideItem = false
+        if m.top.itemContent <> invalid then
+            if m.top.itemContent.showSeeMore <> invalid and m.top.itemContent.showSeeMore = true then isSeeMoreOrGuideItem = true
+            if m.top.itemContent.goToGuide <> invalid and m.top.itemContent.goToGuide = true then isSeeMoreOrGuideItem = true
+        end if
+
+        ' Las tarjetas "Ver todos/Guía" nunca deben mostrar información de programa, incluso al recibir foco.
+        if isSeeMoreOrGuideItem then
             m.metadataGroup.visible = false
+        else if m.isSearchScreenContext then
+            ' En SearchScreen solo mostramos metadata cuando item y carrusel tienen foco.
+            m.metadataGroup.visible = (m.showMetadataGroup and hasItemFocus and hasCarouselFocus)
         else
             ' Fuera de SearchScreen mantenemos el comportamiento estándar.
             m.metadataGroup.visible = m.showMetadataGroup
