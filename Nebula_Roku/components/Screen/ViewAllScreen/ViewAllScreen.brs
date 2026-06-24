@@ -741,7 +741,8 @@ sub __configurePosterGridLayout(totalItems as integer)
 
   gridX = m.posterGrid.translation[0]
   gridY = m.posterGrid.translation[1]
-  availableWidth = m.scaleInfo.width - gridX - m.scaleInfo.safeZone.x
+  ' Bloque grilla nativa: extendemos la grilla hasta el borde derecho visual con margen mínimo.
+  availableWidth = m.scaleInfo.width - gridX - scaleValue(10, m.scaleInfo)
   availableHeight = scaleValue(500, m.scaleInfo)
   itemWidthWithSpacing = itemSize[0] + spacingX
   itemHeightWithSpacing = itemSize[1] + spacingY

@@ -86,7 +86,6 @@ end sub
 sub onVisibleAutoHideTimerFired()
   if m.top.loading.visible then
     m.top.loading.visible = false
-    print "Visible false 1"
     print 
   end if
 end sub
@@ -208,7 +207,6 @@ sub initData()
   __configMain()
   if m.top.onFocus and m.top.loadData then
     if m.top.loading.visible = false then m.top.loading.visible = true
-    print "Visible true 1"
     
     safeX = m.scaleInfo.safeZone.x
     safeY = m.scaleInfo.safeZone.y
@@ -311,7 +309,6 @@ sub initFocus()
     if m.lastFocus <> invalid then m.lastFocus.setFocus(true)
     if m.restoreFocusToLastNews = true then __updateOverlayVisibilityByFocus() ' Oculta selectedIndicator cuando el foco restaurado pertenece a News.
     m.top.loading.visible = false
-    print "Visible false 2"
   end if
 end sub
 
@@ -481,7 +478,6 @@ sub onSelectItem()
     if m.itemSelected <> invalid and m.itemSelected.goToGuide = true then
       __markLastFocus()
       m.top.loading.visible = true
-      print "Visible true 2"
       requestId = createRequestId()
 
       action = {
@@ -512,7 +508,6 @@ sub onSelectItem()
     if m.itemSelected <> invalid and m.itemSelected.showSeeMore = true then
       __markLastFocus()
       m.top.loading.visible = true
-      print "Visible true 3"
 
       ' Obtenemos carouselId desde carouselData[carouselIndex].id como pide el flujo de Home -> ViewAll.
       carouselIndex = __getFocusedCarouselIndex()
@@ -531,6 +526,8 @@ sub onSelectItem()
         menuSelectedItemId = m.menuSelectedItem.id
       end if
 
+      m.top.loading.visible = false
+
       m.top.viewAll = FormatJson({
         menuSelectedItemId: menuSelectedItemId
         carouselId: carouselId
@@ -548,7 +545,6 @@ sub onSelectItem()
         m.pinDialog = createAndShowPINDialog(m.top, i18n_t(m.global.i18n, "shared.parentalControlModal.title"), "onPinDialogLoad", [i18n_t(m.global.i18n, "button.ok"), i18n_t(m.global.i18n, "button.cancel")])
       else 
         m.top.loading.visible = true
-        print "Visible true 4"
         watchSessionId = getWatchSessionId()
 
         requestId = createRequestId()
@@ -579,8 +575,6 @@ sub onSelectItem()
     else
       m.apiRequestManager = clearApiRequest(m.apiRequestManager) 
       __markLastFocus()
-      m.top.loading.visible = true
-      print "Visible true 5"
       ' Construye payload de detalle reutilizando el item seleccionado.
       detailPayload = m.itemSelected
       ' Garantiza redirectKey para que ProgramDetail pueda resolver el origen y navegación.
@@ -590,6 +584,7 @@ sub onSelectItem()
       ' Marca explícitamente que esta navegación no proviene del carrusel de News.
       detailPayload.openFromNews = false
       ' Envía payload completo a ProgramDetail.
+      m.top.loading.visible = false
       m.top.detail = FormatJson(detailPayload)
     end if
   end if
@@ -623,7 +618,6 @@ function __handleNewsOkAction() as boolean
 
     ' Muestra loading antes de validar sesión de reproducción.
     m.top.loading.visible = true
-    print "Visible true 6"
     ' Recupera o crea el watchSessionId vigente.
     watchSessionId = getWatchSessionId()
     ' Genera identificador único para la acción de red.
@@ -663,9 +657,6 @@ function __handleNewsOkAction() as boolean
   m.apiRequestManager = clearApiRequest(m.apiRequestManager)
   ' Guarda el foco actual para restauración al volver desde ProgramDetailScreen.
   __markLastFocus()
-  ' Activa loading para mantener consistencia visual con la navegación estándar.
-  m.top.loading.visible = true
-  print "Visible true 7"
   ' Dispara navegación a ProgramDetailScreen reutilizando el mismo payload de detalle.
 
   m.top.detail = FormatJson({
@@ -779,7 +770,6 @@ sub onLastWatchedResponse()
       m.apiRequestManager = action.apiRequestManager
     else
       m.top.loading.visible = false
-      print "Visible false 3"
       statusCode = m.apiRequestManager.statusCode
       m.apiRequestManager = clearApiRequest(m.apiRequestManager) 
       m.top.openGuide = false
@@ -795,7 +785,6 @@ sub onLastWatchedResponse()
     end if 
   else
     m.top.loading.visible = false
-    print "Visible false 4"
     statusCode = m.apiRequestManager.statusCode
     errorResponse = m.apiRequestManager.errorResponse    
 
@@ -837,7 +826,6 @@ sub onWatchValidateResponse()
         end if
       else 
         m.top.loading.visible = false
-        print "Visible false 5"
         m.apiRequestManager = clearApiRequest(m.apiRequestManager)
         
         __validateError(0, resp.resultCode, invalid)
@@ -845,7 +833,6 @@ sub onWatchValidateResponse()
       end if
     else 
       m.top.loading.visible = false
-      print "Visible false 6"
       statusCode = m.apiRequestManager.statusCode
       errorResponse = m.apiRequestManager.errorResponse
       m.apiRequestManager = clearApiRequest(m.apiRequestManager)
@@ -878,10 +865,10 @@ sub onStreamingsResponse()
         streaming.key = m.itemSelected.redirectKey 
         streaming.id = m.itemSelected.redirectId
         streaming.streamingType = getStreamingType().DEFAULT
+        m.top.loading.visible = false
         m.top.streaming = FormatJson(streaming)
       else 
         m.top.loading.visible = false
-        print "Visible false 7"
         __markLastFocus()
         printError("Streamings Emty:", m.apiRequestManager.response)
         m.apiRequestManager = clearApiRequest(m.apiRequestManager)
@@ -889,7 +876,6 @@ sub onStreamingsResponse()
       end if
     else 
       m.top.loading.visible = false
-      print "Visible false 8"
       statusCode = m.apiRequestManager.statusCode
       errorResponse = m.apiRequestManager.errorResponse
       removePendingAction(m.apiRequestManager.requestId)
@@ -1104,13 +1090,11 @@ sub onMenuResponse()
         m.myMenu.items = resp.data
       else 
         m.top.loading.visible = false
-        print "Visible false 9"
         m.myMenu.items = [] 
         m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.unhandled"), i18n_t(m.global.i18n, "shared.errorComponent.extendedMessage"), "onDialogClosedFocusContainer", [i18n_t(m.global.i18n, "button.cancel")])
       end if 
     else 
       m.top.loading.visible = false
-      print "Visible false 10"
       error =  m.apiRequestManager.errorResponse
       statusCode =  m.apiRequestManager.statusCode
 
@@ -1170,20 +1154,16 @@ sub onContentViewResponse()
           
           populateCarousels(resp.data)
           m.top.loading.visible = false
-          print "Visible false 11"
         else 
           __showWithoutContent()
           m.top.loading.visible = false
-          print "Visible false 12"
         end if
       else
         __showWithoutContent()
         m.top.loading.visible = false
-        print "Visible false 13"
       end if
     else 
       m.top.loading.visible = false
-      print "Visible false 14"
       error = m.apiRequestManager.errorResponse
       statusCode = m.apiRequestManager.statusCode
 
@@ -1221,7 +1201,6 @@ sub onPinDialogLoad()
   
   if (resp.option = 0 and resp.pin <> invalid and Len(resp.pin) = 4) then 
     m.top.loading.visible = true
-  print "Visible true 8"
     action = {
       node: m.top
       apiRequestManager: m.apiRequestManager
@@ -1284,13 +1263,11 @@ sub onParentalControlResponse()
           m.apiRequestManager = action.apiRequestManager
         else
           m.top.loading.visible = false
-          print "Visible false 15"
           __markLastFocus() 
           m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.parentalControlModal.error.invalid"), i18n_t(m.global.i18n, "shared.parentalControlModal.error.description"), "onDialogClosedFocusContainer")
       end if
     else     
       m.top.loading.visible = false
-      print "Visible false 16"
       statusCode = m.apiRequestManager.statusCode
       errorResponse = m.apiRequestManager.errorResponse
       m.apiRequestManager = clearApiRequest(m.apiRequestManager)
@@ -1417,7 +1394,6 @@ sub __selectMenuItem(menuSelectedItem)
   else if menuSelectedItem.key = "ContentViewId" then
     if m.myMenu.action <> invalid and m.myMenu.action <> "" and m.myMenu.action <> "collapse" then m.myMenu.action = "collapse"
     if not m.top.loading.visible then m.top.loading.visible = true
-    print "Visible true 9"
 
     m.isHomeSelected = (menuSelectedItem.behavior <> invalid and menuSelectedItem.behavior = "home")
 
@@ -1453,7 +1429,6 @@ sub __selectMenuItem(menuSelectedItem)
     __focusCarousels()
 
     m.top.loading.visible = true
-    print "Visible true 10"
     requestId = createRequestId()
 
     action = {
@@ -1478,7 +1453,6 @@ sub __selectMenuItem(menuSelectedItem)
   else 
     __showWithoutContent()
     m.top.loading.visible = false
-    print "Visible false 17"
     m.myMenu.action = "collapse"
     m.lastFocus = invalid
     printError("Menu Selected:", menuSelectedItem.key + " " + menuSelectedItem.id.toStr())
@@ -1507,8 +1481,6 @@ end sub
 ' Dispara la redireccion a la pantalla de sesiones activas porque se alcanzo el limite de perfiles viendo
 sub __redirectToManySessionsScreeen()
   __markLastFocus()
-  if not m.top.loading.visible then m.top.loading.visible = true
-  print "Visible true 11"
   m.top.pendingStreamingSession = FormatJson({ redirectKey: m.itemSelected.redirectKey, redirectId: m.itemSelected.redirectId })
 end sub
 
@@ -1571,7 +1543,6 @@ end sub
 ' Metodo encargado de limpiar todas las dependecias, cancelar las peticiones y quitar los escuchadores de la pantalla
 sub __clearScreen()
   m.top.loading.visible = true
-  print "Visible true 12"
 
   m.myMenu.unobserveField("selectedItem")
   m.myMenu.items = invalid
@@ -2148,7 +2119,6 @@ sub __validateError(statusCode, resultCode, errorResponse)
     if (error.code = 5014) then 
       ' El usuario debe regresar al selector de perfiles.
       m.top.loading.visible = true
-      print "Visible true 13"
       __redirectToProfilesScreen()
     else if (error.code = 5931) then
       ' No tiene plan: mostrar diálogo con mensaje específico.
