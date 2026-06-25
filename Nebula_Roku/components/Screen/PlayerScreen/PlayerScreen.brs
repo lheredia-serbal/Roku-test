@@ -242,8 +242,6 @@ end sub
 ' entonces sigue con el siguente metodo onKeyEvent del compoente superior
 function onKeyEvent(key as String, press as Boolean) as Boolean
 
-  if isPINDialogVisible() then return true
-
   nowMs = __getNowMilliseconds() ' timestamp actual en milisegundos para filtros de entrada
 
   ' Bloquea eventos mientras se esta recargando o por una pequeña ventana posterior
@@ -382,7 +380,7 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
     if key = KeyButtons().OK then
       m.enableGoLive = false
 
-      __goToLive()
+      __reloadLive()
     end if
 
     handled = true
@@ -1815,7 +1813,13 @@ sub __setTimelineFromStreaming()
   ' Reiniciar los estados de la timelinebar
   m.timelineBar.visible = false
   m.timelineBar.baseEpochSeconds = invalid
+  if m.timelineBar.resetToken = invalid then m.timelineBar.resetToken = 0
+  m.timelineBar.resetToken = m.timelineBar.resetToken + 1
   m.timelineBar.position = -1
+  m.timelineBar.duration = -1
+  m.seekTimelineSyncPosition = invalid
+  m.pendingSeekActive = false
+  m.pendingSeekPosition = invalid
   m.liveRewindDuration = invalid
   m.liveRewindMinDuration = invalid
 
@@ -2236,7 +2240,6 @@ sub __closePlayer(onBack = false, logout = false)
   clearTimer(m.inactivityTimer)
   clearTimer(m.inactivityAutoCloseTimer)
   clearTimer(m.showTimeTimer)
-  closePINDialogWithoutValidation(m.top)
   
   m.top.data = ""
   m.beaconType = ""
@@ -3513,9 +3516,6 @@ sub __goToLive()
     m.pauseMomentFrozen = invalid
     m.pauseMoment = invalid
     m.diffDuration = 0
-
-    ' goToLiveEvent.emit()
-    if m.top <> invalid then m.top.goToLiveRequested = true
 
   ' El stream es DVR o VOD
   else if sType = getVideoType().DVR or sType = getVideoType().VOD then

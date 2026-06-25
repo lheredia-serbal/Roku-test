@@ -74,12 +74,54 @@ sub onDurationChanged()
 end sub
 
 sub onPositionChanged()
-  if m.top.position <> invalid then 
-    if (m.top.position = -1) then return
-    if m.top.position = 0 then return
+  if m.top.position <> invalid then
+    if (m.top.position = -1) then
+      __resetProgressState()
+      return
+    end if
     m.currentPosition = m.top.position
-  end if 
+  end if
   __updateProgress()
+end sub
+
+sub onResetTokenChanged()
+  __resetProgressState()
+end sub
+
+sub __resetProgressState()
+  m.currentDuration = 0
+  m.currentPosition = 0
+  m.lastPreviewEpoch = invalid
+  m.previewPinned = false
+  m.lastCommittedPosition = invalid
+  m.lastCommittedDuration = invalid
+  m.committedRemaining = invalid
+  m.pauseStartEpochSeconds = invalid
+  m.suspendUi = false
+  m.cachedProgressWidth = invalid
+  m.cachedThumbTranslation = invalid
+  m.cachedTimeText = invalid
+
+  if m.pauseTickTimer <> invalid then m.pauseTickTimer.control = "stop"
+  if m.progress <> invalid then m.progress.width = 0
+
+  thumbY = 0.0
+  if m.track <> invalid and m.thumb <> invalid then
+    trackY = 0.0
+    if m.track.translation <> invalid then trackY = m.track.translation[1]
+    thumbH = 0.0
+    if m.thumb.height <> invalid then thumbH = m.thumb.height
+    thumbY = trackY + (m.track.height / 2.0) - (thumbH / 2.0)
+  end if
+
+  if m.thumb <> invalid then m.thumb.translation = [0, thumbY]
+  if m.timeLabel <> invalid then m.timeLabel.text = "00:00"
+
+  if m.top <> invalid then
+    m.top.previewVisible = false
+    m.top.previewUri = ""
+    m.top.previewTimeText = ""
+  end if
 end sub
 
 sub __applyWidth()
