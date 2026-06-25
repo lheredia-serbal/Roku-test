@@ -216,6 +216,7 @@ sub init()
   m.pauseOnSeekActive = false
   ' Bandera para mostrar el mensaje de conectando
   m.disableLayoutChannelConnection = false
+  m.goStartPressed = false
 
   ' Variables para la velocidad cuando se esta mantiendo presionado el botón de adelantar o retroceder --- Tap acceleration (FF/RW) ---
   m.trickTapWindowMs = 1000
@@ -408,6 +409,7 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
     if (key = KeyButtons().OK) then
       m.enableGoLive = true
       if m.videoPlayer <> invalid then
+        m.goStartPressed = true
         m.actionPostChageState = "restart"
         ' Si el stream es un live, no hacer nada
         if LCase(m.streaming.type) = getVideoType().LIVE then return true
@@ -2154,6 +2156,10 @@ sub __updateTimeline()
   if position <> invalid and position >= 0 then 
     m.timelineBar.position = position
     print "Position D ;" position
+
+    if position > 5000
+      print "Error"
+    end if
    end if
 end sub
 

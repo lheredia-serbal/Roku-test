@@ -241,6 +241,7 @@ sub __updateProgress()
       if (thumbX <> invalid) then
         if thumbX < 0 then thumbX = 0
 
+        print "thumbY " ; thumbY
         m.thumb.translation = [thumbX, thumbY]
       end if
     end if
