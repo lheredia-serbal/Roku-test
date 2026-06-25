@@ -3,6 +3,8 @@ sub init()
     m.backgroundImage = m.top.findNode("backgroundImage")
     ' Referencia al poster secundario usado para el item entrante en la animación.
     m.incomingBackgroundImage = m.top.findNode("incomingBackgroundImage")
+    ' Referencia al gradiente de noticias ubicado sobre la imagen de fondo.
+    m.newsBackgroundPoster = m.top.findNode("newsBackgroundPoster")
     ' Referencia a la capa oscura que mejora legibilidad sobre la imagen.
     m.overlay = m.top.findNode("overlay")
     ' Referencia al label interno que muestra el título de la noticia actual.
@@ -93,6 +95,13 @@ sub updateLayoutForResolution()
         m.incomingBackgroundImage.translation = scaleSize([0, 0], m.scaleInfo)
     end if
 
+    ' Ajusta el gradiente de noticias para que cubra exactamente el bloque visible de noticias.
+    if m.newsBackgroundPoster <> invalid then
+        m.newsBackgroundPoster.width = scaleValue(baseScreenWidth, m.scaleInfo)
+        m.newsBackgroundPoster.height = scaleValue(baseScreenHeight, m.scaleInfo)
+        m.newsBackgroundPoster.translation = scaleSize([0, 0], m.scaleInfo)
+    end if
+
     ' Ajusta el overlay para que cubra exactamente el bloque visible de noticias.
     if m.overlay <> invalid then
         m.overlay.width = scaleValue(baseScreenWidth, m.scaleInfo)
@@ -103,7 +112,7 @@ sub updateLayoutForResolution()
     ' Ajusta el label de título para ubicarlo abajo a la izquierda del bloque de News.
     if m.newsTitle <> invalid then
         m.newsTitle.width = scaleValue(760, m.scaleInfo)
-        m.newsTitle.translation = scaleSize([140, 460], m.scaleInfo)
+        m.newsTitle.translation = scaleSize([122, 460], m.scaleInfo)
         m.newsTitle.visible = true
     end if
 

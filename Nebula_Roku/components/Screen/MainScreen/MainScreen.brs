@@ -11,6 +11,7 @@ sub init()
   m.newsContainer = m.top.findNode("newsContainer")
 
   'carousel
+  m.carousels = m.top.findNode("carousels")
   m.carouselContainer = m.top.findNode("carouselContainer")
   ' Observa el estado de la animación para restaurar overlays cuando termine la transición.
   if m.carouselContainerMoveAnimation <> invalid then m.carouselContainerMoveAnimation.observeField("state", "onCarouselContainerMoveAnimationStateChanged")
@@ -27,9 +28,6 @@ sub init()
 
   m.infoGradient = m.top.findNode("infoGradient")
   m.programImageBackground = m.top.findNode("programImageBackground")
-
-  ' Referencia al fondo de noticias a pantalla completa.
-  m.newsBackgroundPoster = m.top.findNode("newsBackgroundPoster")
 
   ' Referencia al poster inferior de gradiente ubicado al pie de la pantalla.
   m.bottomGradientPoster = m.top.findNode("bottomGradientPoster")
@@ -93,6 +91,8 @@ end sub
 ' Funcion que interpreta los eventos de teclado y retorna true si fue porcesada por este componente. Sino es porcesado por el
 ' entonces sigue con el siguente metodo onKeyEvent del compoente superior
 function onKeyEvent(key as string, press as boolean) as boolean
+
+  if isPINDialogVisible() then return true
 
   if m.top.loading.visible <> false and key <> KeyButtons().BACK then 
     return true
@@ -224,11 +224,6 @@ sub initData()
 
     m.groupOpacityForMenu.clippingRect = [0, 0, safeX + scaleValue(60, m.scaleInfo), height]
 
-    ' Ajusta fondo de noticias para cubrir toda la pantalla.
-    m.newsBackgroundPoster.width = width
-    m.newsBackgroundPoster.height = height
-    m.newsBackgroundPoster.translation = [0, 0]
-
     ' Calcula el alto del poster inferior usando escala base de 400px.
     bottomPosterHeight = scaleValue(400, m.scaleInfo)
     ' Asigna al poster inferior el ancho completo de pantalla.
@@ -254,6 +249,8 @@ sub initData()
     errorSafeZone = width - (safeX * 2) - scaleValue(230, m.scaleInfo)
     m.withoutContentTitle.width = errorSafeZone
     m.withoutContentMessage.width = errorSafeZone
+
+    m.carousels.translation = scaleSize([0, 100], m.scaleInfo)
 
     m.programInfo.translation = [safeX + scaleValue(60, m.scaleInfo), safeY ]
     ' Ajusta tamaño y posición del overlay de News para mantenerlo arriba del carrusel de noticias.
@@ -1767,8 +1764,6 @@ end sub
 sub __updateOverlayVisibilityByFocus()
   newsFocused = __isNewsFocused() ' Guarda el estado actual de foco para reutilizar la misma decisión visual en overlays y logo.
   __animateMainLogoByFocus(newsFocused) ' Ejecuta la animación del logo según si el foco está o no en el carrusel de News.
-  ' Muestra el fondo dedicado de News solo cuando el foco está en el carrusel de noticias.
-  if m.newsBackgroundPoster <> invalid then m.newsBackgroundPoster.visible = newsFocused
   ' Si el foco está en NewsItem, se ocultan overlays superiores del listado.
    ' Alterna la máscara del menú y el gradiente inferior según el foco del carrusel de noticias.
   if m.groupOpacityForMenu <> invalid then m.groupOpacityForMenu.visible = not newsFocused

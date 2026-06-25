@@ -71,12 +71,6 @@
     <!-- Contenedor dedicado para NewsItem en posición absoluta (0,0). -->
     <Group id="newsContainer" translation="[0, 0]" />
 
-    <!-- Fondo de noticias a pantalla completa, por encima de News y por debajo de carousels/menu. -->
-    <Poster
-      id="newsBackgroundPoster"
-      loadDisplayMode="scaleToFill"
-      uri="pkg:/images/shared/news_gradient.png" />
-
     <!-- Poster inferior ubicado por encima de newsContainer y por debajo de carousels. -->
     <Poster
       id="bottomGradientPoster"
@@ -94,7 +88,7 @@
     </Group>
 
     <!-- Contenedor para múltiples carouseles y foco -->
-    <Group id="carousels" translation="[0, 100]">
+    <Group id="carousels">
       <Group id="carouselContainer" translation="[50, 20]"/>
 
       <SelectionBox id="selectedIndicator" visible="false"/>

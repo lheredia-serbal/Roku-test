@@ -365,6 +365,8 @@ end sub
 ' Maneja eventos de control remoto para navegación/foco.
 function onKeyEvent(key as string, press as boolean) as boolean
 
+  if isPINDialogVisible() then return true
+
   ' Si presionan BACK con teclado visible, cierro teclado y retorno foco al input.
   if key = KeyButtons().BACK and m.searchKeyboard <> invalid and m.searchKeyboard.visible and press then
     __hideKeyboard(true)

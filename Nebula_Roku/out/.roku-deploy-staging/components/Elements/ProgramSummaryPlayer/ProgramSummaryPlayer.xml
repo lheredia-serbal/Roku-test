@@ -28,7 +28,8 @@
         layoutDirection="vert"
         horizAlignment="left"
         vertAlignment="bottom"
-        addItemSpacingAfterChild="false">
+        addItemSpacingAfterChild="false"
+        itemSpacings="[20]" >
     
         <Label 
           id="programTitle"

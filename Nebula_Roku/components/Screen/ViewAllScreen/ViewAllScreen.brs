@@ -160,6 +160,8 @@ end sub
 ' Procesa navegación vertical para mover foco entre filas de carruseles en ViewAll.
 ' Bloque grilla nativa: PosterGrid administra navegación direccional, no se interceptan flechas.
 function onKeyEvent(key as string, press as boolean) as boolean
+
+  if isPINDialogVisible() then return true
   return false
 end function
 
@@ -587,7 +589,6 @@ sub __applyLayout()
   m.posterGrid.vertFocusAnimationStyle = __applyPosterGridItemVerticalFocus(m.viewAllCarouselStyle)
   m.posterGrid.itemSpacing = scaleSize([22, 34], m.scaleInfo)
   m.posterGrid.itemComponentName = "ViewAllGridItem"
-  m.posterGrid.vertFocusAnimationStyle = "fixedFocus"
   ' Bloque foco: aplicamos el color primario al borde/bitmap de selección del PosterGrid.
   if m.global.colors <> invalid and m.global.colors.PRIMARY <> invalid then m.posterGrid.focusBitmapBlendColor = m.global.colors.PRIMARY
   ' El ancho completo permite que horizAlign centre el texto en la pantalla.
@@ -624,18 +625,13 @@ end function
 
 ' Aplica al PosterGrid cuales son los filas que puede scrollear
 function __applyPosterGridItemVerticalFocus(style as Dynamic)
+  carouselStyles = getCarouselStyles()
 
-  vertFocusAnimationStyle = "floatingFocus"
-
-  if style = getCarouselStyles().PORTRAIT_FEATURED then
-    vertFocusAnimationStyle = "fixedFocus"
-  else if style = getCarouselStyles().LANDSCAPE_STANDARD then
-    vertFocusAnimationStyle = "fixedFocus"
-  else if style = getCarouselStyles().LANDSCAPE_FEATURED then
-    vertFocusAnimationStyle = "fixedFocus"
+  if style = carouselStyles.PORTRAIT_STANDARD or style = carouselStyles.PORTRAIT_FEATURED or style = carouselStyles.LANDSCAPE_STANDARD or style = carouselStyles.LANDSCAPE_FEATURED then
+    return "fixedFocus"
   end if
 
-  return vertFocusAnimationStyle
+  return "floatingFocus"
 end function
 
 ' Aplica los textos traducidos de ViewAll.

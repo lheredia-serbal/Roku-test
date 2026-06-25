@@ -6,7 +6,7 @@ sub init()
 
     m.scaleInfo = m.global.scaleInfo
     m.defaultHeight = scaleValue(32, m.scaleInfo)
-    m.spacings = scaleValue(5, m.scaleInfo)
+    m.spacings = scaleValue(3, m.scaleInfo)
     m.titleBottomSpacing = scaleValue(10, m.scaleInfo)
     m.reservedWidth = m.scaleInfo.width - scaleValue(140, m.scaleInfo)
 end sub

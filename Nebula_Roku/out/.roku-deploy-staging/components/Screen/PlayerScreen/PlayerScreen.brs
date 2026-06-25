@@ -242,6 +242,8 @@ end sub
 ' entonces sigue con el siguente metodo onKeyEvent del compoente superior
 function onKeyEvent(key as String, press as Boolean) as Boolean
 
+  if isPINDialogVisible() then return true
+
   nowMs = __getNowMilliseconds() ' timestamp actual en milisegundos para filtros de entrada
 
   ' Bloquea eventos mientras se esta recargando o por una pequeña ventana posterior
@@ -2234,6 +2236,7 @@ sub __closePlayer(onBack = false, logout = false)
   clearTimer(m.inactivityTimer)
   clearTimer(m.inactivityAutoCloseTimer)
   clearTimer(m.showTimeTimer)
+  closePINDialogWithoutValidation(m.top)
   
   m.top.data = ""
   m.beaconType = ""

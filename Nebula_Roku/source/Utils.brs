@@ -308,8 +308,56 @@ function createAndShowPINDialog(screen, title as string,  method, buttons = [])
   pinDialog.setFocus(true)
   pinDialog.visible = true
 
+  __startPINDialogAutoCloseTimer(screen)
+
   return pinDialog
 end function
+
+function isPINDialogVisible() as Boolean
+  return (m.pinDialog <> invalid and m.pinDialog.visible = true)
+end function
+
+sub __startPINDialogAutoCloseTimer(screen)
+  __stopPINDialogAutoCloseTimer(screen)
+
+  timer = createObject("roSGNode", "Timer")
+  timer.id = "pinDialogAutoCloseTimer"
+  timer.repeat = false
+  timer.duration = 20
+  timer.observeField("fire", "onPINDialogAutoCloseTimerFired")
+
+  screen.appendChild(timer)
+  m.pinDialogAutoCloseTimer = timer
+  timer.control = "start"
+end sub
+
+sub __stopPINDialogAutoCloseTimer(screen = invalid)
+  if m.pinDialogAutoCloseTimer = invalid then return
+
+  m.pinDialogAutoCloseTimer.control = "stop"
+  m.pinDialogAutoCloseTimer.unobserveField("fire")
+  if screen <> invalid then screen.removeChild(m.pinDialogAutoCloseTimer)
+  m.pinDialogAutoCloseTimer = invalid
+end sub
+
+sub onPINDialogAutoCloseTimerFired()
+  closePINDialogWithoutValidation(m.top)
+end sub
+
+sub closePINDialogWithoutValidation(screen = invalid)
+  if screen = invalid then screen = m.top
+  __stopPINDialogAutoCloseTimer(screen)
+
+  if m.pinDialog = invalid then return
+
+  m.pinDialog.visible = false
+  m.pinDialog.unobserveField("buttonSelected")
+  if screen <> invalid then screen.removeChild(m.pinDialog)
+  m.pinDialog = invalid
+
+  if m.repositionChannnelList <> invalid then m.repositionChannnelList = true
+  if m.lastButtonSelect <> invalid then m.lastButtonSelect.setFocus(true)
+end sub
 
 sub showCdnErrorDialog(overlayTransparent = false as Boolean)
     if m.global = invalid then return
@@ -438,12 +486,14 @@ end function
 ' Limipia las variables del modal de Control parental y retornan la respuesta. Se debe asignar la variable del 
 ' modal con invalid para que sea limpiado por el garbage collection 
 function clearPINDialogAndGetOption(screen, dialog)
+    __stopPINDialogAutoCloseTimer(screen)
+
     option = dialog.buttonSelected
     pin = dialog.pin
 
     dialog.visible = false
     dialog.unobserveField("buttonSelected")
-    screen.removeChild(m.dialog)
+    screen.removeChild(dialog)
 
   return {option: option, pin: pin}
 end function

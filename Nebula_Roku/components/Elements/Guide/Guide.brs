@@ -70,6 +70,8 @@ end sub
 ' entonces sigue con el siguente metodo onKeyEvent del compoente superior
 function onKeyEvent(key as string, press as boolean) as boolean
 
+    if isPINDialogVisible() then return true
+
     handled = false
 
     if key = KeyButtons().UP then 
@@ -645,7 +647,7 @@ sub __initConfig()
     end if 
 
     m.selectedIndicator.size = scaleSize([153, 228], m.scaleInfo) 'Ajhuste del label y el espacio de separacion
-    m.selectedIndicator.translation = scaleSize([537, 20], m.scaleInfo)
+    m.selectedIndicator.translation = scaleSize([540, 20], m.scaleInfo)
 
     m.channelContainer.width = scaleValue(145, m.scaleInfo)
     m.channelContainer.height = scaleValue(262, m.scaleInfo)

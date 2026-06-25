@@ -33,6 +33,12 @@
             visible="false"
             loadDisplayMode="scaleToZoom"/>
 
+        <!-- Gradiente de noticias ubicado sobre la imagen de fondo y detrás del título. -->
+        <Poster
+            id="newsBackgroundPoster"
+            loadDisplayMode="scaleToFill"
+            uri="pkg:/images/shared/news_gradient.png" />
+
         <!-- Capa oscura opcional para mejorar legibilidad del texto sobre la imagen. -->
         <Rectangle
             id="overlay"
