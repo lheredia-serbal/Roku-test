@@ -852,12 +852,12 @@ Sub OnVideoPlayerStateChange()
   end if
 
   if state = "paused" then
-    if m.playPauseImageButton <> invalid then m.playPauseImageButton.uri = "pkg:/images/shared/play.png"
+    __syncPlayPauseButtonWithVideoState(state)
   else if state = "playing" then
     clearTimer(m.retryReconnection)
     m.lastErrorTime = invalid
 
-    if m.playPauseImageButton <> invalid then m.playPauseImageButton.uri = "pkg:/images/shared/pause.png"
+    __syncPlayPauseButtonWithVideoState(state)
   end if
 
   if m.actionPostChageState <> invalid then
@@ -872,6 +872,36 @@ Sub OnVideoPlayerStateChange()
     m.timelineBar.isPaused = (state = "paused")
   end if
 End Sub
+
+' Indica si la pausa actual fue provocada por la navegación/preview del timeline.
+function __isTimelineSeekingPlaybackLock() as Boolean
+  if m.pauseOnSeekActive = true then return true
+  if m.seekHoldActive = true then return true
+  if m.pendingSeekActive = true then return true
+  if m.timelineBar <> invalid and m.timelineBar.seeking = true then return true
+
+  return false
+end function
+
+' Actualiza el icono de play/pause de forma centralizada para evitar parpadeos durante el seek.
+sub __setPlayPauseButtonUri(uri as String, force = false as Boolean)
+  if m.playPauseImageButton = invalid then return
+  if uri = invalid or uri = "" then return
+
+  if force <> true and __isTimelineSeekingPlaybackLock() then return
+  if m.playPauseImageButton.uri = uri then return
+
+  m.playPauseImageButton.uri = uri
+end sub
+
+' Sincroniza el icono con el estado real del Video sin tomar como pausa definitiva el preview del timeline.
+sub __syncPlayPauseButtonWithVideoState(state as String, force = false as Boolean)
+  if state = "paused" then
+    __setPlayPauseButtonUri("pkg:/images/shared/play.png", force)
+  else if state = "playing" then
+    __setPlayPauseButtonUri("pkg:/images/shared/pause.png", force)
+  end if
+end sub
 
 ' Metodo que actualiza la linea de tiempo cuando cambia la posicion del video
 sub onVideoPositionChanged()
@@ -2357,8 +2387,13 @@ end sub
 sub __showProgramInfo()
   m.playerControllers.visible = true
   if m.timelineBar <> invalid and not m.isLiveContent then m.timelineBar.visible = true
-  btn = __getFirstVisibleControllerButton()
-  if btn <> invalid then btn.setFocus(true)
+
+  if m.timelineBar <> invalid and m.timelineBar.visible = true then
+    m.timelineBar.setFocus(true)
+  else
+    btn = __getFirstVisibleControllerButton()
+    if btn <> invalid then btn.setFocus(true)
+  end if
   m.videoPlayer.setFocus(false)
 
   m.showInfoTimer.control = "start"
@@ -2509,8 +2544,7 @@ sub __togglePlayPause()
     m.userPaused = true
     m.videoPlayer.control = "pause"
 
-    if m.playPauseImageButton <> invalid then m.playPauseImageButton.uri = "pkg:/images/shared/play.png"
-
+    __setPlayPauseButtonUri("pkg:/images/shared/play.png", true)
 
     streamType = invalid
     if m.streaming <> invalid and m.streaming.type <> invalid then streamType = LCase(m.streaming.type)
@@ -2529,7 +2563,7 @@ sub __togglePlayPause()
   if state = "paused" then
     m.userPaused = false
     m.videoPlayer.control = "resume" ' <- clave
-    if m.playPauseImageButton <> invalid then m.playPauseImageButton.uri = "pkg:/images/shared/pause.png"
+    __setPlayPauseButtonUri("pkg:/images/shared/pause.png", true)
     return
   end if
 
@@ -2540,7 +2574,7 @@ sub __togglePlayPause()
       m.videoPlayer.seek = m.pausePosition
     end if
     m.videoPlayer.control = "play"
-    if m.playPauseImageButton <> invalid then m.playPauseImageButton.uri = "pkg:/images/shared/pause.png"
+    __setPlayPauseButtonUri("pkg:/images/shared/pause.png", true)
     return
   end if
 end sub
@@ -3115,7 +3149,12 @@ sub onTimelinePreviewChanged()
     m.timelinePreviewTimeLabel.height = bgH
     if m.timelinePreviewTimeLabel.horizAlign <> "right" then m.timelinePreviewTimeLabel.horizAlign = "right"
     m.timelinePreviewTimeLabel.translation = [bgX + scaleValue(3, m.scaleInfo), bgY]
-    m.timelinePreviewTimeLabel.text = m.timelineBar.previewTimeText
+
+    if m.streaming.streamingType = getStreamingType().LIVE_REWIND then
+      m.timelinePreviewTimeLabel.text = "-" + m.timelineBar.previewTimeText
+    else 
+      m.timelinePreviewTimeLabel.text = m.timelineBar.previewTimeText
+    end if
   else
     ' Solo tiene que mostrar el tiempo
     x = piT[0] + tb.x + bcX + m.timelineBar.previewX
