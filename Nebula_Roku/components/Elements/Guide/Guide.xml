@@ -56,7 +56,7 @@
                     <Group id="carouselGuideContainer" translation="[0,0]" >
                         <QvTargetList 
                             id="carouselGuide"
-                            translation="[0,0]"
+                            translation="[-10,0]"
                             advanceKey="right" 
                             reverseKey="left" 
                             focusable="true"/>

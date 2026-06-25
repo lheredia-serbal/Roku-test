@@ -114,8 +114,11 @@ sub changeProgram()
             end if
         end if 
 
-        m.programContainer.itemSpacings = particularItemSpacings
-
+        if m.top.program.categoryName = invalid or m.top.program.categoryName = "" then
+            m.categoryGroup.itemSpacings = [0]
+        else
+            m.categoryGroup.itemSpacings = particularItemSpacings
+        end if
 
         ' Title
         if showTitle then

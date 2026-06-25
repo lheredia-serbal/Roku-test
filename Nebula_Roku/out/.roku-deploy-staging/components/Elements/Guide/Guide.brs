@@ -37,6 +37,7 @@ sub init()
     
     m.loadConfig = false
     m.saveDateByEvent = false
+    m.noProgram = false
     m.channelArray = []
 
     m.nextCarouselGuide = invalid
@@ -644,7 +645,7 @@ sub __initConfig()
     end if 
 
     m.selectedIndicator.size = scaleSize([153, 228], m.scaleInfo) 'Ajhuste del label y el espacio de separacion
-    m.selectedIndicator.translation = scaleSize([547, 20], m.scaleInfo)
+    m.selectedIndicator.translation = scaleSize([537, 20], m.scaleInfo)
 
     m.channelContainer.width = scaleValue(145, m.scaleInfo)
     m.channelContainer.height = scaleValue(262, m.scaleInfo)
@@ -858,6 +859,8 @@ sub __processAndLoadCarousel(programs)
         end if
     end if
 
+    m.noProgram = false
+
     if m.currentCarouselGuide.data <> invalid and m.currentCarouselGuide.data.programs.count() = 0 then 
 
         currentChannelProgram = {}
@@ -874,6 +877,8 @@ sub __processAndLoadCarousel(programs)
         currentChannelProgram.parentalControl = m.currentChannel.parentalControl
 
         m.currentCarouselGuide.data.programs.Push(currentChannelProgram)
+
+        m.noProgram = true
     end if
 
     for each program in programs
@@ -948,7 +953,12 @@ sub __processAndLoadCarousel(programs)
 
     __setupTargetList(contentRoot)
 
-    m.carouselGuide.jumpToItem = m.indexPosition
+    if (m.noProgram = true) then
+        m.carouselGuide.jumpToItem = 0
+    else
+        m.carouselGuide.jumpToItem = m.indexPosition
+    end if
+    
     
     if m.lastElementSelect <> invalid then
         m.lastElementSelect = m.carouselGuide
