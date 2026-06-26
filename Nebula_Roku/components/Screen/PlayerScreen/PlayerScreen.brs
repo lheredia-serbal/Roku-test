@@ -216,7 +216,8 @@ sub init()
   m.pauseOnSeekActive = false
   ' Bandera para mostrar el mensaje de conectando
   m.disableLayoutChannelConnection = false
-  m.goStartPressed = false
+  ' Mantiene la timeline en 0 mientras Roku reporta position=0 después de presionar restart.
+  m.forceTimelineStartPosition = false
 
   ' Variables para la velocidad cuando se esta mantiendo presionado el botón de adelantar o retroceder --- Tap acceleration (FF/RW) ---
   m.trickTapWindowMs = 1000
@@ -409,10 +410,10 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
     if (key = KeyButtons().OK) then
       m.enableGoLive = true
       if m.videoPlayer <> invalid then
-        m.goStartPressed = true
         m.actionPostChageState = "restart"
         ' Si el stream es un live, no hacer nada
         if LCase(m.streaming.type) = getVideoType().LIVE then return true
+        m.forceTimelineStartPosition = true
 
         if LCase(m.streaming.type) = getVideoType().VOD or LCase(m.streaming.type) = getVideoType().DVR
           actionLog = getActionLog({ actionCode: ActionLogCode().CATCHUP_GO_TO_START, program: m.program, contentType: m.streaming.type })
@@ -2108,6 +2109,7 @@ end sub
 
 ' Actualiza la barra de tiempo con la informacion del player
 sub __updateTimeline()
+  
   if m.isReloadStreaming then return
   ' Validar timelinebar invalid
   if m.timelineBar = invalid or m.isLiveContent or m.videoPlayer = invalid then return
@@ -2130,8 +2132,19 @@ sub __updateTimeline()
   duration = m.videoPlayer.duration
   position = m.videoPlayer.position
 
-  if (m.videoPlayer.position = 0) then
-    position = m.videoPlayer.duration
+  print "position 1 " position
+  print "forceTimelineStartPosition 1 " m.forceTimelineStartPosition
+
+  if position = 0 and m.videoPlayer.state <> "buffering" then
+    if m.forceTimelineStartPosition = true then
+       print "position 2 " position ; m.forceTimelineStartPosition
+      position = 0
+    else
+       print "position 3 " position ; m.videoPlayer.duration ; m.forceTimelineStartPosition
+      position = m.videoPlayer.duration
+    end if
+  else if position <> invalid and position > 0 then
+    m.forceTimelineStartPosition = false
   end if
   
   ' Si el contenido es un Live Rewind, setear la posición
@@ -2141,8 +2154,10 @@ sub __updateTimeline()
       if m.streamStartSeconds <> invalid then
         now = CreateObject("roDateTime")
         now.ToLocalTime()
+        print "position 4 " position
         position = now.AsSeconds() - m.streamStartSeconds
       else
+        print "position 5 " position
         position = 0
       end if
     end if
@@ -2157,7 +2172,7 @@ sub __updateTimeline()
     m.timelineBar.position = position
     print "Position D ;" position
 
-    if position > 5000
+    if position > 2000
       print "Error"
     end if
    end if
