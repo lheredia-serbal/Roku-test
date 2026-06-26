@@ -37,6 +37,12 @@ sub init()
   m.cachedProgressWidth = invalid
   m.cachedThumbTranslation = invalid
   m.cachedTimeText = invalid
+  m.pendingZeroThumbY = invalid
+  m.zeroThumbTimer = CreateObject("roSGNode", "Timer")
+  m.zeroThumbTimer.duration = 0.3
+  m.zeroThumbTimer.repeat = false
+  m.zeroThumbTimer.ObserveField("fire", "onZeroThumbTimerFired")
+  m.top.appendChild(m.zeroThumbTimer)
   m.pauseTickTimer = CreateObject("roSGNode", "Timer")
   m.pauseTickTimer.duration = 1
   m.pauseTickTimer.repeat = true
@@ -101,6 +107,8 @@ sub __resetProgressState()
   m.cachedProgressWidth = invalid
   m.cachedThumbTranslation = invalid
   m.cachedTimeText = invalid
+  m.pendingZeroThumbY = invalid
+  if m.zeroThumbTimer <> invalid then m.zeroThumbTimer.control = "stop"
 
   if m.pauseTickTimer <> invalid then m.pauseTickTimer.control = "stop"
   if m.progress <> invalid then m.progress.width = 0
@@ -122,6 +130,32 @@ sub __resetProgressState()
     m.top.previewUri = ""
     m.top.previewTimeText = ""
   end if
+end sub
+
+sub __cancelPendingZeroThumb()
+  m.pendingZeroThumbY = invalid
+  if m.zeroThumbTimer <> invalid then m.zeroThumbTimer.control = "stop"
+end sub
+
+sub __scheduleZeroThumbTranslation(thumbY as dynamic)
+  if m.pendingZeroThumbY <> invalid then
+    m.pendingZeroThumbY = thumbY
+    return
+  end if
+
+  m.pendingZeroThumbY = thumbY
+  if m.zeroThumbTimer <> invalid then
+    m.zeroThumbTimer.control = "stop"
+    m.zeroThumbTimer.control = "start"
+  end if
+end sub
+
+sub onZeroThumbTimerFired()
+  if m.thumb <> invalid and m.pendingZeroThumbY <> invalid then
+    m.thumb.translation = [0, m.pendingZeroThumbY]
+  end if
+
+  m.pendingZeroThumbY = invalid
 end sub
 
 sub __applyWidth()
@@ -231,6 +265,7 @@ sub __updateProgress()
   if m.thumb <> invalid then
     
     if (m.top.isLive ) then
+      __cancelPendingZeroThumb()
       m.thumb.translation = [m.totalWidth - 20, thumbY]
       m.progress.width =  m.totalWidth
       ' Setear el máximo rango en X que puede alcanzar la esfera de progreso
@@ -238,13 +273,15 @@ sub __updateProgress()
     else
       ' Validar que la esfera de progreso, no se salga fuera del rango máximo
       if m.maxWidth <> invalid and thumbX > m.maxWidth then thumbX = m.maxWidth
+      if (thumbX <> invalid) then
+        if thumbX < 0 then thumbX = 0
 
-      if thumbX < 0 then thumbX = 0
-      if (thumbX <> invalid ) then
         if thumbX = 0 then
-          print "thumbY " ; thumbY
+          __scheduleZeroThumbTranslation(thumbY)
+        else
+          __cancelPendingZeroThumb()
+          m.thumb.translation = [thumbX, thumbY]
         end if
-        m.thumb.translation = [thumbX, thumbY]
       end if
     end if
   end if

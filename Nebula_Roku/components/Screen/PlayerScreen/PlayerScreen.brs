@@ -528,9 +528,11 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
   else if m.timelineBar.isInFocusChain() and __isSeekKey(key) then
     handled = true
 
-    if LCase(m.streaming.type) = getVideoType().LIVE_REWIND and m.streaming.streamingType = getStreamingType().DEFAULT then
-      m.actionPostChageState = "pause"
-      __reconnectStream(true, getStreamingType().LIVE_REWIND)
+    if __isDefaultLiveRewindStream() then
+      if not __isForwardSeekKey(key) then
+        m.actionPostChageState = "pause"
+        __reconnectStream(true, getStreamingType().LIVE_REWIND)
+      end if
     else
       if (not m.isReloadStreaming)
         if press then
@@ -2193,6 +2195,18 @@ function __isSeekKey(key as String) as Boolean
   return key = KeyButtons().LEFT or key = KeyButtons().RIGHT or key = KeyButtons().FAST_FORWARD or key = KeyButtons().REWIND
 end function
 
+' Determina si la tecla presionada avanza hacia adelante en la linea de tiempo
+function __isForwardSeekKey(key as String) as Boolean
+  if key = invalid then return false
+
+  return key = KeyButtons().RIGHT or key = KeyButtons().FAST_FORWARD
+end function
+
+' Determina si el stream actual esta en vivo con capacidad de live rewind, pero aun reproduciendo default
+function __isDefaultLiveRewindStream() as Boolean
+  return m.streaming <> invalid and LCase(m.streaming.type) = getVideoType().LIVE_REWIND and m.streaming.streamingType = getStreamingType().DEFAULT
+end function
+
 ' Agenda la sincronización de TimelineBar para reflejar seeks asíncronos con reintento diferido.
 sub __scheduleTimelineSync(position = invalid as dynamic)
   if m.timelineBar <> invalid and position <> invalid and position >= 0 then
@@ -2931,7 +2945,7 @@ end sub
 sub __startSeekHold(key as String)
   if m.isLiveContent or m.videoPlayer = invalid then return
 
-  if LCase(m.streaming.type) = getVideoType().LIVE_REWIND and m.streaming.streamingType = getStreamingType().DEFAULT then
+  if __isDefaultLiveRewindStream() and not __isForwardSeekKey(key) then
     __reconnectStream()
   end if
 

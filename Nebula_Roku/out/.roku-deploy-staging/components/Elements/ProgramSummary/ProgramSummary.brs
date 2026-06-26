@@ -40,12 +40,12 @@ sub changeProgram()
     end if
 
     if title <> "" then
-        m.programTitle = __createShadowLabel("programTitle", title, "font:LargeBoldSystemFont", m.defaultHeight)
+        m.programTitle = __createShadowLabel("programTitle", title, "font:LargeBoldSystemFont", m.defaultHeight, 1)
         m.programContainer.appendChild(m.programTitle)
     end if
 
     if program.subtitle <> invalid and program.subtitle <> "" then
-        m.programSubtitle = __createShadowLabel("programSubtitle", program.subtitle, "font:MediumBoldSystemFont", m.defaultHeight)
+        m.programSubtitle = __createShadowLabel("programSubtitle", program.subtitle, "font:MediumBoldSystemFont", m.defaultHeight, 1)
         m.programContainer.appendChild(m.programSubtitle)
     end if
 
@@ -149,7 +149,7 @@ sub changeProgram()
         else if (program.channel <> invalid and program.channel.category <> invalid and program.channel.category <> "")
             synopsis = program.channel.category
         end if
-        m.programSynopsis = __createShadowLabel("programSynopsis", synopsis, "font:SmallerSystemFont", scaleValue(90, m.scaleInfo))
+        m.programSynopsis = __createShadowLabel("programSynopsis", synopsis, "font:SmallerSystemFont", scaleValue(90, m.scaleInfo), 3)
         m.programSynopsis.wrap = true
         m.programSynopsis.maxLines = 3
         m.programContainer.appendChild(m.programSynopsis)
@@ -159,7 +159,7 @@ sub changeProgram()
 end sub
 
 ' Crea un ShadowLabel con la estética compartida por el resumen.
-function __createShadowLabel(id as string, text as string, font as string, height as float) as object
+function __createShadowLabel(id as string, text as string, font as string, height as float, maxLines as float) as object
     label = CreateObject("roSGNode", "ShadowLabel")
     label.id = id
     label.text = text
@@ -167,6 +167,7 @@ function __createShadowLabel(id as string, text as string, font as string, heigh
     label.height = height
     label.vertAlign = "top"
     label.font = font
+    label.maxLines = maxLines
     return label
 end function
 
