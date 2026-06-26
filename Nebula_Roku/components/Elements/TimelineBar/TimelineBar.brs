@@ -114,7 +114,7 @@ sub __resetProgressState()
     thumbY = trackY + (m.track.height / 2.0) - (thumbH / 2.0)
   end if
 
-  if m.thumb <> invalid then m.thumb.translation = [0, thumbY]
+  'if m.thumb <> invalid then m.thumb.translation = [0, thumbY]
   if m.timeLabel <> invalid then m.timeLabel.text = "00:00"
 
   if m.top <> invalid then
@@ -238,10 +238,12 @@ sub __updateProgress()
     else
       ' Validar que la esfera de progreso, no se salga fuera del rango máximo
       if m.maxWidth <> invalid and thumbX > m.maxWidth then thumbX = m.maxWidth
-      if (thumbX <> invalid) then
-        if thumbX < 0 then thumbX = 0
 
-        print "thumbY " ; thumbY
+      if thumbX < 0 then thumbX = 0
+      if (thumbX <> invalid ) then
+        if thumbX = 0 then
+          print "thumbY " ; thumbY
+        end if
         m.thumb.translation = [thumbX, thumbY]
       end if
     end if

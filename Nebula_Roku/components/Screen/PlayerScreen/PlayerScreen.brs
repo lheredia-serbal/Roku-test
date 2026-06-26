@@ -2168,7 +2168,7 @@ sub __updateTimeline()
   if duration <> invalid and duration > 0 then m.timelineBar.duration = duration
 
   ' Setear la posición del timelinebar
-  if position <> invalid and position >= 0 then 
+  if position <> invalid and position >= 50 then 
     m.timelineBar.position = position
     print "Position D ;" position
 
