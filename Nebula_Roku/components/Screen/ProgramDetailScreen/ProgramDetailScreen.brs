@@ -46,7 +46,7 @@ end sub
 ' entonces sigue con el siguente metodo onKeyEvent del compoente superior
 function onKeyEvent(key as string, press as boolean) as boolean
 
-  if isPINDialogVisible() then return true
+  if handlePINDialogKeyEvent(press) then return true
 
   if m.top.loading.visible <> false and key <> KeyButtons().BACK then 
     return true

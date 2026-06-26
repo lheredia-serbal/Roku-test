@@ -2,6 +2,8 @@
 sub init()
   ' Referencia al nodo de video principal que reproduce el stream y expone estado/controles del playback.
   m.videoPlayer = m.top.findNode("VideoPlayer")
+  ' Nodo de foco separado del Video para que el Video no capture eventos del remoto.
+  m.videoFocus = m.top.findNode("Video")
   ' Contenedor de controles del reproductor (play/pause, reiniciar, ir al vivo y guía).
   m.playerControllers = m.top.findNode("playerControllers")
 
@@ -147,6 +149,8 @@ sub init()
   ' Guarda la última posición del player
   m.lastPosition = invalid
   ' Guardar de la ultima acción del player
+  ' Ventana de protección para sostener la pausa después de cambiar un vivo a live rewind.
+  m.pendingLiveRewindPauseGuardUntilMs = invalid
   m.actionPostChageState = invalid
   ' Bandera que indica que el stream se esta recargando, para evitar que el usuario realice acciones en el player
   m.isReloadStreaming = false
@@ -244,6 +248,8 @@ end sub
 ' entonces sigue con el siguente metodo onKeyEvent del compoente superior
 function onKeyEvent(key as String, press as Boolean) as Boolean
 
+  if handlePINDialogKeyEvent(press) then return true
+
   nowMs = __getNowMilliseconds() ' timestamp actual en milisegundos para filtros de entrada
 
   ' Bloquea eventos mientras se esta recargando o por una pequeña ventana posterior
@@ -261,7 +267,7 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
     handled = true
 
     ' Si es cotenido vivo no hace nada
-    if m.streaming <> invalid and LCase(m.streaming.type) = getVideoType().LIVE then return true 
+    if m.streaming <> invalid and LCase(m.streaming.type) = getVideoType().LIVE then return true
 
     ' Retroceder 20 segundos
     __replayBack(20)
@@ -273,23 +279,30 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
     end if
   end if
   
-  ' Presiono en el botón PLAY
+  ' Presiono en el botón PLAY/PAUSE nativo del control Roku
   if key = KeyButtons().PLAY then
     handled = true
 
-    ' Si es cotenido vivo no hace nada
-    if m.streaming <> invalid and LCase(m.streaming.type) = getVideoType().LIVE then return true 
+    ' Si el contenido está en vivo con live rewind, cambiar a la URL de rewind
+    ' y pausar apenas el nuevo stream quede reproduciendo. Si la info del programa
+    ' está oculta, no la mostramos: sólo respetamos la pausa nativa.
+    if __isDefaultLiveRewindStream() then
+      controlsVisible = (m.playerControllers <> invalid and m.playerControllers.visible = true)
+      if __pauseDefaultLiveRewindStream() then
+        if controlsVisible then __showProgramInfo()
+        return true
+      end if
+    end if
 
-    ' Si el contenido es en vivo y permite live rewind, pausar y cambiar a live rewind
-    if m.streaming <> invalid and LCase(m.streaming.type) = getVideoType().LIVE_REWIND and m.streaming.streamingType = getStreamingType().DEFAULT then
-      m.actionPostChageState = "pause"
+    ' Si es contenido vivo sin live rewind no hace nada
+    if m.streaming <> invalid and LCase(m.streaming.type) = getVideoType().LIVE then return true
 
-      ' Volver a cargar al stream, pero esta vez como liverewind
-      __reconnectStream()
-      __showProgramInfo()
+    if m.streaming <> invalid and m.streaming.type <> invalid then
+      m.pendingLiveRewindPauseGuardUntilMs = invalid
+      __togglePlayPause()
     end if
   end if
-  
+
   ' Se esta mostrando el mensaje de "Todavía estas ahí"
   if m.inactivityContinueButton.isInFocusChain() then
 
@@ -305,7 +318,7 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
 
     return handled
 
-  else if m.videoPlayer.isInFocusChain() and key = KeyButtons().BACK then
+  else if __isPlayerFocusInChain() and key = KeyButtons().BACK then
     if press then 
       ' Si presionó el botón BACK, cerrar el player
       __closePlayer()
@@ -473,17 +486,15 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
       if key = KeyButtons().RIGHT and m.playPauseImageButton.focusRight <> invalid then
           m.playPauseImageButton.focusRight.setFocus(true)
         else if (key = KeyButtons().OK) and not LCase(m.streaming.type) = getVideoType().LIVE then
-          if LCase(m.streaming.type) = getVideoType().LIVE_REWIND and m.streaming.streamingType = getStreamingType().DEFAULT then
-            m.actionPostChageState = "pause"
-            __reconnectStream(true, getStreamingType().LIVE_REWIND)
-          else
+          if not __pauseDefaultLiveRewindStream() then
+            m.pendingLiveRewindPauseGuardUntilMs = invalid
             __togglePlayPause()
           end if
       end if
     end if
     handled = true
   
-  else if m.videoPlayer.isInFocusChain() and key = KeyButtons().OK and not handled then
+  else if __isPlayerFocusInChain() and key = KeyButtons().OK and not handled then
     ' Bloquea los casos de click sobre el player hasta que la informacion 
     ' del programa haya contenstado al menos una vez por ok o error
     if m.blockTuShowControls then return true
@@ -530,8 +541,7 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
 
     if __isDefaultLiveRewindStream() then
       if not __isForwardSeekKey(key) then
-        m.actionPostChageState = "pause"
-        __reconnectStream(true, getStreamingType().LIVE_REWIND)
+       __pauseDefaultLiveRewindStream()
       end if
     else
       if (not m.isReloadStreaming)
@@ -543,7 +553,7 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
       end if
     end if
 
-  else if m.videoPlayer.isInFocusChain() and __isSeekKey(key) then
+  else if __isPlayerFocusInChain() and __isSeekKey(key) then
     handled = true
     __showProgramInfo()
 
@@ -584,7 +594,7 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
 
     handled = true
 
-  else if m.videoPlayer.isInFocusChain() and (key = KeyButtons().UP or key = KeyButtons().DOWN) then
+  else if __isPlayerFocusInChain() and (key = KeyButtons().UP or key = KeyButtons().DOWN) then
     if m.allowChannelList then 
       if not press then 
         now = CreateObject("roDateTime")
@@ -612,7 +622,7 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
   else if m.guide.isInFocusChain() and key = KeyButtons().BACK then 
     if press then 
       m.guide.visible = false
-      m.videoPlayer.setFocus(true)
+      __focusPlayer()
       m.guide.channelIdIndexOf = -1
       m.guide.searchChannelPosition = true
     end if
@@ -621,6 +631,25 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
 
   return handled
 end function
+
+' Enfoca el área del player sin pasar el foco al nodo Video.
+sub __focusPlayer()
+  if m.videoFocus <> invalid then
+    m.videoFocus.setFocus(true)
+  else if m.videoPlayer <> invalid then
+    m.videoPlayer.setFocus(true)
+  end if
+end sub
+
+' Indica si el foco está en el área principal del player, usando un proxy de foco
+' para evitar que el nodo Video consuma eventos de botones antes de PlayerScreen.
+function __isPlayerFocusInChain() as Boolean
+  if m.videoFocus <> invalid and m.videoFocus.isInFocusChain() then return true
+  if m.videoPlayer <> invalid and m.videoPlayer.isInFocusChain() then return true
+
+  return false
+end function
+
 
 ' Devuelve tiempo monotónico en ms para controlar ventanas de bloqueo/debounce
 function __getNowMilliseconds() as Integer
@@ -857,6 +886,13 @@ Sub OnVideoPlayerStateChange()
   end if
 
   if state = "paused" then
+    ' Cuando los controles no están visibles, el nodo Video puede consumir el botón
+    ' PLAY/PAUSE nativo antes de que onKeyEvent lo procese. Detectamos esa pausa
+    ' sobre un vivo default con rewind y aplicamos el mismo cambio a live rewind.
+    if __shouldSwitchHiddenNativePauseToLiveRewind() then
+      __pauseDefaultLiveRewindStream()
+    end if
+
     __syncPlayPauseButtonWithVideoState(state)
   else if state = "playing" then
     clearTimer(m.retryReconnection)
@@ -865,12 +901,14 @@ Sub OnVideoPlayerStateChange()
     __syncPlayPauseButtonWithVideoState(state)
   end if
 
-  if m.actionPostChageState <> invalid then
-    if m.actionPostChageState = "pause" and state = "playing" then
-      m.disableLayoutChannelConnection = false
-      __togglePlayPause()
+  if m.actionPostChageState = "pause" then
+    if state = "playing" or state = "buffering" then
+      __pauseVideoAfterLiveRewindSwitch()
+    else if state = "paused" then
       m.actionPostChageState = invalid
     end if
+  else if __isLiveRewindPauseGuardActive() and (state = "playing" or state = "buffering") then
+    __pauseVideoAfterLiveRewindSwitch()
   end if
 
   if m.timelineBar <> invalid then
@@ -1027,7 +1065,7 @@ sub onSelectItemGuide()
 
       m.focusplayerByload = true
       m.guide.visible = false
-      m.videoPlayer.setFocus(true)
+      __focusPlayer()
       __refreshWatchTokenData(itemSelected.redirectKey, itemSelected.redirectId)
       __loadStreamingURL(itemSelected.redirectKey, itemSelected.redirectId, streamingAction)
     end if
@@ -1097,7 +1135,6 @@ end sub
 
 ' Procesa la respuesta al obtener la url de lo que se quiere ver
 sub onStreamingsResponse() 
-  print "onStreamingsResponse inicio"
   m.isLoadingStreamingRequest = false
 
   if validateStatusCode(m.apiRequestManager.statusCode) then
@@ -1245,8 +1282,6 @@ sub onStreamingsResponse()
   end if
 
   m.apiRequestManager = clearApiRequest(m.apiRequestManager)
-
-  print "onStreamingsResponse fin"
 end sub
 
 ' Procesa la respuesta al obtener el Summary de un programa
@@ -1561,7 +1596,7 @@ sub onHidenProgramInfo()
   __setSeekUi(false)
   __cancelPendingSeek()
 
-  m.videoPlayer.setFocus(true)
+  __focusPlayer()
 end sub
 
 ' Cierra la lista de canales
@@ -1569,7 +1604,7 @@ sub onHideChannelListTimerFired()
   ' Solo tiene sentido ocultar si está visible
   if m.channelListContainer.visible then
       m.channelListContainer.visible = false
-      if m.dialogShowing = false then m.videoPlayer.setFocus(true)
+      if m.dialogShowing = false and not isPINDialogVisible() then __focusPlayer()
   end if
 end sub
 
@@ -1728,7 +1763,7 @@ sub __loadPlayer(streaming, focusPlayer = true)
     end if
 
     ' Setear el foco en el player si es necesario
-    if focusPlayer then m.videoPlayer.setFocus(true)
+    if focusPlayer then __focusPlayer()
 
     m.videoPlayer.control = "play"
 
@@ -1913,7 +1948,7 @@ sub __hideInactivityPrompt(logout = false)
   if m.inactivityOverlay <> invalid then
     wasVisible = m.inactivityOverlay.visible
     m.inactivityOverlay.visible = false
-    if not logout and wasVisible and m.videoPlayer <> invalid then m.videoPlayer.setFocus(true)
+    if not logout and wasVisible and m.videoPlayer <> invalid then __focusPlayer()
   end if
 end sub
 
@@ -2134,15 +2169,10 @@ sub __updateTimeline()
   duration = m.videoPlayer.duration
   position = m.videoPlayer.position
 
-  print "position 1 " position
-  print "forceTimelineStartPosition 1 " m.forceTimelineStartPosition
-
   if position = 0 and m.videoPlayer.state <> "buffering" then
     if m.forceTimelineStartPosition = true then
-       print "position 2 " position ; m.forceTimelineStartPosition
       position = 0
     else
-       print "position 3 " position ; m.videoPlayer.duration ; m.forceTimelineStartPosition
       position = m.videoPlayer.duration
     end if
   else if position <> invalid and position > 0 then
@@ -2156,10 +2186,8 @@ sub __updateTimeline()
       if m.streamStartSeconds <> invalid then
         now = CreateObject("roDateTime")
         now.ToLocalTime()
-        print "position 4 " position
         position = now.AsSeconds() - m.streamStartSeconds
       else
-        print "position 5 " position
         position = 0
       end if
     end if
@@ -2170,13 +2198,8 @@ sub __updateTimeline()
   if duration <> invalid and duration > 0 then m.timelineBar.duration = duration
 
   ' Setear la posición del timelinebar
-  if position <> invalid and position >= 50 then 
+  if position <> invalid then 
     m.timelineBar.position = position
-    print "Position D ;" position
-
-    if position > 2000
-      print "Error"
-    end if
    end if
 end sub
 
@@ -2206,6 +2229,44 @@ end function
 function __isDefaultLiveRewindStream() as Boolean
   return m.streaming <> invalid and LCase(m.streaming.type) = getVideoType().LIVE_REWIND and m.streaming.streamingType = getStreamingType().DEFAULT
 end function
+
+' Cambia un vivo con capacidad de rewind a live rewind y agenda la pausa cuando cargue.
+function __pauseDefaultLiveRewindStream() as Boolean
+  if not __isDefaultLiveRewindStream() then return false
+
+  m.actionPostChageState = "pause"
+  m.pendingLiveRewindPauseGuardUntilMs = __getNowMilliseconds() + 6000
+  __reconnectStream(true, getStreamingType().LIVE_REWIND)
+
+  return true
+end function
+
+' Detecta pausas hechas por el Video cuando los controles están ocultos y no hubo key handler.
+function __shouldSwitchHiddenNativePauseToLiveRewind() as Boolean
+  if not __isDefaultLiveRewindStream() then return false
+  if m.isReloadStreaming = true then return false
+  if m.actionPostChageState = "pause" then return false
+  if m.playerControllers <> invalid and m.playerControllers.visible = true then return false
+
+  return true
+end function
+
+' Indica si todavía hay que defender la pausa de eventos play tardíos después del cambio a live rewind.
+function __isLiveRewindPauseGuardActive() as Boolean
+  if m.pendingLiveRewindPauseGuardUntilMs = invalid then return false
+
+  if __getNowMilliseconds() <= m.pendingLiveRewindPauseGuardUntilMs then return true
+
+  m.pendingLiveRewindPauseGuardUntilMs = invalid
+  return false
+end function
+
+' Fuerza pausa sin usar toggle para evitar que un estado intermedio termine reanudando el player.
+sub __pauseVideoAfterLiveRewindSwitch()
+  m.disableLayoutChannelConnection = false
+  __pauseVideo()
+  __setPlayPauseButtonUri("pkg:/images/shared/play.png", true)
+end sub
 
 ' Agenda la sincronización de TimelineBar para reflejar seeks asíncronos con reintento diferido.
 sub __scheduleTimelineSync(position = invalid as dynamic)
@@ -2410,7 +2471,7 @@ sub __cancelChannelPosition(logout = false)
   m.showChannelListAfterUpdate = false
   m.channelListContainer.visible = false
 
-  if not logout then m.videoPlayer.setFocus(true)
+  if not logout then __focusPlayer()
 
   if not logout and m.repositionChannnelList then
     __repositionChannelList()
@@ -2429,7 +2490,7 @@ sub __showProgramInfo()
     btn = __getFirstVisibleControllerButton()
     if btn <> invalid then btn.setFocus(true)
   end if
-  m.videoPlayer.setFocus(false)
+  if m.videoFocus <> invalid then m.videoFocus.setFocus(false)
 
   m.showInfoTimer.control = "start"
   m.showInfoTimer.ObserveField("fire","onHidenProgramInfo")
@@ -2451,7 +2512,6 @@ sub __loadStreamingURL(key, id, streamingAction, streamingType = getStreamingTyp
 
   m.playerLoaded = false
   
-  print "__loadStreamingURL"
   ' Falta agregar el update Session
   requestId = createRequestId()
   action = {

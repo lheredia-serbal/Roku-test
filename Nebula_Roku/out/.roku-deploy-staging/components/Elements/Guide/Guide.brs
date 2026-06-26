@@ -70,7 +70,7 @@ end sub
 ' entonces sigue con el siguente metodo onKeyEvent del compoente superior
 function onKeyEvent(key as string, press as boolean) as boolean
 
-    if isPINDialogVisible() then return true
+    if handlePINDialogKeyEvent(press) then return true
 
     handled = false
 

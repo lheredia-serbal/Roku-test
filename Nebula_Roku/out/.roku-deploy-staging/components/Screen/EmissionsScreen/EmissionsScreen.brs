@@ -163,7 +163,7 @@ end sub
 ' Captura eventos de teclado para volver a la pantalla anterior.
 function onKeyEvent(key as string, press as boolean) as boolean
 
-  if isPINDialogVisible() then return true
+  if handlePINDialogKeyEvent(press) then return true
 
   ' Ignora eventos de liberación de tecla.
   if not press then return false

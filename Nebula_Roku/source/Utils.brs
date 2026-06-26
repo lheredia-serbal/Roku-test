@@ -300,6 +300,8 @@ function createAndShowPINDialog(screen, title as string,  method, buttons = [])
   pinDialog.title = title
   pinDialog.buttons =buttons
   pinDialog.observeField("buttonSelected", method)
+  if pinDialog.hasField("pin") then pinDialog.observeField("pin", "onPINDialogUserInteraction")
+  if pinDialog.hasField("focusedChild") then pinDialog.observeField("focusedChild", "onPINDialogUserInteraction")
 
   ' Agregar el diálogo a la escena
   screen.appendChild(pinDialog)
@@ -317,6 +319,19 @@ function isPINDialogVisible() as Boolean
   return (m.pinDialog <> invalid and m.pinDialog.visible = true)
 end function
 
+' Mantiene vivo el modal de PIN mientras el usuario está oprimiendo teclas dentro del diálogo.
+' Retorna true cuando el modal está visible para conservar el comportamiento previo de consumo del evento.
+function handlePINDialogKeyEvent(press as Boolean) as Boolean
+  if not isPINDialogVisible() then return false
+
+  if press then __restartPINDialogAutoCloseTimer(m.top)
+  return true
+end function
+
+sub onPINDialogUserInteraction()
+  __restartPINDialogAutoCloseTimer(m.top)
+end sub
+
 sub __startPINDialogAutoCloseTimer(screen)
   __stopPINDialogAutoCloseTimer(screen)
 
@@ -329,6 +344,13 @@ sub __startPINDialogAutoCloseTimer(screen)
   screen.appendChild(timer)
   m.pinDialogAutoCloseTimer = timer
   timer.control = "start"
+end sub
+
+sub __restartPINDialogAutoCloseTimer(screen = invalid)
+  if screen = invalid then screen = m.top
+  if screen = invalid then return
+
+  __startPINDialogAutoCloseTimer(screen)
 end sub
 
 sub __stopPINDialogAutoCloseTimer(screen = invalid)
@@ -352,6 +374,7 @@ sub closePINDialogWithoutValidation(screen = invalid)
 
   m.pinDialog.visible = false
   m.pinDialog.unobserveField("buttonSelected")
+  __unobservePINDialogUserInteraction(m.pinDialog)
   if screen <> invalid then screen.removeChild(m.pinDialog)
   m.pinDialog = invalid
 
@@ -493,10 +516,18 @@ function clearPINDialogAndGetOption(screen, dialog)
 
     dialog.visible = false
     dialog.unobserveField("buttonSelected")
+    __unobservePINDialogUserInteraction(dialog)
     screen.removeChild(dialog)
 
   return {option: option, pin: pin}
 end function
+
+sub __unobservePINDialogUserInteraction(dialog)
+  if dialog = invalid then return
+
+  if dialog.hasField("pin") then dialog.unobserveField("pin")
+  if dialog.hasField("focusedChild") then dialog.unobserveField("focusedChild")
+end sub
 
 ' Valida si el error debe disparar un logout, de ser asi dispara el Logout en la pantalla 
 ' si es que este tiene la propiedad o se envia la pantalla

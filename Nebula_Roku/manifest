@@ -41,8 +41,8 @@ rsg_version=1.3
 # IMPORTANTE: Se debe cambiar toda esta sección por aplicación.
 # *******************************************************************************************
 
-title=Nebula
-registry_prefix=NebulaDev
+title=NebulaTest
+registry_prefix=NebulaTest
 
 # *******************************************************************************************
 # FIN de la Sección

@@ -161,7 +161,7 @@ end sub
 ' Bloque grilla nativa: PosterGrid administra navegación direccional, no se interceptan flechas.
 function onKeyEvent(key as string, press as boolean) as boolean
 
-  if isPINDialogVisible() then return true
+  if handlePINDialogKeyEvent(press) then return true
   return false
 end function
 
