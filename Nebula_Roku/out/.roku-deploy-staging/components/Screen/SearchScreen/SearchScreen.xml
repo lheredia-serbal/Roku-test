@@ -69,7 +69,9 @@
     </Group>
 
     <!-- Input de busqueda -->
+    
     <TextEditBox id="searchInput" clearOnDownKey="false" />
+    <SelectionBox id="searchInputBorder" visible="false" />
 
     <!-- Botón de búsqueda manual (solo visible en modo MANUAL). -->
     <QvButton id="searchActionButton" visible="false" focusable="true" />

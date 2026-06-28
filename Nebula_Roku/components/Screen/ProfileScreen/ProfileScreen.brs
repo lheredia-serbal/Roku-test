@@ -829,6 +829,7 @@ sub __loadProfiles(profilesResp)
     newProfile.profileId = profile.id
     newProfile.name = profile.name
     newProfile.focusable = true
+    newProfile.showManageProfile = m.showManageProfile
     newProfile.auxInfo = FormatJson(profile)
 
     m.profiles.push(newProfile)
@@ -1068,7 +1069,6 @@ sub __loadEditProfile(profileByEdit)
   m.top.loading.visible = false
   m.editMode = true
   m.profileByEdit = profileByEdit
-  m.profileImageEdit.showManageProfile = false
   m.profileImageEdit.uriImage = getImageUrl(m.profileByEdit.avatar.image) 
   m.profileImageEdit.visible = true
   m.keyboard.setFocus(true) 
@@ -1144,7 +1144,6 @@ sub __backToSelectProfile(reloadProfile)
   m.screenProfileEdit.visible = false
   m.profileByEdit = invalid
 
-  m.profileImageEdit.showManageProfile = true
   m.profileImageEdit.visible = false
   m.profileImageEdit.uriImage = invalid 
   m.keyboard.text = ""

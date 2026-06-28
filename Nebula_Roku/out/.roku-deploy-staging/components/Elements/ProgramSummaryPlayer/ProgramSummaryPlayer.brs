@@ -80,7 +80,14 @@ sub changeProgram()
             particularItemSpacings[2] = m.spacings
         end if
         
+        synopsisText = invalid
         if m.top.program.synopsis <> invalid and m.top.program.synopsis <> "" then
+            synopsisText = m.top.program.synopsis
+        else if m.top.program.categoryName <> invalid and m.top.program.categoryName <> "" then
+            synopsisText = m.top.program.categoryName
+        end if
+
+        if synopsisText <> invalid and synopsisText <> "" then
             showSynopsis = true
             particularItemSpacings[3] = m.spacings
         end if
@@ -189,7 +196,7 @@ sub changeProgram()
 
         ' Sinopsis
         if showSynopsis then
-            m.programSynopsis.text = m.top.program.synopsis
+            m.programSynopsis.text = synopsisText
             m.programSynopsis.height = m.defaultHeight
             m.programSynopsis.visible = true
         end if

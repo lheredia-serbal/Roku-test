@@ -293,6 +293,10 @@ function createAndShowDialog(screen, title as String, message as String, method 
   return dialog
 end function
 
+function isPINDialogVisible() as Boolean
+  return (m.pinDialog <> invalid and m.pinDialog.visible = true)
+end function
+
 ' Crea el modal para el control parental
 function createAndShowPINDialog(screen, title as string,  method, buttons = [])
   pinDialog = createObject("roSGNode", "StandardPinPadDialog")
@@ -300,8 +304,6 @@ function createAndShowPINDialog(screen, title as string,  method, buttons = [])
   pinDialog.title = title
   pinDialog.buttons =buttons
   pinDialog.observeField("buttonSelected", method)
-  if pinDialog.hasField("pin") then pinDialog.observeField("pin", "onPINDialogUserInteraction")
-  if pinDialog.hasField("focusedChild") then pinDialog.observeField("focusedChild", "onPINDialogUserInteraction")
 
   ' Agregar el diálogo a la escena
   screen.appendChild(pinDialog)
@@ -310,77 +312,8 @@ function createAndShowPINDialog(screen, title as string,  method, buttons = [])
   pinDialog.setFocus(true)
   pinDialog.visible = true
 
-  __startPINDialogAutoCloseTimer(screen)
-
   return pinDialog
 end function
-
-function isPINDialogVisible() as Boolean
-  return (m.pinDialog <> invalid and m.pinDialog.visible = true)
-end function
-
-' Mantiene vivo el modal de PIN mientras el usuario está oprimiendo teclas dentro del diálogo.
-' Retorna true cuando el modal está visible para conservar el comportamiento previo de consumo del evento.
-function handlePINDialogKeyEvent(press as Boolean) as Boolean
-  if not isPINDialogVisible() then return false
-
-  if press then __restartPINDialogAutoCloseTimer(m.top)
-  return true
-end function
-
-sub onPINDialogUserInteraction()
-  __restartPINDialogAutoCloseTimer(m.top)
-end sub
-
-sub __startPINDialogAutoCloseTimer(screen)
-  __stopPINDialogAutoCloseTimer(screen)
-
-  timer = createObject("roSGNode", "Timer")
-  timer.id = "pinDialogAutoCloseTimer"
-  timer.repeat = false
-  timer.duration = 20
-  timer.observeField("fire", "onPINDialogAutoCloseTimerFired")
-
-  screen.appendChild(timer)
-  m.pinDialogAutoCloseTimer = timer
-  timer.control = "start"
-end sub
-
-sub __restartPINDialogAutoCloseTimer(screen = invalid)
-  if screen = invalid then screen = m.top
-  if screen = invalid then return
-
-  __startPINDialogAutoCloseTimer(screen)
-end sub
-
-sub __stopPINDialogAutoCloseTimer(screen = invalid)
-  if m.pinDialogAutoCloseTimer = invalid then return
-
-  m.pinDialogAutoCloseTimer.control = "stop"
-  m.pinDialogAutoCloseTimer.unobserveField("fire")
-  if screen <> invalid then screen.removeChild(m.pinDialogAutoCloseTimer)
-  m.pinDialogAutoCloseTimer = invalid
-end sub
-
-sub onPINDialogAutoCloseTimerFired()
-  closePINDialogWithoutValidation(m.top)
-end sub
-
-sub closePINDialogWithoutValidation(screen = invalid)
-  if screen = invalid then screen = m.top
-  __stopPINDialogAutoCloseTimer(screen)
-
-  if m.pinDialog = invalid then return
-
-  m.pinDialog.visible = false
-  m.pinDialog.unobserveField("buttonSelected")
-  __unobservePINDialogUserInteraction(m.pinDialog)
-  if screen <> invalid then screen.removeChild(m.pinDialog)
-  m.pinDialog = invalid
-
-  if m.repositionChannnelList <> invalid then m.repositionChannnelList = true
-  if m.lastButtonSelect <> invalid then m.lastButtonSelect.setFocus(true)
-end sub
 
 sub showCdnErrorDialog(overlayTransparent = false as Boolean)
     if m.global = invalid then return
@@ -509,25 +442,15 @@ end function
 ' Limipia las variables del modal de Control parental y retornan la respuesta. Se debe asignar la variable del 
 ' modal con invalid para que sea limpiado por el garbage collection 
 function clearPINDialogAndGetOption(screen, dialog)
-    __stopPINDialogAutoCloseTimer(screen)
-
     option = dialog.buttonSelected
     pin = dialog.pin
 
     dialog.visible = false
     dialog.unobserveField("buttonSelected")
-    __unobservePINDialogUserInteraction(dialog)
-    screen.removeChild(dialog)
+    screen.removeChild(m.dialog)
 
   return {option: option, pin: pin}
 end function
-
-sub __unobservePINDialogUserInteraction(dialog)
-  if dialog = invalid then return
-
-  if dialog.hasField("pin") then dialog.unobserveField("pin")
-  if dialog.hasField("focusedChild") then dialog.unobserveField("focusedChild")
-end sub
 
 ' Valida si el error debe disparar un logout, de ser asi dispara el Logout en la pantalla 
 ' si es que este tiene la propiedad o se envia la pantalla

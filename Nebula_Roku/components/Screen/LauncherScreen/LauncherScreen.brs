@@ -5,6 +5,7 @@ sub init()
 
   if getValidateChangeStorage() then 
     migrationOk = migrateRegistrySectionToPrefixed()
+    if migrationOk then print "Complete Migration"
   end if
 
   appCode = getAppCode()

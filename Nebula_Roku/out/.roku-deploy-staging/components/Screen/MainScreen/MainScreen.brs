@@ -92,8 +92,6 @@ end sub
 ' entonces sigue con el siguente metodo onKeyEvent del compoente superior
 function onKeyEvent(key as string, press as boolean) as boolean
 
-  if handlePINDialogKeyEvent(press) then return true
-
   if m.top.loading.visible <> false and key <> KeyButtons().BACK then 
     return true
   end if
@@ -1879,8 +1877,8 @@ sub __syncNewsDots()
         dot = createObject("roSGNode", "Poster")
         dot.uri = "pkg:/images/shared/ball-large.png"
         ' Define tamaño del dot activo para enfatizar el foco horizontalmente.
-        dot.width = 70
-        dot.height = 12
+        dot.width = scaleValue(40, m.scaleInfo)
+        dot.height = scaleValue(6, m.scaleInfo)
         ' Escala la barra al tamaño objetivo respetando transparencia del PNG.
         dot.loadDisplayMode = "scaleToZoom"
         ' Opacidad máxima para el dot activo.
@@ -1889,8 +1887,8 @@ sub __syncNewsDots()
         ' Crea dot circular inactivo reutilizando el asset compartido del proyecto.
         dot = createObject("roSGNode", "Poster")
         dot.uri = "pkg:/images/shared/ball.png"
-        dot.width = 12
-        dot.height = 12
+        dot.width = scaleValue(6, m.scaleInfo)
+        dot.height = scaleValue(6, m.scaleInfo)
         ' Atenúa el blanco en dots inactivos para reducir protagonismo.
         dot.blendColor = "0xFFFFFFA6"
         ' Opacidad reducida para dots inactivos.

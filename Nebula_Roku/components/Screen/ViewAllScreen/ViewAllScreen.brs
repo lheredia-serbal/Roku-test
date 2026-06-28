@@ -161,7 +161,7 @@ end sub
 ' Bloque grilla nativa: PosterGrid administra navegación direccional, no se interceptan flechas.
 function onKeyEvent(key as string, press as boolean) as boolean
 
-  if handlePINDialogKeyEvent(press) then return true
+  if key = invalid return false
   return false
 end function
 
@@ -795,7 +795,6 @@ sub __configurePosterGridLayout(totalItems as integer)
   if itemSpacing <> invalid and itemSpacing.count() > 1 then spacingY = itemSpacing[1]
 
   gridX = m.posterGrid.translation[0]
-  gridY = m.posterGrid.translation[1]
   ' Bloque grilla nativa: extendemos la grilla hasta el borde derecho visual con margen mínimo.
   availableWidth = m.scaleInfo.width - gridX - scaleValue(10, m.scaleInfo)
   availableHeight = scaleValue(500, m.scaleInfo)

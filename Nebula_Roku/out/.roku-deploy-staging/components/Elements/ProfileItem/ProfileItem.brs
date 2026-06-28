@@ -43,11 +43,13 @@ sub onFocusChange()
         m.opacityLayout.opacity = 0.3
         m.selectedIndicator.visible = true
         m.profileName.color = m.global.colors.WHITE
+        m.opacityByEdit.visible = m.top.showManageProfile
     else 
         ' No tiene foco 
         m.opacityLayout.opacity = 0.0
         m.selectedIndicator.visible = false
         m.profileName.color = m.global.colors.LIGHT_GRAY
+        m.opacityByEdit.visible = false
     end if
 
     m.profileByEdit.visible = m.top.showManageProfile
@@ -80,6 +82,5 @@ sub setSize()
 
     m.opacityLayout.opacity = 0.0
     m.selectedIndicator.visible = false
-    m.profileByEdit.visible = m.top.showManageProfile
     m.profileName.color = m.global.colors.LIGHT_GRAY
 end sub

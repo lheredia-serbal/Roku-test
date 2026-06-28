@@ -113,7 +113,6 @@ sub __resetProgressState()
   if m.pauseTickTimer <> invalid then m.pauseTickTimer.control = "stop"
   if m.progress <> invalid then m.progress.width = 0
 
-  thumbY = 0.0
   if m.track <> invalid and m.thumb <> invalid then
     trackY = 0.0
     if m.track.translation <> invalid then trackY = m.track.translation[1]
@@ -122,7 +121,7 @@ sub __resetProgressState()
     thumbY = trackY + (m.track.height / 2.0) - (thumbH / 2.0)
   end if
 
-  'if m.thumb <> invalid then m.thumb.translation = [0, thumbY]
+  if m.thumb <> invalid then m.thumb.translation = [0, thumbY]
   if m.timeLabel <> invalid then m.timeLabel.text = "00:00"
 
   if m.top <> invalid then

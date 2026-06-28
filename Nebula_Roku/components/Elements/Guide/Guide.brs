@@ -37,6 +37,7 @@ sub init()
     
     m.loadConfig = false
     m.saveDateByEvent = false
+    m.carouselGuideEventsObserved = false
     m.noProgram = false
     m.channelArray = []
 
@@ -70,8 +71,6 @@ end sub
 ' entonces sigue con el siguente metodo onKeyEvent del compoente superior
 function onKeyEvent(key as string, press as boolean) as boolean
 
-    if handlePINDialogKeyEvent(press) then return true
-
     handled = false
 
     if key = KeyButtons().UP then 
@@ -103,11 +102,6 @@ function onKeyEvent(key as string, press as boolean) as boolean
             end if
 
             __savePosition()
-            
-            m.carouselGuide.unobserveField("itemFocused")
-            m.carouselGuide.unobserveField("itemSelected")
-            m.carouselGuide.unobserveField("happenedLeft")
-            m.carouselGuide.unobserveField("happenedRight")
 
             m.currentChannelNumber.setFocus(true)
 
@@ -148,12 +142,7 @@ function onKeyEvent(key as string, press as boolean) as boolean
             end if
 
             __savePosition()
-            
-            m.carouselGuide.unobserveField("itemFocused")
-            m.carouselGuide.unobserveField("itemSelected")
-            m.carouselGuide.unobserveField("happenedLeft")
-            m.carouselGuide.unobserveField("happenedRight")
-            
+
             m.currentChannelNumber.setFocus(true)
             
             clearTimer(m.changeDown)
@@ -200,11 +189,6 @@ function onKeyEvent(key as string, press as boolean) as boolean
             m.apiRequestCurrentChannel = clearApiRequest(m.apiRequestCurrentChannel)
             m.apiRequestPrevChannel = clearApiRequest(m.apiRequestPrevChannel)
             m.apiRequestNextChannel = clearApiRequest(m.apiRequestNextChannel)
-                
-            m.carouselGuide.unobserveField("itemFocused")
-            m.carouselGuide.unobserveField("itemSelected")
-            m.carouselGuide.unobserveField("happenedLeft")
-            m.carouselGuide.unobserveField("happenedRight")
 
             m.currentCatchupHours = 0
             m.programSummaryPlayer.catchupDuration =  m.currentCatchupHours
@@ -416,18 +400,25 @@ end sub
 
 ' devuelve el nodo que esta teniendo el foco.
 sub onItemFocusedChanged()
-    m.programBySend = invalid
+    ' Cuando el PIN esta abierto, el foco puede cambiar dentro del dialogo y disparar
+    ' itemFocused nuevamente. No debemos limpiar m.programBySend porque contiene
+    ' el programa que se debe reproducir si la validacion parental es correcta.
+    'if not isPINDialogVisible() then m.programBySend = invalid
     m.programSummaryPlayer.program = m.carouselGuide.content.getChild(m.carouselGuide.itemFocused)
 end sub
 
 ' Procesa el evento de flecha izquierda
 sub onLeftEvent()
-    if m.carouselGuide.happenedLeft then m.saveDateByEvent = true
+    if m.currentChannel <> invalid and m.currentChannel.program <> invalid then
+        if m.carouselGuide.happenedLeft then m.saveDateByEvent = true
+    end if
 end sub
 
 ' Procesa el evento de flecha derecha
 sub onRightEvent()
-    if m.carouselGuide.happenedRight then m.saveDateByEvent = true
+    if m.currentChannel <> invalid and m.currentChannel.program <> invalid then
+        if m.carouselGuide.happenedRight then m.saveDateByEvent = true  
+    end if
 end sub
 
 ' Dispara la carga de la guia del canal superior
@@ -647,7 +638,7 @@ sub __initConfig()
     end if 
 
     m.selectedIndicator.size = scaleSize([153, 228], m.scaleInfo) 'Ajhuste del label y el espacio de separacion
-    m.selectedIndicator.translation = scaleSize([540, 20], m.scaleInfo)
+    m.selectedIndicator.translation = scaleSize([539, 20], m.scaleInfo)
 
     m.channelContainer.width = scaleValue(145, m.scaleInfo)
     m.channelContainer.height = scaleValue(262, m.scaleInfo)
@@ -740,10 +731,13 @@ sub __clearGuide()
     m.apiRequestPrevChannel = clearApiRequest(m.apiRequestPrevChannel)
     m.apiRequestNextChannel = clearApiRequest(m.apiRequestNextChannel)
     
-    m.carouselGuide.unobserveField("itemFocused")
-    m.carouselGuide.unobserveField("itemSelected")
-    m.carouselGuide.unobserveField("happenedLeft")
-    m.carouselGuide.unobserveField("happenedRight")
+    if m.carouselGuideEventsObserved then
+        m.carouselGuide.unobserveField("itemFocused")
+        m.carouselGuide.unobserveField("itemSelected")
+        m.carouselGuide.unobserveField("happenedLeft")
+        m.carouselGuide.unobserveField("happenedRight")
+        m.carouselGuideEventsObserved = false
+    end if
 
     m.currentCatchupHours = 0
     m.programSummaryPlayer.catchupDuration =  m.currentCatchupHours
@@ -815,23 +809,28 @@ sub __setupTargetList(content as Object)
     m.carouselGuide.content = content
     m.carouselGuide.itemComponentName = "GuideSingleItem"
     m.carouselGuide.showTargetRects = false
-    m.carouselGuide.observeField("itemSelected", "onItemSelectedChanged")
-    m.carouselGuide.observeField("itemFocused", "onItemFocusedChanged")
-    m.carouselGuide.observeField("happenedLeft", "onLeftEvent")
-    m.carouselGuide.observeField("happenedRight", "onRightEvent")
+
+    if not m.carouselGuideEventsObserved then
+        m.carouselGuide.observeField("itemSelected", "onItemSelectedChanged")
+        m.carouselGuide.observeField("itemFocused", "onItemFocusedChanged")
+        m.carouselGuide.observeField("happenedLeft", "onLeftEvent")
+        m.carouselGuide.observeField("happenedRight", "onRightEvent")
+        m.carouselGuideEventsObserved = true
+    end if
 end sub
 
 ' Selecciona un canal enviandolo al player para reproducir o levantando el modal de control 
 ' parental si el canal lo requiere
 sub __channelSelected()
     if m.currentChannel.parentalControl <> invalid and m.currentChannel.parentalControl then
-        m.lastElementSelect = m.top.focusedChild
-        if m.pinDialog <> invalid then
-            m.programBySend = invalid
-            clearPINDialogAndGetOption(m.top, m.pinDialog)
-            m.pinDialog = invalid
-        end if
-        m.pinDialog = createAndShowPINDialog(m.top, i18n_t(m.global.i18n, "shared.parentalControlModal.title"), "onPinDialogLoad", [i18n_t(m.global.i18n, "button.ok"), i18n_t(m.global.i18n, "button.cancel")])
+        'm.lastElementSelect = m.top.focusedChild
+        'if m.pinDialog <> invalid then
+            'm.programBySend = invalid
+            'clearPINDialogAndGetOption(m.top, m.pinDialog)
+            'm.pinDialog = invalid
+        'end if
+        'm.pinDialog = createAndShowPINDialog(m.top, i18n_t(m.global.i18n, "shared.parentalControlModal.title"), "onPinDialogLoad", [i18n_t(m.global.i18n, "button.ok"), i18n_t(m.global.i18n, "button.cancel")])
+        __loadStreamingForPlayer()
     else
         __loadStreamingForPlayer()
     end if

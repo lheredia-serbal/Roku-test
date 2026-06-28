@@ -96,7 +96,6 @@ sub __showMetadata(itemSize as Object)
   padding = scaleValue(8, m.scaleInfo)
   progressHeight = scaleValue(3, m.scaleInfo)
   progressBottom = scaleValue(8, m.scaleInfo)
-  labelsBottomPadding = scaleValue(6, m.scaleInfo)
   metadataWidth = itemSize[0] - (padding * 2)
   if metadataWidth < 0 then metadataWidth = 0
 

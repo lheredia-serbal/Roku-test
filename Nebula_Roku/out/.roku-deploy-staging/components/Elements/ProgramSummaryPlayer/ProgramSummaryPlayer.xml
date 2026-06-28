@@ -35,14 +35,14 @@
           id="programTitle"
           height="1"
           vertAlign="center"
-          font="font:MediumBoldSystemFont"
+          font="font:LargeBoldSystemFont"
           visible="false" />
 
         <Label 
           id="programSubtitle"
           height="1"
           vertAlign="center"
-          font="font:SmallBoldSystemFont"
+          font="font:MediumBoldSystemFont"
           visible="false" />
 
         <LayoutGroup

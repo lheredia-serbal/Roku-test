@@ -248,8 +248,6 @@ end sub
 ' entonces sigue con el siguente metodo onKeyEvent del compoente superior
 function onKeyEvent(key as String, press as Boolean) as Boolean
 
-  if handlePINDialogKeyEvent(press) then return true
-
   nowMs = __getNowMilliseconds() ' timestamp actual en milisegundos para filtros de entrada
 
   ' Bloquea eventos mientras se esta recargando o por una pequeña ventana posterior
@@ -2935,8 +2933,11 @@ sub __queueSeek(key as String)
   m.pendingSeekActive = true
   m.pendingSeekPosition = position
 
-  ' Preview UI inmediato (sin aplicar seek al stream todavía)
+  ' Preview UI inmediato (sin aplicar seek al stream todavía).
+  ' Marcar seeking antes de cambiar position evita que TimelineBar actualice timeLabel
+  ' con cada LEFT/RIGHT; el texto se confirma al presionar OK.
   if m.timelineBar <> invalid then
+    m.timelineBar.seeking = true
     m.timelineBar.duration = duration
     m.timelineBar.position = position
   end if
@@ -2944,7 +2945,6 @@ sub __queueSeek(key as String)
   __restartShowInfoTimer()
   __restartSeekCommitTimer()
 
-  if m.timelineBar <> invalid then m.timelineBar.seeking = true
 end sub
 
 sub __restartSeekCommitTimer()
@@ -3052,10 +3052,12 @@ sub __stopSeekHold()
   m.seekHoldKey = invalid
   m.seekHoldTicks = 0
 
-  ' ahora sí: 2 segundos desde que soltó
+  ' Mantener TimelineBar en modo seeking si hay un seek pendiente para que timeLabel
+  ' no cambie al soltar LEFT/RIGHT; se actualiza cuando el usuario confirma con OK
+  ' o se restaura si cancela la navegación.
   __restartSeekCommitTimer()
 
-  if m.timelineBar <> invalid then m.timelineBar.seeking = false
+  if m.timelineBar <> invalid and not m.pendingSeekActive then m.timelineBar.seeking = false
 end sub
 
 sub onSeekHoldTimerFired()
@@ -3121,8 +3123,11 @@ sub __queueSeekWithJump(key as String, jumpOverride as Integer)
   m.pendingSeekActive = true
   m.pendingSeekPosition = position
 
-  ' Preview UI
+  ' Preview UI.
+  ' Marcar seeking antes de cambiar position evita que TimelineBar actualice timeLabel
+  ' con cada LEFT/RIGHT; el texto se confirma al presionar OK.
   if m.timelineBar <> invalid then
+    m.timelineBar.seeking = true
     m.timelineBar.duration = duration
     m.timelineBar.position = position
   end if
