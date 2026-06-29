@@ -551,7 +551,7 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
       end if
     end if
 
-  else if __isPlayerFocusInChain() and __isSeekKey(key) then
+  else if __shouldShowProgramInfoForSeekKey() and __isSeekKey(key) then
     handled = true
     __showProgramInfo()
 
@@ -648,6 +648,21 @@ function __isPlayerFocusInChain() as Boolean
   return false
 end function
 
+' Indica si las teclas de navegación/seek deben abrir la información del programa
+' desde la superficie del PlayerScreen, incluso cuando el foco quedó en el grupo
+' raíz del componente y no específicamente en el nodo proxy Video.
+function __shouldShowProgramInfoForSeekKey() as Boolean
+  if __isPlayerFocusInChain() then return true
+  if m.top = invalid or not m.top.isInFocusChain() then return false
+
+  if m.playerControllers <> invalid and m.playerControllers.isInFocusChain() then return false
+  if m.timelineBar <> invalid and m.timelineBar.isInFocusChain() then return false
+  if m.channelListContainer <> invalid and m.channelListContainer.isInFocusChain() then return false
+  if m.guide <> invalid and m.guide.isInFocusChain() then return false
+  if m.inactivityContinueButton <> invalid and m.inactivityContinueButton.isInFocusChain() then return false
+
+  return true
+end function
 
 ' Devuelve tiempo monotónico en ms para controlar ventanas de bloqueo/debounce
 function __getNowMilliseconds() as Integer
@@ -1229,6 +1244,16 @@ sub onStreamingsResponse()
 
       ' Inicializar el player
       __loadPlayer(streaming, false)
+
+      ' Cuando el cambio desde live default a live rewind fue disparado por una pausa
+      ' nativa/intermedia, asegurar que el nuevo stream quede despausado después
+      ' de cargar correctamente la URL y setear el contenido en el player.
+      if m.unpauseAfterDefaultLiveRewindSwitch = true then
+        m.unpauseAfterDefaultLiveRewindSwitch = false
+        if m.videoPlayer <> invalid then m.videoPlayer.control = "play"
+        m.playPauseIcon = "pause"
+        if m.timelineBar <> invalid then m.timelineBar.isPaused = false
+      end if
 
       ' Si estoy cambiando la url del Live por la de Rewind entonces no es necesario reposicionar la guia y la lista de canales
       if (m.streaming.streamingType = getStreamingType().DEFAULT) then
