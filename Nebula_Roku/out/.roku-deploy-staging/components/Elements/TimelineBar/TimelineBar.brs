@@ -39,7 +39,7 @@ sub init()
   m.cachedTimeText = invalid
   m.pendingZeroThumbY = invalid
   m.zeroThumbTimer = CreateObject("roSGNode", "Timer")
-  m.zeroThumbTimer.duration = 0.3
+  m.zeroThumbTimer.duration = 0.5
   m.zeroThumbTimer.repeat = false
   m.zeroThumbTimer.ObserveField("fire", "onZeroThumbTimerFired")
   m.top.appendChild(m.zeroThumbTimer)
@@ -280,6 +280,10 @@ sub __updateProgress()
         else
           __cancelPendingZeroThumb()
           m.thumb.translation = [thumbX, thumbY]
+
+          if (thumbX = m.totalWidth -20 and m.top.streamType = getStreamingType().LIVE_REWIND and m.top.liveText <> invalid) then
+            m.timeLabel.text = m.top.liveText
+          end if
         end if
       end if
     end if

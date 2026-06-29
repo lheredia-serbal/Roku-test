@@ -282,11 +282,11 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
     handled = true
 
     ' Si el contenido está en vivo con live rewind, cambiar a la URL de rewind
-    ' y pausar apenas el nuevo stream quede reproduciendo. Si la info del programa
-    ' está oculta, no la mostramos: sólo respetamos la pausa nativa.
+    ' y dejar que el nuevo stream comience a reproducirse automáticamente. Si la
+    ' info del programa está oculta, no la mostramos.
     if __isDefaultLiveRewindStream() then
       controlsVisible = (m.playerControllers <> invalid and m.playerControllers.visible = true)
-      if __pauseDefaultLiveRewindStream() then
+      if __switchDefaultLiveRewindStream() then
         if controlsVisible then __showProgramInfo()
         return true
       end if
@@ -484,7 +484,7 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
       if key = KeyButtons().RIGHT and m.playPauseImageButton.focusRight <> invalid then
           m.playPauseImageButton.focusRight.setFocus(true)
         else if (key = KeyButtons().OK) and not LCase(m.streaming.type) = getVideoType().LIVE then
-          if not __pauseDefaultLiveRewindStream() then
+          if not __switchDefaultLiveRewindStream() then
             m.pendingLiveRewindPauseGuardUntilMs = invalid
             __togglePlayPause()
           end if
@@ -539,7 +539,7 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
 
     if __isDefaultLiveRewindStream() then
       if not __isForwardSeekKey(key) then
-       __pauseDefaultLiveRewindStream()
+       __switchDefaultLiveRewindStream()
       end if
     else
       if (not m.isReloadStreaming)
@@ -875,12 +875,18 @@ Sub OnVideoPlayerStateChange()
 
   if state = "buffering" then
     if not m.disableLayoutChannelConnection then 
+
+      if (LCase(m.streaming.type) = LCase(getVideoType().LIVE_REWIND) and m.streaming.streamingType = getStreamingType().LIVE_REWIND) return
+      print "test 1 " ; state ; m.streaming.type ; m.streaming.streamingType ; m.errorChannel.visible
       m.errorChannel.visible = true
       m.spinner.visible = true
+
+    else
+      __hideChannelConnectionLayout()
     end if
   else
-    m.errorChannel.visible = false
-    m.spinner.visible = false
+    print "test 2 " ; state ; m.streaming.streamingType ; m.errorChannel.visible
+    __hideChannelConnectionLayout()
   end if
 
   if state = "paused" then
@@ -888,7 +894,7 @@ Sub OnVideoPlayerStateChange()
     ' PLAY/PAUSE nativo antes de que onKeyEvent lo procese. Detectamos esa pausa
     ' sobre un vivo default con rewind y aplicamos el mismo cambio a live rewind.
     if __shouldSwitchHiddenNativePauseToLiveRewind() then
-      __pauseDefaultLiveRewindStream()
+      __switchDefaultLiveRewindStream()
     end if
 
     __syncPlayPauseButtonWithVideoState(state)
@@ -1203,6 +1209,7 @@ sub onStreamingsResponse()
         end if
       end if
 		  
+      print "test 3 " ; m.streaming.streamingType ; m.errorChannel.visible
       m.errorChannel.visible = false
       m.spinner.visible = false
       m.focusplayerByload = false
@@ -2228,12 +2235,18 @@ function __isDefaultLiveRewindStream() as Boolean
   return m.streaming <> invalid and LCase(m.streaming.type) = getVideoType().LIVE_REWIND and m.streaming.streamingType = getStreamingType().DEFAULT
 end function
 
-' Cambia un vivo con capacidad de rewind a live rewind y agenda la pausa cuando cargue.
-function __pauseDefaultLiveRewindStream() as Boolean
+' Cambia un vivo con capacidad de rewind a live rewind y opcionalmente pausa al cargar.
+function __switchDefaultLiveRewindStream(pauseAfterSwitch = false as Boolean) as Boolean
   if not __isDefaultLiveRewindStream() then return false
 
-  m.actionPostChageState = "pause"
-  m.pendingLiveRewindPauseGuardUntilMs = __getNowMilliseconds() + 6000
+  if pauseAfterSwitch then
+    m.actionPostChageState = "pause"
+    m.pendingLiveRewindPauseGuardUntilMs = __getNowMilliseconds() + 6000
+  else
+    m.actionPostChageState = invalid
+    m.pendingLiveRewindPauseGuardUntilMs = invalid
+  end if
+
   __reconnectStream(true, getStreamingType().LIVE_REWIND)
 
   return true
@@ -2264,6 +2277,12 @@ sub __pauseVideoAfterLiveRewindSwitch()
   m.disableLayoutChannelConnection = false
   __pauseVideo()
   __setPlayPauseButtonUri("pkg:/images/shared/play.png", true)
+end sub
+
+' Oculta el cartel de conexión de señal y el spinner asociado.
+sub __hideChannelConnectionLayout()
+  if m.errorChannel <> invalid then m.errorChannel.visible = false
+  if m.spinner <> invalid then m.spinner.visible = false
 end sub
 
 ' Agenda la sincronización de TimelineBar para reflejar seeks asíncronos con reintento diferido.
@@ -2546,6 +2565,7 @@ sub __errorProcessing()
     end if
   end if
   
+  print "test 4 " ; m.streaming.streamingType ; m.errorChannel.visible
   m.errorChannel.visible = true
   m.spinner.visible = true
 end sub
@@ -2605,13 +2625,14 @@ sub __extendTimeWatching()
   end if
 end sub
 
-' Reconectar el stream automáticamente
+' Reconectar el stream automáticamenteR
 sub __reconnectStream(saveTime = true, streamingType = invalid)
   if not m.isReloadStreaming then
     m.enableGoLive = true
     m.isReloadStreaming = true
     m.reloadInputBlockUntilMs = __getNowMilliseconds() + 1200
     m.disableLayoutChannelConnection = true
+    __hideChannelConnectionLayout()
     if (saveTime and m.streaming <> invalid and m.streaming.liveRewindDuration)
       m.lastPosition = m.streaming.liveRewindDuration - (m.videoPlayer.duration - m.videoPlayer.position) - 30
     end if
