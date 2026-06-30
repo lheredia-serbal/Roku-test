@@ -151,6 +151,7 @@ sub init()
   ' Guardar de la ultima acción del player
   ' Ventana de protección para sostener la pausa después de cambiar un vivo a live rewind.
   m.pendingLiveRewindPauseGuardUntilMs = invalid
+  
   m.actionPostChageState = invalid
   ' Bandera que indica que el stream se esta recargando, para evitar que el usuario realice acciones en el player
   m.isReloadStreaming = false

@@ -37,7 +37,7 @@ sub init()
   m.cachedProgressWidth = invalid
   m.cachedThumbTranslation = invalid
   m.cachedTimeText = invalid
-  m.pendingZeroThumbY = invalid
+  m.pendingZeroThumb = invalid
   m.zeroThumbTimer = CreateObject("roSGNode", "Timer")
   m.zeroThumbTimer.duration = 0.5
   m.zeroThumbTimer.repeat = false
@@ -121,6 +121,7 @@ sub __resetProgressState()
     thumbY = trackY + (m.track.height / 2.0) - (thumbH / 2.0)
   end if
 
+  print "Translation 2 " ; 0
   if m.thumb <> invalid then m.thumb.translation = [0, thumbY]
   if m.timeLabel <> invalid then m.timeLabel.text = "00:00"
 
@@ -137,20 +138,25 @@ sub __cancelPendingZeroThumb()
 end sub
 
 sub __scheduleZeroThumbTranslation(thumbY as dynamic)
+  print "__scheduleZeroThumbTranslation"
   if m.pendingZeroThumbY <> invalid then
     m.pendingZeroThumbY = thumbY
+    print "__scheduleZeroThumbTranslation 2 " ; thumbY
     return
   end if
 
+  print "__scheduleZeroThumbTranslation 3 " ; thumbY
   m.pendingZeroThumbY = thumbY
   if m.zeroThumbTimer <> invalid then
     m.zeroThumbTimer.control = "stop"
     m.zeroThumbTimer.control = "start"
+    print "__scheduleZeroThumbTranslation 4 " ; thumbY
   end if
 end sub
 
 sub onZeroThumbTimerFired()
   if m.thumb <> invalid and m.pendingZeroThumbY <> invalid then
+    print "Translation 3 " ; 0
     m.thumb.translation = [0, m.pendingZeroThumbY]
   end if
 
@@ -231,6 +237,7 @@ sub __updateProgress()
   ' Si no hay duración
   if m.currentDuration <= 0 and not m.top.isLive then
     m.progress.width = 0
+    print "Translation 4 " ; -thumbHalf
     if m.thumb <> invalid then m.thumb.translation = [-thumbHalf, thumbY]
     if m.timeLabel <> invalid then m.timeLabel.text = "00:00"
     return
@@ -265,6 +272,7 @@ sub __updateProgress()
     
     if (m.top.isLive ) then
       __cancelPendingZeroThumb()
+      print "Translation 6 " ; m.totalWidth - 20
       m.thumb.translation = [m.totalWidth - 20, thumbY]
       m.progress.width =  m.totalWidth
       ' Setear el máximo rango en X que puede alcanzar la esfera de progreso
@@ -275,10 +283,13 @@ sub __updateProgress()
       if (thumbX <> invalid) then
         if thumbX < 0 then thumbX = 0
 
+        print "ThumbX " ; thumbX
+
         if thumbX = 0 then
           __scheduleZeroThumbTranslation(thumbY)
         else
           __cancelPendingZeroThumb()
+          print "Translation 1 " ; thumbX
           m.thumb.translation = [thumbX, thumbY]
 
           if (thumbX = m.totalWidth -20 and m.top.streamType = getStreamingType().LIVE_REWIND and m.top.liveText <> invalid) then
@@ -510,6 +521,7 @@ sub __restoreCachedUi()
   if m.cachedProgressWidth <> invalid and m.progress <> invalid then 
     m.progress.width = m.cachedProgressWidth
   end if
+  print "Translation 5 " ; m.cachedThumbTranslation
   if m.cachedThumbTranslation <> invalid and m.thumb <> invalid then m.thumb.translation = m.cachedThumbTranslation
   if m.cachedTimeText <> invalid and m.timeLabel <> invalid then 
     m.timeLabel.text = m.cachedTimeText
