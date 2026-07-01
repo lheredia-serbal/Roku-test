@@ -11,7 +11,7 @@
     "next": "Next",
     "no": "NO",
     "previous": "Previous",
-    "ready": "Done",
+    "ready": "Ready!",
     "retry": "Retry",
     "tryAgain": "Try again",
     "save": "Save",
@@ -104,7 +104,7 @@
   },
   "player": {
     "guide": {
-      "availableToView": "Available to watch",
+      "availableToView": "Available to view",
       "now": "NOW"
     },
     "video": {

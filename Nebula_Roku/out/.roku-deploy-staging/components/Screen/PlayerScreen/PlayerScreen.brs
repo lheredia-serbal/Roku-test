@@ -732,6 +732,7 @@ sub initData()
     end if
 
     if m.timelineBar <> invalid then
+      m.timelineBar.streamType = m.streaming.type 
       isLiveTimeline = (LCase(m.streaming.type) = getVideoType().LIVE) or (LCase(m.streaming.type) = getVideoType().LIVE_REWIND and m.streaming.streamingType = getStreamingType().DEFAULT)
       m.timelineBar.isLive = isLiveTimeline
     end if
@@ -892,7 +893,7 @@ Sub OnVideoPlayerStateChange()
   if state = "buffering" then
     if not m.disableLayoutChannelConnection then 
 
-      if (LCase(m.streaming.type) = LCase(getVideoType().LIVE_REWIND) and m.streaming.streamingType = getStreamingType().LIVE_REWIND) return
+      'if (LCase(m.streaming.type) = LCase(getVideoType().LIVE_REWIND) and m.streaming.streamingType = getStreamingType().DEFAULT) return
       m.errorChannel.visible = true
       m.spinner.visible = true
 

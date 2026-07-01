@@ -39,7 +39,7 @@ sub init()
   m.cachedTimeText = invalid
   m.pendingZeroThumb = invalid
   m.zeroThumbTimer = CreateObject("roSGNode", "Timer")
-  m.zeroThumbTimer.duration = 0.5
+  m.zeroThumbTimer.duration = 0.3
   m.zeroThumbTimer.repeat = false
   m.zeroThumbTimer.ObserveField("fire", "onZeroThumbTimerFired")
   m.top.appendChild(m.zeroThumbTimer)
@@ -81,8 +81,8 @@ end sub
 
 sub onPositionChanged()
   if m.top.position <> invalid then
-    if (m.top.position = -1) then
-      __resetProgressState()
+    if (m.top.position = -1 and m.top.duration = 0 ) then
+      __resetProgressState(true)
       return
     end if
     m.currentPosition = m.top.position
@@ -91,10 +91,10 @@ sub onPositionChanged()
 end sub
 
 sub onResetTokenChanged()
-  __resetProgressState()
+  __resetProgressState(false)
 end sub
 
-sub __resetProgressState()
+sub __resetProgressState(resetTimeBar)
   m.currentDuration = 0
   m.currentPosition = 0
   m.lastPreviewEpoch = invalid
@@ -121,8 +121,10 @@ sub __resetProgressState()
     thumbY = trackY + (m.track.height / 2.0) - (thumbH / 2.0)
   end if
 
-  print "Translation 2 " ; 0
-  if m.thumb <> invalid then m.thumb.translation = [0, thumbY]
+  print "Translation 2 " ; 0 ; resetTimeBar
+  if m.thumb <> invalid and resetTimeBar = true then 
+    m.thumb.translation = [0, thumbY]
+  end if
   if m.timeLabel <> invalid then m.timeLabel.text = "00:00"
 
   if m.top <> invalid then

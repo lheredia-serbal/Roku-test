@@ -717,7 +717,9 @@ sub onFocusItem()
   if m.carouselContainer <> invalid and m.carouselContainer.isInFocusChain() and m.carouselContainer.focusedChild <> invalid then
     newFocus = ParseJson(m.carouselContainer.focusedChild.focused)
     if (m.itemfocused = invalid) or (m.itemfocused <> invalid and (newFocus.key <> m.itemfocused.key or newFocus.id <> m.itemfocused.id or newFocus.redirectKey <> m.itemfocused.redirectKey or newFocus.redirectId <> m.itemfocused.redirectId)) then
-      m.programImageBackground.uri = ""
+      if m.programImageBackground.uri = invalid or m.programImageBackground.uri = "" then
+        m.programImageBackground.uri = ""
+      end if
       m.itemfocused = newFocus
       m.carouselContainer.focusedChild.focused = invalid
       clearTimer(m.programTimer)
@@ -1036,8 +1038,10 @@ sub onProgramSummaryResponse()
         m.program = resp.data
 
         if  m.program.backgroundImage <> invalid then
+          print "programImageBackground uri 2 " ; getImageUrl(m.program.backgroundImage)
           m.programImageBackground.uri = getImageUrl(m.program.backgroundImage)
         else 
+          print "programImageBackground uri 3 "
           m.programImageBackground.uri = ""
         end if
 
@@ -1491,6 +1495,7 @@ end sub
 sub __clearProgramInfo()
   m.programInfo.program = invalid
   __hideProgramInfoImmediately()
+  print "programImageBackground uri 4 " 
   m.programImageBackground.uri = ""
   m.itemfocused = invalid
   clearTimer(m.programTimer)

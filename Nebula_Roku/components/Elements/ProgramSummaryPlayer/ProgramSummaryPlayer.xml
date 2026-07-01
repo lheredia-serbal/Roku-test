@@ -72,7 +72,7 @@
           vertAlign="center"
           wrap="true"
           maxLines="3"
-          font="font:SmallerSystemFont"
+          font="font:TinySystemFont"
           visible="false" />
 
         <QvButton

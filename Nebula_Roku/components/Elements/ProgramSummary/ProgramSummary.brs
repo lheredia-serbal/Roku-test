@@ -149,7 +149,7 @@ sub changeProgram()
         else if (program.channel <> invalid and program.channel.category <> invalid and program.channel.category <> "")
             synopsis = program.channel.category
         end if
-        m.programSynopsis = __createShadowLabel("programSynopsis", synopsis, "font:SmallerSystemFont", scaleValue(90, m.scaleInfo), 3)
+        m.programSynopsis = __createShadowLabel("programSynopsis", synopsis, "font:TinySystemFont", scaleValue(90, m.scaleInfo), 3)
         m.programSynopsis.wrap = true
         m.programSynopsis.maxLines = 3
         m.programContainer.appendChild(m.programSynopsis)
