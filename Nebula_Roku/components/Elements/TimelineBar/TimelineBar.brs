@@ -252,7 +252,6 @@ sub __updateProgress()
   end if
 
   ' Progreso
-
   if (m.currentPosition > 0 and m.currentDuration > 0) then  
     progressWidth = (m.currentPosition / m.currentDuration) * m.totalWidth
   else
@@ -314,7 +313,7 @@ sub __updateProgress()
       'if m.committedRemaining <> invalid then remaining = m.committedRemaining
 
       if remaining < 0 then remaining = 0
-      if (m.top.isPaused = true) then
+      if (m.top.isPaused = true and m.pauseStartEpochSeconds <> invalid) then
         elapsedPaused = __getEpochSeconds() - m.pauseStartEpochSeconds
         if elapsedPaused > 0 then remaining = remaining + elapsedPaused
       end if

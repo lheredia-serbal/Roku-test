@@ -57,7 +57,7 @@ sub init()
   ' Mantengo el input completamente visible desde la inicialización.
   m.searchInput.opacity = 1.0 
   if m.searchActionButton <> invalid then
-    m.searchActionButton.size = scaleSize([180, 44], m.scaleInfo)
+    m.searchActionButton.size = scaleSize([180, 45], m.scaleInfo)
     m.searchActionButton.translation = [m.searchInput.translation[0] + m.searchInput.width + scaleValue(20, m.scaleInfo), m.searchInput.translation[1]]
     m.searchActionButton.visible = false
   end if

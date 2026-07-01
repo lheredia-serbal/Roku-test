@@ -884,7 +884,7 @@ sub __processAndLoadCarousel(programs)
 
     for each program in programs
         child = contentRoot.createChild("ProgramNode")
-        child.size = scaleSize([153, 230], m.scaleInfo)
+        child.size = scaleSize([154, 230], m.scaleInfo)
         if program.key <> invalid then child.key = program.key
         if program.id <> invalid then child.id = program.id
         if program.title <> invalid and program.title <> "" then child.title = program.title
