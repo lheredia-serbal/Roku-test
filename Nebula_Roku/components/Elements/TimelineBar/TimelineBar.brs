@@ -81,57 +81,9 @@ end sub
 
 sub onPositionChanged()
   if m.top.position <> invalid then
-    if (m.top.position = -1 and m.top.duration = 0 ) then
-      __resetProgressState(true)
-      return
-    end if
     m.currentPosition = m.top.position
   end if
   __updateProgress()
-end sub
-
-sub onResetTokenChanged()
-  __resetProgressState(false)
-end sub
-
-sub __resetProgressState(resetTimeBar)
-  m.currentDuration = 0
-  m.currentPosition = 0
-  m.lastPreviewEpoch = invalid
-  m.previewPinned = false
-  m.lastCommittedPosition = invalid
-  m.lastCommittedDuration = invalid
-  m.committedRemaining = invalid
-  m.pauseStartEpochSeconds = invalid
-  m.suspendUi = false
-  m.cachedProgressWidth = invalid
-  m.cachedThumbTranslation = invalid
-  m.cachedTimeText = invalid
-  m.pendingZeroThumbY = invalid
-  if m.zeroThumbTimer <> invalid then m.zeroThumbTimer.control = "stop"
-
-  if m.pauseTickTimer <> invalid then m.pauseTickTimer.control = "stop"
-  if m.progress <> invalid then m.progress.width = 0
-
-  if m.track <> invalid and m.thumb <> invalid then
-    trackY = 0.0
-    if m.track.translation <> invalid then trackY = m.track.translation[1]
-    thumbH = 0.0
-    if m.thumb.height <> invalid then thumbH = m.thumb.height
-    thumbY = trackY + (m.track.height / 2.0) - (thumbH / 2.0)
-  end if
-
-  print "Translation 2 " ; 0 ; resetTimeBar
-  if m.thumb <> invalid and resetTimeBar = true then 
-    m.thumb.translation = [0, thumbY]
-  end if
-  if m.timeLabel <> invalid then m.timeLabel.text = "00:00"
-
-  if m.top <> invalid then
-    m.top.previewVisible = false
-    m.top.previewUri = ""
-    m.top.previewTimeText = ""
-  end if
 end sub
 
 sub __cancelPendingZeroThumb()
@@ -140,25 +92,20 @@ sub __cancelPendingZeroThumb()
 end sub
 
 sub __scheduleZeroThumbTranslation(thumbY as dynamic)
-  print "__scheduleZeroThumbTranslation"
   if m.pendingZeroThumbY <> invalid then
     m.pendingZeroThumbY = thumbY
-    print "__scheduleZeroThumbTranslation 2 " ; thumbY
     return
   end if
 
-  print "__scheduleZeroThumbTranslation 3 " ; thumbY
   m.pendingZeroThumbY = thumbY
   if m.zeroThumbTimer <> invalid then
     m.zeroThumbTimer.control = "stop"
     m.zeroThumbTimer.control = "start"
-    print "__scheduleZeroThumbTranslation 4 " ; thumbY
   end if
 end sub
 
 sub onZeroThumbTimerFired()
   if m.thumb <> invalid and m.pendingZeroThumbY <> invalid then
-    print "Translation 3 " ; 0
     m.thumb.translation = [0, m.pendingZeroThumbY]
   end if
 
@@ -239,7 +186,6 @@ sub __updateProgress()
   ' Si no hay duración
   if m.currentDuration <= 0 and not m.top.isLive then
     m.progress.width = 0
-    print "Translation 4 " ; -thumbHalf
     if m.thumb <> invalid then m.thumb.translation = [-thumbHalf, thumbY]
     if m.timeLabel <> invalid then m.timeLabel.text = "00:00"
     return
@@ -271,26 +217,22 @@ sub __updateProgress()
 
   if m.thumb <> invalid then
     
-    if (m.top.isLive ) then
+    if (m.top.isLive and m.currentPosition = 0 ) then
       __cancelPendingZeroThumb()
-      print "Translation 6 " ; m.totalWidth - 20
       m.thumb.translation = [m.totalWidth - 20, thumbY]
       m.progress.width =  m.totalWidth
       ' Setear el máximo rango en X que puede alcanzar la esfera de progreso
       m.maxWidth = m.totalWidth - 20
     else
-      ' Validar que la esfera de progreso, no se salga fuera del rango máximo
+    ' Validar que la esfera de progreso, no se salga fuera del rango máximo
       if m.maxWidth <> invalid and thumbX > m.maxWidth then thumbX = m.maxWidth
       if (thumbX <> invalid) then
         if thumbX < 0 then thumbX = 0
-
-        print "ThumbX " ; thumbX
 
         if thumbX = 0 then
           __scheduleZeroThumbTranslation(thumbY)
         else
           __cancelPendingZeroThumb()
-          print "Translation 1 " ; thumbX
           m.thumb.translation = [thumbX, thumbY]
 
           if (thumbX = m.totalWidth -20 and m.top.streamType = getStreamingType().LIVE_REWIND and m.top.liveText <> invalid) then
@@ -522,7 +464,6 @@ sub __restoreCachedUi()
   if m.cachedProgressWidth <> invalid and m.progress <> invalid then 
     m.progress.width = m.cachedProgressWidth
   end if
-  print "Translation 5 " ; m.cachedThumbTranslation
   if m.cachedThumbTranslation <> invalid and m.thumb <> invalid then m.thumb.translation = m.cachedThumbTranslation
   if m.cachedTimeText <> invalid and m.timeLabel <> invalid then 
     m.timeLabel.text = m.cachedTimeText

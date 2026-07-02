@@ -823,13 +823,13 @@ end sub
 ' parental si el canal lo requiere
 sub __channelSelected()
     if m.currentChannel.parentalControl <> invalid and m.currentChannel.parentalControl then
-        'm.lastElementSelect = m.top.focusedChild
-        'if m.pinDialog <> invalid then
-            'm.programBySend = invalid
-            'clearPINDialogAndGetOption(m.top, m.pinDialog)
-            'm.pinDialog = invalid
-        'end if
-        'm.pinDialog = createAndShowPINDialog(m.top, i18n_t(m.global.i18n, "shared.parentalControlModal.title"), "onPinDialogLoad", [i18n_t(m.global.i18n, "button.ok"), i18n_t(m.global.i18n, "button.cancel")])
+        m.lastElementSelect = m.top.focusedChild
+        if m.pinDialog <> invalid then
+            m.programBySend = invalid
+            clearPINDialogAndGetOption(m.top, m.pinDialog)
+            m.pinDialog = invalid
+        end if
+        m.pinDialog = createAndShowPINDialog(m.top, i18n_t(m.global.i18n, "shared.parentalControlModal.title"), "onPinDialogLoad", [i18n_t(m.global.i18n, "button.ok"), i18n_t(m.global.i18n, "button.cancel")])
         __loadStreamingForPlayer()
     else
         __loadStreamingForPlayer()

@@ -1038,10 +1038,8 @@ sub onProgramSummaryResponse()
         m.program = resp.data
 
         if  m.program.backgroundImage <> invalid then
-          print "programImageBackground uri 2 " ; getImageUrl(m.program.backgroundImage)
           m.programImageBackground.uri = getImageUrl(m.program.backgroundImage)
         else 
-          print "programImageBackground uri 3 "
           m.programImageBackground.uri = ""
         end if
 
@@ -1495,7 +1493,6 @@ end sub
 sub __clearProgramInfo()
   m.programInfo.program = invalid
   __hideProgramInfoImmediately()
-  print "programImageBackground uri 4 " 
   m.programImageBackground.uri = ""
   m.itemfocused = invalid
   clearTimer(m.programTimer)

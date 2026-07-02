@@ -30,7 +30,6 @@
     <field id="liveText" type="string" value="Live" onChange="onLiveTextChanged" />
     <field id="previewTimeText" type="string" value="" />
     <field id="seekCommitToken" type="integer" value="0" onChange="onSeekCommitTokenChanged" />
-    <field id="resetToken" type="integer" value="0" onChange="onResetTokenChanged" />
   </interface>
 
   <children>

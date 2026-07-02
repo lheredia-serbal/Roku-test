@@ -19,8 +19,6 @@ sub init()
   m.showInfoTimer = m.top.findNode("showInfoTimer")
   ' Timer para refrescar datos cuando cambia la programación en vivo.
   m.newProgramTimer = m.top.findNode("newProgramTimer")
-  ' Timer de debounce para confirmar el seek acumulado al dejar de navegar la timeline.
-  m.seekCommitTimer = m.top.findNode("seekCommitTimer")
   ' Timer que procesa saltos continuos mientras se mantiene presionado FF/RW.
   m.seekHoldTimer = m.top.findNode("seekHoldTimer")
    ' Timer dedicado para sincronizar TimelineBar luego de un seek asíncrono.
@@ -97,7 +95,6 @@ sub init()
   ' Fila contenedora de botones de acción del reproductor.
   m.controlsRow = m.top.findNode("controlsRow")
   
-  m.seekCommitTimer.ObserveField("fire", "onSeekCommitTimerFired")
   m.seekHoldTimer.ObserveField("fire", "onSeekHoldTimerFired")
   ' Subnodo interno de la timeline usado para cálculos/posicionamiento de preview.
   m.timelineBarBarContainer = m.timelineBar.findNode("barContainer")
@@ -148,9 +145,10 @@ sub init()
   m.liveRewindMinDuration = invalid
   ' Guarda la última posición del player
   m.lastPosition = invalid
-  ' Guardar de la ultima acción del player
   ' Ventana de protección para sostener la pausa después de cambiar un vivo a live rewind.
   m.pendingLiveRewindPauseGuardUntilMs = invalid
+  ' Tiempo que guarda desde que el usuario se mueve en la barra, antes de cambiar a Live Rewind
+  m.pendingMsUntilChangeLiveRewind = invalid
   
   m.actionPostChageState = invalid
   ' Bandera que indica que el stream se esta recargando, para evitar que el usuario realice acciones en el player
@@ -457,7 +455,6 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
                 if dtIsBefore(toDateTime(startLimit), toDateTime(programStartDate)) 
                   ' Posición objetivo para reiniciar al inicio lógico del programa actual.
                   restartPosition = dtDiffSeconds(programStartDate, startLimit)
-                  print "seek 1 " ; restartPosition
                   m.videoPlayer.seek = restartPosition
                   ' Sincroniza TimelineBar inmediato + diferido (500ms) sin bloquear SceneGraph.
                   __scheduleTimelineSync(restartPosition)
@@ -473,11 +470,8 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
           end if
         else
           ' Solo en casos de VOD y DVR, solo posicionarse al comienzo del stream
-          print "VideoPlayer pause 14"
           m.videoPlayer.control = "pause" ' opcional, evita saltos visuales
-          print "seek 2 " ; 0
           m.videoPlayer.seek = 0
-          print "VideoPlayer play 15"
           m.videoPlayer.control = "play"
         end if
       end if
@@ -516,10 +510,14 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
     handled = true
 
     if press then
-    ' Evitar doble commit
-    if m.seekCommitTimer <> invalid then m.seekCommitTimer.control = "stop"
 
-    ' (opcional pero recomendado) si estaba en hold, lo cortamos
+    if m.pendingMsUntilChangeLiveRewind <> invalid then
+      m.playAfterReplayReconnect = true
+      __reconnectStream(true, getStreamingType().LIVE_REWIND)
+      return true
+    end if
+
+    ' Si estaba en hold, lo cortamos
     if m.seekHoldTimer <> invalid then m.seekHoldTimer.control = "stop"
     m.seekHoldActive = false
     m.seekHoldKey = invalid
@@ -548,13 +546,11 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
       if not __isForwardSeekKey(key) then
        __pauseDefaultLiveRewindStream()
       end if
-    else
-      if (not m.isReloadStreaming)
-        if press then
-          __startSeekHold(key)  ' <- 1 salto inmediato + timer repetitivo
-        else
-          __stopSeekHold()      ' <- al soltar, deja el debounce para commit
-        end if
+
+      if press then
+        __startSeekHold(key)  ' <- 1 salto inmediato + timer repetitivo
+      else
+        __stopSeekHold()      ' <- al soltar, deja el debounce para commit
       end if
     end if
 
@@ -745,7 +741,7 @@ sub initData()
 
     if m.timelineBar <> invalid then
       m.timelineBar.streamType = m.streaming.type 
-      isLiveTimeline = (LCase(m.streaming.type) = getVideoType().LIVE) or (LCase(m.streaming.type) = getVideoType().LIVE_REWIND and m.streaming.streamingType = getStreamingType().DEFAULT)
+      isLiveTimeline = (LCase(m.streaming.type) = getVideoType().LIVE) or __isLiveWithLiveRewind()
       m.timelineBar.isLive = isLiveTimeline
     end if
 
@@ -896,8 +892,9 @@ end sub
 Sub OnVideoPlayerStateChange()
 
   if m.videoPlayer = invalid then return
-  print "videoplayer state " ; m.videoPlayer.state
-    state = m.videoPlayer.state
+  state = m.videoPlayer.state
+
+  print "State " ; state
 
   if state = "error" then
     __errorProcessing()
@@ -907,7 +904,6 @@ Sub OnVideoPlayerStateChange()
   if state = "buffering" then
     if not m.disableLayoutChannelConnection then 
 
-      'if (LCase(m.streaming.type) = LCase(getVideoType().LIVE_REWIND) and m.streaming.streamingType = getStreamingType().DEFAULT) return
       m.errorChannel.visible = true
       m.spinner.visible = true
 
@@ -919,6 +915,7 @@ Sub OnVideoPlayerStateChange()
   end if
 
   if state = "paused" then
+    
     ' Cuando los controles no están visibles, el nodo Video puede consumir el botón
     ' PLAY/PAUSE nativo antes de que onKeyEvent lo procese. Detectamos esa pausa
     ' sobre un vivo default con rewind y aplicamos el mismo cambio a live rewind.
@@ -1000,7 +997,7 @@ sub onVideoDurationChanged()
   if (m.videoPlayer.duration = 0 or not m.playerLoaded) then return 
   if (m.streaming = invalid) then return 
   if (LCase(m.streaming.type) = getVideoType().LIVE) then return 
-  if (LCase(m.streaming.type) = getVideoType().LIVE_REWIND and m.streaming.streamingType = getStreamingType().DEFAULT) then return 
+  if __isLiveWithLiveRewind() then return 
   __updateTimeline()
 
   ' Si el contenido del stream no es en vivo o Live Rewind, setear los observables para poder ajustar el timelinebar
@@ -1034,6 +1031,8 @@ sub onSelectItemChannelList()
   if m.channelList <> invalid and m.channelList.isInFocusChain() then
     m.disableLayoutChannelConnection = false
     itemSelected = ParseJson(m.channelList.selected)
+
+    __clearVariablesBeforeChangeChannel()
 
     if itemSelected <> invalid and itemSelected.id <> invalid and itemSelected.id <> 0 then 
       itemSelected.redirectKey = "ChannelId"
@@ -1077,6 +1076,7 @@ end sub
 sub onSelectItemGuide() 
   if m.guide <> invalid and m.guide.isInFocusChain() then
     m.enableGoLive = false
+    __clearVariablesBeforeChangeChannel()
     m.disableLayoutChannelConnection = false
     itemSelected = ParseJson(m.guide.selected)
     
@@ -1172,19 +1172,13 @@ end sub
 
 ' Procesa la respuesta al obtener la url de lo que se quiere ver
 sub onStreamingsResponse() 
-  print "onStreamingsResponse"
   m.isLoadingStreamingRequest = false
 
   if validateStatusCode(m.apiRequestManager.statusCode) then
     resp = ParseJson(m.apiRequestManager.response)
     if resp <> invalid and resp.data <> invalid then
-      print "stream " ; resp.data
       ' Detener el player
-      if m.playAfterReplayReconnect = false
-        print "video player stop"
-        m.videoPlayer.control = "stop" 
-      end if
-      print "videoPlayer.content 1" 
+      m.videoPlayer.control = "stop" 
       m.videoPlayer.content = invalid
 
       ' Setear los datos del stream
@@ -1277,7 +1271,6 @@ sub onStreamingsResponse()
       ' de cargar correctamente la URL y setear el contenido en el player.
       if m.unpauseAfterDefaultLiveRewindSwitch = true then
         m.unpauseAfterDefaultLiveRewindSwitch = false
-        print "videoplayer play 1"
         if m.videoPlayer <> invalid then m.videoPlayer.control = "play"
         m.playPauseIcon = "pause"
         if m.timelineBar <> invalid then m.timelineBar.isPaused = false
@@ -1309,7 +1302,7 @@ sub onStreamingsResponse()
         m.retryReconnection.control = "start"
       end if
       
-      printError("Streamings Emty:", response)
+      printError("Streamings Empty:", response)
     end if
   else 
     if m.apiRequestManager <> invalid then
@@ -1772,7 +1765,6 @@ end sub
 
 ' Carga el streaming que se reproducira en el player.
 sub __loadPlayer(streaming, focusPlayer = true)
-  print "__loadPlayer"
   m.playerLoaded = true
   videoContent = createObject("RoSGNode", "ContentNode")
 
@@ -1806,7 +1798,6 @@ sub __loadPlayer(streaming, focusPlayer = true)
       end if
     end if
     
-    print "videoPlayer.content 2 " ; videoContent
     m.videoPlayer.content = videoContent
     
     m.videoPlayer.visible = true
@@ -1823,18 +1814,16 @@ sub __loadPlayer(streaming, focusPlayer = true)
     ' Setear el foco en el player si es necesario
     if focusPlayer then __focusPlayer()
 
-    if m.playAfterReplayReconnect = false then
-      print "videoplayer play 2"
-      m.videoPlayer.control = "play"
-    end if
+    m.videoPlayer.control = "play"
 
     ' Si el contenido no es en vivo
     if not m.isLiveContent then
       ' Verificar si ya existe una última posición
       if m.lastPosition <> invalid then
         ' Si ya existe, setear la posición del player con esa posición
-        print "seek 3 " ; m.lastPosition 
-        m.videoPlayer.seek = m.lastPosition 
+
+        print "lastPosition 1 " ; m.lastPosition
+        m.videoPlayer.seek = m.lastPosition
         m.lastPosition = invalid
       else
         if m.streaming.streamingType = getStreamingType().LIVE_REWIND and m.actionPostChageState = "restart" then
@@ -1847,10 +1836,8 @@ sub __loadPlayer(streaming, focusPlayer = true)
 
               ' Si la fecha limite de inicio es menor o igual al comienzo del programa, posicionarse al inicio del programa
               if dtIsBeforeOrEqual(toDateTime(startLimit), toDateTime(programStartDate)) 
-                print "seek 4 " ; m.dtDiffSeconds(programStartDate, startLimit) 
                 m.videoPlayer.seek = dtDiffSeconds(programStartDate, startLimit)
               else
-                print "seek 5 " ; 0
                 m.videoPlayer.seek = 0
               end if 
             end if
@@ -1858,7 +1845,6 @@ sub __loadPlayer(streaming, focusPlayer = true)
         else 
           ' Si no existe, setear el player al comienzo del stream
           if m.playAfterReplayReconnect = false then
-            print "seek 6 " ; m.streaming.startAt
             m.videoPlayer.seek = m.streaming.startAt
           end if
         end if 
@@ -1950,13 +1936,9 @@ sub __setTimelineFromStreaming()
   ' Reiniciar los estados de la timelinebar
   m.timelineBar.visible = false
   m.timelineBar.baseEpochSeconds = invalid
-  if m.timelineBar.resetToken = invalid then m.timelineBar.resetToken = 0
-  m.timelineBar.resetToken = m.timelineBar.resetToken + 1
   m.timelineBar.position = -1
   m.timelineBar.duration = -1
   m.seekTimelineSyncPosition = invalid
-  m.pendingSeekActive = false
-  m.pendingSeekPosition = invalid
   m.liveRewindDuration = invalid
   m.liveRewindMinDuration = invalid
 
@@ -1976,10 +1958,15 @@ sub __setTimelineFromStreaming()
     now = CreateObject("roDateTime")
     now.ToLocalTime()
 
-    elapsed = now.AsSeconds() - m.streamStartSeconds
-    if elapsed < 0 then elapsed = 0
-    if elapsed > m.liveRewindDuration then elapsed = m.liveRewindDuration
-    m.timelineBar.position = elapsed
+    if m.lastPosition <> invalid then
+      print "lastPosition 2 " ; m.lastPosition
+      m.timelineBar.position = m.lastPosition
+    else
+      elapsed = now.AsSeconds() - m.streamStartSeconds
+      if elapsed < 0 then elapsed = 0
+      if elapsed > m.liveRewindDuration then elapsed = m.liveRewindDuration
+      m.timelineBar.position = elapsed
+    end if
   else if m.streaming.startAt <> invalid then
     ' El stream no es Live Rewind, setear desde el inicio del stream
     m.timelineBar.position = m.streaming.startAt
@@ -1988,6 +1975,9 @@ sub __setTimelineFromStreaming()
   if m.timelineBar <> invalid then
     m.timelineBar.baseEpochSeconds = m.streamStartSeconds
   end if
+
+  m.pendingSeekActive = false
+  m.pendingSeekPosition = invalid
 end sub
 
 ' Reiniciar el timer de inactividad
@@ -2141,8 +2131,10 @@ sub __loadProgramInfo(program)
 
     if durationSeconds > 0 then m.timelineBar.duration = durationSeconds
 
-    if m.videoPlayer <> invalid and m.videoPlayer.position >= 0 then
+    if m.videoPlayer <> invalid and m.videoPlayer.position > 0 then
       m.timelineBar.position = m.videoPlayer.position
+    else if __isLiveWithLiveRewind() and m.streaming <> invalid and m.streaming.liveRewindDuration <> invalid
+      m.timelineBar.position = m.streaming.liveRewindDuration
     else if m.streaming <> invalid and m.streaming.startAt <> invalid then
       m.timelineBar.position = m.streaming.startAt
     else
@@ -2324,7 +2316,6 @@ sub __applyPendingReplayAfterReconnect()
   m.needRestorePosition = true
 
   if shouldPlay then
-    print "videoplayer play 3"
     m.videoPlayer.control = "play"
     m.playPauseIcon = "pause"
     if m.timelineBar <> invalid then m.timelineBar.isPaused = false
@@ -2352,8 +2343,6 @@ sub __restorePositionLiveRewindStream()
 
   if targetPosition < 0 then targetPosition = 0
 
-  print "seek 7 position " ; targetPosition
-  print "seek 7 duration " ; m.videoPlayer.duration
   m.videoPlayer.seek = targetPosition
   if m.timelineBar <> invalid then m.timelineBar.position = targetPosition
 
@@ -2364,9 +2353,8 @@ end sub
 function __pauseDefaultLiveRewindStream() as Boolean
   if not __isDefaultLiveRewindStream() then return false
 
-  m.actionPostChageState = "pause"
   m.pendingLiveRewindPauseGuardUntilMs = __getNowMilliseconds() + 6000
-  __reconnectStream(true, getStreamingType().LIVE_REWIND)
+  m.pendingMsUntilChangeLiveRewind = __getNowMilliseconds()
 
   return true
 end function
@@ -2455,7 +2443,6 @@ sub __handleSeek(key as String)
   if position < 0 then position = 0
   if position > duration then position = duration
 
-  print "seek 8 " ; position
   m.videoPlayer.seek = position
 
   if m.timelineBar <> invalid then
@@ -2508,7 +2495,6 @@ sub __closePlayer(onBack = false, logout = false)
   m.beaconType = ""
   if not logout then m.top.loading.visible = true
   m.lastErrorTime = invalid
-  m.lastKey = invalid
   m.itemSelected = invalid
   m.repositionChannnelList = false
   m.lastButtonSelect = invalid
@@ -2518,6 +2504,8 @@ sub __closePlayer(onBack = false, logout = false)
   m.liveRewindDuration = invalid
   m.initStreeamingType = invalid
   m.enableGoLive = false
+
+  __clearVariablesBeforeChangeChannel()
   
   m.errorChannel.visible = false
   m.spinner.visible = false
@@ -2526,7 +2514,6 @@ sub __closePlayer(onBack = false, logout = false)
     m.videoPlayer.unobserveField("state")
     m.videoPlayer.unobserveField("position")
     m.videoPlayer.unobserveField("duration")
-    print "VideoPlayer stop 4"
     m.videoPlayer.control = "stop"
   end if
   
@@ -2580,7 +2567,6 @@ sub __closePlayer(onBack = false, logout = false)
 
   m.pendingSeekActive = false
   m.pendingSeekPosition = invalid
-  if m.seekCommitTimer <> invalid then m.seekCommitTimer.control = "stop"
 
   if m.seekHoldTimer <> invalid then m.seekHoldTimer.control = "stop"
   m.seekHoldActive = false
@@ -2616,6 +2602,16 @@ sub __cancelChannelPosition(logout = false)
   end if 
 end sub
 
+' Función que limpia las variables al cambiar de canal
+sub __clearVariablesBeforeChangeChannel()
+  m.actionPostChageState = invalid
+  m.needRestorePosition = false
+  m.playAfterReplayReconnect = false
+  m.pendingLiveRewindPauseGuardUntilMs = invalid
+  m.lastKey = invalid
+  m.pendingMsUntilChangeLiveRewind = invalid
+end sub
+
 ' Muestra la información del programa actual sobre el player y dispara un timer para escondera 
 ' automáticamente si no hay ninguna interacción. 
 sub __showProgramInfo()
@@ -2649,8 +2645,6 @@ sub __loadStreamingURL(key, id, streamingAction, streamingType = getStreamingTyp
   m.isLoadingStreamingRequest = true
 
   m.playerLoaded = false
-
-  print "__loadStreamingURL"
   
   ' Falta agregar el update Session
   requestId = createRequestId()
@@ -2755,8 +2749,24 @@ sub __reconnectStream(saveTime = true, streamingType = invalid)
     m.reloadInputBlockUntilMs = __getNowMilliseconds() + 1200
     m.disableLayoutChannelConnection = true
     __hideChannelConnectionLayout()
-    if (saveTime and m.streaming <> invalid and m.streaming.liveRewindDuration)
-      m.lastPosition = m.streaming.liveRewindDuration - (m.videoPlayer.duration - m.videoPlayer.position) - 30
+    if (saveTime and m.streaming <> invalid) then
+      if __isLiveWithLiveRewind() and m.timelineBar.position <> invalid then
+        m.lastPosition = m.timelineBar.position
+        print "lastPosition 3 " ; m.lastPosition
+      else if (m.streaming.liveRewindDuration)
+        m.lastPosition = m.streaming.liveRewindDuration - (m.videoPlayer.duration - m.videoPlayer.position) - 30
+        print "lastPosition 4 " ; m.lastPosition
+      end if
+
+      if (m.pendingMsUntilChangeLiveRewind <> invalid) then
+        m.lastPosition = m.lastPosition + ((__getNowMilliseconds() - m.pendingMsUntilChangeLiveRewind) / 1000)
+        print "lastPosition 5 " ; m.lastPosition
+      end if 
+
+      if (m.streaming <> invalid) then
+        m.lastPosition = m.lastPosition
+        print "lastPosition 6 " ; m.lastPosition
+      end if 
     end if
 
     startpid = 0
@@ -2778,7 +2788,6 @@ sub __togglePlayPause()
     if m.videoPlayer.position <> invalid and m.videoPlayer.position > 0 then m.pausePosition = m.videoPlayer.position
 
     m.userPaused = true
-    print "VideoPlayer pause 5"
     m.videoPlayer.control = "pause"
 
     __setPlayPauseButtonUri("pkg:/images/shared/play.png", true)
@@ -2799,7 +2808,6 @@ sub __togglePlayPause()
   ' Reanudar (desde paused)
   if state = "paused" then
     m.userPaused = false
-    print "VideoPlayer resume 5"
     m.videoPlayer.control = "resume" ' <- clave
     __setPlayPauseButtonUri("pkg:/images/shared/pause.png", true)
     return
@@ -2809,10 +2817,8 @@ sub __togglePlayPause()
   if state = "stopped" then
     m.userPaused = false
     if m.pausePosition <> invalid and m.pausePosition > 0 then
-      print "seek 9 " ; m.pausePosition
       m.videoPlayer.seek = m.pausePosition
     end if
-    print "videoplayer play 4"
     m.videoPlayer.control = "play"
     __setPlayPauseButtonUri("pkg:/images/shared/pause.png", true)
     return
@@ -3060,6 +3066,8 @@ sub __queueSeek(key as String)
   ' posición base: si ya veníamos acumulando, seguimos desde el pending
   if m.pendingSeekActive and m.pendingSeekPosition <> invalid then
     position = m.pendingSeekPosition
+  else if __isLiveWithLiveRewind()
+    position = m.liveRewindDuration
   else
     position = m.videoPlayer.position
     if position = invalid or position < 0 then position = 0
@@ -3098,10 +3106,6 @@ sub __restartSeekCommitTimer()
   return
 end sub
 
-sub onSeekCommitTimerFired()
-  return
-end sub
-
 sub __commitPendingSeek()
   if not m.pendingSeekActive then return
   if m.videoPlayer = invalid then return
@@ -3127,7 +3131,6 @@ sub __commitPendingSeek()
     end if
   end if
 
-  print "seek 10 " ; m.pendingSeekPosition
   m.videoPlayer.seek = m.pendingSeekPosition
 
   m.pendingSeekActive = false
@@ -3152,13 +3155,6 @@ end sub
 
 sub __startSeekHold(key as String)
   if m.isLiveContent or m.videoPlayer = invalid then return
-
-  if __isDefaultLiveRewindStream() and not __isForwardSeekKey(key) then
-    __reconnectStream()
-  end if
-
-  ' mientras está apretado, NO queremos commit
-  if m.seekCommitTimer <> invalid then m.seekCommitTimer.control = "stop"
 
   m.seekHoldActive = true
   m.seekHoldKey = key
@@ -3247,6 +3243,10 @@ sub __queueSeekWithJump(key as String, jumpOverride as Integer)
 
   ' posición base
   if m.pendingSeekActive and m.pendingSeekPosition <> invalid then
+    position = m.pendingSeekPosition
+  else if __isLiveWithLiveRewind()
+    m.pendingSeekActive = true
+    m.pendingSeekPosition = m.liveRewindDuration
     position = m.pendingSeekPosition
   else
     position = m.videoPlayer.position
@@ -3374,34 +3374,37 @@ sub onTimelinePreviewChanged()
     m.timelinePreviewPoster.loadDisplayMode = "scaleToZoom"
     m.timelinePreviewPoster.visible = true
 
-    ' IMPORTANTE: append después del poster para que quede “por encima” de la imagen
-    m.timelinePreviewOverlay.appendChild(m.timelinePreviewTimeBg)
-    m.timelinePreviewOverlay.appendChild(m.timelinePreviewTimeLabel)
+    if (m.streaming.streamingType <> getStreamingType().LIVE_REWIND and m.streaming.streamingType <> getStreamingType().DEFAULT) then
 
-    m.timelinePreviewTimeLabel.text = m.timelineBar.previewTimeText
+      ' IMPORTANTE: append después del poster para que quede “por encima” de la imagen
+      m.timelinePreviewOverlay.appendChild(m.timelinePreviewTimeBg)
+      m.timelinePreviewOverlay.appendChild(m.timelinePreviewTimeLabel)
 
-    ' Si también lo querés 16:9:
-    bgW = scaleValue(70, m.scaleInfo)
-    bgH = scaleValue(20, m.scaleInfo)
-
-    bgX = w - bgW
-    bgY = h - bgH
-
-    m.timelinePreviewTimeBg.width = bgW
-    m.timelinePreviewTimeBg.height = bgH
-    m.timelinePreviewTimeBg.translation = [bgX, bgY]
-    m.timelinePreviewTimeBg.visible = true
-
-    ' Label dentro del recuadro (con un mini padding interno)
-    m.timelinePreviewTimeLabel.width = bgW - scaleValue(6, m.scaleInfo)
-    m.timelinePreviewTimeLabel.height = bgH
-    if m.timelinePreviewTimeLabel.horizAlign <> "right" then m.timelinePreviewTimeLabel.horizAlign = "right"
-    m.timelinePreviewTimeLabel.translation = [bgX + scaleValue(3, m.scaleInfo), bgY]
-
-    if m.streaming.streamingType = getStreamingType().LIVE_REWIND then
-      m.timelinePreviewTimeLabel.text = "-" + m.timelineBar.previewTimeText
-    else 
       m.timelinePreviewTimeLabel.text = m.timelineBar.previewTimeText
+
+      ' Si también lo querés 16:9:
+      bgW = scaleValue(70, m.scaleInfo)
+      bgH = scaleValue(20, m.scaleInfo)
+
+      bgX = w - bgW
+      bgY = h - bgH
+
+      m.timelinePreviewTimeBg.width = bgW
+      m.timelinePreviewTimeBg.height = bgH
+      m.timelinePreviewTimeBg.translation = [bgX, bgY]
+      m.timelinePreviewTimeBg.visible = true
+
+      ' Label dentro del recuadro (con un mini padding interno)
+      m.timelinePreviewTimeLabel.width = bgW - scaleValue(6, m.scaleInfo)
+      m.timelinePreviewTimeLabel.height = bgH
+      if m.timelinePreviewTimeLabel.horizAlign <> "right" then m.timelinePreviewTimeLabel.horizAlign = "right"
+      m.timelinePreviewTimeLabel.translation = [bgX + scaleValue(3, m.scaleInfo), bgY]
+
+      if m.streaming.streamingType = getStreamingType().LIVE_REWIND then
+        m.timelinePreviewTimeLabel.text = "-" + m.timelineBar.previewTimeText
+      else 
+        m.timelinePreviewTimeLabel.text = m.timelineBar.previewTimeText
+      end if
     end if
   else
     ' Solo tiene que mostrar el tiempo
@@ -3488,7 +3491,6 @@ sub __replayBack(seconds as Integer)
   if m.isLiveContent then return
 
   ' cancelar timers/estado de seek pendiente para evitar doble ejecución
-  if m.seekCommitTimer <> invalid then m.seekCommitTimer.control = "stop"
   if m.seekHoldTimer   <> invalid then m.seekHoldTimer.control = "stop"
 
   m.pendingSeekActive = false
@@ -3522,7 +3524,6 @@ sub __replayBack(seconds as Integer)
   if dur <> invalid and dur > 0 and newPos > dur then newPos = dur
 
   ' seek real
-  print "seek 11 " ; newPos
   m.videoPlayer.seek = newPos
 
   ' Mantener TimelineBar sincronizada
@@ -3582,7 +3583,6 @@ end sub
 ' Reiniciar el stream
 sub __restartVideo()
   ' Pausar el stream
-  print "VideoPlayer pause 7"
   m.videoPlayer.control = "pause"
   m.timelineBar.isLive = false
 
@@ -3911,7 +3911,6 @@ sub __setPlayerCurrentTime(sec as float)
   if sec < 0 then sec = 0
   if m.videoPlayer = invalid then return
 
-  print "seek 12 " ; Int(sec)
   m.videoPlayer.seek = Int(sec)
 end sub
 
@@ -3944,7 +3943,6 @@ sub __playVideo(validateLimit = invalid as dynamic)
         end if
       end if
 
-      print "VideoPlayer play 8"
       m.videoPlayer.control = "play"
       m.playPauseIcon = "pause"
 
@@ -3958,7 +3956,6 @@ sub __playVideo(validateLimit = invalid as dynamic)
     end if
 
   else if stype = getVideoType().DVR or stype = getVideoType().VOD then
-    print "VideoPlayer play 9"
     m.videoPlayer.control = "play"
     m.playPauseIcon = "pause"
 
@@ -3970,7 +3967,6 @@ sub __playVideo(validateLimit = invalid as dynamic)
 
     if m._isEnded = true then __loadTimeToEnd()
   else
-    print "VideoPlayer play 10"
     m.videoPlayer.control = "play"
     m.playPauseIcon = "pause"
   end if
@@ -4065,7 +4061,6 @@ end sub
 ' Pausar el video
 sub __playerPause()
   if m.videoPlayer = invalid then return
-  print "VideoPlayer pause 11"
   m.videoPlayer.control = "pause"
 end sub
 
@@ -4125,18 +4120,22 @@ sub __reloadLive()
       m.streaming.streamingType = getStreamingType().LIVE_REWIND
       __togglePlayPause()
       __loadStreamingURL(m.lastKey, m.lastId, getStreamingAction().PLAY, getStreamingType().DEFAULT)
-      print "VideoPlayer play 12"
       m.videoPlayer.control = "play"
     else
       ' en live-rewind, normalmente "live edge" es duration (ventana) o el final
       dur = m.timelineBar.duration
       if dur <> invalid and dur > 0 then
-        print "seek 13 " ; dur
         m.videoPlayer.seek = dur
 
       end if
-      print "VideoPlayer play 13"
       m.videoPlayer.control = "play"
     end if
   end if
+end sub
+
+' Función que valida que el stream es un Live y puede cambiar a Live Rewind
+sub __isLiveWithLiveRewind() as boolean
+  if m.streaming = invalid return false
+  if (LCase(m.streaming.type) = getVideoType().LIVE_REWIND and m.streaming.streamingType = getStreamingType().DEFAULT) then return true
+  return false
 end sub
