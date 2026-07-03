@@ -594,7 +594,7 @@ sub __applyLayout()
   ' El ancho completo permite que horizAlign centre el texto en la pantalla.
   if m.noResultsLabel <> invalid then
     m.noResultsLabel.width = width
-    m.noResultsLabel.translation = scaleSize([0, safeY + 200], m.scaleInfo)
+    m.noResultsLabel.translation = scaleSize([0, safeY + 370], m.scaleInfo)
     m.noResultsLabel.color = m.global.colors.WHITE
   end if
 end sub

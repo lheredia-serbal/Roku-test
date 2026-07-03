@@ -751,10 +751,14 @@ end function
 
 ' Detiene y limpia el Timer pasado por parametro.
 sub clearTimer(timer)
+    print "clearTimer 1" ; timer
     if timer <> invalid then
+        print "clearTimer 2"
         timer.control = "stop"
+        print "clearTimer 3"
         timer.unobserveField("fire")
     end if
+    print "clearTimer 4"
 end sub
 
 ' Se encarga de entregar la imagen de error. La priemra vez que se llama crea el arreglo, guarda en una variable global el arreglo 
