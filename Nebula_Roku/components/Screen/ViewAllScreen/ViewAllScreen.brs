@@ -157,14 +157,6 @@ sub onFocusItem()
   end if
 end sub
 
-' Procesa navegación vertical para mover foco entre filas de carruseles en ViewAll.
-' Bloque grilla nativa: PosterGrid administra navegación direccional, no se interceptan flechas.
-function onKeyEvent(key as string, press as boolean) as boolean
-
-  if key = invalid return false
-  return false
-end function
-
 ' Procesa la respuesta de Program Summary para actualizar la franja superior.
 sub onProgramSummaryResponse()
   ' Si el manager se limpió, volvemos a intentar desde el foco actual.
@@ -242,6 +234,7 @@ sub onSelectItem()
 
      ' Muestro modal de PIN con mismo callback y textos usados en MainScreen.
     m.pinDialog = createAndShowPINDialog(m.top, i18n_t(m.global.i18n, "shared.parentalControlModal.title"), "onPinDialogLoad", [i18n_t(m.global.i18n, "button.ok"), i18n_t(m.global.i18n, "button.cancel")])
+    m.pinDialog.observeField("wasClosed", "onDialogLogoutWasClosed") 
     return
   else
 
@@ -282,6 +275,16 @@ sub onSelectItem()
       m.top.detail = FormatJson(m.itemSelected)
     end if
   end if
+end sub
+
+' Procesa el cierre del modal tras que el usuario selecione el cierre de sesion.
+sub onDialogLogoutWasClosed()
+  clearDialogAndGetWasClosed(m.pinDialog)
+  m.pinDialog = invalid
+  
+  ' Si se cancela o PIN inválido en formato, cierro loading y restauro foco.
+  if m.top.loading <> invalid then m.top.loading.visible = false
+  __restoreLastFocus()
 end sub
 
 ' Procesa callback del modal PIN reutilizando lógica de MainScreen.

@@ -835,16 +835,7 @@ end sub
 
 ' Dibuja el modal que pregunta si el usuario realmente quiere salir del app.
 sub __showExitAsk()
-  'create the dialog
-  dialog = createObject("roSGNode", "StandardMessageDialog")
-  dialog.palette = createPaletteDialog()
-  dialog.title = [i18n_t(m.global.i18n, "shared.exitModal.title")]
-  dialog.message = [i18n_t(m.global.i18n, "shared.exitModal.askExit")]
-  dialog.buttons = [i18n_t(m.global.i18n, "button.yes"), i18n_t(m.global.i18n, "button.no")]
-  dialog.observeFieldScoped("buttonSelected", "onDialogButtonClicked")
-
-  'assigning the dialog to m.top.dialog will "show" the dialog
-  m.top.dialog = dialog
+  m.top.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.exitModal.title"), i18n_t(m.global.i18n, "shared.exitModal.askExit"), "onDialogButtonClicked", [i18n_t(m.global.i18n, "button.yes"), i18n_t(m.global.i18n, "button.no")], false)
 end sub
 
 ' Adminsitrador de eventos back

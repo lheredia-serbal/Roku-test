@@ -194,7 +194,7 @@ Sub setWatchSession(watchSession as object)
         if (id = invalid) then id = 0
         
         __RegWrite(__RegKeys().WATCH_SESSION_ID, id.toStr(), __REG_SECTION_SESSION_DATA())
-        if (watchSession.watchToken <> invalid) __RegWrite(__RegKeys().WATCH_TOKEN, watchSession.watchToken, __REG_SECTION_AUTHENTICATION())
+        if (watchSession.watchToken <> invalid and watchSession.watchToken <> "") __RegWrite(__RegKeys().WATCH_TOKEN, watchSession.watchToken, __REG_SECTION_AUTHENTICATION())
     end if
 End Sub
 

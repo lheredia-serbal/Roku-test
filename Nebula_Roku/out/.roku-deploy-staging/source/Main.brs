@@ -5,7 +5,7 @@ sub Main(args as Object)
     m.port = CreateObject("roMessagePort")
     screen.setMessagePort(m.port)
     ' Inicializa el monitoreo de memoria recomendado por Roku
-    InitMemoryMonitoring(m.port)
+    ' InitMemoryMonitoring(m.port)
 
     if args <> invalid
         if args.reason <> invalid then
@@ -31,8 +31,11 @@ sub Main(args as Object)
         if msgType = "roSGScreenEvent"
             if msg.isScreenClosed() then return
         'respond to the appExit field on MainScene
-        else if HandleSystemEvents(msg)
-            ' Evento de sistema/memoria ya gestionado
+        ' else if HandleSystemEvents(msg)
+        '     ' Evento de sistema/memoria ya gestionado
+        else if msgType = "roInputEvent"
+            info = msg.GetInfo()
+            print "Deep link received"; info
 
         else if msgType = "roSGNodeEvent" then
             field = msg.getField()
@@ -42,75 +45,75 @@ sub Main(args as Object)
     end while
 end sub
 
-sub InitMemoryMonitoring(port as Object)
-    ' Monitor específico de memoria de la app/canal
-    m.memMon = CreateObject("roAppMemoryMonitor")
-    memMonIf = invalid
-    if m.memMon <> invalid then
-        ' Verifica que la interfaz exista para compatibilidad con distintas versiones de OS
-        memMonIf = GetInterface(m.memMon, "ifAppMemoryMonitor")
-        if memMonIf <> invalid then
-            ' Enlaza el monitor al mismo puerto del loop principal
-            m.memMon.SetMessagePort(port)
-            ' Habilita warnings cuando el canal entra en presión de memoria
-            m.memMon.EnableMemoryWarningEvent(true)
+' sub InitMemoryMonitoring(port as Object)
+'     ' Monitor específico de memoria de la app/canal
+'     m.memMon = CreateObject("roAppMemoryMonitor")
+'     memMonIf = invalid
+'     if m.memMon <> invalid then
+'         ' Verifica que la interfaz exista para compatibilidad con distintas versiones de OS
+'         memMonIf = GetInterface(m.memMon, "ifAppMemoryMonitor")
+'         if memMonIf <> invalid then
+'             ' Enlaza el monitor al mismo puerto del loop principal
+'             m.memMon.SetMessagePort(port)
+'             ' Habilita warnings cuando el canal entra en presión de memoria
+'             m.memMon.EnableMemoryWarningEvent(true)
 
-            ' Snapshot inicial de memoria para diagnóstico en logs
-            m.lastMemorySnapshot = LogMemorySnapshot("startup")
-        end if
-    end if
+'             ' Snapshot inicial de memoria para diagnóstico en logs
+'             m.lastMemorySnapshot = LogMemorySnapshot("startup")
+'         end if
+'     end if
 
-    ' Eventos de memoria general del dispositivo (no solo del canal)
-    m.devInfo = CreateObject("roDeviceInfo")
-    if m.devInfo <> invalid then
-        m.devInfo.SetMessagePort(port)
-        ' Habilita notificación cuando el sistema reporta memoria general baja
-        m.devInfo.EnableLowGeneralMemoryEvent(true)
-    end if
-end sub
+'     ' Eventos de memoria general del dispositivo (no solo del canal)
+'     m.devInfo = CreateObject("roDeviceInfo")
+'     if m.devInfo <> invalid then
+'         m.devInfo.SetMessagePort(port)
+'         ' Habilita notificación cuando el sistema reporta memoria general baja
+'         m.devInfo.EnableLowGeneralMemoryEvent(true)
+'     end if
+' end sub
 
-function HandleSystemEvents(msg as Object) as Boolean
-    msgType = type(msg)
-    if msgType = "roAppMemoryMonitorEvent" then
-        ' Punto ideal para degradación controlada: limpiar cachés, liberar imágenes pesadas, etc.
+' function HandleSystemEvents(msg as Object) as Boolean
+'     msgType = type(msg)
+'     if msgType = "roAppMemoryMonitorEvent" then
+'         ' Punto ideal para degradación controlada: limpiar cachés, liberar imágenes pesadas, etc.
 
-        if m.memMon <> invalid then
-            ' Snapshot al momento del warning para entender severidad
-            snapshot = LogMemorySnapshot("warning")
+'         if m.memMon <> invalid then
+'             ' Snapshot al momento del warning para entender severidad
+'             snapshot = LogMemorySnapshot("warning")
 
-            ' Presión de memoria alta: fuerza GC para liberar objetos no referenciados.
-            if snapshot <> invalid and snapshot.memoryLimitPercent >= 85 then
-                printLog("High memory pressure detected (" + snapshot.memoryLimitPercent.toStr() + "%). Triggering garbage collection.")
-                RunGarbageCollector()
-            end if
-        end if
-        return true
-    else if msgType = "roDeviceInfoEvent" then
-        ' Evento de memoria general del sistema
-        info = msg.GetInfo()
-        if info <> invalid and info.generalMemoryLevel <> invalid then
-        end if
-        return true
-    end if
+'             ' Presión de memoria alta: fuerza GC para liberar objetos no referenciados.
+'             if snapshot <> invalid and snapshot.memoryLimitPercent >= 85 then
+'                 printLog("High memory pressure detected (" + snapshot.memoryLimitPercent.toStr() + "%). Triggering garbage collection.")
+'                 RunGarbageCollector()
+'             end if
+'         end if
+'         return true
+'     else if msgType = "roDeviceInfoEvent" then
+'         ' Evento de memoria general del sistema
+'         info = msg.GetInfo()
+'         if info <> invalid and info.generalMemoryLevel <> invalid then
+'         end if
+'         return true
+'     end if
 
-    return false
-end function
+'     return false
+' end function
 
-function LogMemorySnapshot(context as String) as Dynamic
-    if m.memMon = invalid then return invalid
+' function LogMemorySnapshot(context as String) as Dynamic
+'     if m.memMon = invalid then return invalid
 
-    channelAvailableMemory = m.memMon.GetChannelAvailableMemory()
-    channelMemoryLimit = m.memMon.GetChannelMemoryLimit()
-    memoryLimitPercent = m.memMon.GetMemoryLimitPercent()
+'     channelAvailableMemory = m.memMon.GetChannelAvailableMemory()
+'     channelMemoryLimit = m.memMon.GetChannelMemoryLimit()
+'     memoryLimitPercent = m.memMon.GetMemoryLimitPercent()
 
-    snapshot = {
-        context: context
-        channelAvailableMemory: channelAvailableMemory
-        channelMemoryLimit: channelMemoryLimit
-        memoryLimitPercent: memoryLimitPercent
-    }
+'     snapshot = {
+'         context: context
+'         channelAvailableMemory: channelAvailableMemory
+'         channelMemoryLimit: channelMemoryLimit
+'         memoryLimitPercent: memoryLimitPercent
+'     }
 
-    m.lastMemorySnapshot = snapshot
-    printLog("Memory snapshot [" + context + "] - available: " + channelAvailableMemory.toStr() + " bytes, usage: " + memoryLimitPercent.toStr() + "%")
-    return snapshot
-end function
+'     m.lastMemorySnapshot = snapshot
+'     printLog("Memory snapshot [" + context + "] - available: " + channelAvailableMemory.toStr() + " bytes, usage: " + memoryLimitPercent.toStr() + "%")
+'     return snapshot
+' end function

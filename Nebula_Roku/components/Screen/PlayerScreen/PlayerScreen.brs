@@ -348,7 +348,6 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
     if press then __restartShowInfoTimer()
 
     ' Se presionó OK, mostrar la guía
-    print "test 10"
     if key = KeyButtons().OK and press then
       if m.showInfoTimer <> invalid then clearTimer(m.showInfoTimer)
       if m.playerControllers.visible then m.playerControllers.visible = false
@@ -356,7 +355,6 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
       m.guide.setFocus(true)
       m.guide.positioninChannelId = true
 
-      print "test 11"
       actionLog = getActionLog({ actionCode: ActionLogCode().OPEN_PAGE, pageUrl: "Epg" })
       __saveActionLog(actionLog)
     end if
@@ -596,7 +594,6 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
     handled = true
 
   else if __isPlayerFocusInChain() and (key = KeyButtons().UP or key = KeyButtons().DOWN) then
-    print "__isPlayerFocusInChain"
     if m.allowChannelList then 
       if not press then 
         now = CreateObject("roDateTime")
@@ -841,7 +838,6 @@ end sub
 
 ' Procesa la respuesta de la lista de  canales
 sub onChannelsResponse()
-  print "onChannelsResponse " ; m.apiRequestManager.statusCode
   if validateStatusCode(m.apiRequestManager.statusCode) then
     resp = ParseJson(m.apiRequestManager.response)
     if resp <> invalid and resp.data <> invalid then
@@ -871,13 +867,14 @@ sub onChannelsResponse()
         changeStatusAction(m.apiRequestManager.requestId, "error")
         retryAll()
       else      
-        printError("ChannelsList:", error)
         
         if validateLogout(statusCode, m.top) then return
         ' Cambio agregado: mostrar CDN dialog desde Player cuando aplica 9000.
         __showPlayerCdnErrorDialog(statusCode, ApiType().CLIENTS_API_URL)
         m.showChannelListAfterUpdate = false 
       end if
+
+      printError("Channel Response: ", error)
     end if
   end if
 
@@ -1039,6 +1036,7 @@ sub onSelectItemChannelList()
         m.lastButtonSelect = m.channelList.focusedChild
         m.channelList.selected = invalid
         m.pinDialog = createAndShowPINDialog(m.top, i18n_t(m.global.i18n, "shared.parentalControlModal.title"), "onPinDialogLoad", [i18n_t(m.global.i18n, "button.ok"), i18n_t(m.global.i18n, "button.cancel")])
+        m.pinDialog.observeField("wasClosed", "onDialogLogoutWasClosed") 
       else
 
         isSameStreaming = (m.lastKey = itemSelected.redirectKey and itemSelected.redirectId = m.lastId)
@@ -1057,6 +1055,14 @@ sub onSelectItemChannelList()
       end if 
     end if
   end if
+end sub
+
+' Procesa el cierre del modal tras que el usuario selecione el cierre de sesion.
+sub onDialogLogoutWasClosed()
+  clearDialogAndGetWasClosed(m.pinDialog)
+  m.pinDialog = invalid
+  
+  __setLastFocus()
 end sub
 
 ' Metodo que se dispiara por la seleccion de un item desde la Guia
@@ -1158,7 +1164,6 @@ end sub
 
 ' Procesa la respuesta al obtener la url de lo que se quiere ver
 sub onStreamingsResponse() 
-  print "onStreamingsResponse"
   m.isLoadingStreamingRequest = false
 
   if validateStatusCode(m.apiRequestManager.statusCode) then
@@ -1320,14 +1325,11 @@ end sub
 
 ' Procesa la respuesta al obtener el Summary de un programa
 sub onProgramSummaryResponse()
-  print "onProgramSummaryResponse " ; m.program
   m.blockTuShowControls = false
 
   if validateStatusCode(m.apiProgramManager.statusCode) then
     resp = ParseJson(m.apiProgramManager.response)
     if resp <> invalid and resp.data <> invalid then
-      firstLoad = false
-      if m.program = invalid then firstLoad = true
       __loadProgramInfo(resp.data)
       __getChannels()
     else
@@ -1347,7 +1349,6 @@ sub onProgramSummaryResponse()
       else
         statusCode = m.apiProgramManager.statusCode
         errorResponse = m.apiProgramManager.errorResponse
-        printError("ProgramSumary:", errorResponse)
         
         if validateLogout(statusCode, m.top) then return
 
@@ -1501,7 +1502,6 @@ sub onWatchValidateResponse()
       onSendBeacon()
     else 
       m.apiBeaconRequestManager = clearApiRequest(m.apiBeaconRequestManager)
-      printError("WatchValidate ResultCode:", resp.resultCode)
     end if
   else 
     if m.apiBeaconRequestManager <> invalid and not m.apiBeaconRequestManager.serverError then
@@ -1538,8 +1538,7 @@ sub onPinDialogLoad()
     requestId = createRequestId()
     m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlParentalControlPin(resp.pin), "GET", "onParentalControlResponse", requestId)
   else 
-    m.repositionChannnelList = true
-    if m.lastButtonSelect <> invalid then m.lastButtonSelect.setFocus(true)
+    __setLastFocus()
   end if 
 end sub
 
@@ -1562,10 +1561,7 @@ sub onParentalControlResponse()
   else
     if m.apiRequestManager <> invalid and not m.apiRequestManager.serverError then
       statusCode = m.apiRequestManager.statusCode
-      errorResponse = m.apiRequestManager.errorResponse
       m.apiRequestManager = clearApiRequest(m.apiRequestManager)
-
-      printError("ParentalControl:", statusCode.toStr() + " " +  errorResponse)
       
       if validateLogout(statusCode, m.top) then return
 
@@ -1999,7 +1995,6 @@ end function
 
 ' Dispara la busqueda de la lista de canales 
 sub __getChannels(getNewChannels = true)
-  print "__getChannels " ; getNewChannels
   requestId = createRequestId()
   if getNewChannels then
     action = {
@@ -2553,8 +2548,6 @@ sub __loadStreamingURL(key, id, streamingAction, streamingType = getStreamingTyp
   m.isLoadingStreamingRequest = true
 
   m.playerLoaded = false
-
-  print "__loadStreamingURL"
   
   ' Falta agregar el update Session
   requestId = createRequestId()
@@ -2592,7 +2585,6 @@ sub __errorProcessing()
     end if
   end if
   
-  print "test 4 " ; m.streaming.streamingType ; m.errorChannel.visible
   m.errorChannel.visible = true
   m.spinner.visible = true
 end sub
@@ -4006,6 +3998,17 @@ if m.streaming = invalid then return invalid
   if selectedStartSeconds = invalid then return invalid
   return selectedStartSeconds
 end function
+
+sub __setLastFocus() 
+  if m.top <> invalid then m.top.setFocus(true)
+  m.repositionChannnelList = true
+
+  if m.channelListContainer.visible = false then
+    __focusPlayer()
+  else 
+    m.channelList.positioninChannelId = true
+  end if
+end sub
 
 sub __reloadLive()
 

@@ -154,9 +154,7 @@ sub initFocus()
     __unbindKeyboardTextObservers()
 
     __bindKeyboardTextObservers()
-
-    m.backgroundPoster.uri = m.top.backgroundUri
-
+    
     ' Si Search se abrió desde MainScreen, fuerzo foco en input y refrescar el carrusel de recomendados.
     if m.top.enterFromMainScreen then
       m.top.enterFromMainScreen = false
@@ -1739,11 +1737,22 @@ sub __validateCarouselItem(carouselItem)
   if carouselItem.parentalControl <> invalid and carouselItem.parentalControl = true and carouselItem.redirectKey = "ChannelId" then
     ' Muestro modal de PIN con mismo callback y textos usados en MainScreen.
     m.pinDialog = createAndShowPINDialog(m.top, i18n_t(m.global.i18n, "shared.parentalControlModal.title"), "onPinDialogLoad", [i18n_t(m.global.i18n, "button.ok"), i18n_t(m.global.i18n, "button.cancel")])
+    m.pinDialog.observeField("wasClosed", "onDialogLogoutWasClosed") 
     return
   end if
 
   ' Si no requiere PIN, navego según tipo de destino.
   __navigateToSelectedItem(carouselItem)
+end sub
+
+' Procesa el cierre del modal tras que el usuario selecione el cierre de sesion.
+sub onDialogLogoutWasClosed()
+  clearDialogAndGetWasClosed(m.pinDialog)
+  m.pinDialog = invalid
+  
+  ' Si se cancela o PIN inválido en formato, cierro loading y restauro foco.
+  if m.top.loading <> invalid then m.top.loading.visible = false
+  __restoreLastFocus()
 end sub
 
 ' Valdia el error obtenido desde la API

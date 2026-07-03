@@ -866,6 +866,8 @@ sub __openPlayer(streamingAction)
     m.streamingAction = streamingAction
     if m.program.parentalControl <> invalid and m.program.parentalControl then
       m.pinDialog = createAndShowPINDialog(m.top, i18n_t(m.global.i18n, "shared.parentalControlModal.title"), "onPinDialogLoad", [i18n_t(m.global.i18n, "button.ok"), i18n_t(m.global.i18n, "button.cancel")])
+      ' Se escucha el evento de cancelacion para reubicarlo si hace falta.
+      m.pinDialog.observeField("wasClosed", "onDialogLogoutWasClosed") 
     else  
       if m.top.isOpenByPlayer then
         if streamingAction = invalid then streamingAction = getStreamingAction().PLAY
@@ -1074,6 +1076,14 @@ end sub
 
 sub onActiveApiUrlChanged()
   __syncApiUrlFromGlobal()
+end sub
+
+' Procesa el cierre del modal tras que el usuario selecione el cierre de sesion.
+sub onDialogLogoutWasClosed()
+  clearDialogAndGetWasClosed(m.pinDialog)
+  m.pinDialog = invalid
+  
+  if m.lastButtonSelect <> invalid then m.lastButtonSelect.setFocus(true)
 end sub
 
 sub __syncApiUrlFromGlobal()

@@ -1089,7 +1089,7 @@ sub __loadEditProfile(profileByEdit)
   m.btnCancel.focusable = true
   m.btnCancel.size = [scaleValue(220, m.scaleInfo)]
 
-  if m.profileByEdit.id <> invalid and m.profileByEdit.id <> 0 and not m.profileByEdit.default then 
+  if m.profileByEdit.id <> invalid and m.profileByEdit.id <> 0 and not m.profileByEdit.default and __canDeleteProfile(m.profileByEdit.id) then 
     m.btnDeleteProfile = m.buttonEditContainer.createChild("QvButton")
     m.btnDeleteProfile.id = "btnDeleteProfile"
     m.btnDeleteProfile.text = i18n_t(m.global.i18n, "profiles.profilePage.DeleteProfile")
@@ -1097,6 +1097,15 @@ sub __loadEditProfile(profileByEdit)
     m.btnDeleteProfile.focusable = true
   end if 
 end sub  
+
+' Devuelve si se puede eliminar el perfil recibido por parametro
+function __canDeleteProfile(profileIdSelected)
+  contact = m.global.contact
+  if (contact <> invalid and contact.profile <> invalid and contact.profile.id <> invalid and profileIdSelected = contact.profile.id) then
+    return false
+  end if 
+  return true
+end function
 
 ' Limpia los carouseles de avatars, las referencias y elimina los escuchadores 
 sub __clearAvatarsCarousel()

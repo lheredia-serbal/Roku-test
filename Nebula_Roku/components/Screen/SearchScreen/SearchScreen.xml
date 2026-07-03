@@ -50,12 +50,6 @@
   </interface>
 
   <children>
-
-    <!-- Fondo de pantalla completo detrás de todo el contenido. -->
-    <Poster
-      id="backgroundPoster"
-      loadDisplayMode="scaleToZoom" />
-
     <!-- Carrusel de recomendados -->
     <Group id="relatedContainer" visible="false">
       <Carousel id="related" />

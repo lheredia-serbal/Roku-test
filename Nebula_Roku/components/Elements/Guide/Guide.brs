@@ -71,45 +71,32 @@ end sub
 ' entonces sigue con el siguente metodo onKeyEvent del compoente superior
 function onKeyEvent(key as string, press as boolean) as boolean
 
-    print "guide onKeyEvent " ; key
-
     handled = false
 
     if key = KeyButtons().UP then 
-        print "guide onKeyEvent 2 " ; press
         if press then 
-            print "guide onKeyEvent 3 " ; m.programBySend
             m.programBySend = invalid
             
-            print "guide onKeyEvent 4 " ; m.top.channelIdIndexOf
             m.top.channelIdIndexOf = m.top.channelIdIndexOf - 1
     
-            print "guide onKeyEvent 5 " ; m.top.channelIdIndexOf
             if m.top.channelIdIndexOf < 0 then m.top.channelIdIndexOf = m.channelArray.count() - 1 
 
-            print "guide onKeyEvent 6 " ; m.top.channelIdIndexOf
             prevIndex = m.top.channelIdIndexOf - 1 
             nextIndex = m.top.channelIdIndexOf + 1
 
-            print "guide onKeyEvent 7 " ; m.channelArray.count()
+
             if prevIndex < 0 then prevIndex = m.channelArray.count() - 1
             if nextIndex > m.channelArray.count() - 1 then prevIndex = 0
 
-            print "guide onKeyEvent 8 " ; m.currentChannel
             m.nextChannel = m.currentChannel
-            print "guide onKeyEvent 9 " ; m.nextChannel ; m.nextChannelNumber ; m.nextChannelImage
             __updateChannelInfo(m.nextChannel, m.nextChannelNumber, m.nextChannelImage)
 
-            print "currentChannel 1 " ; m.prevChannel
             m.currentChannel = m.prevChannel
 
-            print "guide onKeyEvent 10 " ; m.currentChannel.id
             m.top.channelId = m.currentChannel.id
 
-            print "guide onKeyEvent 11 " ; m.currentChannel ; m.currentChannelNumber ; m.currentChannelImage
             __updateChannelInfo(m.currentChannel, m.currentChannelNumber, m.currentChannelImage)
 
-            print "guide onKeyEvent 12 " ; m.channelArray ; m.channelArray[prevIndex]
             if m.channelArray[prevIndex] <> invalid then 
                 m.prevChannel = m.channelArray[prevIndex]
                 __updateChannelInfo(m.prevChannel, m.prevChannelNumber, m.prevChannelImage)
@@ -128,30 +115,22 @@ function onKeyEvent(key as string, press as boolean) as boolean
         handled = true 
 
     else if key = KeyButtons().DOWN then
-        print "guide onKeyEvent Down 1 " ; press
         if press then 
-            print "guide onKeyEvent Down 2 " ; m.programBySend
             m.programBySend = invalid
 
-            print "guide onKeyEvent Down 3 " ; m.top.channelIdIndexOf
             m.top.channelIdIndexOf = m.top.channelIdIndexOf + 1
     
-            print "guide onKeyEvent Down 4 " ; m.top.channelIdIndexOf
             if m.top.channelIdIndexOf > m.channelArray.count() - 1 then m.top.channelIdIndexOf = 0 
 
             prevIndex = m.top.channelIdIndexOf - 1 
             nextIndex = m.top.channelIdIndexOf + 1
 
-            print "guide onKeyEvent Down 5 " ; m.channelArray
             if prevIndex < 0 then prevIndex = m.channelArray.count() - 1
             if nextIndex > m.channelArray.count() - 1 then prevIndex = 0
 
-            print "guide onKeyEvent Down 6 " ; m.currentChannel
             m.prevChannel = m.currentChannel
-            print "guide onKeyEvent Down 7 " ; m.prevChannel ; m.prevChannelNumber ; m.prevChannelImage
             __updateChannelInfo(m.prevChannel, m.prevChannelNumber, m.prevChannelImage)
 
-            print "currentChannel 2 " ; m.nextChannel
             m.currentChannel = m.nextChannel
 
             m.top.channelId = m.currentChannel.id
@@ -220,7 +199,6 @@ function onKeyEvent(key as string, press as boolean) as boolean
             m.carouselGuide.content = invalid
             m.top.channelIdIndexOf = -1
             m.nextChannel = invalid
-            print "currentChannel 3 " ; invalid
             m.currentChannel = invalid
             m.prevChannel = invalid
             m.isNowPosition = true
@@ -253,7 +231,6 @@ end function
 
 ' Carga la lista de canales.
 sub loadChannelArray()
-    print "guide loadChannelArray"
     if not m.loadConfig then __initConfig()
 
     if m.top.items <> invalid and m.top.items.count() > 0 then 
@@ -266,10 +243,8 @@ end sub
 
 ' Posiciona el el foco sobre el canal que concuerda con el Id pasado
 sub onShowPositioninChannelId()
-    print "guide onShowPositioninChannelId " ; m.top.positioninChannelId
     if m.top.positioninChannelId then
         m.top.positioninChannelId = false
-        print "guide onShowPositioninChannelId 2" ; m.currentChannel
         if m.currentChannel <> invalid then
             ' En caso de que el id del canal, sea diferente al canals seleccionado, actualizar el canarl
             if m.currentChannel.id <> m.top.channelId and m.channelArray <> invalid then
@@ -279,7 +254,6 @@ sub onShowPositioninChannelId()
                     end if
                 end for
 
-                print "currentChannel 4 " ; m.channelArray[m.top.channelIdIndexOf]
                 m.currentChannel = m.channelArray[m.top.channelIdIndexOf]
             end if 
             m.currentChannelNumber.setFocus(true)
@@ -290,7 +264,6 @@ end sub
 
 ' Dispara la busqueda de la posicion del canal.  
 sub onSearchChannelPosition()
-    print "guide onSearchChannelPosition"
     if m.top.searchChannelPosition then
         m.top.searchChannelPosition = false
         __searchChannel()
@@ -299,13 +272,11 @@ end sub
 
 ' Se posiciona la guia en el canal recibido por Id.
 sub positionChannel()
-    print "guide positionChannel"
     if m.top.channelId <> 0 then __searchChannel()
 end sub
 
 ' Procesa la respuesta de la guia del canal actual
 sub onCurrentCarouselResponse()
-    print "guide onCurrentCarouselResponse " ; m.apiRequestCurrentChannel.statusCode
     if validateStatusCode(m.apiRequestCurrentChannel.statusCode) then 
         m.currentCarouselGuide = ParseJson(m.apiRequestCurrentChannel.response)
 
@@ -333,7 +304,7 @@ sub onCurrentCarouselResponse()
         statusCode = m.apiRequestCurrentChannel.statusCode
         m.apiRequestCurrentChannel = clearApiRequest(m.apiRequestCurrentChannel) 
 
-        printError("Guide (CurrentCarousel):", error)
+        printError("Current Carousel response: " , error)
 
         if validateLogout(statusCode, m.top) then return
     end if
@@ -341,40 +312,29 @@ end sub
 
 ' Procesa la respuesta de la guia del canal anterior
 sub onPrevCarouselResponse()
-    print "guide onPrevCarouselResponse " ; m.apiRequestPrevChannel
     if validateStatusCode(m.apiRequestPrevChannel.statusCode) then
-        print "guide onPrevCarouselResponse 2" ; m.apiRequestPrevChannel.statusCode
         m.prevCarouselGuide = ParseJson(m.apiRequestPrevChannel.response)
 
-        print "guide onPrevCarouselResponse 3" ; m.apiRequestPrevChannel.dataAux
         if m.apiRequestPrevChannel.dataAux <> invalid and m.apiRequestPrevChannel.dataAux <> "" then
             m.prevCarouselGuide.channelId = ParseJson(m.apiRequestPrevChannel.dataAux).channelId
         end if 
 
-        print "guide onPrevCarouselResponse 4"
         m.apiRequestPrevChannel = clearApiRequest(m.apiRequestPrevChannel)
     else
-        print "guide onPrevCarouselResponse 5" ; m.apiRequestPrevChannel
         error = m.apiRequestPrevChannel.errorResponse
-        print "guide onPrevCarouselResponse 6" ; error
         statusCode = m.apiRequestPrevChannel.statusCode
-        print "guide onPrevCarouselResponse 7" ; statusCode
         m.apiRequestPrevChannel = clearApiRequest(m.apiRequestPrevChannel) 
 
-        printError("Guide (PrevCarousel):", error)
-
+        printError("Prev Carousel Response: " ,error)
         if validateLogout(statusCode, m.top) then return
     end if
 end sub
 
 ' Procesa la respuesta de la guia del canal siguiente
 sub onNextCarouselResponse()
-    print "guide onNextCarouselResponse " ; m.apiRequestNextChannel.statusCode
     if validateStatusCode(m.apiRequestNextChannel.statusCode) then 
-        print "guide onNextCarouselResponse 2" ; m.apiRequestNextChannel
         m.nextCarouselGuide = ParseJson(m.apiRequestNextChannel.response)
 
-        print "guide onNextCarouselResponse 3" ; ParseJson(m.apiRequestNextChannel.response)
         if m.apiRequestNextChannel.dataAux <> invalid and m.apiRequestNextChannel.dataAux <> "" then
             m.nextCarouselGuide.channelId = ParseJson(m.apiRequestNextChannel.dataAux).channelId
         end if 
@@ -385,7 +345,7 @@ sub onNextCarouselResponse()
         statusCode = m.apiRequestNextChannel.statusCode
         m.apiRequestNextChannel = clearApiRequest(m.apiRequestNextChannel) 
 
-        printError("Guide (NextCarousel):", error)
+        printError("Next Carousel Response", error)
 
         if validateLogout(statusCode, m.top) then return
     end if
@@ -393,7 +353,6 @@ end sub
 
 ' Devuelve el nodo que se a seleccionado
 sub onItemSelectedChanged()
-    print "guide onItemSelectedChanged"
     indexSelected = m.carouselGuide.itemSelected
     programNode = m.carouselGuide.content.getChild(indexSelected)
     
@@ -427,6 +386,7 @@ sub onItemSelectedChanged()
             end if
             m.programBySend = m.currentCarouselGuide.data.programs[indexSelected]
             m.pinDialog = createAndShowPINDialog(m.top, i18n_t(m.global.i18n, "shared.parentalControlModal.title"), "onPinDialogLoad", [i18n_t(m.global.i18n, "button.ok"), i18n_t(m.global.i18n, "button.cancel")])
+            m.pinDialog.observeField("wasClosed", "onDialogLogoutWasClosed") 
         else
             m.programBySend = m.currentCarouselGuide.data.programs[indexSelected]
             __loadStreamingForPlayer()
@@ -439,9 +399,17 @@ sub onItemSelectedChanged()
     end if 
 end sub
 
+' Procesa el cierre del modal tras que el usuario selecione el cierre de sesion.
+sub onDialogLogoutWasClosed()
+  clearDialogAndGetWasClosed(m.pinDialog)
+  m.pinDialog = invalid
+  
+  m.repositionChannnelList = true
+if m.lastElementSelect <> invalid then m.lastElementSelect.setFocus(true)
+end sub
+
 ' devuelve el nodo que esta teniendo el foco.
 sub onItemFocusedChanged()
-    print "guide onItemFocusedChanged"
     ' Cuando el PIN esta abierto, el foco puede cambiar dentro del dialogo y disparar
     ' itemFocused nuevamente. No debemos limpiar m.programBySend porque contiene
     ' el programa que se debe reproducir si la validacion parental es correcta.
@@ -451,7 +419,6 @@ end sub
 
 ' Procesa el evento de flecha izquierda
 sub onLeftEvent()
-    print "guide onLeftEvent"
     if m.currentChannel <> invalid and m.currentChannel.program <> invalid then
         if m.carouselGuide.happenedLeft then m.saveDateByEvent = true
     end if
@@ -459,7 +426,6 @@ end sub
 
 ' Procesa el evento de flecha derecha
 sub onRightEvent()
-    print "guide onRightEvent"
     if m.currentChannel <> invalid and m.currentChannel.program <> invalid then
         if m.carouselGuide.happenedRight then m.saveDateByEvent = true  
     end if
@@ -467,16 +433,13 @@ end sub
 
 ' Dispara la carga de la guia del canal superior
 sub onLoadChangeChannelUp()
-    print "guide onLoadChangeChannelUp"
     clearTimer(m.changeUp)
 
-    print "guide onLoadChangeChannelUp 2" ; m.prevCarouselGuide ; m.prevCarouselGuide ; m.currentChannel
     if m.prevCarouselGuide <> invalid and m.prevCarouselGuide.channelId = m.currentChannel.id then 
         m.nextCarouselGuide = m.currentCarouselGuide
         m.currentCarouselGuide = m.prevCarouselGuide
         m.prevCarouselGuide = invalid
 
-        print "guide onLoadChangeChannelUp 2" ; m.currentCarouselGuide ; m.currentCarouselGuide.data
         if m.currentCarouselGuide <> invalid and m.currentCarouselGuide.data <> invalid then
             if m.currentCarouselGuide.data.catchupDuration <> invalid then 
                 m.currentCatchupHours = m.currentCarouselGuide.data.catchupDuration
@@ -497,10 +460,8 @@ end sub
 
 ' Dispara la carga de la guia del canal inferior
 sub onLoadChangeChannelDown()
-    print "guide onLoadChangeChannelDown " ; m.nextCarouselGuide ; m.currentChannel
     clearTimer(m.changeDown)
 
-    print "guide onLoadChangeChannelDown 2" ; m.nextCarouselGuide ; m.nextCarouselGuide.channelId ; m.currentChannel.id
     if m.nextCarouselGuide <> invalid and m.nextCarouselGuide.channelId = m.currentChannel.id then 
         m.prevCarouselGuide = m.currentCarouselGuide
         m.currentCarouselGuide = m.nextCarouselGuide
@@ -526,12 +487,10 @@ end sub
 
 ' Se dispara la validacion del PIN cargado en el modal
 sub onPinDialogLoad()
-    print "guide onPinDialogLoad"
   resp = clearPINDialogAndGetOption(m.top, m.pinDialog)
   m.pinDialog = invalid
   
   if (resp.option = 0 and resp.pin <> invalid and Len(resp.pin) = 4) then 
-    ' if m.lastElementSelect <> invalid then m.lastElementSelect.setFocus(true)
     m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlParentalControlPin(resp.pin), "GET", "onParentalControlResponse")
   else 
     m.repositionChannnelList = true
@@ -541,7 +500,6 @@ end sub
 
 ' Procesa la respuesta de la validacion del PIN
 sub onParentalControlResponse()
-    print "guide onParentalControlResponse"
     m.top.loading.visible = false
     if validateStatusCode(m.apiRequestManager.statusCode) then
         resp = ParseJson(m.apiRequestManager.response)
@@ -561,7 +519,8 @@ sub onParentalControlResponse()
         errorResponse = m.apiRequestManager.errorResponse
         m.apiRequestManager = clearApiRequest(m.apiRequestManager)
 
-        printError("ParentalControl:", statusCode.toStr() + " " +  errorResponse)
+        printError("Parental Control Response Code: " + statusCode)
+        printError("Parental Control Response Response: " + errorResponse)
 
         if validateLogout(statusCode, m.top) then return
     end if
@@ -569,7 +528,6 @@ end sub
 
 ' Hace foco en objeto que lo tenia antes de que se abriera el modal
 sub onDialogClosedLastFocus()
-    print "guide onDialogClosedLastFocus"
   option = clearDialogAndGetOption(m.top, m.dialog)
   m.dialog = invalid
   
@@ -581,7 +539,6 @@ end sub
 
 ' Metodo que dispara el deslogueo del usuario
 sub onLogoutEvent()
-    print "guide onLogoutEvent"
     m.carouselGuide.setFocus(true)
     __removeProgramDetailComponent()
     m.top.logout = true
@@ -591,7 +548,6 @@ end sub
 
 ' Metodo que recarga el player con la nueva seleccion del objeto.
 sub onStreamingPlayer()
-    print "guide onStreamingPlayer"
     if m.programDetailComponent.programOpenInPlayer <> invalid and m.programDetailComponent.programOpenInPlayer <> "" then 
         program = ParseJson(m.programDetailComponent.programOpenInPlayer)
         
@@ -603,15 +559,12 @@ end sub
 
 ' Metodo que dispara la apertura de la pantalla para eliminar sesiones concurrentes
 sub onKillSession()
-    print "guide onKillSession"
-    printError("FaltaImplementar onKillSession")
     m.carouselGuide.setFocus(true)
     __removeProgramDetailComponent()
 end sub
 
 ' Metodo que levanta la pantalla de detalle sobre el player.
 sub onBackDetail()
-    print "guide onBackDetail"
     m.carouselGuide.setFocus(true)
     if (m.guideContainer.visible = false) then m.guideContainer.visible = true
     __removeEmissionsComponent()
@@ -620,7 +573,6 @@ end sub
 
 ' Metodo que abre EmissionsScreen desde el detalle creado dentro de Guide.
 sub onEmissions()
-    print "guide onEmissions"
     if m.programDetailComponent = invalid then return
     if m.programDetailComponent.emissions = invalid or m.programDetailComponent.emissions = "" then return
 
@@ -631,7 +583,6 @@ end sub
 
 ' Metodo que vuelve de EmissionsScreen al detalle embebido en Guide.
 sub onBackEmissions()
-    print "guide onBackEmissions"
     if m.emissionsComponent = invalid then return
 
     if m.emissionsComponent.onBack then
@@ -650,7 +601,6 @@ end sub
 
 ' Reproduce una emision seleccionada desde EmissionsScreen sobre el player actual.
 sub onStreamingEmissions()
-    print "guide onStreamingEmissions"
     if m.emissionsComponent = invalid then return
     if m.emissionsComponent.streaming = invalid or m.emissionsComponent.streaming = "" then return
 
@@ -669,7 +619,6 @@ end sub
 ' Carga la configuracion inicial del componente, escuchando los observable y obteniendo las 
 ' referencias de compenentes necesarios para su uso
 sub __initConfig()
-    print "guide __initConfig"
     width = m.scaleInfo.width
     height = m.scaleInfo.height
 
@@ -743,7 +692,6 @@ end sub
 
 ' Busca el canal pasado definido en el channelId sobre el arreglo de canales
 sub __searchChannel()
-    print "guide __searchChannel " ; m.channelArray.count() ; m.top.channelId
     if m.channelArray.count() > 0 and m.top.channelId <> 0 then 
         for i = 0 to m.channelArray.count() - 1
 
@@ -761,7 +709,6 @@ sub __searchChannel()
                 end if
                  
                 if m.channelArray[m.top.channelIdIndexOf] <> invalid then 
-                    print "currentChannel 5 " ; m.channelArray[m.top.channelIdIndexOf]
                     m.currentChannel = m.channelArray[m.top.channelIdIndexOf]
                     __updateChannelInfo(m.currentChannel, m.currentChannelNumber, m.currentChannelImage)
                 end if
@@ -775,7 +722,6 @@ sub __searchChannel()
             end if
         end for
 
-        print "guide __searchChannel 3" ; m.top.visible
         if m.top.visible then 
             if m.currentChannel <> invalid then
                 m.currentChannelNumber.setFocus(true)
@@ -787,7 +733,6 @@ end sub
 
 ' Limpia las variables y observables necesarios para el uso interno del componente.
 sub __clearGuide()
-    print "guide __clearGuide"
     clearTimer(m.changeUp)
     clearTimer(m.changeDown)
 
@@ -811,7 +756,6 @@ sub __clearGuide()
     m.carouselGuide.content = invalid
     m.top.channelIdIndexOf = -1
     m.nextChannel = invalid
-    print "currentChannel 6 " ; invalid
     m.currentChannel = invalid
     m.prevChannel = invalid
     m.isNowPosition = true
@@ -854,25 +798,21 @@ end sub
 
 ' Realiza la busca la guia del canal actual
 sub __searchCurrentChannel()
-    print "guide __searchCurrentChannel"
     m.apiRequestCurrentChannel = sendApiRequest(m.apiRequestCurrentChannel, urlEpgCarouselGuide(m.currentChannel.id), "GET", "onCurrentCarouselResponse", invalid, invalid, invalid, false, FormatJson({channelId: m.currentChannel.id}))
 end sub
 
 ' Realiza la busca la guia del canal anterior
 sub __searchPrevChannel() 
-    print "guide __searchPrevChannel"
     m.apiRequestPrevChannel = sendApiRequest(m.apiRequestPrevChannel, urlEpgCarouselGuide(m.prevChannel.id), "GET", "onPrevCarouselResponse", invalid, invalid, invalid, false, FormatJson({channelId: m.prevChannel.id}))
 end sub
 
 ' Realiza la busca la guia del canal siguiente
 sub __searchNextChannel() 
-    print "guide __searchNextChannel"
     m.apiRequestNextChannel = sendApiRequest(m.apiRequestNextChannel, urlEpgCarouselGuide(m.nextChannel.id), "GET", "onNextCarouselResponse", invalid, invalid, invalid, false, FormatJson({channelId: m.nextChannel.id}))
 end sub
 
 ' Función para configurar un TargetList con su TargetSet y contenido
 sub __setupTargetList(content as Object)
-    print "guide __setupTargetList"
     ' Genera las posiciones de los targets dinámicamente según la cantidad de items
     m.carouselGuide.targetSet = m.targetSet
     m.carouselGuide.content = content
@@ -891,7 +831,6 @@ end sub
 ' Selecciona un canal enviandolo al player para reproducir o levantando el modal de control 
 ' parental si el canal lo requiere
 sub __channelSelected()
-    print "guide __channelSelected"
     if m.currentChannel.parentalControl <> invalid and m.currentChannel.parentalControl then
         m.lastElementSelect = m.top.focusedChild
         if m.pinDialog <> invalid then
@@ -900,7 +839,7 @@ sub __channelSelected()
             m.pinDialog = invalid
         end if
         m.pinDialog = createAndShowPINDialog(m.top, i18n_t(m.global.i18n, "shared.parentalControlModal.title"), "onPinDialogLoad", [i18n_t(m.global.i18n, "button.ok"), i18n_t(m.global.i18n, "button.cancel")])
-        __loadStreamingForPlayer()
+        m.pinDialog.observeField("wasClosed", "onDialogLogoutWasClosed") 
     else
         __loadStreamingForPlayer()
     end if
@@ -908,7 +847,6 @@ end sub
 
 ' Procesa y carga la lista de programa del canal que actualmente tiene el foco
 sub __processAndLoadCarousel(programs)
-    print "guide __processAndLoadCarousel"
     contentRoot = createObject("roSGNode", "ProgramNode")
     startTime = CreateObject("roDateTime")
     endTime = CreateObject("roDateTime")
@@ -921,7 +859,6 @@ sub __processAndLoadCarousel(programs)
     channelName = ""
     channelCategory = ""
     
-    print "guide __processAndLoadCarousel 2 " ; m.currentChannel
     if m.currentChannel <> invalid then
         if m.currentChannel.name <> invalid and  m.currentChannel.name <> "" then
         channelName = m.currentChannel.name
@@ -932,10 +869,8 @@ sub __processAndLoadCarousel(programs)
         end if
     end if
 
-    print "guide __processAndLoadCarousel 3 " ; m.noProgram
     m.noProgram = false
 
-    print "guide __processAndLoadCarousel 4 " ; m.currentCarouselGuide.data
     if m.currentCarouselGuide.data <> invalid and m.currentCarouselGuide.data.programs.count() = 0 then 
 
         currentChannelProgram = {}
@@ -956,7 +891,6 @@ sub __processAndLoadCarousel(programs)
         m.noProgram = true
     end if
 
-    print "guide __processAndLoadCarousel 5 " ; programs
     for each program in programs
         child = contentRoot.createChild("ProgramNode")
         child.size = scaleSize([154, 230], m.scaleInfo)
@@ -1026,17 +960,14 @@ sub __processAndLoadCarousel(programs)
         index++
     end for
 
-    print "guide __processAndLoadCarousel 6 " ; contentRoot
     __setupTargetList(contentRoot)
 
-    print "guide __processAndLoadCarousel 7 " ; m.noProgram 
     if (m.noProgram = true) then
         m.carouselGuide.jumpToItem = 0
     else
         m.carouselGuide.jumpToItem = m.indexPosition
     end if
     
-    print "guide __processAndLoadCarousel 8 " ; m.lastElementSelect
     if m.lastElementSelect <> invalid then
         m.lastElementSelect = m.carouselGuide
     else 
@@ -1048,7 +979,6 @@ end sub
 
 ' Actualiza la informacion del canal en pantalla 
 sub __updateChannelInfo(channel, roElementNumber, roElementImage)
-     print "guide __updateChannelInfo"
     if channel = invalid then return
     if channel.number <> invalid then 
         roElementNumber.text = channel.number.ToStr()
@@ -1065,7 +995,6 @@ end sub
 
 ' Notifica al player que se a selecionado un nuevo programa para reproducir
 sub __loadStreamingForPlayer()
-    print "guide __loadStreamingForPlayer"
     if m.programBySend <> invalid then 
         ' Seleccion por programa
         m.top.selected = FormatJson({key: m.programBySend.key, id: m.programBySend.id, currentChannelId: m.currentChannel.id, streamingAction: invalid})
@@ -1077,7 +1006,6 @@ end sub
 
 ' Define y muestra el detalle de un programa como modal
 sub __loadDetail()
-    print "guide __loadDetail"
     __removeProgramDetailComponent()
     m.programDetailComponent = m.detailGuideContainer.createChild("ProgramDetailScreen")
 
@@ -1102,7 +1030,6 @@ end sub
 
 ' Define y muestra EmissionsScreen como modal sobre el player.
 sub __loadEmissions(emissionsData as string)
-    print "guide __loadEmissions"
     __removeEmissionsComponent()
 
     if m.programDetailComponent <> invalid then
@@ -1123,13 +1050,9 @@ end sub
 ' Guarda la posicion donde se decidio deplazar hacia arriba o abajo para mantener 
 ' la misma linea temporal al cambiar entre canales de la guia
 sub __savePosition()
-    print "guide __savePosition " ; m.saveDateByEvent
     if m.saveDateByEvent then
-        print "guide __savePosition 2" ; m.carouselGuide ; m.carouselGuide.itemFocused
         if m.carouselGuide <> invalid and m.carouselGuide.itemFocused <> invalid and m.carouselGuide.content <> invalid then 
-            print "guide __savePosition 3" ; m.carouselGuide.itemFocused
             node = m.carouselGuide.content.getChild(m.carouselGuide.itemFocused)
-             print "guide __savePosition 4" ; node
             if node <> invalid then 
                 if node.isNow then
                     m.isNowPosition = true
@@ -1141,13 +1064,11 @@ sub __savePosition()
             end if 
         end if
     end if
-    print "guide __savePosition 5" ; m.saveDateByEvent
     m.saveDateByEvent = false
 end sub
 
 ' Limpia el modal del detalle de programa que se abrio sobre el player.
 sub __removeProgramDetailComponent()
-    print "guide __removeProgramDetailComponent"
     __removeEmissionsComponent()
 
     if m.programDetailComponent <> invalid then 
@@ -1170,7 +1091,6 @@ end sub
 
 ' Limpia EmissionsScreen embebido dentro de Guide.
 sub __removeEmissionsComponent()
-    print "guide __removeEmissionsComponent"
     if m.emissionsComponent <> invalid then
         m.detailGuideContainer.removeChild(m.emissionsComponent)
         m.emissionsComponent.unobserveField("onBack")

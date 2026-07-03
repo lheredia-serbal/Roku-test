@@ -82,10 +82,7 @@ end sub
 
 ' Oculta MainScreen si continúa visible cuando se cumple el timeout configurado.
 sub onVisibleAutoHideTimerFired()
-  if m.top.loading.visible then
-    m.top.loading.visible = false
-    print 
-  end if
+  if m.top.loading.visible then m.top.loading.visible = false
 end sub
 
 ' Funcion que interpreta los eventos de teclado y retorna true si fue porcesada por este componente. Sino es porcesado por el
@@ -271,48 +268,57 @@ end sub
 sub initFocus()
   if m.dialog <> invalid and m.dialog.visible then return
 
-  if m.top.onFocus and m.lastFocus = invalid then 
-    __applyTranslations()
-    __validateAutoUpgradeTime()
-     ' Prioriza foco inicial en NewsItem cuando existe; si no, mantiene foco en carouseles.
-    if m.newsCarouselItem <> invalid and __hasNewsContent() then
-      m.newsCarouselItem.setFocus(true)
+  if (m.top.onFocus) then 
+    if (m.lastFocus = invalid) then 
+      __applyTranslations()
+      __validateAutoUpgradeTime()
+       ' Prioriza foco inicial en NewsItem cuando existe; si no, mantiene foco en carouseles.
+      if m.newsCarouselItem <> invalid and __hasNewsContent() then
+        m.newsCarouselItem.setFocus(true)
+      else
+        ' Si News no tiene contenido, mantiene foco en carruseles y evita ocultar el logo.
+        m.carouselContainer.setFocus(true)
+      end if
+      __updateOverlayVisibilityByFocus()
     else
-      ' Si News no tiene contenido, mantiene foco en carruseles y evita ocultar el logo.
-      m.carouselContainer.setFocus(true)
-    end if
-    __updateOverlayVisibilityByFocus()
+      __validateVariables()
+      if m.lastRefreshDate <> invalid then
+        nowDate = CreateObject("roDateTime")
+        nowDate.ToLocalTime()
   
-  else
-    __validateVariables()
-    if m.lastRefreshDate <> invalid then
-      nowDate = CreateObject("roDateTime")
-      nowDate.ToLocalTime()
-
-      ' Paso mas de 5 minutos que se cargo la vista?
-      if (m.lastRefreshDate.asSeconds() + 300) <= nowDate.asSeconds() then
-        ' Valido que la vista seleccionada no sea la de la Guia
-        if m.menuSelectedItem <> invalid and m.menuSelectedItem.code <> "epg" then
-          ' Volver a cargar la vista 
-          __selectMenuItem(m.menuSelectedItem)
-          return
+        ' Paso mas de 5 minutos que se cargo la vista?
+        if (m.lastRefreshDate.asSeconds() + 300) <= nowDate.asSeconds() then
+          ' Valido que que exista un menu al cual volver
+          if m.menuSelectedItem <> invalid then
+            ' Volver a cargar la vista
+            if m.selectedIndicator <> invalid then m.selectedIndicator.visible = false
+            __selectMenuItem(m.menuSelectedItem)
+            return
+          end if
         end if
       end if
+  
+      __restarFocus()
+      m.top.loading.visible = false
     end if
-
-    if m.restoreFocusToLastNews = true then __restoreNewsSelection() ' Asegura que News use el índice persistido antes de recuperar foco.
-    if m.lastFocus <> invalid then m.lastFocus.setFocus(true)
-    if m.restoreFocusToLastNews = true then __updateOverlayVisibilityByFocus() ' Oculta selectedIndicator cuando el foco restaurado pertenece a News.
-    m.top.loading.visible = false
-  end if
+    
+  end if 
 end sub
 
-' Toma la seleccion del item del menu
+' Toma la seleccion del item del menu Valdiando cual es el tipo de menu. Tener en cuenta que los que son de MenuId se concideran que son Menu de uso
+' interno por lo que no se guarda la referencia para evitar problemas de actualizacion de contenido o cambios de vistas referenciadas (Ver Todos).
+' IMPORTANTE: Tener en cuenta que si se agrega una Opcion Menu que tenga: {Key: MenuId, Id: -1} entocnes no se guardara la referencia en caso
+' contrario, todo valor distinto en uno de esos dos campos, hace que se guarde la referencia.
 sub onSelectMenuItem()
-  if m.myMenu <> invalid and m.myMenu.selectedItem <> invalid then
-    m.menuSelectedItem = ParseJson(m.myMenu.selectedItem)
+  if (m.myMenu <> invalid and m.myMenu.selectedItem <> invalid) then
+    menuSelectedItem = ParseJson(m.myMenu.selectedItem)
     m.myMenu.selectedItem = invalid
-    __selectMenuItem(m.menuSelectedItem)
+
+    if (not (menuSelectedItem.key = "MenuId" and menuSelectedItem.id = -1)) then
+      m.menuSelectedItem = menuSelectedItem
+    end if
+    
+    __selectMenuItem(menuSelectedItem)
   end if
 end sub
 
@@ -538,6 +544,7 @@ sub onSelectItem()
       if m.itemSelected.parentalControl <> invalid and m.itemSelected.parentalControl then
         __markLastFocus()
         m.pinDialog = createAndShowPINDialog(m.top, i18n_t(m.global.i18n, "shared.parentalControlModal.title"), "onPinDialogLoad", [i18n_t(m.global.i18n, "button.ok"), i18n_t(m.global.i18n, "button.cancel")])
+        m.pinDialog.observeField("wasClosed", "onDialogLogoutWasClosed") 
       else 
         m.top.loading.visible = true
         watchSessionId = getWatchSessionId()
@@ -607,6 +614,7 @@ function __handleNewsOkAction() as boolean
       __markLastFocus()
       ' Abre diálogo de PIN con callbacks existentes del flujo normal.
       m.pinDialog = createAndShowPINDialog(m.top, i18n_t(m.global.i18n, "shared.parentalControlModal.title"), "onPinDialogLoad", [i18n_t(m.global.i18n, "button.ok"), i18n_t(m.global.i18n, "button.cancel")])
+      m.pinDialog.observeField("wasClosed", "onDialogLogoutWasClosed") 
       ' Finaliza manejando OK desde News.
       return true
     end if
@@ -932,11 +940,19 @@ sub onDialogLogoutContainer()
     ' Disparar logout
     m.top.logout = true
   else 
-    ' Disparar el volver a enfocar cuando la opcion "No"    
+    ' Disparar el volver a enfocar cuando la opcion "No" 
     if m.lastFocus <> invalid then m.lastFocus.setFocus(true)
   end if 
 end sub
 
+' Procesa el cierre del modal tras que el usuario selecione el cierre de sesion.
+sub onDialogLogoutWasClosed()
+  clearDialogAndGetWasClosed(m.pinDialog)
+  m.pinDialog = invalid
+  
+  ' Disparar el volver a enfocar cuando la opcion "No"    
+  if m.lastFocus <> invalid then m.lastFocus.setFocus(true)
+end sub
 
 ' Procesa el cierre de los modales de error para volver a dar foco sobre el elemento que lo 
 ' tenia antes del error
@@ -950,11 +966,7 @@ end sub
 ' Hace foco en objeto que lo tenia antes de que se abriera el modal
 sub onDialogClosedLastFocus()
   onDialogClosedFocusContainer()
-  if m.lastFocus <> invalid then 
-    m.lastFocus = invalid
-  else
-    
-  end if
+  if __restarFocus() then m.lastFocus = invalid
 end sub
 
 ' Dispara el evento de deslogueo
@@ -965,6 +977,8 @@ end sub
 ' Dispara la busqueda del programa que esta teniendo el foco. Usa un timer para buscarlo una vez que el 
 ' usuario se detuvo en la navegacion
 function getProgramInfo() as boolean
+  if (m.newsContainer <>invalid and m.newsContainer.isInFocusChain()) then return false ' Detiene el timer si es que el objeto final de la busqueda es na New
+
   try 
   clearTimer(m.programTimer)
 
@@ -1123,7 +1137,6 @@ end sub
 
 ' Procesa la respuesta de la peticion de la vista de contenido
 sub onContentViewResponse()
-
   if m.apiRequestManager = invalid then
     __selectMenuItem(m.menuSelectedItem)
     return
@@ -1364,8 +1377,7 @@ sub __selectMenuItem(menuSelectedItem)
   
   else if menuSelectedItem.key = "MenuId" and menuSelectedItem.id = -1 and menuSelectedItem.code <> invalid and menuSelectedItem.code = "exit" then
     m.myMenu.action = "collapse"
-    m.selectedIndicator.visible = true
-    if m.lastFocus <> invalid then m.lastFocus.setFocus(true)
+    __restarFocus()
 
     actionLog =  getActionLog({ actionCode: ActionLogCode().LOGOUT })
 
@@ -1375,7 +1387,10 @@ sub __selectMenuItem(menuSelectedItem)
 
   else if menuSelectedItem.key = "MenuId" and menuSelectedItem.id = -1 and menuSelectedItem.code <> invalid and menuSelectedItem.code = "logout" then
     m.myMenu.action = "collapse"
+
+    ' Se debe acomodar en un futuro para que lso modales sean abiertos por la Scene y no por cada hijo particualr a traves de un appendChild
     m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.exitModal.title"), i18n_t(m.global.i18n, "shared.exitModal.askLogout"), "onDialogLogoutContainer", [ i18n_t(m.global.i18n, "button.yes"), i18n_t(m.global.i18n, "button.no")])
+    m.dialog.observeField("wasClosed", "onDialogLogoutWasClosed") ' Se escucha el evento de cancelacion para reubicarlo si hace falta.
 
   else if menuSelectedItem.key = "MenuId" and menuSelectedItem.id = -1 and menuSelectedItem.code <> invalid and menuSelectedItem.code = "profiles" then
     __redirectToProfilesScreen()
@@ -1423,6 +1438,7 @@ sub __selectMenuItem(menuSelectedItem)
     m.top.openGuide = true
     
     m.myMenu.action = "collapse"
+
     __focusCarousels()
 
     m.top.loading.visible = true
@@ -2051,9 +2067,7 @@ sub onAutoUpgradeAvailableDialogClosed(_event)
   if option = 1 then
     m.top.forceExit = true
   else
-    if m.lastFocus <> invalid then
-      m.lastFocus.setFocus(true)
-    else
+    if not __restarFocus() then
       __focusCarousels()
     end if
     __updateSelectedIndicator()
@@ -2094,6 +2108,20 @@ sub __validateVariables()
     m.apiVariableRequest = action.apiRequestManager
   end if
 end sub
+
+' Trata de ubicar el foco en el ultimo item que tuvo foco, si no lo encuentra entonces retorna false
+function __restarFocus(showVisibleSelector = true as boolean)
+    if m.restoreFocusToLastNews then 
+      __focusCarousels()
+      return true
+    end if
+    if m.lastFocus <> invalid then 
+      if showVisibleSelector then m.selectedIndicator.visible = true
+      m.lastFocus.setFocus(true)
+      return true
+    end if 
+    return false
+end function
 
 ' Valdia el error obtenido desde la API
 sub __validateError(statusCode, resultCode, errorResponse)
@@ -2146,7 +2174,7 @@ sub __validateError(statusCode, resultCode, errorResponse)
   end if 
 end sub
 
-' Guarda el ultimo utem que a tenido foco en los carouseles en la variable lastFocus
+' Guarda el ultimo item que a tenido foco en los carouseles en la variable lastFocus
 sub __markLastFocus()
   if __isNewsFocused() and m.newsCarouselItem <> invalid then ' Detecta cuando la navegación sale desde el carrusel News.
     m.lastNewsFocusIndex = m.newsCarouselItem.currentIndex ' Persiste el índice exacto del item de News seleccionado.
@@ -2170,8 +2198,8 @@ sub __restoreNewsSelection()
   if restoredNewsIndex < 0 then restoredNewsIndex = 0 ' Ajusta índices negativos al primer item disponible.
   if restoredNewsIndex >= newsItems.count() then restoredNewsIndex = newsItems.count() - 1 ' Ajusta índices mayores al último item disponible.
   m.newsCarouselItem.currentIndex = restoredNewsIndex ' Aplica el índice restaurado para mostrar el último item seleccionado de News.
-  if m.restoreFocusToLastNews = true then m.lastFocus = m.newsCarouselItem ' Actualiza lastFocus al NewsItem vigente si fue recreado.
-  if m.restoreFocusToLastNews = true and m.selectedIndicator <> invalid then m.selectedIndicator.visible = false ' Mantiene oculto selectedIndicator al restaurar foco sobre News.
+  if m.restoreFocusToLastNews then m.lastFocus = m.newsCarouselItem ' Actualiza lastFocus al NewsItem vigente si fue recreado.
+  if m.restoreFocusToLastNews and m.selectedIndicator <> invalid then m.selectedIndicator.visible = false ' Mantiene oculto selectedIndicator al restaurar foco sobre News.
   __syncNewsDots() ' Refresca los indicadores externos para reflejar el item restaurado.
 end sub
 
@@ -2364,7 +2392,6 @@ sub __loadOrganizationLogo()
 end sub
 
 sub onActiveApiUrlChanged()
-  print 'onActiveApiUrlChanged'
   __syncApiUrlFromGlobal()
 end sub
 

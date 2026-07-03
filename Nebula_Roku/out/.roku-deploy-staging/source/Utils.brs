@@ -276,7 +276,7 @@ sub printLog(message)
 end sub
 
 ' Crea un modal generico moestrnado la info enviada por parametro. Por defecto se crea solo con el boton "OK" 
-function createAndShowDialog(screen, title as String, message as String, method as string, buttons = ["OK"])
+function createAndShowDialog(screen, title as String, message as String, method as string, buttons = ["OK"], addSceneAndFocus = true)
   dialog = createObject("roSGNode", "StandardMessageDialog")
   dialog.palette = createPaletteDialog()
   dialog.title = title
@@ -284,12 +284,15 @@ function createAndShowDialog(screen, title as String, message as String, method 
   dialog.buttons = buttons ' Asegúrate de agregar al menos un botón
   dialog.observeField("buttonSelected", method)
 
-  ' Agregar el diálogo a la escena
-  screen.appendChild(dialog)
-
-  ' Mostrar el diálogo
-  dialog.setFocus(true)
-  dialog.visible = true
+  if (addSceneAndFocus) then 
+    ' Agregar el diálogo a la escena
+    screen.appendChild(dialog)
+  
+    ' Mostrar el diálogo
+    dialog.setFocus(true)
+    dialog.visible = true
+  end if
+  
   return dialog
 end function
 
@@ -438,6 +441,14 @@ function clearDialogAndGetOption(screen, dialog)
   
   return option
 end function
+
+
+' Limipia las variables del modal para que sea limpiado por el garbage collection por una cancelacion o back.
+Sub clearDialogAndGetWasClosed(dialog)
+  dialog.visible = false
+  dialog.unobserveField("wasClosed")
+end Sub
+
 
 ' Limipia las variables del modal de Control parental y retornan la respuesta. Se debe asignar la variable del 
 ' modal con invalid para que sea limpiado por el garbage collection 
@@ -751,14 +762,10 @@ end function
 
 ' Detiene y limpia el Timer pasado por parametro.
 sub clearTimer(timer)
-    print "clearTimer 1" ; timer
     if timer <> invalid then
-        print "clearTimer 2"
         timer.control = "stop"
-        print "clearTimer 3"
         timer.unobserveField("fire")
     end if
-    print "clearTimer 4"
 end sub
 
 ' Se encarga de entregar la imagen de error. La priemra vez que se llama crea el arreglo, guarda en una variable global el arreglo 

@@ -31,6 +31,8 @@ sub init()
   m.firstFocusedEpisodeIndex = invalid
   ' Guarda el último índice que tuvo foco para poder restaurarlo tras cerrar modales.
   m.lastFocusedEpisodeIndex = invalid
+  ' Guarda referencia al último EpisodeItem focuseable para restaurar foco real tras cerrar modales.
+  m.lastFocusedEpisodeItem = invalid
   ' Alto del separador para incluirlo en el desplazamiento vertical.
   m.episodeSeparatorHeight = 1
   ' Cantidad de episodios renderizados para navegación vertical.
@@ -86,7 +88,7 @@ sub __applyScaledLayout()
   end if
 
   if m.episodesUnavailableDescription <> invalid then
-    m.episodesUnavailableDescription.translation = scaleSize([0, 200], m.scaleInfo)
+    m.episodesUnavailableDescription.translation = scaleSize([0, 370], m.scaleInfo)
   end if
 
   ' Define centro vertical compartido para mantener ambos labels alineados entre sí.
@@ -345,6 +347,7 @@ function __renderEpisodes(episodes)
   ' Reinicia focos guardados para la nueva carga de emisiones.
   m.firstFocusedEpisodeIndex = invalid
   m.lastFocusedEpisodeIndex = invalid
+  m.lastFocusedEpisodeItem = invalid
   ' Recorre episodios para crear un EpisodeItem por cada uno.
   for i = 0 to episodes.count() - 1
     item = episodes[i]
@@ -469,7 +472,11 @@ function __openSelectedEpisode() as boolean
   ' Abre modal de PIN cuando el episodio tiene control parental activo.
   if m.selectedEpisode.parentalControl <> invalid and m.selectedEpisode.parentalControl then
     ' Crea y muestra el modal de PIN replicando el comportamiento de MainScreen.
+    ' Guarda la referencia del EpisodeItem enfocado justo antes de ceder el foco al modal de PIN.
+    m.lastFocusedEpisodeItem = __getEpisodeItemByIndex(m.selectedEpisodeIndex)
     m.pinDialog = createAndShowPINDialog(m.top, i18n_t(m.global.i18n, "shared.parentalControlModal.title"), "onEpisodePinDialogLoad", [i18n_t(m.global.i18n, "button.ok"), i18n_t(m.global.i18n, "button.cancel")])
+    ' Se escucha el evento de cancelacion para reubicarlo si hace falta.
+    m.pinDialog.observeField("wasClosed", "onDialogLogoutWasClosed") 
     ' Consume OK porque el flujo continúa desde el callback del modal.
     return true
   end if
@@ -522,8 +529,6 @@ end sub
 sub onEpisodePinDialogLoad()
   ' Obtiene opción/pin ingresado y limpia referencia del modal de PIN.
   resp = clearPINDialogAndGetOption(m.top, m.pinDialog)
-  ' Limpia referencia para evitar reutilización accidental del modal.
-  m.pinDialog = invalid
   ' Crea requestId para registrar la validación de PIN en el retry manager.
   requestId = createRequestId()
 
@@ -551,11 +556,42 @@ sub onEpisodePinDialogLoad()
       end function
     }
 
+    ' Limpia referencia para evitar reutilización accidental del modal.
+    m.pinDialog = invalid
+
     ' Ejecuta validación de PIN con soporte de retry global.
     runAction(requestId, action, ApiType().CLIENTS_API_URL)
     ' Sincroniza manager local con la acción ejecutada.
     m.apiRequestManager = action.apiRequestManager
+  else
+    __setLastFocus()
   end if
+end sub
+
+sub __setLastFocus()
+    ' Restaura la selección visual del último episodio enfocado antes de abrir el modal de PIN.
+  focusIndex = m.lastFocusedEpisodeIndex
+  if focusIndex = invalid then focusIndex = m.firstFocusedEpisodeIndex
+  if focusIndex <> invalid then
+    __updateSelection(focusIndex)
+  else
+    __updateSelection(0)
+  end if
+
+  ' Devuelve el foco real al objeto focuseable guardado antes de abrir el modal.
+  if m.lastFocusedEpisodeItem <> invalid then
+    m.lastFocusedEpisodeItem.setFocus(true)
+  else if m.top <> invalid then
+    m.top.setFocus(true)
+  end if
+end sub
+
+' Procesa el cierre del modal tras que el usuario selecione el cierre de sesion.
+sub onDialogLogoutWasClosed()
+  clearDialogAndGetWasClosed(m.pinDialog)
+  m.pinDialog = invalid
+  
+  __setLastFocus()
 end sub
 
 ' Procesa respuesta de validación de PIN para habilitar WatchValidate del episodio.
@@ -614,13 +650,7 @@ sub onEpisodePinErrorDialogClosed()
   if m.top <> invalid then m.top.setFocus(true)
   ' Si el usuario cierra el diálogo, restaura foco en el último item o en su defecto en el primero.
   if option = 0 then
-    focusIndex = m.lastFocusedEpisodeIndex
-    if focusIndex = invalid then focusIndex = m.firstFocusedEpisodeIndex
-    if focusIndex <> invalid then
-      __updateSelection(focusIndex)
-    else
-      __updateSelection(0)
-    end if
+    __setLastFocus()
   end if
 end sub
 
