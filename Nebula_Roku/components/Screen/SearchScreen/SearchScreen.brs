@@ -134,6 +134,7 @@ end sub
 sub initFocus()
   ' Si la pantalla recibió foco.
   if m.top.onFocus then
+    m.top.openGuide = false
     m.searchMode = getConfigVariable(m.global.configVariablesKeys.SEARCH_MODE)
     m.searchMinChars = getConfigVariable(m.global.configVariablesKeys.SEARCH_MIN_CHARS)
     m.searchDebounceMs = getConfigVariable(m.global.configVariablesKeys.SEARCH_DEBOUNCE_MS)

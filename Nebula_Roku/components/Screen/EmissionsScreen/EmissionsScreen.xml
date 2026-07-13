@@ -37,6 +37,13 @@
     <field id="streaming" alwaysnotify="true" type="string" />
     <!-- Campo para limpieza de sesión consistente con otras pantallas. -->
     <field id="logout" alwaysnotify="true" type="boolean" value="false" onChange="onLogoutChange" />
+
+    <!-- Paramentros de Entrada -->
+    <field id="isOpenByPlayer" type="boolean" value="false" />
+
+    <!-- Paramentros de Salida -->
+    <field id="programOpenInPlayer" type="string" />
+    <field id="pendingStreamingSession" type="string" />
   </interface>
 
   <children>

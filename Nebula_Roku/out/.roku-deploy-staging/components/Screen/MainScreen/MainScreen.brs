@@ -269,6 +269,7 @@ sub initFocus()
   if m.dialog <> invalid and m.dialog.visible then return
 
   if (m.top.onFocus) then 
+    m.top.openGuide = false
     if (m.lastFocus = invalid) then 
       __applyTranslations()
       __validateAutoUpgradeTime()
@@ -314,7 +315,7 @@ sub onSelectMenuItem()
     menuSelectedItem = ParseJson(m.myMenu.selectedItem)
     m.myMenu.selectedItem = invalid
 
-    if (not (menuSelectedItem.key = "MenuId" and menuSelectedItem.id = -1)) then
+    if (not (menuSelectedItem.key = "MenuId" and (menuSelectedItem.id = -1 or (menuSelectedItem.code <> invalid and menuSelectedItem.code = "epg")))) then
       m.menuSelectedItem = menuSelectedItem
     end if
     
@@ -544,7 +545,7 @@ sub onSelectItem()
       if m.itemSelected.parentalControl <> invalid and m.itemSelected.parentalControl then
         __markLastFocus()
         m.pinDialog = createAndShowPINDialog(m.top, i18n_t(m.global.i18n, "shared.parentalControlModal.title"), "onPinDialogLoad", [i18n_t(m.global.i18n, "button.ok"), i18n_t(m.global.i18n, "button.cancel")])
-        m.pinDialog.observeField("wasClosed", "onDialogLogoutWasClosed") 
+        m.pinDialog.observeField("wasClosed", "onPinDialogWasClosed") 
       else 
         m.top.loading.visible = true
         watchSessionId = getWatchSessionId()
@@ -614,7 +615,7 @@ function __handleNewsOkAction() as boolean
       __markLastFocus()
       ' Abre diálogo de PIN con callbacks existentes del flujo normal.
       m.pinDialog = createAndShowPINDialog(m.top, i18n_t(m.global.i18n, "shared.parentalControlModal.title"), "onPinDialogLoad", [i18n_t(m.global.i18n, "button.ok"), i18n_t(m.global.i18n, "button.cancel")])
-      m.pinDialog.observeField("wasClosed", "onDialogLogoutWasClosed") 
+      m.pinDialog.observeField("wasClosed", "onPinDialogWasClosed") 
       ' Finaliza manejando OK desde News.
       return true
     end if
@@ -947,6 +948,15 @@ end sub
 
 ' Procesa el cierre del modal tras que el usuario selecione el cierre de sesion.
 sub onDialogLogoutWasClosed()
+  clearDialogAndGetWasClosed(m.dialog)
+  m.dialog = invalid
+  
+  ' Disparar el volver a enfocar cuando la opcion "No"    
+  if m.lastFocus <> invalid then m.lastFocus.setFocus(true)
+end sub
+
+' Procesa el cierre del modal tras que el usuario selecione el cierre de sesion.
+sub onPinDialogWasClosed()
   clearDialogAndGetWasClosed(m.pinDialog)
   m.pinDialog = invalid
   

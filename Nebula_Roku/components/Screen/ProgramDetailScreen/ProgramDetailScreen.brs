@@ -434,6 +434,9 @@ end sub
 ' Se dispara cuando ocurre un cambio de evento al cargar una imagen y define que hacer.
 sub onStatusChange()
   if m.programImage.visible = true and ((m.programImage.loadStatus = "failed") or (m.programImage.loadStatus = "none")) then 
+    if m.program <> invalid and m.programTitleError <> invalid and m.program.title <> invalid and m.program.title <> "" then 
+      m.programTitleError.text = m.program.title
+    end if
     m.programTitleContainerByError.visible = true
     m.programImage.uri = getImageError()
   end if 
@@ -781,7 +784,9 @@ sub __loadProgramInfo(program)
        m.programTitleError.text = m.program.title
        m.programTitleContainerByError.visible = true
     end if
+
     m.programImage.uri =  imageUrl
+    
     m.programImage.visible = true
   else
     m.programImage.visible = false

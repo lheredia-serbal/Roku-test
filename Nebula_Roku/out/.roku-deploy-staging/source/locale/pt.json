@@ -48,7 +48,7 @@
     "to": "de"
   },
   "launcherScreen": {
-    "copyright": "@copyright {{year}} - Qvix Solutions"
+    "copyright": "@copyright {{year}} - {{organizationName}}"
   },
   "configPage": {
     "title": "Informação de dispositivo",

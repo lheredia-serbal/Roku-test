@@ -22,6 +22,7 @@
         <!-- Paramentros de Entrada -->
         <field id="loading" type="node" />
         <field id="items" type="array" onChange="loadChannelArray"/>
+        <field id="clearLastPosition" type="boolean" alwaysnotify="true" value="false" onChange="onClearLastPosition"/>
         <field id="channelId" type="integer" value="0" onChange="positionChannel"/>
         <field id="channelIdIndexOf" type="integer" value="-1"/>
         <field id="visible" type="boolean" />

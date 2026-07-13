@@ -121,14 +121,14 @@ sub onLauncherFinished()
       if m.global.contact <> invalid and m.global.contact.profile <> invalid then
         __initMain()
       else 
-        __startAppDialogBeacon()
+        ' __startAppDialogBeacon()
         __initProfile()
       end if 
     else
       m.top.signalBeacon("AppLaunchComplete")
       m.LauncherScreen.unobserveField("finished")
 
-      __startAppDialogBeacon()
+      ' __startAppDialogBeacon()
       m.LoginScreen.ObserveField("finished", "onLoginFinished")
       m.LoginScreen.visible = true
       m.LoginScreen.onFocus = true
@@ -175,7 +175,7 @@ sub onLoginFinished()
     m.LoginScreen.onFocus = false
     if m.global.contact <> invalid and m.global.contact.profile <> invalid then
       ' Notifica a Roku que el usuario autenticado inició sesión correctamente (Req 4.3).
-      __completeAppDialogBeacon()
+      ' __completeAppDialogBeacon()
       __initMain()
     else 
       __initProfile()
@@ -190,7 +190,7 @@ sub onProfileFinished()
     ' Esconder Launcher y mostrar MainScreen
     m.ProfileScreen.visible = false
     m.ProfileScreen.onFocus = false
-    __completeAppDialogBeacon()
+    ' __completeAppDialogBeacon()
     __initMain()
   end if 
 end sub
@@ -342,6 +342,7 @@ sub onStreamingPlayer()
     m.StackOfScreens.Pop()
     streaming = m.KillSessionScreen.streaming
     openGuide = m.KillSessionScreen.openGuide
+    m.KillSessionScreen.openGuide = false
     __hideKillSessionScreen()
   end if
   
@@ -483,6 +484,9 @@ sub onKillSession()
   else if m.StackOfScreens.Peek() = "ProgramDetailScreen" then
     pendingStreamingSession = m.ProgramDetailScreen.pendingStreamingSession
     __hideProgramDetail()
+  else if m.StackOfScreens.Peek() = "EmissionsScreen" then
+    pendingStreamingSession = m.EmissionsScreen.pendingStreamingSession
+    __hideEmissions()
   end if
   
   if pendingStreamingSession <> invalid then __showKillSession(pendingStreamingSession, openGuide)
@@ -544,20 +548,20 @@ sub __initMain()
 end sub
 
 ' Performance Req 3.2: marca el inicio de un diálogo interactivo antes del Home.
-sub __startAppDialogBeacon()
-  if m.appDialogInitiated <> true then
-    m.appDialogInitiated = true
-    m.top.signalBeacon("AppDialogInitiate")
-  end if
-end sub
+' sub __startAppDialogBeacon()
+'   if m.appDialogInitiated <> true then
+'     m.appDialogInitiated = true
+'     m.top.signalBeacon("AppDialogInitiate")
+'   end if
+' end sub
 
 ' Performance Req 3.2: marca el cierre del diálogo cuando termina el flujo hacia Home.
-sub __completeAppDialogBeacon()
-  if m.appDialogInitiated = true and m.appDialogCompleted <> true then
-    m.appDialogCompleted = true
-    m.top.signalBeacon("AppDialogComplete")
-  end if
-end sub
+' sub __completeAppDialogBeacon()
+'   if m.appDialogInitiated = true and m.appDialogCompleted <> true then
+'     m.appDialogCompleted = true
+'     m.top.signalBeacon("AppDialogComplete")
+'   end if
+' end sub
 
 ' Define la configuracion del componente Perfil los observable y si seteando sus variables necesarias
 sub __initProfile()
@@ -589,6 +593,7 @@ sub __showEmissions(emissionsData as string)
   m.EmissionsScreen.setFocus(true)
   m.EmissionsScreen.ObserveField("onBack", "onBackEmissions")
   m.EmissionsScreen.ObserveField("streaming", "onStreamingPlayer")
+  m.EmissionsScreen.ObserveField("pendingStreamingSession", "onKillSession")
 end sub
 
 ' Muestra la pantalla de Ver todos
@@ -600,7 +605,7 @@ sub __showViewAll(viewAllData as string)
   m.ViewAllScreen.setFocus(true)
   m.ViewAllScreen.ObserveField("streaming", "onStreamingPlayer")
   m.ViewAllScreen.ObserveField("detail", "onProgramDetail") 
-  if m.loading <> invalid then m.loading.visible = false
+  if m.loading <> invalid then m.loading.visible = true
 end sub
 
 ' Muestra la pantalla de configuracion
@@ -682,6 +687,7 @@ sub __hideEmissions(clearData = true)
   m.EmissionsScreen.unobserveField("onBack")
   ' Deja de escuchar salida de streaming al ocultar Emissions.
   m.EmissionsScreen.unobserveField("streaming")
+  m.EmissionsScreen.unobserveField("pendingStreamingSession")
   m.EmissionsScreen.onBack = false
   ' Limpia payload de streaming para evitar retriggers.
   m.EmissionsScreen.streaming = invalid

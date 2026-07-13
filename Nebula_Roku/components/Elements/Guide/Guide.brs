@@ -229,6 +229,12 @@ function onKeyEvent(key as string, press as boolean) as boolean
     return handled
 end function
 
+sub onClearLastPosition() 
+    m.saveDateByEvent = false
+    m.isNowPosition = true
+    m.dateTimeByPosition = invalid
+end sub
+
 ' Carga la lista de canales.
 sub loadChannelArray()
     if not m.loadConfig then __initConfig()
@@ -548,8 +554,14 @@ end sub
 
 ' Metodo que recarga el player con la nueva seleccion del objeto.
 sub onStreamingPlayer()
-    if m.programDetailComponent.programOpenInPlayer <> invalid and m.programDetailComponent.programOpenInPlayer <> "" then 
+    if m.programDetailComponent <> invalid and m.programDetailComponent.programOpenInPlayer <> invalid and m.programDetailComponent.programOpenInPlayer <> "" then 
         program = ParseJson(m.programDetailComponent.programOpenInPlayer)
+        
+        m.top.selected = FormatJson({key: program.key, id: program.id, currentChannelId: program.channel.id, streamingAction: program.streamingAction})
+    end if 
+
+    if m.emissionsComponent <> invalid and m.emissionsComponent.programOpenInPlayer <> invalid and m.emissionsComponent.programOpenInPlayer <> "" then 
+        program = ParseJson(m.emissionsComponent.programOpenInPlayer)
         
         m.top.selected = FormatJson({key: program.key, id: program.id, currentChannelId: program.channel.id, streamingAction: program.streamingAction})
     end if 
@@ -1038,13 +1050,17 @@ sub __loadEmissions(emissionsData as string)
     end if
 
     m.emissionsComponent = m.detailGuideContainer.createChild("EmissionsScreen")
+
+    m.emissionsComponent.isOpenByPlayer = true
     m.emissionsComponent.loading = m.top.loading
+    m.emissionsComponent.observeField("programOpenInPlayer", "onStreamingPlayer")
     m.emissionsComponent.observeField("onBack", "onBackEmissions")
     m.emissionsComponent.observeField("streaming", "onStreamingEmissions")
     m.emissionsComponent.observeField("logout", "onLogoutEvent")
+    m.emissionsComponent.observeField("pendingStreamingSession", "onKillSession")
     m.emissionsComponent.onFocus = true
     m.emissionsComponent.setFocus(true)
-    m.emissionsComponent.data = emissionsData
+    m.emissionsComponent.data = emissionsData    
 end sub
 
 ' Guarda la posicion donde se decidio deplazar hacia arriba o abajo para mantener 
@@ -1096,9 +1112,13 @@ sub __removeEmissionsComponent()
         m.emissionsComponent.unobserveField("onBack")
         m.emissionsComponent.unobserveField("streaming")
         m.emissionsComponent.unobserveField("logout")
+        m.emissionsComponent.unobserveField("programOpenInPlayer")
+        m.emissionsComponent.unobserveField("pendingStreamingSession")
+        m.emissionsComponent.isOpenByPlayer = false
         m.emissionsComponent.onFocus = false
         m.emissionsComponent.data = invalid
         m.emissionsComponent.loading = invalid
+        m.emissionsComponent.programOpenInPlayer = invalid
         m.emissionsComponent.streaming = invalid
         m.emissionsComponent.onBack = false
     end if

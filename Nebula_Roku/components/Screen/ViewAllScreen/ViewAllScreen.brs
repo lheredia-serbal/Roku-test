@@ -460,7 +460,7 @@ end sub
 
 ' Procesa la respuesta del servicio de ViewAll.
 sub onViewAllCarouselResponse()
-  if m.top.loading <> invalid then m.top.loading.visible = false
+  __setViewAllLoading(false)
 
   if m.apiRequestManager = invalid then
     ' Re-disparamos la obtención del carrusel.
@@ -740,6 +740,18 @@ function __buildSearchBody(searchText as Dynamic) as string
   return FormatJson({ searchText: safeSearchText })
 end function
 
+' Muestra/oculta el loading global para la búsqueda de ViewAll y deja la pantalla transparente
+' mientras se esperan resultados, igualando el comportamiento visual con el resto de pantallas.
+sub __setViewAllLoading(show as boolean)
+  if m.top.loading <> invalid then m.top.loading.visible = show
+
+  if show then
+    m.top.opacity = 0.0
+  else
+    m.top.opacity = 1.0
+  end if
+end sub
+
 ' Bloque grilla nativa: limpia el PosterGrid actual de ViewAll y resetea estado visual asociado.
 sub __clearViewAllCarousel()
   ' Reseteamos la colección cacheada para que el componente quede sin contenido al salir.
@@ -845,12 +857,12 @@ sub __getViewAllCarousel()
   if m.apiUrl = invalid then m.apiUrl = getConfigVariable(m.global.configVariablesKeys.API_URL)
   ' Abortamos si no hay URL de API disponible.
   if m.apiUrl = invalid then return
-  ' Mostramos loading durante la llamada.
-  if m.top.loading <> invalid and not m.top.loading.visible then m.top.loading.visible = true
   ' Resolvemos configuración del request para reutilizar lógica entre ViewAll y SearchById.
   requestConfig = __getViewAllRequestConfig()
   ' Cortamos si no se pudo construir la configuración del servicio.
   if requestConfig = invalid then return
+    ' Mostramos loading global y ocultamos ViewAll mientras se buscan los resultados.
+  __setViewAllLoading(true)
   ' Creamos id único para registrar acción pendiente.
   requestId = createRequestId()
   action = {

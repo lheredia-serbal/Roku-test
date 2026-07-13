@@ -162,11 +162,20 @@ function getImageUrl(image, defautlValue = invalid) as Dynamic
     __setInitialValues()
 
     if image <> invalid and image.rootVariable <> invalid and __getVariable(image.rootVariable) <> invalid then
-        ' Arma la URL base cuando la imagen depende de una variable remota.
-        imageUrl = __getVariable(image.rootVariable) + image.relativePath
-        return imageUrl
+        ' Arma la URL base cuando la imágen depende de una variable remota.
+        variable = __getVariable(image.rootVariable)
+        if variable <> invalid and variable <> ""
+            imageUrl = __getVariable(image.rootVariable) + image.relativePath
+            ' Se agrego una validacion extra para evitar buscar imagenes con / en el inicio porque genera crash en roku
+            if Left(imageUrl, 1) = "/" then return defautlValue 
+            return imageUrl
+        else 
+            return defautlValue
+        end if
     else if image.relativePath <> invalid and image.rootVariable = invalid
         imageUrl = image.relativePath
+        ' Se agrego una validacion extra para evitar buscar imagenes con / en el inicio porque genera crash en roku
+        if Left(imageUrl, 1) = "/" then return defautlValue 
         return imageUrl
     else 
         return defautlValue
@@ -445,8 +454,10 @@ end function
 
 ' Limipia las variables del modal para que sea limpiado por el garbage collection por una cancelacion o back.
 Sub clearDialogAndGetWasClosed(dialog)
-  dialog.visible = false
-  dialog.unobserveField("wasClosed")
+if dialog <> invalid then 
+    dialog.visible = false
+    dialog.unobserveField("wasClosed")
+end if
 end Sub
 
 

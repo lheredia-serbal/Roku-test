@@ -54,95 +54,91 @@
       visible="false"
       focusable="false"/>
 
-    <Group
-      id="Video"
-      focusable="true"/>
+    <Group 
+      id="playerControllers" 
+      translation="[0,0]"
+      visible="false">
 
-      <Group 
-        id="playerControllers" 
+      <Poster
+        id="backgroundControllers" 
         translation="[0,0]"
-        visible="false">
+        uri="pkg:/images/shared/player_info_gradient.png" />
+        
+      <LayoutGroup
+        id="programInfo"
+        layoutDirection="vert"
+        horizAlignment="custom"
+        vertAlignment="bottom"
+        itemSpacings="[4]">
+        
+        <ProgramSummaryPlayer id="programSummaryPlayer"/>
 
-        <Poster
-          id="backgroundControllers" 
-          translation="[0,0]"
-          uri="pkg:/images/shared/player_info_gradient.png" />
-          
+        <TimelineBar
+          id="timelineBar"
+          visible="true"/>
+
+        <!--  Contenedor de Botones -->
         <LayoutGroup
-          id="programInfo"
-          layoutDirection="vert"
-          horizAlignment="custom"
-          vertAlignment="bottom"
-          itemSpacings="[4]">
-          
-          <ProgramSummaryPlayer id="programSummaryPlayer"/>
-
-          <TimelineBar
-            id="timelineBar"
-            visible="true"/>
-
-          <!--  Contenedor de Botones -->
-          <LayoutGroup
-            id="controlsRow"
-            layoutDirection="horiz"
-            horizAlignment="left"
-            vertAlignment="top"
-            translation="[-10, 0]"
-            itemSpacings="[20]">
-
-            <QvImageButton id="playPauseImageButton" uri="pkg:/images/shared/pause.png" focusable="true" tooltip=""/>
-            <QvImageButton id="restartImageButton"   uri="pkg:/images/shared/restart.png" focusable="true" tooltip=""/>
-            <QvImageButton id="toLiveImageButton"    uri="pkg:/images/shared/live.png" focusable="true" tooltip=""/>
-            <QvImageButton id="guideImageButton"     uri="pkg:/images/shared/guide.png" focusable="true" tooltip=""/>
-          </LayoutGroup>
-        </LayoutGroup>
-
-        <Group id="timelinePreviewOverlay" visible="false">
-          <Rectangle id="timelinePreviewBg" color="#000000" opacity="0.85" />
-          <Poster 
-            id="timelinePreviewPoster"
-            translation="[2,2]"
-            loadDisplayMode="scaleToFit" />
-        </Group>
-      </Group>
-
-    <Group id="errorChannel" visible="false">
-      <Rectangle id="connectingGroup" translation="[0, 0]" color="#222222" />
-        <LayoutGroup
-          id="connectingContainer"
+          id="controlsRow"
           layoutDirection="horiz"
           horizAlignment="left"
           vertAlignment="top"
-          itemSpacings="[25]">
+          translation="[-10, 0]"
+          itemSpacings="[20]">
 
-          <Poster id="errorChannelImage"/>
-
-          <LayoutGroup 
-            layoutDirection="vert"
-            horizAlignment="left"
-            vertAlignment="center"
-            itemSpacings="[10]"> 
-            
-            <Label
-              id="errorChannelTitle"
-              vertAlign="center"
-              wrap="false" 
-              maxLines="1"
-              font="font:SmallestSystemFont" />
-              
-            <Label
-              id="connectingSignal"
-              vertAlign="center"
-              wrap="false" 
-              maxLines="1"
-              font="font:TinySystemFont" />
-            
-          </LayoutGroup>
+          <QvImageButton id="playPauseImageButton" uri="pkg:/images/shared/pause.png" focusable="true" tooltip=""/>
+          <QvImageButton id="restartImageButton"   uri="pkg:/images/shared/restart.png" focusable="true" tooltip=""/>
+          <QvImageButton id="toLiveImageButton"    uri="pkg:/images/shared/live.png" focusable="true" tooltip=""/>
+          <QvImageButton id="guideImageButton"     uri="pkg:/images/shared/guide.png" focusable="true" tooltip=""/>
         </LayoutGroup>
+      </LayoutGroup>
 
-        <Group id="spinnerGroup"> 
-          <Spinner id="spinner" visible="false"/>
-        </Group>
+      <Group id="timelinePreviewOverlay" visible="false">
+        <Rectangle id="timelinePreviewBg" color="#000000" opacity="0.85" />
+        <Poster 
+          id="timelinePreviewPoster"
+          translation="[2,2]"
+          loadDisplayMode="scaleToFit" />
+      </Group>
+    </Group>
+
+    <Group id="errorChannel" visible="false">
+      <Rectangle id="connectingGroup" translation="[0, 0]" color="#222222" />
+      <LayoutGroup
+        id="connectingContainer"
+        layoutDirection="horiz"
+        horizAlignment="left"
+        vertAlignment="top"
+        itemSpacings="[25]">
+
+        <Poster id="errorChannelImage"/>
+
+        <LayoutGroup 
+          layoutDirection="vert"
+          horizAlignment="left"
+          vertAlignment="center"
+          itemSpacings="[10]"> 
+          
+          <Label
+            id="errorChannelTitle"
+            vertAlign="center"
+            wrap="false" 
+            maxLines="1"
+            font="font:SmallestSystemFont" />
+            
+          <Label
+            id="connectingSignal"
+            vertAlign="center"
+            wrap="false" 
+            maxLines="1"
+            font="font:TinySystemFont" />
+          
+        </LayoutGroup>
+      </LayoutGroup>
+
+      <Group id="spinnerGroup"> 
+        <Spinner id="spinner" visible="false"/>
+      </Group>
     </Group>
     
     <Group id="channelListContainer" visible="false">

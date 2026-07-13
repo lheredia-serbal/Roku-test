@@ -481,10 +481,17 @@ function __openSelectedEpisode() as boolean
     return true
   end if
 
-  ' Ejecuta validación de visualización cuando no requiere PIN.
-  __runEpisodeWatchValidate()
-  ' Consume OK para evitar bubbling mientras se procesa la acción.
-  return true
+    if m.top.isOpenByPlayer then
+
+      m.selectedEpisode.streamingAction = getStreamingAction().PLAY
+      m.top.programOpenInPlayer = FormatJson(m.selectedEpisode)
+      return true
+    else
+      ' Ejecuta validación de visualización cuando no requiere PIN.
+      __runEpisodeWatchValidate()
+      ' Consume OK para evitar bubbling mientras se procesa la acción.
+      return true
+    end if
 end function
 
 ' Ejecuta WatchValidate del episodio seleccionado para continuar al player.
@@ -613,10 +620,17 @@ sub onEpisodeParentalControlResponse()
     if response <> invalid and response.data <> invalid and response.data then
       ' Remueve acción pendiente al completar validación de PIN.
       removePendingAction(m.apiRequestManager.requestId)
-      ' Encadena WatchValidate exactamente igual que MainScreen.
-      __runEpisodeWatchValidate()
-      ' Corta ejecución para esperar respuesta de WatchValidate.
-      return
+      
+      if m.top.isOpenByPlayer then
+        m.selectedEpisode.streamingAction = getStreamingAction().PLAY
+        m.top.programOpenInPlayer = FormatJson(m.selectedEpisode)
+        return
+      else
+        ' Encadena WatchValidate exactamente igual que MainScreen.
+        __runEpisodeWatchValidate()
+        ' Corta ejecución para esperar respuesta de WatchValidate.
+        return
+      end if
     else
       ' Muestra mensaje de PIN inválido replicando MainScreen.
       m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.parentalControlModal.error.invalid"), i18n_t(m.global.i18n, "shared.parentalControlModal.error.description"), "onEpisodePinErrorDialogClosed")
@@ -629,7 +643,7 @@ sub onEpisodeParentalControlResponse()
     ' Limpia request manager al finalizar error de validación de PIN.
     m.apiRequestManager = clearApiRequest(m.apiRequestManager)
     ' Reutiliza validación global para logout cuando aplica.
-    __validateError(statusCode)
+    __validateError(statusCode, 0, errorResponse)
     ' Loguea fallo de validación de PIN para soporte.
     printError("Episode ParentalControl:", statusCode.toStr() + " " + errorResponse)
     ' Corta ejecución tras manejar error HTTP.
@@ -684,11 +698,12 @@ sub onEpisodeWatchValidateResponse()
     else
       ' Obtiene resultCode para diagnóstico cuando WatchValidate falla.
       resultCode = invalid
+
       if watchData <> invalid then resultCode = watchData.resultCode
       ' Limpia request manager al finalizar respuesta inválida.
       m.apiRequestManager = clearApiRequest(m.apiRequestManager)
       ' Reutiliza manejo global de errores funcionales.
-      __validateError(0)
+      __validateError(0, resultCode, invalid)
       ' Loguea resultado no exitoso para soporte.
       printError("Episode WatchValidate ResultCode:", resultCode)
       return
@@ -701,7 +716,7 @@ sub onEpisodeWatchValidateResponse()
     ' Limpia request manager al finalizar respuesta con error.
     m.apiRequestManager = clearApiRequest(m.apiRequestManager)
     ' Reutiliza manejo global de errores HTTP.
-    __validateError(statusCode)
+    __validateError(0, response.data.resultCode, invalid)
     ' Loguea error de WatchValidate para soporte.
     printError("Episode WatchValidate Status:", statusCode.toStr() + " " + errorResponse)
     return
@@ -1142,10 +1157,43 @@ sub onLogoutChange()
   end if
 end sub
 
-' Reutiliza validación de errores estándar para resolver logout cuando aplica.
-sub __validateError(statusCode as integer)
-  ' Si el error implica logout, delegamos y detenemos el flujo local.
+sub __validateError(statusCode, resultCode, errorResponse, callback = invalid)
+  error = invalid
+
   if validateLogout(statusCode, m.top) then return 
+  
+  if errorResponse <> invalid and errorResponse <> "" then 
+    error = ParseJson(errorResponse) 
+  else 
+    error = { code: resultCode }
+  end if
+
+  if (error <> invalid and error.code <> invalid) then 
+    if (error.code = 5931) then
+      m.dialog = createAndShowDialog(m.top,i18n_t(m.global.i18n, "shared.errorComponent.weAreSorry"), (i18n_t(m.global.i18n, "shared.errorComponent.youCurrentlyDoNotHavePlan")).Replace("[ProductName]", m.productName), "onDialogClosedLastFocus", [i18n_t(m.global.i18n, "button.cancel")])
+    
+    else if (error.code = 5932) then
+      m.dialog = createAndShowDialog(m.top,i18n_t(m.global.i18n, "shared.errorComponent.weAreSorry"), (i18n_t(m.global.i18n, "shared.errorComponent.youCurrentlyDoNotHaveAnyActiveSubscriptions")).Replace("[ProductName]", m.productName), "onDialogClosedLastFocus", [i18n_t(m.global.i18n, "button.cancel")])
+    
+    else if (error.code = 5939) then
+      m.dialog = createAndShowDialog(m.top,i18n_t(m.global.i18n, "shared.errorComponent.weAreSorry"), i18n_t(m.global.i18n, "shared.errorComponent.youCurrentlyDoNotHaveSufficientBalance"), "onDialogClosedLastFocus", [i18n_t(m.global.i18n, "button.cancel")])
+    
+    else if (error.code = 5930) then
+      __redirectToManySessionsScreeen()
+    end if
+  else 
+    if (statusCode = 400) or (statusCode = 404) or (statusCode = 500) then 
+      m.dialog = createAndShowDialog(m.top, i18n_t(m.global.i18n, "shared.errorComponent.unhandled"), i18n_t(m.global.i18n, "shared.errorComponent.extendedMessage"), "onDialogClosedLastFocus", [i18n_t(m.global.i18n, "button.cancel")])
+    else 
+      if (callback <> invalid) then callback()
+    end if
+  end if 
+end sub
+
+' Dispara la redireccion a la pantalla de sesiones activas porque se alcanzo el limite de perfiles viendo
+sub __redirectToManySessionsScreeen()
+  if not m.top.loading.visible then m.top.loading.visible = true
+  m.top.pendingStreamingSession = FormatJson({ redirectKey: m.selectedEpisode.key, redirectId: m.selectedEpisode.id })
 end sub
 
 ' Guardar el log cuandos se cambia una opción del menú 

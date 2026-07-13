@@ -13,6 +13,7 @@ sub init()
   device = getDevice(deviceInfo, scaleInfo, getVersion(), getVersionCode(), appCode, m.global.language)
 
   addAndSetFields(m.global, {
+    organizationName: getOrganizationName(),
     configVariablesKeys: getAppConfigVariable(),
     apiVersions: getApiVersion(),
     device: device,
@@ -160,7 +161,7 @@ end sub
 ' Procesa la respuesta al validar la conexion contra las APIs
 sub onValdiateConnectionResponse()
   m.versionLabel.text = "v " + getVersion()
-  m.copyrightLabel.text = i18n_t(m.global.i18n, "launcherScreen.copyright").Replace("{{year}}",getCurrentYear())
+  m.copyrightLabel.text = i18n_t(m.global.i18n, "launcherScreen.copyright").Replace("{{year}}",getCurrentYear()).Replace("{{organizationName}}", m.global.organizationName)
   
   if validateStatusCode(m.apiRequestManager.statusCode) then
     m.apiRequestManager = sendApiRequest(m.apiRequestManager, urlPlatformsVariables(m.global.appCode, getVersionCode()), "GET", "onPlatformResponse", invalid, invalid, invalid, true)

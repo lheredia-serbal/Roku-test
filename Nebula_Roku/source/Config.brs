@@ -25,8 +25,8 @@ End function
 
 function getCdnConfigUrls() As Object
     return [
-        "https://cdndev.qvixprimary.com/v1/nebulatest.json",
-        "https://cdndev.qvixsecondary.com/v1/nebulatest.json"
+        "https://cdndev.qvixprimary.com/v1/nebuladev.json",
+        "https://cdndev.qvixsecondary.com/v1/nebuladev.json"
     ]
 end function
 
@@ -36,4 +36,8 @@ function getSpecialColors()
         PRIMARY: "#21acfa",
         SECONDARY: "#ffb522",
     }
+end function
+
+function getOrganizationName()
+    return "Qvix Solutions"
 end function

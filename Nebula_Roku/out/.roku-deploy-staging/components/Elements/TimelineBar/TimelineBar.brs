@@ -38,11 +38,6 @@ sub init()
   m.cachedThumbTranslation = invalid
   m.cachedTimeText = invalid
   m.pendingZeroThumb = invalid
-  m.zeroThumbTimer = CreateObject("roSGNode", "Timer")
-  m.zeroThumbTimer.duration = 0.3
-  m.zeroThumbTimer.repeat = false
-  m.zeroThumbTimer.ObserveField("fire", "onZeroThumbTimerFired")
-  m.top.appendChild(m.zeroThumbTimer)
   m.pauseTickTimer = CreateObject("roSGNode", "Timer")
   m.pauseTickTimer.duration = 1
   m.pauseTickTimer.repeat = true
@@ -108,7 +103,6 @@ sub __resetProgressState(resetTimeBar)
   m.cachedThumbTranslation = invalid
   m.cachedTimeText = invalid
   m.pendingZeroThumbY = invalid
-  if m.zeroThumbTimer <> invalid then m.zeroThumbTimer.control = "stop"
 
   if m.pauseTickTimer <> invalid then m.pauseTickTimer.control = "stop"
   if m.progress <> invalid then m.progress.width = 0
@@ -346,8 +340,12 @@ sub __updateProgress()
 
   epoch = 0
   if m.baseEpochSeconds <> invalid and m.baseEpochSeconds > 0 then
+    ' IMPORTANTE!!!
+    ' Se esta teniendo en cuenta el liveOffsetMs por ahora porque parece haber algun lado que la barra lo acumula y en los VOD esto no deberia ser asi
+    liveOffsetMs = 0 
+    if m.top.liveOffsetMs <> 0 then liveOffsetMs = int(m.top.liveOffsetMs / 1000)
     ' Si baseEpochSeconds está corrido -3h, sumale el offset
-    epoch = Int(m.baseEpochSeconds) + Int(m.utcOffsetSec) + Int(m.currentPosition)
+    epoch = Int(m.baseEpochSeconds) + Int(m.utcOffsetSec) + Int(m.currentPosition) - liveOffsetMs
   else
     epoch = Int(m.currentPosition)
   end if
