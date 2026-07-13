@@ -1220,8 +1220,6 @@ sub onStreamingsResponse()
           m.timelineBar.visible = true
         else
           m.timelineBar.visible = false
-          m.timelineBar.position = 0
-          m.timelineBar.duration = 0
         end if
 
         if m.streaming.liveOffsetMs <> invalid then
@@ -2438,8 +2436,6 @@ sub __closePlayer(onBack = false, logout = false)
 
   if m.timelineBar <> invalid then
     m.timelineBar.visible = false
-    m.timelineBar.position = -1
-    m.timelineBar.duration = -1
     m.timelineBar.baseEpochSeconds = invalid
   end if
 
