@@ -708,6 +708,11 @@ sub initData()
       m.timelineBar.streamType = m.streaming.type 
       isLiveTimeline = (LCase(m.streaming.type) = getVideoType().LIVE) or (LCase(m.streaming.type) = getVideoType().LIVE_REWIND and m.streaming.streamingType = getStreamingType().DEFAULT)
       m.timelineBar.isLive = isLiveTimeline
+
+      if (LCase(m.streaming.type) = getVideoType().LIVE_REWIND) then
+        m.timelineBar.duration = m.streaming.liveRewindDuration
+        m.timelineBar.position = m.streaming.liveRewindDuration
+      end if
     end if
 
     ' Setear el timelinebar

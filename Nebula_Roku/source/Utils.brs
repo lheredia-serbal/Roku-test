@@ -94,8 +94,9 @@ function validateStatusCode(statusCode as integer) as boolean
     return statusCode >= 200 and statusCode < 300
 end function
 
-function validateErrorServer() as boolean
-    
+' Redondea un valor a un decimal.
+function __roundToOneDecimal(value as float) as float
+  return Int((value * 10.0) + 0.5) / 10.0
 end function
 
 ' Obtiene las variables de configuracion del global

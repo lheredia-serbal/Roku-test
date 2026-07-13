@@ -28,6 +28,7 @@ sub init()
   m.playerSeekTime = 10
   m.playerIncreasedSeekTime = 30
   m.maxBar = 0
+  m.relationMillSecPx = 0.0
 
   m.utcOffsetSec = __getDeviceUtcOffsetSeconds()
 
@@ -66,6 +67,10 @@ sub init()
   __updateProgress()
 end sub
 
+function onKeyEvent(key as String, press as Boolean) as Boolean
+  print "key " ; key ; " press " ; press
+end function
+
 sub onWidthChanged()
   __applyWidth()
 end sub
@@ -75,6 +80,13 @@ sub onDurationChanged()
     if (m.top.duration) = -1 then return
     m.currentDuration = m.top.duration
   end if
+
+  m.maxBar = m.totalWidth
+  m.relationMillSecPx = 0.0
+  if m.maxBar <> invalid and m.maxBar > 0 and m.currentDuration <> invalid and m.currentDuration > 0 then
+    m.relationMillSecPx = __roundToOneDecimal(m.maxBar / m.currentDuration)
+  end if
+
   __updateProgress()
 end sub
 
@@ -98,6 +110,7 @@ sub __resetProgressState(resetTimeBar)
   m.currentPosition = 0
   m.maxBar = 0
   m.playerSeekTime = 0
+  m.relationMillSecPx = 0
   m.playerIncreasedSeekTime = 0
   m.lastPreviewEpoch = invalid
   m.previewPinned = false
@@ -168,6 +181,7 @@ sub __applyWidth()
   end if
 
   m.track.width = m.totalWidth
+  m.bar = m.totalWidth
 
   if m.timeLabel <> invalid then m.timeLabel.width = m.totalWidth
 
