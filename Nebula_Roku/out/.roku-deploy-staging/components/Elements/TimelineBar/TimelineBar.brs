@@ -25,6 +25,10 @@ sub init()
   m.lastPreviewEpoch = invalid
   m.lastPreviewEpoch = invalid
 
+  m.playerSeekTime = 10
+  m.playerIncreasedSeekTime = 30
+  m.maxBar = 0
+
   m.utcOffsetSec = __getDeviceUtcOffsetSeconds()
 
   m.previewPinned = false
@@ -92,6 +96,9 @@ end sub
 sub __resetProgressState(resetTimeBar)
   m.currentDuration = 0
   m.currentPosition = 0
+  m.maxBar = 0
+  m.playerSeekTime = 0
+  m.playerIncreasedSeekTime = 0
   m.lastPreviewEpoch = invalid
   m.previewPinned = false
   m.lastCommittedPosition = invalid

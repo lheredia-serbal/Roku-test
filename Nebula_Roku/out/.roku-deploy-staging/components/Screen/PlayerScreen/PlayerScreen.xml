@@ -16,6 +16,7 @@
   <script type="text/brightscript" uri="pkg:/source/Utils/RetryUtils.brs" />
   <script type="text/brightscript" uri="pkg:/source/CarouselConstants.brs" />
   <script type="text/brightscript" uri="pkg:/source/Enums.brs" />
+  <script type="text/brightscript" uri="pkg:/source/VideoPlayer.brs" />
 
   <script type="text/brightscript" uri="pkg:/source/Services/Channels.brs" />
   <script type="text/brightscript" uri="pkg:/source/Services/Health.brs" />
