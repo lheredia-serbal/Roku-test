@@ -22,6 +22,7 @@ sub init()
   m.totalWidth = 0
   m.currentDuration = 0.0
   m.currentPosition = 0.0
+  m.currentPositionPx = 0.0
   m.lastPreviewEpoch = invalid
   m.lastPreviewEpoch = invalid
 
@@ -30,19 +31,25 @@ sub init()
   m.maxBar = 0
   m.relationMillSecPx = 0.0
 
+  m.seekHoldActive = false
+  m.seekHoldKey = invalid
+  m.seekHoldTicks = 0
+  m.seekHoldBaseJump = 0
+
+  m.seekHoldTimer = CreateObject("roSGNode", "Timer")
+  m.seekHoldTimer.duration = 0.2
+  m.seekHoldTimer.repeat = true
+  m.seekHoldTimer.ObserveField("fire", "onSeekHoldTimerFired")
+  m.top.appendChild(m.seekHoldTimer)
+
   m.utcOffsetSec = __getDeviceUtcOffsetSeconds()
 
-  m.previewPinned = false
-  m.lastCommittedPosition = invalid
-  m.lastCommittedDuration = invalid
   m.committedRemaining = invalid
   m.pauseStartEpochSeconds = invalid
   m.lastStreamType = invalid
-  m.suspendUi = false
   m.cachedProgressWidth = invalid
   m.cachedThumbTranslation = invalid
   m.cachedTimeText = invalid
-  m.pendingZeroThumb = invalid
   m.pauseTickTimer = CreateObject("roSGNode", "Timer")
   m.pauseTickTimer.duration = 1
   m.pauseTickTimer.repeat = true
@@ -63,13 +70,128 @@ sub init()
 
   __initColors()
   __applyWidth()
+  __getThumbPosition()
   __applyHeight(m.top.hasFocus = true)
-  __updateProgress()
 end sub
 
 function onKeyEvent(key as String, press as Boolean) as Boolean
-  print "key " ; key ; " press " ; press
+
+  handled = false
+  
+  if (key = KeyButtons().LEFT or key = KeyButtons().RIGHT) and press then 
+
+    if press then
+      __startSeekHold(key)
+    else
+      __stopSeekHold()
+    end if
+
+    '__updateProgress()
+
+    handled = true
+  end if
+
+  if (key = KeyButtons().OK and press) then
+    __getCurrentPosition()
+    handled = true
+  end if
+
+  return handled
 end function
+
+sub __startSeekHold(key as String)
+  if m.thumb = invalid then return
+
+  if m.seekHoldTimer <> invalid then m.seekHoldTimer.control = "stop"
+
+  m.seekHoldActive = true
+  m.seekHoldKey = key
+  m.seekHoldTicks = 0
+
+  base = m.playerSeekTime
+  if base = invalid or base <= 0 then base = 10
+
+  m.seekHoldBaseJump = base * 5
+
+  ' 1 salto inmediato con el valor base, igual que __startSeekHold en PlayerScreen.
+  __moveThumbWithJump(key, base)
+
+  ' if m.seekHoldTimer <> invalid then
+  '   m.seekHoldTimer.duration = 0.2
+  '   m.seekHoldTimer.repeat = true
+  '   m.seekHoldTimer.control = "start"
+  ' end if
+end sub
+
+sub __stopSeekHold()
+  if m.seekHoldTimer <> invalid then m.seekHoldTimer.control = "stop"
+
+  m.seekHoldActive = false
+  m.seekHoldKey = invalid
+  m.seekHoldTicks = 0
+end sub
+
+sub onSeekHoldTimerFired()
+  if not m.seekHoldActive then return
+  if m.seekHoldKey = invalid then return
+
+  m.seekHoldTicks = m.seekHoldTicks + 1
+
+  jump = __getHoldJumpSeconds(m.seekHoldTicks)
+  __moveThumbWithJump(m.seekHoldKey, jump)
+end sub
+
+function __getHoldJumpSeconds(ticks as Integer) as Integer
+  base = m.seekHoldBaseJump
+  if base = invalid or base <= 0 then
+    base = m.playerSeekTime
+    if base = invalid or base <= 0 then base = 10
+    base = base * 5
+  end if
+
+  mult = 1
+  if ticks >= 5 and ticks < 10 then mult = 2
+  if ticks >= 10 and ticks < 20 then mult = 4
+  if ticks >= 20 then mult = 8
+
+  return base * mult
+end function
+
+sub __moveThumbWithJump(key as String, jump as Dynamic)
+  if m.thumb = invalid then return
+
+  __notifySeekKeyPressed()
+
+  stepX = 0.0
+  if m.relationMillSecPx <> invalid and jump <> invalid then
+    stepX = m.relationMillSecPx * jump
+  end if
+
+  if stepX <= 0 then return
+
+  if key = KeyButtons().LEFT then
+    nextX = m.currentPositionPx - stepX
+  else
+    nextX = m.currentPositionPx + stepX
+  end if
+
+  minX = 0.0
+  maxX = m.totalWidth
+  if m.maxBar <> invalid and m.maxBar > 0 then maxX = m.maxBar
+  if maxX = invalid or maxX < minX then maxX = minX
+
+  if nextX < minX then nextX = minX
+  if nextX > maxX then nextX = maxX
+
+  if m.progress <> invalid then m.progress.width = nextX
+  m.thumb.translation = [nextX - m.thumbHalf, m.thumbY]
+  m.currentPositionPx = nextX
+end sub
+
+sub __notifySeekKeyPressed()
+  if m.top.seekKeyPress = invalid then m.top.seekKeyPress = 0
+  m.top.seekKeyPress = m.top.seekKeyPress + 1
+end sub
 
 sub onWidthChanged()
   __applyWidth()
@@ -84,7 +206,7 @@ sub onDurationChanged()
   m.maxBar = m.totalWidth
   m.relationMillSecPx = 0.0
   if m.maxBar <> invalid and m.maxBar > 0 and m.currentDuration <> invalid and m.currentDuration > 0 then
-    m.relationMillSecPx = __roundToOneDecimal(m.maxBar / m.currentDuration)
+    m.relationMillSecPx = roundToOneDecimal(m.maxBar / m.currentDuration)
   end if
 
   __updateProgress()
@@ -97,6 +219,9 @@ sub onPositionChanged()
       return
     end if
     m.currentPosition = m.top.position
+    if (m.currentDuration <> invalid and m.currentDuration  <> 0 and m.totalWidth  <> invalid and m.totalWidth <> 0) then
+      m.currentPositionPx = roundToOneDecimal((m.totalWidth * m.currentPosition) / m.currentDuration)
+    end if
   end if
   __updateProgress()
 end sub
@@ -109,34 +234,25 @@ sub __resetProgressState(resetTimeBar)
   m.currentDuration = 0
   m.currentPosition = 0
   m.maxBar = 0
-  m.playerSeekTime = 0
   m.relationMillSecPx = 0
   m.playerIncreasedSeekTime = 0
+  if m.seekHoldTimer <> invalid then m.seekHoldTimer.control = "stop"
+  m.seekHoldActive = false
+  m.seekHoldKey = invalid
+  m.seekHoldTicks = 0
+  m.seekHoldBaseJump = 0
   m.lastPreviewEpoch = invalid
-  m.previewPinned = false
-  m.lastCommittedPosition = invalid
-  m.lastCommittedDuration = invalid
   m.committedRemaining = invalid
   m.pauseStartEpochSeconds = invalid
-  m.suspendUi = false
   m.cachedProgressWidth = invalid
   m.cachedThumbTranslation = invalid
   m.cachedTimeText = invalid
-  m.pendingZeroThumbY = invalid
 
   if m.pauseTickTimer <> invalid then m.pauseTickTimer.control = "stop"
   if m.progress <> invalid then m.progress.width = 0
 
-  if m.track <> invalid and m.thumb <> invalid then
-    trackY = 0.0
-    if m.track.translation <> invalid then trackY = m.track.translation[1]
-    thumbH = 0.0
-    if m.thumb.height <> invalid then thumbH = m.thumb.height
-    thumbY = trackY + (m.track.height / 2.0) - (thumbH / 2.0)
-  end if
-
   if m.thumb <> invalid and resetTimeBar = true then 
-    m.thumb.translation = [0, thumbY]
+    m.thumb.translation = [0, m.thumbY]
   end if
   if m.timeLabel <> invalid then m.timeLabel.text = "00:00"
 
@@ -145,32 +261,6 @@ sub __resetProgressState(resetTimeBar)
     m.top.previewUri = ""
     m.top.previewTimeText = ""
   end if
-end sub
-
-sub __cancelPendingZeroThumb()
-  m.pendingZeroThumbY = invalid
-  if m.zeroThumbTimer <> invalid then m.zeroThumbTimer.control = "stop"
-end sub
-
-sub __scheduleZeroThumbTranslation(thumbY as dynamic)
-  if m.pendingZeroThumbY <> invalid then
-    m.pendingZeroThumbY = thumbY
-    return
-  end if
-
-  m.pendingZeroThumbY = thumbY
-  if m.zeroThumbTimer <> invalid then
-    m.zeroThumbTimer.control = "stop"
-    m.zeroThumbTimer.control = "start"
-  end if
-end sub
-
-sub onZeroThumbTimerFired()
-  if m.thumb <> invalid and m.pendingZeroThumbY <> invalid then
-    m.thumb.translation = [0, m.pendingZeroThumbY]
-  end if
-
-  m.pendingZeroThumbY = invalid
 end sub
 
 sub __applyWidth()
@@ -184,8 +274,17 @@ sub __applyWidth()
   m.bar = m.totalWidth
 
   if m.timeLabel <> invalid then m.timeLabel.width = m.totalWidth
+end sub
 
-  __updateProgress()
+sub __getThumbPosition()
+  ' Medidas del thumb
+  m.thumbH = 0.0
+  if m.thumb <> invalid then
+    if m.thumb.width <> invalid then m.thumbHalf = m.thumb.width / 2.0
+    if m.thumb.height <> invalid then m.thumbH = m.thumb.height
+  end if
+
+  m.thumbY = 0
 end sub
 
 sub __applyHeight(hasFocus as boolean)
@@ -199,18 +298,11 @@ sub __applyHeight(hasFocus as boolean)
   y = (m.trackHeightMax - h) / 2.0
   m.track.translation = [0, y]
   m.progress.translation = [0, y]
-
-  __updateProgress()
 end sub
 
 sub __updateProgress()
-  if (m.currentDuration = m.currentPosition) then return
   if (m.currentDuration = invalid or m.currentPosition = invalid) then return
-  if m.currentDuration <= 0  and m.currentPosition <= 0 then return 
-  if m.suspendUi = true and m.top <> invalid and m.top.isPaused <> true then
-    __restoreCachedUi()
-    return
-  end if
+  if m.currentDuration <= 0 and m.currentPosition <= 0 then return 
 
   ' LIVE: no hay tiempo, mostrar "En vivo" (traducido) y no usar position/duration
   if m.top <> invalid and m.top.isLive = true then
@@ -228,27 +320,10 @@ sub __updateProgress()
 
   if m.track = invalid or m.progress = invalid or m.barContainer = invalid then return
 
-  ' Medidas del thumb
-  thumbHalf = 0.0
-  thumbH = 0.0
-  if m.thumb <> invalid then
-    if m.thumb.width <> invalid then thumbHalf = m.thumb.width / 2.0
-    if m.thumb.height <> invalid then thumbH = m.thumb.height
-  end if
-  m.thumbHalf = thumbHalf
-
-  ' Centrado vertical del thumb
-  trackY = 0.0
-  if m.track <> invalid and m.track.translation <> invalid then
-    trackY = m.track.translation[1]
-  end if
-
-  thumbY = trackY + (m.track.height / 2.0) - (thumbH / 2.0)
-
   ' Si no hay duración
   if m.currentDuration <= 0 and not m.top.isLive then
     m.progress.width = 0
-    if m.thumb <> invalid then m.thumb.translation = [-thumbHalf, thumbY]
+    if m.thumb <> invalid then m.thumb.translation = [- m.thumbHalf, m.thumbY]
     if m.timeLabel <> invalid then m.timeLabel.text = "00:00"
     return
   end if
@@ -259,8 +334,7 @@ sub __updateProgress()
     m.currentPosition = m.currentDuration
   end if
 
-  ' Progreso
-
+  ' Progreso 
   if (m.currentPosition > 0 and m.currentDuration > 0) then  
     progressWidth = (m.currentPosition / m.currentDuration) * m.totalWidth
   else
@@ -274,33 +348,27 @@ sub __updateProgress()
   m.progress.width = progressWidth
 
   ' Thumb X centrado en borde del progreso
-  thumbX = progressWidth - thumbHalf
-  if thumbX < -thumbHalf then thumbX = -thumbHalf
-  if thumbX > (m.totalWidth - thumbHalf) then thumbX = (m.totalWidth - thumbHalf)
+  thumbX = progressWidth - m.thumbHalf
+  if thumbX < - m.thumbHalf then thumbX = - m.thumbHalf
+  if thumbX > (m.totalWidth - m.thumbHalf) then thumbX = (m.totalWidth - m.thumbHalf)
 
   if m.thumb <> invalid then
     
     if (m.top.isLive ) then
-      __cancelPendingZeroThumb()
-      m.thumb.translation = [m.totalWidth - 20, thumbY]
+      m.thumb.translation = [m.totalWidth - m.thumbHalf, m.thumbY]
       m.progress.width =  m.totalWidth
       ' Setear el máximo rango en X que puede alcanzar la esfera de progreso
-      m.maxWidth = m.totalWidth - 20
+      m.maxWidth = m.totalWidth - m.thumbHalf
     else
       ' Validar que la esfera de progreso, no se salga fuera del rango máximo
       if m.maxWidth <> invalid and thumbX > m.maxWidth then thumbX = m.maxWidth
       if (thumbX <> invalid) then
         if thumbX < 0 then thumbX = 0
 
-        if thumbX = 0 then
-          __scheduleZeroThumbTranslation(thumbY)
-        else
-          __cancelPendingZeroThumb()
-          m.thumb.translation = [thumbX, thumbY]
+        m.thumb.translation = [thumbX, m.thumbY]
 
-          if (thumbX = m.totalWidth -20 and m.top.streamType = getStreamingType().LIVE_REWIND and m.top.liveText <> invalid) then
-            m.timeLabel.text = m.top.liveText
-          end if
+        if (thumbX = m.totalWidth - m.thumbHalf and m.top.streamType = getStreamingType().LIVE_REWIND and m.top.liveText <> invalid) then
+          m.timeLabel.text = m.top.liveText
         end if
       end if
     end if
@@ -373,10 +441,10 @@ sub __updateProgress()
 
   url = __buildThumbUrl(epoch)
   ' Posición relativa al TimelineBar (misma cuenta que ya hacías)
-  previewX = (thumbX + thumbHalf) - (m.previewW / 2.0)
+  previewX = (thumbX + m.thumbHalf) - (m.previewW / 2.0)
   previewX = __clamp(previewX, 0, m.totalWidth - m.previewW)
 
-  previewY = thumbY - m.previewH - m.previewMargin
+  previewY = m.thumbY - m.previewH - m.previewMargin
   
   m.top.previewX = previewX
   m.top.previewY = previewY
@@ -465,24 +533,6 @@ sub onBaseEpochChanged()
   end if 
 end sub
 
-sub onSeekingChanged()
-  if m.top <> invalid and m.top.seeking = true then
-    if m.top.streamType <> getStreamingType().LIVE_REWIND then
-      m.committedRemaining = m.currentDuration - m.currentPosition
-      if m.committedRemaining < 0 then m.committedRemaining = 0
-    else if m.committedRemaining = invalid
-      m.committedRemaining = m.currentDuration - m.currentPosition
-      if m.committedRemaining < 0 then m.committedRemaining = 0
-    end if
-  end if
-  __updateProgress()
-end sub
-
-sub onSeekCommitTokenChanged()
-  __commitSelection()
-  __updateProgress()
-end sub
-
 sub onIsPausedChanged()
   if m.top <> invalid and m.top.isPaused = true then
     m.pauseStartEpochSeconds = __getEpochSeconds()
@@ -491,7 +541,6 @@ sub onIsPausedChanged()
       if m.committedRemaining < 0 then m.committedRemaining = 0
     end if
     if m.pauseTickTimer <> invalid then m.pauseTickTimer.control = "start"
-    if m.suspendUi = true then m.suspendUi = false
   else
     m.pauseStartEpochSeconds = invalid
     if m.pauseTickTimer <> invalid then m.pauseTickTimer.control = "stop"
@@ -518,25 +567,6 @@ function __buildThumbUrl(epochSeconds as integer) as string
   return m.thumbnailsUrlTemplate.Replace("[DateInEpoch]", epochSeconds.toStr())
 end function
 
-sub __cacheUi()
-  if m.progress <> invalid then m.cachedProgressWidth = m.progress.width
-  if m.thumb <> invalid then m.cachedThumbTranslation = m.thumb.translation
-  if m.timeLabel <> invalid then 
-    m.cachedTimeText = m.timeLabel.text
-  end if
-end sub
-
-' Obtiene dispositivo UTC offset seconds.
-sub __restoreCachedUi()
-  if m.cachedProgressWidth <> invalid and m.progress <> invalid then 
-    m.progress.width = m.cachedProgressWidth
-  end if
-  if m.cachedThumbTranslation <> invalid and m.thumb <> invalid then m.thumb.translation = m.cachedThumbTranslation
-  if m.cachedTimeText <> invalid and m.timeLabel <> invalid then 
-    m.timeLabel.text = m.cachedTimeText
-  end if 
-end sub
-
 sub onLiveTextChanged()
   __updateProgress()
 end sub
@@ -556,23 +586,18 @@ function __getDeviceUtcOffsetSeconds() as integer
   return utcSecs - locSecs
 end function
 
-sub __commitSelection()
-  if m.top = invalid then return
-  if m.currentDuration <= 0 then return
-
-  m.lastCommittedPosition = m.currentPosition
-  m.lastCommittedDuration = m.currentDuration
-  m.committedRemaining = m.lastCommittedDuration - m.lastCommittedPosition
-  if m.committedRemaining < 0 then m.committedRemaining = 0
-
-  if m.top.streamType = getStreamingType().LIVE_REWIND and m.top.isPaused = true then
-    m.pauseStartEpochSeconds = __getEpochSeconds()
-  end if
-end sub
-
 ' Obtiene epoch seconds.
 function __getEpochSeconds() as integer
   dt = CreateObject("roDateTime")
   dt.Mark()
   return dt.AsSeconds()
 end function
+
+' Obtener la posición seleccionada por el usuario y posicionar el player
+sub __getCurrentPosition()
+
+  if (m.currentPositionPx <> invalid and m.currentPositionPx <> 0 and m.maxBar <> invalid and m.maxBar <> 0 and m.currentDuration <> invalid and m.currentDuration <> 0) then
+    m.currentPosition = (m.currentDuration * m.currentPositionPx) / m.maxBar
+    m.top.seekPosition = m.currentPosition
+  end if
+end sub

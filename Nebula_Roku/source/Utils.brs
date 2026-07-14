@@ -95,7 +95,7 @@ function validateStatusCode(statusCode as integer) as boolean
 end function
 
 ' Redondea un valor a un decimal.
-function __roundToOneDecimal(value as float) as float
+function roundToOneDecimal(value as float) as float
   return Int((value * 10.0) + 0.5) / 10.0
 end function
 

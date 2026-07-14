@@ -17,10 +17,6 @@ sub init()
   m.showInfoTimer = m.top.findNode("showInfoTimer")
   ' Timer para refrescar datos cuando cambia la programación en vivo.
   m.newProgramTimer = m.top.findNode("newProgramTimer")
-  ' Timer de debounce para confirmar el seek acumulado al dejar de navegar la timeline.
-  m.seekCommitTimer = m.top.findNode("seekCommitTimer")
-  ' Timer que procesa saltos continuos mientras se mantiene presionado FF/RW.
-  m.seekHoldTimer = m.top.findNode("seekHoldTimer")
    ' Timer dedicado para sincronizar TimelineBar luego de un seek asíncrono.
   m.seekTimelineSyncTimer = m.top.findNode("seekTimelineSyncTimer")
   
@@ -89,12 +85,8 @@ sub init()
   m.timelinePreviewBg = m.top.findNode("timelinePreviewBg") 
   ' Timer para refrescar periódicamente el tiempo restante mostrado en pantalla.
   m.showTimeTimer = m.top.findNode("showTimeTimer")
-
   ' Fila contenedora de botones de acción del reproductor.
   m.controlsRow = m.top.findNode("controlsRow")
-  
-  m.seekCommitTimer.ObserveField("fire", "onSeekCommitTimerFired")
-  m.seekHoldTimer.ObserveField("fire", "onSeekHoldTimerFired")
   ' Subnodo interno de la timeline usado para cálculos/posicionamiento de preview.
   m.timelineBarBarContainer = m.timelineBar.findNode("barContainer")
   m.showTimeTimer.observeField("fire", "onShowTimeTimerFired")
@@ -107,6 +99,8 @@ sub init()
     m.timelineBar.observeField("previewX", "onTimelinePreviewChanged")
     m.timelineBar.observeField("previewY", "onTimelinePreviewChanged")
     m.timelineBar.observeField("previewUri", "onTimelinePreviewChanged")
+    m.timelineBar.observeField("seekKeyPress", "onTimelineSeekKeyPressed")
+    m.timelineBar.observeField("seekPosition", "onSeekPosition")
   end if
   
   ' Overlay que renderiza miniatura y metadata al mover la timeline.
@@ -166,9 +160,6 @@ sub init()
   m.lastKeyPressedAtMs = -999999 ' timestamp de la ultima tecla procesada
   ' Reloj monotónico para medir intervalos de entrada sin depender de hora del sistema.
 
-  ' Variable que indica cuanto tiempo en segundos debe adelantar o retroceder
-  m.timelineSeekStep = 15
-
   ' Tipo del beacon del stream
   m.beaconType = ""
   ' Tiempo para volver a validar la conexión
@@ -188,25 +179,12 @@ sub init()
   m.lastButtonSelect = invalid
   ' Bandera para indicar que tiene que enviar el último canal visto
   m.sendLastChannelWatched = false
-  ' Bandera para indicar si ya se puede hacer foco en el player
-  m.focusplayerByload = false
 
-  ' Bandera que indica si quedan saltos de tiempo pendiente
-  m.pendingSeekActive = false
-  ' Guarda la cantidad de segundos pendientes para el salto en el tiempo
-  m.pendingSeekPosition = invalid
   ' Guarda temporalmente la posición objetivo para aplicar la sincronización diferida.
   m.seekTimelineSyncPosition = invalid
 
   ' Bandera que impide que se abran más de un program info al mismo tiempo
   m.saveOpenPlayer = true
-  ' Bandera que indica que se esta manteniendo presionado el botón de adelantar o retroceder
-  m.seekHoldActive = false
-  ' Guarda el botón que se esta manteniendo presionado
-  m.seekHoldKey = invalid
-  ' Guardar los ticks que se debe adelantar o retroceder
-  m.seekHoldTicks = 0
-
   ' Bandera que indica si se esta mostrando una miniatura arriba del timelinebar
   m.previewPinned = false
   ' Guarda la última posición, cuando se pausa un Live y se puede cambiar a un Live Rewind
@@ -219,23 +197,40 @@ sub init()
   m.disableLayoutChannelConnection = false
   ' Mantiene la timeline en 0 mientras Roku reporta position=0 después de presionar restart.
   m.forceTimelineStartPosition = false
-
-  ' Variables para la velocidad cuando se esta mantiendo presionado el botón de adelantar o retroceder --- Tap acceleration (FF/RW) ---
-  m.trickTapWindowMs = 1000
-  m.trickTapMaxMult = 6   ' ajustá a gusto (6x, 8x, etc)
-  m.trickClock = CreateObject("roTimespan")
-  m.trickClock.Mark()
-
-  ' Guardar el último botón que se mantuvo presionado
-  m.lastTrickKey = invalid
-  m.lastTrickMs  = -999999
-  ' Guardar los multiplicadores cuando se mantiene presionada un botón
-  m.trickTapCount = 0
-
-  ' Base jump para el hold (se recalcula en cada start)
-  m.seekHoldBaseJump = 0
-
   __ensurePreviewTimeNodes()
+end sub
+
+sub onTimelineSeekKeyPressed()
+  __restartShowInfoTimer()
+
+  if (__isDefaultLiveRewindStream()) then
+    m.actionPostChageState = "pause"
+    __reconnectStream(true, getStreamingType().LIVE_REWIND)
+  end if
+end sub
+
+' Posicionar el player en un lugar definido por el timelinebar
+sub onSeekPosition() 
+  if m.timelineBar.seekPosition <> invalid and m.videoPlayer <> invalid
+    if LCase(m.streaming.type) = getVideoType().VOD or LCase(m.streaming.type) = getVideoType().DVR
+      m.videoPlayer.seek = m.timelineBar.seekPosition
+    end if
+
+    if LCase(m.streaming.type) = getVideoType().LIVE_REWIND then
+
+      if (__isDefaultLiveRewindStream()) then
+        __reconnectStream(true, getStreamingType().LIVE_REWIND)
+      else 
+        ' Falta lo logica para posicionar un Live Rewind
+      end if 
+    end if
+  end if
+
+  ' Ocultar miniatura y volver a mostrar programInfo/summary
+  m.previewPinned = false
+  if m.timelinePreviewOverlay <> invalid then m.timelinePreviewOverlay.visible = false
+  __setSeekUi(false)
+  if m.programSummaryPlayer <> invalid then m.programSummaryPlayer.visible = true
 end sub
 
 ' Funcion que interpreta los eventos de teclado y retorna true si fue porcesada por este componente. Sino es porcesado por el
@@ -251,11 +246,9 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
 
   ' Ignora repeticiones muy seguidas del mismo boton (key repeat del control remoto)
   if press and __isRepeatedKeyPress(key, nowMs) then return true ' evita key-repeat por spam de remoto
-  handled = false
 
   ' Se presionó el botón de replay
   if press and key = KeyButtons().REPLAY then
-    handled = true
 
     ' Si es cotenido vivo no hace nada
     if m.streaming <> invalid and LCase(m.streaming.type) = getVideoType().LIVE then return true
@@ -268,64 +261,113 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
     if m.playerControllers <> invalid and m.playerControllers.visible = true then
       if m.timelineBar <> invalid and m.timelineBar.visible = true then m.timelineBar.setFocus(true)
     end if
+
+    return true
   end if
   
-  ' Presiono en el botón PLAY/PAUSE nativo del control Roku
-  if (m.videoPlayer.isInFocusChain() and key = KeyButtons().PLAY)  then
-    handled = true
+  ' Eventos dentro del player
+  if m.videoPlayer <> invalid and m.videoPlayer.isInFocusChain()
+    
+    ' Presiono en el botón PLAY/PAUSE nativo del control Roku
+    if (key = KeyButtons().PLAY) then
 
-    if (m.streaming.type = getVideoType().LIVE_REWIND) then
-      __togglePlayPause()
-    end if
-  end if
-
-  ' Se esta mostrando el mensaje de "Todavía estas ahí"
-  if m.inactivityContinueButton.isInFocusChain() then
-
-    handled = true
-
-    ' Si presionó algún botón, exentender el tiempo
-    if press and (key = KeyButtons().OK or key = KeyButtons().BACK or KeyButtons().UP or KeyButtons().DOWN or KeyButtons().RIGHT or KeyButtons().LEFT) then
-      __hideInactivityPrompt()
-      __extendTimeWatching()
-
-      __reconnectStream()
+      if (m.streaming.type = getVideoType().LIVE_REWIND) then
+        __togglePlayPause()
+        return true
+      end if
     end if
 
-    return handled
-
-  else if m.videoPlayer <> invalid and m.videoPlayer.isInFocusChain() and key = KeyButtons().BACK then
-    if press then 
+    ' Presiono en el botón BACK nativo del control Roku
+    if (key = KeyButtons().BACK and press) then
       ' Si presionó el botón BACK, cerrar el player
       __closePlayer()
-      handled = false
 
       ' Guardar log de que se cerró el player
       actionLog = getActionLog({ actionCode: ActionLogCode().CLOSE_PLAYER, program: m.program })
       __saveActionLog(actionLog)
-    else 
-      handled = true
+
+      return true
     end if
+
+    ' Presiono en el botón OK nativo del control Roku
+    if key = KeyButtons().OK then
+      ' Bloquea los casos de click sobre el player hasta que la informacion 
+      ' del programa haya contenstado al menos una vez por ok o error
+      if m.blockTuShowControls then return true
+
+      __showProgramInfo()
+
+      return true
+    end if
+
+    ' Presiono en el botón OK nativo del control Roku
+    if __isSeekKey(key) then
+      ' Bloquea los casos de click sobre el player hasta que la informacion 
+      ' del programa haya contenstado al menos una vez por ok o error
+      if m.blockTuShowControls then return true
+
+      __showProgramInfo()
+
+      return true
+    end if
+
+    ' Se presionaron las teclas arriba o abajo, mostrar la lista de canales
+    if (key = KeyButtons().UP or key = KeyButtons().DOWN) then
+      if m.allowChannelList then 
+        if not press then 
+          now = CreateObject("roDateTime")
+          now.ToLocalTime()
     
-  else if m.playerControllers.isInFocusChain() and key = KeyButtons().BACK then
+          if m.channelList.refreshLoadChannelList <> 0 and m.channelList.refreshLoadChannelList > now.AsSeconds() then 
+            __openChannelList()
+          else 
+            m.showChannelListAfterUpdate = true
+            __getChannels()
+          end if
+        end if 
+      end if
+      return true
+    end if
+  end if
+
+  ' Se esta mostrando el mensaje de "Todavía estas ahí"
+  if m.inactivityContinueButton <> invalid and m.inactivityContinueButton.isInFocusChain() then
+    ' Si presionó algún botón, exentender el tiempo
+    if press and (key = KeyButtons().OK or key = KeyButtons().BACK or KeyButtons().UP or KeyButtons().DOWN or KeyButtons().RIGHT or KeyButtons().LEFT) then
+      __hideInactivityPrompt()
+      __extendTimeWatching()
+      __reconnectStream()
+
+      return true
+    end if
+  end if
+    
+  ' Se presionó una tecla mientrás muestra el la información del programa
+  if m.playerControllers <> invalid and m.playerControllers.isInFocusChain() and press then
+    
     ' Si presionó el botón back sobre el player, ocultar la info del programa
-    if press then onHidenProgramInfo()
-    handled = true
-    
-  ' Presionó el botón arriba sobre el player, mientras se muestra la info del programa
-  else if m.playerControllers.isInFocusChain() and key = KeyButtons().UP then
-    ' Reiniciar el timer para cerrar la info del programa
-    __restartShowInfoTimer()
-    ' Posicionar el foco sobre el timelinebar
-    if not press and m.timelineBar <> invalid and m.timelineBar.visible then m.timelineBar.setFocus(true)
+    if (key = KeyButtons().BACK) then
+      onHidenProgramInfo()
+      return true
+    end if
+
+    ' Presionó el botón arriba sobre los botones, posicionar el foco en el timelinebar
+    if (key = KeyButtons().UP) then
+      ' Reiniciar el timer para cerrar la info del programa
+      __restartShowInfoTimer()
+      ' Posicionar el foco sobre el timelinebar
+      m.timelineBar.setFocus(true)
+      return true
+    end if
+  end if 
 
   ' El foco esta sobre el botón de la guía
-  else if m.guideImageButton.isInFocusChain() then
+  if m.guideImageButton <> invalid and m.guideImageButton.isInFocusChain() and press then
     ' Reiniciar el timer para cerrar la info del programa
-    if press then __restartShowInfoTimer()
+    __restartShowInfoTimer()
 
     ' Se presionó OK, mostrar la guía
-    if key = KeyButtons().OK and press then
+    if (key = KeyButtons().OK) then
       if m.showInfoTimer <> invalid then clearTimer(m.showInfoTimer)
       if m.playerControllers.visible then m.playerControllers.visible = false
       m.guide.visible = true
@@ -337,10 +379,10 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
     end if
 
     ' Se presionó arriba, posicionar el foco sobre el timelinebar
-    if key = KeyButtons().UP and m.timelineBar.visible = true and press then m.timelineBar.setFocus(true)
+    if (key = KeyButtons().UP and m.timelineBar.visible = true) then m.timelineBar.setFocus(true)
 
     ' Se presionó Izquierda, posicionar el foco sobre el botón habilitado a la izquierda
-    if key = KeyButtons().LEFT and press then
+    if (key = KeyButtons().LEFT) then
       if m.guideImageButton.focusLeft <> invalid then 
         if m.guideImageButton.focusLeft.disable then 
           if m.guideImageButton.focusLeft.focusLeft <> invalid then m.guideImageButton.focusLeft.focusLeft.setFocus(true) 
@@ -350,44 +392,46 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
       end if
     end if
 
-    handled = true
+    return true
+  end if
 
   ' El foco esta sobre el botón ir al vivo
-  else if m.toLiveImageButton <> invalid and m.toLiveImageButton.isInFocusChain() then
+  if m.toLiveImageButton <> invalid and m.toLiveImageButton.isInFocusChain() and press then
     ' Reiniciar el timer para cerrar la info del programa
     __restartShowInfoTimer()
 
     ' Se presionó el botón izquierda, posicionar el foco en el botón habilitado a la izquierda
-    if key = KeyButtons().LEFT and m.toLiveImageButton.focusLeft <> invalid and press then
+    if (key = KeyButtons().LEFT and m.toLiveImageButton.focusLeft <> invalid) then
       m.toLiveImageButton.focusLeft.setFocus(true)
     end if
 
     ' Se presionó derecha, , posicionar el foco en el botón habilitado a la derecha
-    if key = KeyButtons().RIGHT and m.toLiveImageButton.focusRight <> invalid and press then
+    if (key = KeyButtons().RIGHT and m.toLiveImageButton.focusRight <> invalid) then
       m.toLiveImageButton.focusRight.setFocus(true)
     end if
 
     ' Se presionó el botón OK, reiniciar el stream a LIVE
-    if key = KeyButtons().OK then
+    if (key = KeyButtons().OK) then
       m.enableGoLive = false
 
       __reloadLive()
     end if
 
-    handled = true
+    return true
+  end if
 
   ' Presiono sobre el botón restart
-  else if m.restartImageButton <> invalid and m.restartImageButton.isInFocusChain() and press then
+  if m.restartImageButton <> invalid and m.restartImageButton.isInFocusChain() and press then
     ' Reiniciar el timer para cerrar la info del programa
-    if  press then __restartShowInfoTimer()
+    __restartShowInfoTimer()
     
     ' Presionó sobre el botón izquierda, posicionar el foco en el botón habilitado a la izquierda
-    if key = KeyButtons().LEFT and m.restartImageButton.focusLeft <> invalid then
+    if (key = KeyButtons().LEFT and m.restartImageButton.focusLeft <> invalid) then
       m.restartImageButton.focusLeft.setFocus(true)
     end if
 
     ' Presionó sobre el botón derecha, osicionar el foco en el botón habilitado a la derecha
-    if key = KeyButtons().RIGHT and m.restartImageButton.focusRight <> invalid then
+    if (key = KeyButtons().RIGHT and m.restartImageButton.focusRight <> invalid) then
       if m.restartImageButton.focusRight.disable then
         if m.restartImageButton.focusRight.focusRight <> invalid then m.restartImageButton.focusRight.focusRight.setFocus(true)
       else
@@ -395,7 +439,7 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
       end if
     end if
 
-    ' Presionoó sobre el botón OK
+    ' Presionó sobre el botón OK
     if (key = KeyButtons().OK) then
       m.enableGoLive = true
       if m.videoPlayer <> invalid then
@@ -454,96 +498,28 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
       end if
     end if
 
-    handled = true
-
-  else if m.playPauseImageButton.isInFocusChain() then    
-    if press then
-      __restartShowInfoTimer()
-      if key = KeyButtons().RIGHT and m.playPauseImageButton.focusRight <> invalid then
-          m.playPauseImageButton.focusRight.setFocus(true)
-        else if (key = KeyButtons().OK) and not LCase(m.streaming.type) = getVideoType().LIVE then
-          if not __pauseDefaultLiveRewindStream() then
-            m.pendingLiveRewindPauseGuardUntilMs = invalid
-            __togglePlayPause()
-          end if
-      end if
-    end if
-    handled = true
-  
-  else if m.videoPlayer <> invalid and m.videoPlayer.isInFocusChain() and key = KeyButtons().OK and not handled then
-    ' Bloquea los casos de click sobre el player hasta que la informacion 
-    ' del programa haya contenstado al menos una vez por ok o error
-    if m.blockTuShowControls then return true
-
-    if not press and not m.focusplayerByload then 
-      __showProgramInfo()
-    else 
-      m.focusplayerByload = false
-    end if
-
-    handled = true
-    
-  else if m.timelineBar <> invalid and m.timelineBar.isInFocusChain() and key = KeyButtons().OK and not handled then
-    handled = true
-
-    if press then
-    ' Evitar doble commit
-    if m.seekCommitTimer <> invalid then m.seekCommitTimer.control = "stop"
-
-    ' (opcional pero recomendado) si estaba en hold, lo cortamos
-    if m.seekHoldTimer <> invalid then m.seekHoldTimer.control = "stop"
-    m.seekHoldActive = false
-    m.seekHoldKey = invalid
-    m.seekHoldTicks = 0
-
-    ' Commit inmediato (misma lógica del timer)
-    __commitPendingSeek()
-    if m.timelineBar <> invalid then
-      m.timelineBar.seekCommitToken = m.timelineBar.seekCommitToken + 1
-    end if
-
-    ' Salir de modo seeking
-    if m.timelineBar <> invalid then m.timelineBar.seeking = false
-
-    ' Ocultar miniatura y volver a mostrar programInfo/summary
-    m.previewPinned = false
-    if m.timelinePreviewOverlay <> invalid then m.timelinePreviewOverlay.visible = false
-    __setSeekUi(false) ' esto deja opacity=1 al programSummaryPlayer
-    if m.programSummaryPlayer <> invalid then m.programSummaryPlayer.visible = true
+    return true
   end if
 
-  else if m.timelineBar.isInFocusChain() and __isSeekKey(key) then
-    handled = true
+  ' Se presionó un botón sobre el botón Play/Pause de la info del programa
+  if m.playPauseImageButton <> invalid and m.playPauseImageButton.isInFocusChain() and press then    
+    __restartShowInfoTimer()
 
-    if __isDefaultLiveRewindStream() then
-      if not __isForwardSeekKey(key) then
-       __pauseDefaultLiveRewindStream()
-      end if
-    else
-      if (not m.isReloadStreaming)
-        if press then
-          __startSeekHold(key)  ' <- 1 salto inmediato + timer repetitivo
-        else
-          __stopSeekHold()      ' <- al soltar, deja el debounce para commit
+    if (key = KeyButtons().RIGHT and m.playPauseImageButton.focusRight <> invalid) then
+        m.playPauseImageButton.focusRight.setFocus(true)
+      else if (key = KeyButtons().OK) and not LCase(m.streaming.type) = getVideoType().LIVE then
+        if not __pauseDefaultLiveRewindStream() then
+          m.pendingLiveRewindPauseGuardUntilMs = invalid
+          __togglePlayPause()
         end if
-      end if
     end if
+    return true
+  end if
 
-  else if __shouldShowProgramInfoForSeekKey() and __isSeekKey(key) then
-    handled = true
-    __showProgramInfo()
+  'Se presionó un botón sobre el timelinebar
+  if m.timelineBar <> invalid and m.timelineBar.isInFocusChain() and press then
 
-    if (not m.isReloadStreaming) then
-      if m.streaming <> invalid and LCase(m.streaming.type) = getVideoType().LIVE then return true ' si es cotenido vivo no hace nada
-      if not press and not m.focusplayerByload then 
-        m.timelineBar.setFocus(true)
-      else 
-        m.focusplayerByload = false
-      end if
-    end if
-
-  else if m.timelineBar <> invalid and m.timelineBar.isInFocusChain() and key = KeyButtons().DOWN then
-    if not press then
+    if (key = KeyButtons().DOWN) then
       __restartShowInfoTimer()
       ' Si había miniatura (pinneada o visible), la cerramos y volvemos al summary
       if m.previewPinned or (m.timelinePreviewOverlay <> invalid and m.timelinePreviewOverlay.visible) then
@@ -552,9 +528,6 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
         if m.timelinePreviewOverlay <> invalid then
           m.timelinePreviewOverlay.visible = false
         end if
-
-        ' salimos del modo seeking para que no vuelva a esconder el summary
-        m.timelineBar.seeking = false
 
         __setSeekUi(false) ' esto te pone opacity=1 y/o el estado normal
         if m.programSummaryPlayer <> invalid then
@@ -566,76 +539,55 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
       btn = __getFirstVisibleControllerButton()
       if btn <> invalid then btn.setFocus(true)
     end if
-    if not press then __cancelPendingSeek()
 
-    handled = true
-
-  else if m.videoPlayer <> invalid and m.videoPlayer.isInFocusChain() and (key = KeyButtons().UP or key = KeyButtons().DOWN) then
-    if m.allowChannelList then 
-      if not press then 
-        now = CreateObject("roDateTime")
-        now.ToLocalTime()
+    return true
+  end if
   
-        if m.channelList.refreshLoadChannelList <> 0 and m.channelList.refreshLoadChannelList > now.AsSeconds() then 
-          __openChannelList()
-        else 
-          m.showChannelListAfterUpdate = true
-          __getChannels()
-        end if
-      end if 
-    end if
-    handled = true
-  
-  else if m.channelListContainer.isInFocusChain() and (key = KeyButtons().LEFT or key = KeyButtons().BACK) then
+  ' Se presionó una tecla en la lista de canales
+  if m.channelListContainer <> invalid and m.channelListContainer.isInFocusChain() then
+    
+    ' Se presionó la tecla izquierda o atrás, cerrar la lista de canales
+    if (key = KeyButtons().LEFT or key = KeyButtons().BACK) then
 
-    if (m.channelListContainer.visible = true) then
-      startHideChannelListTimer()
+      if (m.channelListContainer.visible = true) then
+        startHideChannelListTimer()
+      end if
+
+      if not press then __cancelChannelPosition()
+      return true
     end if
 
-    if not press then __cancelChannelPosition()
-    handled = true
+    ' Se presionó la tecla arriba o abajo, navegar sobre la lista de canales
+    if (key = KeyButtons().UP or key = KeyButtons().DOWN) and press then
+      ' si por algun motivo la lista se escondio y sigue teniendo foco entonces se la vuelvo a hacer visible al usuario
+      if (m.channelListContainer.visible = false) then
+        m.channelListContainer.visible = true
+        startHideChannelListTimer()
+      end if
 
-  else if m.channelListContainer.isInFocusChain() and (key = KeyButtons().UP or key = KeyButtons().DOWN) then
-    ' si por algun motivo la lista se escondio y sigue teniendo foco entonces se la vuelvo a hacer visible al usuario
-    if (m.channelListContainer.visible = false) then
-      m.channelListContainer.visible = true
-      startHideChannelListTimer()
+      return true
     end if
+  end if
   
-  else if m.guide.isInFocusChain() and key = KeyButtons().BACK then 
-    if press then 
+  ' Se presionó una tecla en la guía
+  if m.guide <> invalid and m.guide.isInFocusChain() and press
+    if (key = KeyButtons().BACK) then 
       m.guide.visible = false
       __focusPlayer()
       m.guide.channelIdIndexOf = -1
       m.guide.searchChannelPosition = true
+
+      return true 
     end if
-    handled = true 
   end if 
 
-  return handled
+  return false
 end function
 
 ' Enfoca el área del player sin pasar el foco al nodo Video.
 sub __focusPlayer()
   if m.videoPlayer <> invalid then m.videoPlayer.setFocus(true)
 end sub
-
-
-' Indica si las teclas de navegación/seek deben abrir la información del programa
-' desde la superficie del PlayerScreen, incluso cuando el foco quedó en el grupo
-' raíz del componente y no específicamente en el nodo proxy Video.
-function __shouldShowProgramInfoForSeekKey() as Boolean
-  if m.videoPlayer <> invalid and m.videoPlayer.isInFocusChain() then return true
-  if m.top = invalid or not m.top.isInFocusChain() then return false
-
-  if m.playerControllers <> invalid and m.playerControllers.isInFocusChain() then return false
-  if m.timelineBar <> invalid and m.timelineBar.isInFocusChain() then return false
-  if m.channelListContainer <> invalid and m.channelListContainer.isInFocusChain() then return false
-  if m.guide <> invalid and m.guide.isInFocusChain() then return false
-  if m.inactivityContinueButton <> invalid and m.inactivityContinueButton.isInFocusChain() then return false
-
-  return true
-end function
 
 ' Devuelve tiempo monotónico en ms para controlar ventanas de bloqueo/debounce
 function __getNowMilliseconds() as Integer
@@ -806,7 +758,6 @@ end sub
 sub onLogoutEvent()
   if m.guide.logout then 
     onHidenProgramInfo()
-    m.focusplayerByload = true
     m.guide.visible = false
     m.guide.logout = false
     m.top.logout = true
@@ -886,8 +837,6 @@ Sub OnVideoPlayerStateChange()
     else
       __hideChannelConnectionLayout()
     end if
-  else
-    ' __hideChannelConnectionLayout()
   end if
 
   if state = getVideoState().PAUSED then
@@ -922,19 +871,11 @@ Sub OnVideoPlayerStateChange()
   else if __isLiveRewindPauseGuardActive() and (state = getVideoState().PLAYING or state = getVideoState().BUFFERING) then
     __pauseVideoAfterLiveRewindSwitch()
   end if
-
-  if m.timelineBar <> invalid then
-    m.timelineBar.isPaused = (state = getVideoState().PAUSED)
-  end if
 End Sub
 
 ' Indica si la pausa actual fue provocada por la navegación/preview del timeline.
 function __isTimelineSeekingPlaybackLock() as Boolean
   if m.pauseOnSeekActive = true then return true
-  if m.seekHoldActive = true then return true
-  if m.pendingSeekActive = true then return true
-  if m.timelineBar <> invalid and m.timelineBar.seeking = true then return true
-
   return false
 end function
 
@@ -1059,7 +1000,6 @@ sub onSelectItemGuide()
       clearTimer(m.retryReconnection)
       m.lastErrorTime = invalid
 
-      m.focusplayerByload = true
       m.guide.visible = false
       __focusPlayer()
       __refreshWatchTokenData(itemSelected.redirectKey, itemSelected.redirectId)
@@ -1209,7 +1149,6 @@ sub onStreamingsResponse()
       end if
 		   
       __hideChannelConnectionLayout()
-      m.focusplayerByload = false
 
       ' Obtener el inicio del stream, el programa inicia despues del inicio del stream, usar el incio del programa
       if m.streaming.streamStartDate <> invalid and m.streaming.streamStartDate <> "" then
@@ -1603,7 +1542,6 @@ sub onHidenProgramInfo()
   m.previewPinned = false
   if m.timelinePreviewOverlay <> invalid then m.timelinePreviewOverlay.visible = false
   __setSeekUi(false)
-  __cancelPendingSeek()
 
   __focusPlayer()
 end sub
@@ -1881,11 +1819,7 @@ sub __setTimelineFromStreaming()
   ' Reiniciar los estados de la timelinebar
   m.timelineBar.visible = false
   m.timelineBar.baseEpochSeconds = invalid
-  if m.timelineBar.resetToken = invalid then m.timelineBar.resetToken = 0
-  m.timelineBar.resetToken = m.timelineBar.resetToken + 1
   m.seekTimelineSyncPosition = invalid
-  m.pendingSeekActive = false
-  m.pendingSeekPosition = invalid
   m.liveRewindDuration = invalid
   m.liveRewindMinDuration = invalid
 
@@ -2128,7 +2062,7 @@ function __isSeekKey(key as String) as Boolean
 end function
 
 ' Determina si la tecla presionada avanza hacia adelante en la linea de tiempo
-function __isForwardSeekKey(key as String) as Boolean
+function __isForwardKey(key as String) as Boolean
   if key = invalid then return false
 
   return key = KeyButtons().RIGHT or key = KeyButtons().FAST_FORWARD
@@ -2219,34 +2153,6 @@ sub onSeekTimelineSyncTimerFired()
   m.seekTimelineSyncPosition = invalid
 end sub
 
-' Maneja el avance/retroceso con flechas en contenido grabado
-sub __handleSeek(key as String)
-  if m.isLiveContent or m.videoPlayer = invalid then return
-
-  duration = m.videoPlayer.duration
-  if duration = invalid or duration <= 0 then duration = m.timelineBar.duration
-  if duration = invalid or duration <= 0 then return
-
-  position = m.videoPlayer.position
-  if position = invalid or position < 0 then position = 0
-
-  jump = m.timelineSeekStep
-  if jump = invalid or jump <= 0 then jump = 10
-
-  if key = KeyButtons().RIGHT or key = KeyButtons().FAST_FORWARD then
-    position = position + jump
-  else
-    position = position - jump
-  end if
-
-  if position < 0 then position = 0
-  if position > duration then position = duration
-
-  m.videoPlayer.seek = position
-
-  __restartShowInfoTimer()
-end sub
-
 ' Devuelve el primer boton visible en los controles
 function __getFirstVisibleControllerButton() as object
   if m.controlsRow = invalid then return invalid
@@ -2266,7 +2172,6 @@ sub __closePlayer(onBack = false, logout = false)
   m.apiBeaconRequestManager = clearApiRequest(m.apiBeaconRequestManager)
   m.apiLastWatchedRequestManager = clearApiRequest(m.apiLastWatchedRequestManager)
   
-  m.focusplayerByload = false
   m.sendLastChannelWatched = false
   m.playerControllers.visible = false
   m.blockTuShowControls = true
@@ -2355,17 +2260,6 @@ sub __closePlayer(onBack = false, logout = false)
   m.errorChannelTitle.text = ""
   m.errorChannelImage.uri = ""
   if not logout then m.top.onBack = onBack
-
-  m.pendingSeekActive = false
-  m.pendingSeekPosition = invalid
-  if m.seekCommitTimer <> invalid then m.seekCommitTimer.control = "stop"
-
-  if m.seekHoldTimer <> invalid then m.seekHoldTimer.control = "stop"
-  m.seekHoldActive = false
-  m.seekHoldKey = invalid
-  m.seekHoldTicks = 0
-
-  if m.timelineBar <> invalid then m.timelineBar.seeking = false
 end sub
 
 ' Abre la lista de canales
@@ -2402,7 +2296,8 @@ sub __showProgramInfo()
 
   if m.timelineBar <> invalid and m.timelineBar.visible = true then
     m.timelineBar.setFocus(true)
-    if m.videoPlayer <> invalid then m.timelineBar.position = m.videoPlayer.position
+
+    if not __isDefaultLiveRewindStream() and m.videoPlayer <> invalid then m.timelineBar.position = m.videoPlayer.position
   else
     btn = __getFirstVisibleControllerButton()
     if btn <> invalid then btn.setFocus(true)
@@ -2825,223 +2720,6 @@ sub __setControllerButtonFocusNeighbors()
   end for
 end sub
 
-sub __queueSeek(key as String)
-  if m.isLiveContent or m.videoPlayer = invalid then return
-
-  ' duration
-  duration = m.videoPlayer.duration
-  if m.isLiveRewind and m.liveRewindDuration <> invalid then
-    duration = m.liveRewindDuration
-  else
-    if duration = invalid or duration <= 0 then duration = m.timelineBar.duration
-  end if
-  if duration = invalid or duration <= 0 then return
-
-  ' posición base: si ya veníamos acumulando, seguimos desde el pending
-  if m.pendingSeekActive and m.pendingSeekPosition <> invalid then
-    position = m.pendingSeekPosition
-  else
-    position = m.videoPlayer.position
-    if position = invalid or position < 0 then position = 0
-  end if
-
-  jump = m.timelineSeekStep
-  if jump = invalid or jump <= 0 then jump = 10
-
-  if key = KeyButtons().RIGHT or key = KeyButtons().FAST_FORWARD then
-    position = position + jump
-  else
-    position = position - jump
-  end if
-
-  if position < 0 then position = 0
-  if position > duration then position = duration
-
-  m.pendingSeekActive = true
-  m.pendingSeekPosition = position
-
-  __restartShowInfoTimer()
-  __restartSeekCommitTimer()
-
-end sub
-
-sub __restartSeekCommitTimer()
-  return
-end sub
-
-sub onSeekCommitTimerFired()
-  return
-end sub
-
-sub __commitPendingSeek()
-  if not m.pendingSeekActive then return
-  if m.videoPlayer = invalid then return
-  if m.pendingSeekPosition = invalid then return
-
-  if m.streaming <> invalid and m.streaming.type <> invalid and LCase(m.streaming.type) = getVideoType().LIVE_REWIND then
-    if m.streaming.streamingType = getStreamingType().LIVE_REWIND then
-      duration = m.videoPlayer.duration
-      if m.isLiveRewind and m.liveRewindDuration <> invalid then
-        duration = m.liveRewindDuration
-      else if duration = invalid or duration <= 0 then
-        if m.timelineBar <> invalid then duration = m.timelineBar.duration
-      end if
-
-      if duration <> invalid and duration > 0 and m.pendingSeekPosition >= (duration - 1) then
-        m.pendingSeekActive = false
-        m.pendingSeekPosition = invalid
-        if m.timelineBar <> invalid then m.timelineBar.seeking = false
-
-        __reloadLive()
-        return
-      end if
-    end if
-  end if
-
-  m.videoPlayer.seek = m.pendingSeekPosition
-
-  m.pendingSeekActive = false
-  m.pendingSeekPosition = invalid
-
-  if m.timelineBar <> invalid then m.timelineBar.seeking = false
-end sub
-
-sub __cancelPendingSeek()
-  if not m.pendingSeekActive then return
-
-  m.pendingSeekActive = false
-  m.pendingSeekPosition = invalid
-
-end sub
-
-sub __startSeekHold(key as String)
-  if m.isLiveContent or m.videoPlayer = invalid then return
-
-  if __isDefaultLiveRewindStream() and not __isForwardSeekKey(key) then
-    __reconnectStream()
-  end if
-
-  ' mientras está apretado, NO queremos commit
-  if m.seekCommitTimer <> invalid then m.seekCommitTimer.control = "stop"
-
-  m.seekHoldActive = true
-  m.seekHoldKey = key
-  m.seekHoldTicks = 0
-
-  base = m.timelineSeekStep
-  if base = invalid or base <= 0 then base = 10
-
-  mult = 1
-  if key = KeyButtons().FAST_FORWARD or key = KeyButtons().REWIND then
-    mult = __getTrickTapMultiplier(key)
-  else
-    ' si querés que LEFT/RIGHT no acumulen taps, queda 1
-    mult = 1
-  end if
-
-  m.seekHoldBaseJump = base * mult
-
-  ' 1 salto inmediato con tap-mult
-  __queueSeekWithJump(key, m.seekHoldBaseJump)
-
-  ' timer de hold (tu lógica actual)
-  if m.seekHoldTimer <> invalid then
-    m.seekHoldTimer.control = "stop"
-    m.seekHoldTimer.duration = 0.2
-    m.seekHoldTimer.repeat = true
-    m.seekHoldTimer.control = "start"
-  end if
-
-  if m.timelineBar <> invalid then m.timelineBar.seeking = true
-end sub
-
-sub __stopSeekHold()
-  if m.seekHoldTimer <> invalid then
-    m.seekHoldTimer.control = "stop"
-  end if
-
-  m.seekHoldActive = false
-  m.seekHoldKey = invalid
-  m.seekHoldTicks = 0
-
-  ' Mantener TimelineBar en modo seeking si hay un seek pendiente para que timeLabel
-  ' no cambie al soltar LEFT/RIGHT; se actualiza cuando el usuario confirma con OK
-  ' o se restaura si cancela la navegación.
-  __restartSeekCommitTimer()
-
-  if m.timelineBar <> invalid and not m.pendingSeekActive then m.timelineBar.seeking = false
-end sub
-
-sub onSeekHoldTimerFired()
-  if not m.seekHoldActive then return
-  if m.seekHoldKey = invalid then return
-
-  m.seekHoldTicks = m.seekHoldTicks + 1
-
-  jump = __getHoldJumpSeconds(m.seekHoldTicks)
-  __queueSeekWithJump(m.seekHoldKey, jump)
-end sub
-
-function __getHoldJumpSeconds(ticks as Integer) as Integer
-  base = m.seekHoldBaseJump
-  if base = invalid or base <= 0 then
-    base = m.timelineSeekStep
-    if base = invalid or base <= 0 then base = 10
-  end if
-
-  mult = 1
-  if ticks >= 5  and ticks < 10 then mult = 2
-  if ticks >= 10 and ticks < 20 then mult = 4
-  if ticks >= 20 then mult = 8
-
-  return base * mult
-end function
-
-sub __queueSeekWithJump(key as String, jumpOverride as Integer)
-  if m.isLiveContent or m.videoPlayer = invalid then return
-
-  ' duration
-  duration = m.videoPlayer.duration
-  if m.isLiveRewind and m.liveRewindDuration <> invalid then
-    duration = m.liveRewindDuration
-  else
-    if duration = invalid or duration <= 0 then duration = m.timelineBar.duration
-  end if
-  if duration = invalid or duration <= 0 then return
-
-  ' posición base
-  if m.pendingSeekActive and m.pendingSeekPosition <> invalid then
-    position = m.pendingSeekPosition
-  else
-    position = m.videoPlayer.position
-    if position = invalid or position < 0 then position = 0
-  end if
-
-  jump = jumpOverride
-  if jump = invalid or jump <= 0 then
-    jump = m.timelineSeekStep
-    if jump = invalid or jump <= 0 then jump = 10
-  end if
-
-  if key = KeyButtons().RIGHT or key = KeyButtons().FAST_FORWARD then
-    position = position + jump
-  else
-    position = position - jump
-  end if
-
-  if position < 0 then position = 0
-  if position > duration then position = duration
-
-  m.pendingSeekActive = true
-  m.pendingSeekPosition = position
-
-  __restartShowInfoTimer()
-    ' solo reiniciar commit si NO está en hold
-  if not m.seekHoldActive then __restartSeekCommitTimer()
-
-  if m.timelineBar <> invalid then m.timelineBar.seeking = true
-end sub
-
 sub onTimelineSeekingChanged()
   if m.timelineBar = invalid then return
 
@@ -3242,18 +2920,6 @@ sub __replayBack(seconds as Integer)
   ' No aplica a LIVE puro (sin ventana de rewind)
   if m.isLiveContent then return
 
-  ' cancelar timers/estado de seek pendiente para evitar doble ejecución
-  if m.seekCommitTimer <> invalid then m.seekCommitTimer.control = "stop"
-  if m.seekHoldTimer   <> invalid then m.seekHoldTimer.control = "stop"
-
-  m.pendingSeekActive = false
-  m.pendingSeekPosition = invalid
-  m.seekHoldActive = false
-  m.seekHoldKey = invalid
-  m.seekHoldTicks = 0
-
-  if m.timelineBar <> invalid then m.timelineBar.seeking = false
-
   ' Posición actual
   posi = m.videoPlayer.position
   if posi = invalid or posi < 0 then
@@ -3288,30 +2954,6 @@ sub __replayBack(seconds as Integer)
     m.programSummaryPlayer.opacity = 1
   end if
 end sub
-
-' Cuando se mantiene presionado el adelantar o retroceder, multiplicar la velocidad
-function __getTrickTapMultiplier(key as String) as Integer
-  if m.trickClock = invalid then
-    m.trickClock = CreateObject("roTimespan")
-    m.trickClock.Mark()
-  end if
-
-  nowMs = m.trickClock.TotalMilliseconds()
-
-  if m.lastTrickKey = key and (nowMs - m.lastTrickMs) <= m.trickTapWindowMs then
-    m.trickTapCount = m.trickTapCount + 1
-  else
-    m.trickTapCount = 1
-  end if
-
-  ' clamp
-  if m.trickTapCount > m.trickTapMaxMult then m.trickTapCount = m.trickTapMaxMult
-
-  m.lastTrickKey = key
-  m.lastTrickMs  = nowMs
-
-  return m.trickTapCount  ' 1 => 1x, 2 => 2x, 3 => 3x...
-end function
 
 ' Aplicar las traducciones en el componente
 sub __applyTranslations()

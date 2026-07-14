@@ -19,7 +19,7 @@
     <field id="thumbUri" type="uri" value="pkg:/images/shared/ball.png" onChange="onThumbUriChanged" />
     <field id="thumbnailsUrl" type="string" value="" onChange="onThumbnailsUrlChanged" />
     <field id="baseEpochSeconds" type="float" value="0" onChange="onBaseEpochChanged" />
-    <field id="seeking" type="boolean" value="false" onChange="onSeekingChanged" />
+    <field id="seeking" type="boolean" value="false" />
     <field id="previewVisible" type="boolean" value="false" />
     <field id="previewX" type="float" value="0" />
     <field id="previewY" type="float" value="0" />
@@ -30,8 +30,8 @@
     <field id="isPaused" type="boolean" value="false" onChange="onIsPausedChanged" />
     <field id="liveText" type="string" value="Live" onChange="onLiveTextChanged" />
     <field id="previewTimeText" type="string" value="" />
-    <field id="seekCommitToken" type="integer" value="0" onChange="onSeekCommitTokenChanged" />
-    <field id="resetToken" type="integer" value="0" onChange="onResetTokenChanged" />
+    <field id="seekKeyPress" type="integer" value="0" />
+    <field id="seekPosition" type="integer" value="0" />
   </interface>
 
   <children>
