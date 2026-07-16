@@ -179,3 +179,13 @@ function __completeDigit(value, numberOfDigits = 2) as string
         return strValue
     end if
 end function
+
+function getNowAsSeconds() as integer
+
+    correction = 0
+    ' Objeto de fecha actual
+    currentDate = CreateObject("roDateTime")
+    
+    currentDate.ToLocalTime() 
+    return currentDate.AsSeconds() + correction
+end function

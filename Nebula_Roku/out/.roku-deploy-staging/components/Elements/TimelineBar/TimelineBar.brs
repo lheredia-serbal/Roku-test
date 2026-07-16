@@ -35,12 +35,20 @@ sub init()
   m.seekHoldKey = invalid
   m.seekHoldTicks = 0
   m.seekHoldBaseJump = 0
+  m.pendingSeconds = 0
+  m.pausedDate = 0
 
   m.seekHoldTimer = CreateObject("roSGNode", "Timer")
   m.seekHoldTimer.duration = 0.2
   m.seekHoldTimer.repeat = true
   m.seekHoldTimer.ObserveField("fire", "onSeekHoldTimerFired")
   m.top.appendChild(m.seekHoldTimer)
+  
+  m.pendingSecondTimer = CreateObject("roSGNode", "Timer")
+  m.pendingSecondTimer.duration = 1
+  m.pendingSecondTimer.repeat = true
+  m.pendingSecondTimer.ObserveField("fire", "onPendingSecondTimerFired")
+  m.top.appendChild(m.pendingSecondTimer)
 
   m.utcOffsetSec = __getDeviceUtcOffsetSeconds()
 
@@ -74,11 +82,16 @@ sub init()
   __applyHeight(m.top.hasFocus = true)
 end sub
 
+' Maneja los eventos de teclado del TimelineBar.
 function onKeyEvent(key as String, press as Boolean) as Boolean
-
-  handled = false
   
   if (key = KeyButtons().LEFT or key = KeyButtons().RIGHT) and press then 
+
+    if m.pendingSecondTimer <> invalid and __isLiveRewindStream() and m.pendingSeconds = 0 then
+      m.pendingSecondTimer.control = "start"
+      m.pendingSeconds = 0
+      m.pausedDate = getNowAsSeconds()
+    end if
 
     if press then
       __startSeekHold(key)
@@ -88,15 +101,24 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
 
     '__updateProgress()
 
-    handled = true
+    return true
   end if
 
   if (key = KeyButtons().OK and press) then
+
+    if m.pendingSecondTimer <> invalid and __isLiveRewindStream() then m.pendingSecondTimer.control = "stop"
     __getCurrentPosition()
-    handled = true
+
+    if __isLiveRewindStream() then
+      m.top.seekPosition = __getPositionLiveRewind()
+    else
+      m.top.seekPosition = m.currentPosition
+    end if
+    
+    return true
   end if
 
-  return handled
+  return false
 end function
 
 sub __startSeekHold(key as String)
@@ -116,12 +138,26 @@ sub __startSeekHold(key as String)
   ' 1 salto inmediato con el valor base, igual que __startSeekHold en PlayerScreen.
   __moveThumbWithJump(key, base)
 
-  ' if m.seekHoldTimer <> invalid then
-  '   m.seekHoldTimer.duration = 0.2
+  ' if __isLiveRewindStream() and m.seekHoldTimer <> invalid then
+  '   m.seekHoldTimer.duration = 1
   '   m.seekHoldTimer.repeat = true
   '   m.seekHoldTimer.control = "start"
   ' end if
 end sub
+
+' Indica si el TimelineBar está asociado a un stream LiveRewind.
+' Acepta tanto el tipo de video completo como el código interno de streaming LiveRewind.
+function __isLiveRewindStream() as Boolean
+  if m.top = invalid or m.top.streamType = invalid then return false
+
+  streamType = LCase(m.top.streamType)
+  liveRewindVideoType = LCase(getVideoType().LIVE_REWIND)
+  liveRewindStreamingType = LCase(getStreamingType().LIVE_REWIND)
+
+  return streamType = liveRewindVideoType or streamType = liveRewindStreamingType
+end function
+
+' Detiene el timer de navegación por seek y limpia el estado de la tecla retenida.
 
 sub __stopSeekHold()
   if m.seekHoldTimer <> invalid then m.seekHoldTimer.control = "stop"
@@ -184,8 +220,17 @@ sub __moveThumbWithJump(key as String, jump as Dynamic)
   if nextX > maxX then nextX = maxX
 
   if m.progress <> invalid then m.progress.width = nextX
+  print "Thumb 1 " ; nextX - m.thumbHalf
   m.thumb.translation = [nextX - m.thumbHalf, m.thumbY]
   m.currentPositionPx = nextX
+
+  __showThumbnails()
+  __showLabelText()
+end sub
+
+' Ejecuta cada tick de pendingSecondTimer para continuar el seek LiveRewind cada 1 segundo.
+sub onPendingSecondTimerFired()
+  m.pendingSeconds = m.pendingSeconds + 1
 end sub
 
 sub __notifySeekKeyPressed()
@@ -241,6 +286,8 @@ sub __resetProgressState(resetTimeBar)
   m.seekHoldKey = invalid
   m.seekHoldTicks = 0
   m.seekHoldBaseJump = 0
+  m.pendingSeconds = 0
+  m.pausedDate = 0
   m.lastPreviewEpoch = invalid
   m.committedRemaining = invalid
   m.pauseStartEpochSeconds = invalid
@@ -302,31 +349,18 @@ end sub
 
 sub __updateProgress()
   if (m.currentDuration = invalid or m.currentPosition = invalid) then return
-  if m.currentDuration <= 0 and m.currentPosition <= 0 then return 
+  if m.currentDuration <= 0 and m.currentPosition <= 0 then return
 
   ' LIVE: no hay tiempo, mostrar "En vivo" (traducido) y no usar position/duration
   if m.top <> invalid and m.top.isLive = true then
     if m.progress <> invalid then
       m.progress.width = m.totalWidth
     end if
-    if m.timeLabel <> invalid then
-      txt = m.top.liveText
-      if txt = invalid or txt = "" then txt = i18n_t(m.global.i18n, "time.live")
-      m.timeLabel.text = txt
-    end if
   else
     if m.thumb <> invalid then m.thumb.visible = true
   end if
 
   if m.track = invalid or m.progress = invalid or m.barContainer = invalid then return
-
-  ' Si no hay duración
-  if m.currentDuration <= 0 and not m.top.isLive then
-    m.progress.width = 0
-    if m.thumb <> invalid then m.thumb.translation = [- m.thumbHalf, m.thumbY]
-    if m.timeLabel <> invalid then m.timeLabel.text = "00:00"
-    return
-  end if
 
   ' Clamp position
   if m.currentPosition < 0 then m.currentPosition = 0
@@ -347,7 +381,7 @@ sub __updateProgress()
 
   m.progress.width = progressWidth
 
-  ' Thumb X centrado en borde del progreso
+  ' Thumb X centrado en borde del progresoad
   thumbX = progressWidth - m.thumbHalf
   if thumbX < - m.thumbHalf then thumbX = - m.thumbHalf
   if thumbX > (m.totalWidth - m.thumbHalf) then thumbX = (m.totalWidth - m.thumbHalf)
@@ -355,6 +389,7 @@ sub __updateProgress()
   if m.thumb <> invalid then
     
     if (m.top.isLive ) then
+      print "Thumb 4 " ; - m.totalWidth - m.thumbHalf
       m.thumb.translation = [m.totalWidth - m.thumbHalf, m.thumbY]
       m.progress.width =  m.totalWidth
       ' Setear el máximo rango en X que puede alcanzar la esfera de progreso
@@ -365,49 +400,14 @@ sub __updateProgress()
       if (thumbX <> invalid) then
         if thumbX < 0 then thumbX = 0
 
+        print "Thumb 5 " ; - thumbX
         m.thumb.translation = [thumbX, m.thumbY]
-
-        if (thumbX = m.totalWidth - m.thumbHalf and m.top.streamType = getStreamingType().LIVE_REWIND and m.top.liveText <> invalid) then
-          m.timeLabel.text = m.top.liveText
-        end if
       end if
-    end if
-  end if
-
-  ' Texto: no actualizar durante seeking (evita saltos mientras el usuario se mueve)
-  if m.timeLabel <> invalid and not m.top.isLive and m.top.seeking <> true then
-    ' Tiempo restante = Total - Transcurrido
-    if (m.top.streamType = getStreamingType().LIVE_REWIND) then
-      if m.committedRemaining = invalid and not m.top.seeking then
-        m.committedRemaining = m.currentDuration - m.currentPosition
-      end if
-
-      remaining = m.currentDuration - m.currentPosition
-      'if m.committedRemaining <> invalid then remaining = m.committedRemaining
-
-      if remaining < 0 then remaining = 0
-      if (m.top.isPaused = true) then
-        elapsedPaused = __getEpochSeconds() - m.pauseStartEpochSeconds
-        if elapsedPaused > 0 then remaining = remaining + elapsedPaused
-      end if
-      m.timeLabel.text = "-" + __formatTime(remaining)
-    else if not m.top.isLive then 
-      if m.committedRemaining = invalid and not m.top.seeking and m.top.isPaused <> true then
-        m.committedRemaining = m.currentDuration - m.currentPosition
-      end if
-
-      remaining = m.currentDuration - m.currentPosition
-      if m.committedRemaining <> invalid and (m.top.seeking or m.top.isPaused = true) then
-        remaining = m.committedRemaining
-      end if
-      if remaining < 0 then remaining = 0
-      
-      m.timeLabel.text = __formatTime(remaining)
     end if
   end if
 
   ' Preview: SOLO publica datos, NO dibuja nada
-  shouldShow = (m.top.seeking = true) and (m.thumbnailsUrlTemplate <> invalid)
+  shouldShow = (m.thumbnailsUrlTemplate <> invalid)
   if not shouldShow then
     m.top.previewVisible = false
     m.top.previewUri = ""
@@ -427,7 +427,22 @@ sub __updateProgress()
     end if
   end if
 
+  __showThumbnails()
+  __showLabelText()
+end sub
+
+sub __showThumbnails()
+
+  ' Si no hay duración
+  if m.currentDuration <= 0 and not m.top.isLive then
+    m.progress.width = 0
+    print "Thumb 3 " ; - m.thumbHalf
+    if m.thumb <> invalid then m.thumb.translation = [- m.thumbHalf, m.thumbY]
+    return
+  end if
+  
   epoch = 0
+  __getCurrentPosition()
   if m.baseEpochSeconds <> invalid and m.baseEpochSeconds > 0 then
     ' IMPORTANTE!!!
     ' Se esta teniendo en cuenta el liveOffsetMs por ahora porque parece haber algun lado que la barra lo acumula y en los VOD esto no deberia ser asi
@@ -440,16 +455,86 @@ sub __updateProgress()
   end if
 
   url = __buildThumbUrl(epoch)
+
   ' Posición relativa al TimelineBar (misma cuenta que ya hacías)
-  previewX = (thumbX + m.thumbHalf) - (m.previewW / 2.0)
+  previewX = m.currentPositionPx - (m.previewW / 2.0)
   previewX = __clamp(previewX, 0, m.totalWidth - m.previewW)
 
   previewY = m.thumbY - m.previewH - m.previewMargin
-  
+
   m.top.previewX = previewX
   m.top.previewY = previewY
   m.top.previewUri = url
   m.top.previewVisible = true
+end sub
+
+sub __showLabelText()
+
+  if m.timeLabel <> invalid then
+    if m.top <> invalid and m.top.isLive = true then
+      txt = m.top.liveText
+      if txt = invalid or txt = "" then txt = i18n_t(m.global.i18n, "time.live")
+      m.timeLabel.text = txt
+      return
+    end if
+
+    ' Si no hay duración
+    if m.currentDuration <= 0 and not m.top.isLive then
+      if m.timeLabel <> invalid then m.timeLabel.text = "00:00"
+      return
+    end if
+
+    ' Progreso 
+    if (m.currentPosition > 0 and m.currentDuration > 0) then  
+      progressWidth = (m.currentPosition / m.currentDuration) * m.totalWidth
+    else
+      progressWidth = 0
+    end if
+    
+    if progressWidth < 0 then 
+      progressWidth = 0
+    end if
+
+    ' Thumb X centrado en borde del progresoad
+    thumbX = progressWidth - m.thumbHalf
+    if thumbX < - m.thumbHalf then thumbX = - m.thumbHalf
+    if thumbX > (m.totalWidth - m.thumbHalf) then thumbX = (m.totalWidth - m.thumbHalf)
+
+    if (thumbX = m.totalWidth - m.thumbHalf and m.top.streamType = getStreamingType().LIVE_REWIND and m.top.liveText <> invalid) then
+      m.timeLabel.text = m.top.liveText
+    end if
+
+    ' Texto: no actualizar durante 
+    if not m.top.isLive then
+      ' Tiempo restante = Total - Transcurrido
+      if (m.top.streamType = getStreamingType().LIVE_REWIND) then
+        if m.committedRemaining = invalid then
+          m.committedRemaining = m.currentDuration - m.currentPosition
+        end if
+
+        remaining = m.currentDuration - m.currentPosition
+
+        if remaining < 0 then remaining = 0
+        if (m.top.isPaused = true) then
+          elapsedPaused = __getEpochSeconds() - m.pauseStartEpochSeconds
+          if elapsedPaused > 0 then remaining = remaining + elapsedPaused
+        end if
+        m.timeLabel.text = "-" + __formatTime(remaining)
+      else if not m.top.isLive then 
+        if m.committedRemaining = invalid and m.top.isPaused <> true then
+          m.committedRemaining = m.currentDuration - m.currentPosition
+        end if
+
+        remaining = m.currentDuration - m.currentPosition
+        if m.committedRemaining <> invalid then
+          remaining = m.committedRemaining
+        end if
+        if remaining < 0 then remaining = 0
+        
+        m.timeLabel.text = __formatTime(remaining)
+      end if
+    end if
+  end if
 end sub
 
 ' Formatea tiempo.
@@ -520,7 +605,6 @@ sub onThumbnailsUrlChanged()
   end if
 
   m.lastPreviewEpoch = invalid
-  __updateProgress()
 end sub
 
 sub onBaseEpochChanged()
@@ -595,9 +679,18 @@ end function
 
 ' Obtener la posición seleccionada por el usuario y posicionar el player
 sub __getCurrentPosition()
-
   if (m.currentPositionPx <> invalid and m.currentPositionPx <> 0 and m.maxBar <> invalid and m.maxBar <> 0 and m.currentDuration <> invalid and m.currentDuration <> 0) then
     m.currentPosition = (m.currentDuration * m.currentPositionPx) / m.maxBar
-    m.top.seekPosition = m.currentPosition
   end if
 end sub
+
+' Obtener el tiempo en el cuando debe posicionarse cuando se cambia de live a liveRewind
+function __getPositionLiveRewind() as integer
+  ' Obtener el tiempo de la barra en segundos
+  timeLineStartAsSeconds = m.pausedDate - m.currentDuration
+
+  ' Obtener el tiempo del player desde que inicio hasta el inicio del timeline en segundos
+  timeLinePreviewAsSeconds = timeLineStartAsSeconds - m.baseEpochSeconds
+
+  return timeLinePreviewAsSeconds + m.currentPosition + m.pendingSeconds
+end function

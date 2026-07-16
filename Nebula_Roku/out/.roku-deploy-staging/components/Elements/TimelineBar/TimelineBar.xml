@@ -10,6 +10,7 @@
   <script type="text/brightscript" uri="pkg:/source/Enums.brs" />
   <script type="text/brightscript" uri="pkg:/source/Utils.brs" />
   <script type="text/brightscript" uri="pkg:/source/Utils/i18nUtils.brs" />
+  <script type="text/brightscript" uri="pkg:/source/Utils/DateFunctions.brs" />
   <script type="text/brightscript" uri="pkg:/source/StreamingConstants.brs" />
 
   <interface>
@@ -19,7 +20,6 @@
     <field id="thumbUri" type="uri" value="pkg:/images/shared/ball.png" onChange="onThumbUriChanged" />
     <field id="thumbnailsUrl" type="string" value="" onChange="onThumbnailsUrlChanged" />
     <field id="baseEpochSeconds" type="float" value="0" onChange="onBaseEpochChanged" />
-    <field id="seeking" type="boolean" value="false" />
     <field id="previewVisible" type="boolean" value="false" />
     <field id="previewX" type="float" value="0" />
     <field id="previewY" type="float" value="0" />

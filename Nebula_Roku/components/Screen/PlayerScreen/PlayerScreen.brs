@@ -94,7 +94,6 @@ sub init()
   if m.seekTimelineSyncTimer <> invalid then m.seekTimelineSyncTimer.ObserveField("fire", "onSeekTimelineSyncTimerFired")
 
   if m.timelineBar <> invalid then
-    m.timelineBar.observeField("seeking", "onTimelineSeekingChanged")
     m.timelineBar.observeField("previewVisible", "onTimelinePreviewChanged")
     m.timelineBar.observeField("previewX", "onTimelinePreviewChanged")
     m.timelineBar.observeField("previewY", "onTimelinePreviewChanged")
@@ -141,6 +140,10 @@ sub init()
   ' Guardar de la ultima acción del player
   ' Ventana de protección para sostener la pausa después de cambiar un vivo a live rewind.
   m.pendingLiveRewindPauseGuardUntilMs = invalid
+  ' Bandera para indicar que queda pendiente posicionar el position, después de cambiar de Live a LiveRewind
+  m.isPendingPosition = false
+  ' Posición en segundos que debe posicionar el player, después de cambiar de Live a LiveRewind
+  m.pendingPositionSeconds = false
   
   m.actionPostChageState = invalid
   ' Bandera que indica que el stream se esta recargando, para evitar que el usuario realice acciones en el player
@@ -220,8 +223,13 @@ sub onSeekPosition()
 
       if (__isDefaultLiveRewindStream()) then
         __reconnectStream(true, getStreamingType().LIVE_REWIND)
-      else 
-        ' Falta lo logica para posicionar un Live Rewind
+      else
+        if m.isLoadingStreamingRequest then  
+          m.isPendingPosition = true
+          m.pendingPositionSeconds = m.timelineBar.seekPosition
+        else 
+          m.videoPlayer.seek = m.timelineBar.seekPosition
+        end if
       end if 
     end if
   end if
@@ -848,7 +856,9 @@ Sub OnVideoPlayerStateChange()
     end if
 
     __syncPlayPauseButtonWithVideoState(state)
-  else if state = getVideoState().PLAYING then
+  end if
+
+  if state = getVideoState().PLAYING then
     clearTimer(m.retryReconnection)
     m.lastErrorTime = invalid
 
@@ -870,6 +880,8 @@ Sub OnVideoPlayerStateChange()
     end if
   else if __isLiveRewindPauseGuardActive() and (state = getVideoState().PLAYING or state = getVideoState().BUFFERING) then
     __pauseVideoAfterLiveRewindSwitch()
+  else if m.isPendingPosition
+    
   end if
 End Sub
 
@@ -2204,6 +2216,8 @@ sub __closePlayer(onBack = false, logout = false)
   m.liveRewindDuration = invalid
   m.initStreeamingType = invalid
   m.enableGoLive = false
+  m.isPendingPosition = false
+  m.pendingPositionSeconds = 0
   
   __hideChannelConnectionLayout()
 
@@ -2306,9 +2320,6 @@ sub __showProgramInfo()
 
   m.showInfoTimer.control = "start"
   m.showInfoTimer.ObserveField("fire","onHidenProgramInfo")
-
-  ' respeta el estado seeking
-  onTimelineSeekingChanged()
 end sub
 
 'Metodo que dispara la carga de un nuevo streaming en el player
@@ -2321,6 +2332,8 @@ sub __loadStreamingURL(key, id, streamingAction, streamingType = getStreamingTyp
   m.newStreamingType = streamingType
   m.lastStreamingRequestAtMs = __getNowMilliseconds()
   m.isLoadingStreamingRequest = true
+  m.isPendingPosition = false
+  m.pendingPositionSeconds = 0
 
   m.videoPlayer.control = getVideoAction().STOP
   m.videoPlayer.content = invalid
@@ -2718,36 +2731,6 @@ sub __setControllerButtonFocusNeighbors()
       end if 
     end if
   end for
-end sub
-
-sub onTimelineSeekingChanged()
-  if m.timelineBar = invalid then return
-
-  isSeeking = (m.timelineBar.seeking = true)
-
-  ' Ocultar “program info” mientras se muestra la miniatura
-  if m.programSummaryPlayer <> invalid then
-    m.programSummaryPlayer.visible = (not isSeeking)
-  end if
-
-  if isSeeking then
-    shouldPause = false
-    if m.streaming <> invalid and m.streaming.type <> invalid then
-      stype = LCase(m.streaming.type)
-      if stype = getVideoType().LIVE_REWIND then
-        if m.streaming.streamingType = getStreamingType().LIVE_REWIND then shouldPause = true
-      else if stype = getVideoType().VOD or stype = getVideoType().DVR then
-        shouldPause = true
-      end if
-    end if
-
-    if shouldPause and not m.pauseOnSeekActive then
-      m.pauseOnSeekActive = true
-      __pauseVideo()
-    end if
-  else
-    m.pauseOnSeekActive = false
-  end if
 end sub
 
 sub onTimelinePreviewChanged()
